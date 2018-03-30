@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils import timezone
+from datetime import date
 
 
 class Customer(models.Model):
@@ -42,6 +43,7 @@ class Orders(models.Model):
     inbox_date = models.DateTimeField('Fecha de entrada',
                                       default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True)
     ref_name = models.CharField(max_length=32)
     delivery = models.DateField(blank=True, default=timezone.now)
     status = models.CharField(max_length=1, choices=STATUS, default='1')
@@ -58,23 +60,23 @@ class Orders(models.Model):
     prepaid = models.DecimalField(max_digits=7, decimal_places=2)
     workshop = models.DecimalField('Horas de taller',
                                    max_digits=7, decimal_places=2, default=0)
-    delivery = models.DateField()
-    status = models.CharField(max_length=1, choices=STATUS)
 
-    # Measures
-    waist = models.DecimalField(max_digits=3, decimal_places=2)
-    chest = models.DecimalField(max_digits=3, decimal_places=2)
-    hip = models.DecimalField(max_digits=3, decimal_places=2)
-    lenght = models.DecimalField(max_digits=3, decimal_places=2)
-    others = models.TextField(blank=True)
-
-    # Pricing
-    budget = models.DecimalField(max_digits=5, decimal_places=2)
-    prepaid = models.DecimalField(max_digits=5, decimal_places=2)
-    workshop = models.DecimalField(max_digits=3, decimal_places=2)
+    def __str__(self):
+        """Force object name."""
+        return '%s %s %s' % (self.inbox_date.date(),
+                             self.customer, self.ref_name)
 
 
 class Comments(models.Model):
     """Keep the comments by order & user."""
 
-    pass
+    creation = models.DateTimeField('Alta', default=timezone.now)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    reference = models.ForeignKey(Orders, on_delete=models.CASCADE)
+    comment = models.TextField(default='')
+
+    def __str__(self):
+        """Force object name."""
+        name = ('El ' + str(self.creation.date()) +
+                ', ' + str(self.user) + ' comentó en ' + str(self.reference))
+        return name
