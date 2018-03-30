@@ -1,0 +1,92 @@
+{% load staticfiles %}
+<html>
+  <head>
+    <title>Trapu Zaharrak App</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+    <link rel="stylesheet" id="cff-font-awesome-css"  href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css?ver=4.5.0' type='text/css' media='all'" />
+    <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+    <script src="{% static 'tz/js/customjs.js' %}"></script>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <div class="d-flex">
+          <div class="mx-auto">
+            <h1 class="intro_text">Trapu Zaharrak App</h1>
+          </div>
+        </div>
+      </div>
+    </header>
+    <section id="search">
+      <div class="container-fluid">
+        <div class="d-flex my-4">
+          <div class="mx-auto">
+            <form class="form-inline">
+              <input class="form-control" type="search" placeholder="Buscar Pedido" aria-label="Buscar">
+              <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Buscar</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="last_orders">
+      <div class="container-fluid">
+        <div class="d-flex">
+          <h3>Últimos pedidos</h3>
+        </div>
+        <div class="d-flex">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Referencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in orders %}
+              <tr>
+                <th>{{order.inbox_date|date:"d/m"}}</th>
+                <th>{{order.ref_name}}</th>
+              </tr>
+              {% endfor%}
+          </table>
+        </div>
+      </div>
+    </section>
+    <section id="last_commets">
+      <div class="container-fluid">
+        <div class="d-flex">
+          <h3>Últimos comentarios</h3>
+        </div>
+        <div class="d-flex">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Quién</th>
+                <th scope="col">Referencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for comment in comments %}
+              <tr>
+                <th>{{comment.creation|date:"d/m"}}</th>
+                <th>{{comment.user}}</th>
+                <th>{{comment.reference}}</th>
+              </tr>
+              {% endfor%}
+          </table>
+        </div>
+      </div>
+    </section>
+    <footer>
+      <div class="fixed-bottom">
+        <button class="m-3 add_new"><i class="fa fa-plus fa-2x"></i></button>
+      </div>
+    </footer>
+  </body>
+</html>

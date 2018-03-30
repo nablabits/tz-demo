@@ -1,0 +1,29 @@
+body{
+  font-family: dosis;
+}
+h1, h2 {
+  font-family: Oswald;
+  color: #555;
+}
+h3, h4, h5 {
+  font-family: dosis;
+  color: #555;
+}
+header{
+  width: 100%;
+  background-color: #62DDBD;
+  padding: 20px 0px;
+  border-bottom: 1px solid #ccc;
+}
+.intro_text{
+  font-size: 40px;
+}
+.add_new{
+  float: right;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: 1px transparent;
+  background-color: #62DDBD;
+  color: #555;
+}
