@@ -24,7 +24,7 @@ class Customer(models.Model):
         return self.name
 
 
-class Orders(models.Model):
+class Order(models.Model):
     """The main object, store the order info."""
 
     STATUS = (
@@ -67,12 +67,12 @@ class Orders(models.Model):
                              self.customer, self.ref_name)
 
 
-class Comments(models.Model):
+class Comment(models.Model):
     """Keep the comments by order & user."""
 
-    creation = models.DateTimeField('Alta', default=timezone.now)
+    creation = models.DateTimeField('Cuando', default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    reference = models.ForeignKey(Orders, on_delete=models.CASCADE)
+    reference = models.ForeignKey(Order, on_delete=models.CASCADE)
     comment = models.TextField(default='')
 
     def __str__(self):
@@ -80,3 +80,12 @@ class Comments(models.Model):
         name = ('El ' + str(self.creation.date()) +
                 ', ' + str(self.user) + ' comentó en ' + str(self.reference))
         return name
+
+
+class CommentCheck(models.Model):
+    """Mark the comment as read."""
+
+    creation = models.DateTimeField(default=timezone.now)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
+    read = models.BooleanField('Leido', default=False)

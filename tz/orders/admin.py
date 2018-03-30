@@ -1,6 +1,7 @@
 from django.contrib import admin
-from .models import Customer, Comments, Orders
+from .models import Customer, Comment, Order, CommentCheck
 
 admin.site.register(Customer)
-admin.site.register(Comments)
-admin.site.register(Orders)
+admin.site.register(Comment)
+admin.site.register(Order)
+admin.site.register(CommentCheck)
