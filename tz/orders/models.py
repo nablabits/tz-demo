@@ -45,7 +45,6 @@ class Orders(models.Model):
     inbox_date = models.DateTimeField('Fecha de entrada',
                                       default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-<<<<<<< HEAD
     ref_name = models.CharField(max_length=32)
     delivery = models.DateField(blank=True, default=timezone.now)
     status = models.CharField(max_length=1, choices=STATUS, default='1')
@@ -62,7 +61,6 @@ class Orders(models.Model):
     prepaid = models.DecimalField(max_digits=7, decimal_places=2)
     workshop = models.DecimalField('Horas de taller',
                                    max_digits=7, decimal_places=2, default=0)
-=======
     delivery = models.DateField()
     status = models.CharField(max_length=1, choices=STATUS)
 
@@ -77,7 +75,6 @@ class Orders(models.Model):
     budget = models.DecimalField(max_digits=5, decimal_places=2)
     prepaid = models.DecimalField(max_digits=5, decimal_places=2)
     workshop = models.DecimalField(max_digits=3, decimal_places=2)
->>>>>>> 33c807aa14257831d7e133ac1069325e1d2dfb2c
 
 
 class Comments(models.Model):
