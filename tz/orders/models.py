@@ -13,9 +13,6 @@ class Customer(models.Model):
     phone = models.IntegerField('Telefono')
     email = models.EmailField('Eposta', max_length=64, blank=True)
     CIF = models.CharField('CIF', max_length=10, blank=True)
-    phone = models.IntegerField('Telefonoa')
-    email = models.EmailField('Eposta', max_length=64, blank=True)
-    CIF = models.CharField('CIF', max_length=10)
     cp = models.IntegerField('CP')
     notif = models.BooleanField(default=False)
 

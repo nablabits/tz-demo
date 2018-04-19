@@ -12,22 +12,31 @@
     <script src="{% static 'tz/js/customjs.js' %}"></script>
   </head>
   <body>
-    <header>
+    <aside id="sidebar">
+    </aside>
+    <header class="fixed-top">
       <div class="container">
         <div class="d-flex">
           <div class="mx-auto">
-            <h1 class="intro_text">Trapu Zaharrak App</h1>
+            <h1 class="intro_text">Trapu Zarrak App</h1>
           </div>
+        </div>
+        <div class="d-flex justify-content-end">
+          <span class="pr-3">
+            <i class="fa fa-user"></i>
+            <strong>Usuaria:</strong> {{user}}
+          </span>
+          <span>({{ now|date:"d/m" }}; {{ now|time:"H:i" }})</span>
         </div>
       </div>
     </header>
-    <section id="search">
+    <section id="search" class="f-section">
       <div class="container-fluid">
         <div class="d-flex my-4">
           <div class="mx-auto">
             <form class="form-inline">
               <input class="form-control" type="search" placeholder="Buscar Pedido" aria-label="Buscar">
-              <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Buscar</button>
+              <button class="btn btn-outline-success my-2 my-sm-0 mx-sm-2" type="submit">Buscar</button>
             </form>
           </div>
         </div>
@@ -35,52 +44,23 @@
     </section>
     <section id="last_orders">
       <div class="container-fluid">
-        <div class="d-flex">
-          <h3>Últimos pedidos</h3>
-        </div>
-        <div class="d-flex">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Fecha</th>
-                <th scope="col">Referencia</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for order in orders %}
-              <tr>
-                <th>{{order.inbox_date|date:"d/m"}}</th>
-                <th>{{order.ref_name}}</th>
-              </tr>
-              {% endfor%}
-          </table>
+        <div class="d-flex justify-content-center">
+          <div class="ordersbox p-4 my-2">
+            <!-- <span class="d-block"></span> -->
+            <h3><i class="fa fa-star fa-pull-left"></i>Hay 5 pedidos activos</h3>
+            <p>Pulsa para mostralos</p>
+          </div>
         </div>
       </div>
     </section>
     <section id="last_commets">
       <div class="container-fluid">
-        <div class="d-flex">
-          <h3>Últimos comentarios</h3>
-        </div>
-        <div class="d-flex">
-          <table class="table">
-            <thead>
-              <tr>
-                <th scope="col">Fecha</th>
-                <th scope="col">Quién</th>
-                <th scope="col">Referencia</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for comment in comments %}
-              <tr>
-                <th>{{comment.creation|date:"d/m"}}</th>
-                <th>{{comment.user}}</th>
-                <th>{{comment.reference}}</th>
-              </tr>
-              {% endfor%}
-          </table>
-        </div>
+        <div class="d-flex justify-content-center">
+          <div class="commentsbox p-4 my-2">
+            <h3><i class="fa fa-envelope fa-pull-left"></i>Tienes 2 mensajes sin leer</h3>
+            <p>Pulsa para mostralos</p>
+          </div>
+        </div
       </div>
     </section>
     <footer>

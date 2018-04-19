@@ -1,5 +1,6 @@
 body{
   font-family: dosis;
+  color: #555;
 }
 h1, h2 {
   font-family: Oswald;
@@ -12,11 +13,28 @@ h3, h4, h5 {
 header{
   width: 100%;
   background-color: #62DDBD;
-  padding: 20px 0px;
   border-bottom: 1px solid #ccc;
+  padding-top: 1.5em;
+}
+.f-section{
+  margin-top: 130px;
 }
 .intro_text{
-  font-size: 40px;
+  font-size: 35px;
+}
+.ordersbox{
+  width: 80%;
+  background-color: #C4FF84;
+  border-radius: 5px;
+  border: 1px solid lightgrey;
+  text: #fff;
+}
+.commentsbox{
+  width: 80%;
+  background-color: #84DCFF;
+  border-radius: 5px;
+  border: 1px solid lightgrey;
+  text: #fff;
 }
 .add_new{
   float: right;
@@ -24,6 +42,7 @@ header{
   height: 55px;
   border-radius: 50%;
   border: 1px transparent;
-  background-color: #62DDBD;
-  color: #555;
+  background-color: #E040FB;
+  color: #fff;
+  box-shadow: -3px 2px 5px #555;
 }
