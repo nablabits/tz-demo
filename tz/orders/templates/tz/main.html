@@ -26,7 +26,7 @@
             <i class="fa fa-user"></i>
             <strong>Usuaria:</strong> {{user}}
           </span>
-          <span>({{ now|date:"d/m" }}; {{ now|time:"H:i" }})</span>
+          <span><i class="fa fa-history"></i> {{ now|date:"d/m" }}; {{ now|time:"H:i" }}</span>
         </div>
       </div>
     </header>
@@ -47,7 +47,7 @@
         <div class="d-flex justify-content-center">
           <div class="ordersbox p-4 my-2">
             <!-- <span class="d-block"></span> -->
-            <h3><i class="fa fa-star fa-pull-left"></i>Hay 5 pedidos activos</h3>
+            <h3><i class="fa fa-star fa-pull-left"></i>5 pedidos activos</h3>
             <p>Pulsa para mostralos</p>
           </div>
         </div>
@@ -57,7 +57,7 @@
       <div class="container-fluid">
         <div class="d-flex justify-content-center">
           <div class="commentsbox p-4 my-2">
-            <h3><i class="fa fa-envelope fa-pull-left"></i>Tienes 2 mensajes sin leer</h3>
+            <h3><i class="fa fa-envelope fa-pull-left"></i>2 mensajes sin leer</h3>
             <p>Pulsa para mostralos</p>
           </div>
         </div

@@ -13,7 +13,6 @@
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
     <script src="{% static 'tz/js/customjs.js' %}"></script>
   </head>
-</body>
 <header class="fixed-top">
   <div class="container">
     <div class="d-flex">
@@ -33,7 +32,7 @@
 <section class="f-section">
   <div class="container">
     <h3>Nuevo Cliente:</h3>
-    <form>
+    <form method="post"> {% csrf_token %}
       <div class="form-group">
         <label for="name">Nombre</label>
         <input type="text" class="form-control" id="InputName" aria-describedby="nameHelp" placeholder="Jon Aizpuru Gerrikagoitia" required>
@@ -72,4 +71,5 @@
     </form>
   </div>
 </section>
+</body>
 </html>
