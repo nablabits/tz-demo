@@ -1,0 +1,44 @@
+{% load staticfiles %}
+<!doctype html>
+<html>
+  <head>
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
+    <link rel="stylesheet" id="cff-font-awesome-css"  href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css?ver=4.5.0' type='text/css' media='all'" />
+    <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
+    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
+    <script src="{% static 'tz/js/customjs.js' %}"></script>
+  </head>
+  <body>
+    <aside id="sidebar">
+    </aside>
+    <header class="fixed-top">
+      <div class="container">
+        <div class="d-flex">
+          <div class="mx-auto">
+            <a href="{% url 'main' %}"><h1 class="intro_text">Trapu Zarrak App</h1></a>
+          </div>
+        </div>
+        <div class="d-flex justify-content-end">
+          <span class="pr-3">
+            <i class="fa fa-user"></i>
+            <strong>Usuaria:</strong> {{user}}
+          </span>
+          <span><i class="fa fa-history"></i> {{ now|date:"d/m" }}; {{ now|time:"H:i" }}</span>
+        </div>
+      </div>
+    </header>
+    {% block homeview %}{% endblock %}
+    {% block newcustomer %}{% endblock %}
+    {% if footer %}
+    <footer>
+      <div class="fixed-bottom">
+        <button class="m-3 add_new"><i class="fa fa-plus fa-2x"></i></button>
+      </div>
+    </footer>
+    {% endif %}
+  </body>
+</html>

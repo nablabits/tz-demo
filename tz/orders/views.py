@@ -24,6 +24,8 @@ def main(request):
                  'comments': comments,
                  'user': cur_user,
                  'now': now,
+                 'title': 'TrapuZarrak · Inicio',
+                 'footer': True,
                  }
 
     return render(request, 'tz/main.html', dict4view)
@@ -47,4 +49,8 @@ def new_customer(request):
         form = CustomerForm()
         now = datetime.now()
         return render(request, 'tz/new_customer.html',
-                      {'form': form, 'now': now})
+                      {'form': form,
+                       'now': now,
+                       'title': 'TrapuZarrak · Nuevo Cliente',
+                       'footer': False,
+                       })
