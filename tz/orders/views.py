@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect
 from .models import Comment, Customer, Order, CommentCheck
 from django.utils import timezone
-from .forms import CustomerForm
+from .forms import CustomerForm, OrderForm
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
@@ -52,5 +52,30 @@ def new_customer(request):
                       {'form': form,
                        'now': now,
                        'title': 'TrapuZarrak · Nuevo Cliente',
+                       'footer': False,
+                       })
+
+
+@login_required()
+def new_order(request):
+    """Create new customers with a form view."""
+    if request.method == "POST":
+        """ When coming from edit view, save the changes (if they are valid)
+        and jump to main page
+        """
+        form = OrderForm(request.POST)
+
+        if form.is_valid():
+            customer = form.save(commit=False)
+            customer.creation = timezone.now()
+            customer.save()
+            return redirect('main')
+    else:
+        form = OrderForm()
+        now = datetime.now()
+        return render(request, 'tz/new_order.html',
+                      {'form': form,
+                       'now': now,
+                       'title': 'TrapuZarrak · Nuevo Pedido',
                        'footer': False,
                        })
