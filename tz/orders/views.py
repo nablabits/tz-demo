@@ -68,6 +68,7 @@ def new_order(request):
         if form.is_valid():
             customer = form.save(commit=False)
             customer.creation = timezone.now()
+            customer.user = request.user
             customer.save()
             return redirect('main')
     else:
