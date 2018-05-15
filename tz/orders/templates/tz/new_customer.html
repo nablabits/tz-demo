@@ -1,43 +1,25 @@
 {% extends "tz/base.html" %}
+{% load widget_tweaks %}
 {% block newcustomer %}
 <section class="f-section">
   <div class="container">
     <h3>Nuevo Cliente:</h3>
-    <form method="post"> {% csrf_token %}
-      <div class="form-group">
-        <label for="name">Nombre</label>
-        <input type="text" class="form-control" id="InputName" aria-describedby="nameHelp" placeholder="Jon Aizpuru Gerrikagoitia" required>
-      </div>
-      <div class="form-group">
-        <label for="addr">Dirección</label>
-        <input type="text" class="form-control" id="InputAddress" aria-describedby="addrHelp" placeholder="Bekobaso 2" required>
-      </div>
-      <div class="form-group">
-        <label for="city">Ciudad</label>
-        <input type="text" class="form-control" id="InputCity" aria-describedby="cityHelp" placeholder="Gerekiz" required>
-      </div>
-      <div class="form-group">
-        <label for="zip">CP</label>
-        <input type="number" class="form-control" id="InputZIP" aria-describedby="zipHelp" placeholder="48103" required>
-      </div>
-      <div class="form-group">
-        <label for="phone">Phone</label>
-        <input type="number" class="form-control" id="InputPhone" aria-describedby="phoneHelp" placeholder="123456789" required>
-      </div>
-      <div class="form-group">
-        <label for="email">Email</label>
-        <input type="email" class="form-control" id="InputEmail" aria-describedby="emailHelp" placeholder="jon@etxetxu.com">
-      </div>
-      <div class="form-group">
-        <label for="CIF">CIF</label>
-        <input type="text" class="form-control" id="InputCIF" aria-describedby="addrHelp" placeholder="44231003F">
-      </div>
-      <div class="form-check">
-        <input class="form-check-input mx-2" type="checkbox" value="" id="CheckNotif">
-        <label class="form-check-label ml-2" for="Notif">
-          Notificaciones
-        </label>
-      </div>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      {% for hidden_field in form.hidden_fields %}
+        {{ hidden_field }}
+      {% endfor %}
+
+      {% for field in form.visible_fields %}
+        <div class="form-group">
+          {{ field.label_tag }}
+          {% render_field field class="form-control" %}
+          {% if field.help_text %}
+            <small class="form-text text-muted">{{ field.help_text }}</small>
+          {% endif %}
+        </div>
+      {% endfor %}
       <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Crear</button>
     </form>
   </div>
