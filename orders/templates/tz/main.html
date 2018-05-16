@@ -15,10 +15,16 @@
     <section id="last_orders">
       <div class="container-fluid">
         <div class="d-flex justify-content-center">
-          <div class="ordersbox p-4 my-2">
-            <!-- <span class="d-block"></span> -->
-            <h3><i class="fa fa-star fa-pull-left"></i>5 pedidos activos</h3>
-            <p>Pulsa para mostralos</p>
+          <div class="w-75">
+            <div class="ordersbox p-4 my-2" data-toggle="collapse" data-target="#orders-list">
+              <h3><i class="fa fa-star fa-pull-left"></i>{{orders_count}} pedidos activos</h3>
+              <p>Pulsa para mostralos</p>
+            </div>
+            <div class="collapse order-list" id="orders-list">
+              {% for order in orders %}
+                {{ order.ref_name}}
+              {% endfor %}
+            </div>
           </div>
         </div>
       </div>

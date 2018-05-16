@@ -12,6 +12,7 @@ def main(request):
     """Create the root view."""
     # Query all active orders
     orders = Order.objects.exclude(status=7).order_by('-inbox_date')
+    orders_count = len(orders)
 
     # Query last commnents on active orders
     comments = Comment.objects.filter(reference__in=orders)
@@ -21,6 +22,7 @@ def main(request):
     now = datetime.now()
 
     dict4view = {'orders': orders,
+                 'orders_count': orders_count,
                  'comments': comments,
                  'user': cur_user,
                  'now': now,
@@ -30,6 +32,11 @@ def main(request):
 
     return render(request, 'tz/main.html', dict4view)
 
+
+@login_required
+def orderlist(request):
+    """A view to display active orders."""
+    pass
 
 @login_required()
 def new_customer(request):

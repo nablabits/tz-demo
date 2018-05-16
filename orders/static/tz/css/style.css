@@ -23,14 +23,15 @@ header{
   font-size: 35px;
 }
 .ordersbox{
-  width: 80%;
+  /* width: 80%; */
   background-color: #C4FF84;
   border-radius: 5px;
   border: 1px solid lightgrey;
   text: #fff;
+  cursor: pointer;
 }
 .commentsbox{
-  width: 80%;
+  /* width: 80%; */
   background-color: #84DCFF;
   border-radius: 5px;
   border: 1px solid lightgrey;
