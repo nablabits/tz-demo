@@ -11,7 +11,7 @@ from datetime import datetime
 def main(request):
     """Create the root view."""
     # Query all active orders
-    orders = Order.objects.exclude(status=7).order_by('-inbox_date')
+    orders = Order.objects.exclude(status=7).order_by('delivery')
     orders_count = len(orders)
 
     # Query last commnents on active orders
@@ -20,6 +20,7 @@ def main(request):
 
     cur_user = request.user
     now = datetime.now()
+
 
     dict4view = {'orders': orders,
                  'orders_count': orders_count,

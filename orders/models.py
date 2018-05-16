@@ -63,6 +63,10 @@ class Order(models.Model):
         return '%s %s %s' % (self.inbox_date.date(),
                              self.customer, self.ref_name)
 
+    @property
+    def overdue(self):
+        return date.today() > self.delivery
+
 
 class Comment(models.Model):
     """Keep the comments by order & user."""

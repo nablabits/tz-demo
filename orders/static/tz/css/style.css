@@ -23,12 +23,19 @@ header{
   font-size: 35px;
 }
 .ordersbox{
-  /* width: 80%; */
   background-color: #C4FF84;
-  border-radius: 5px;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
   border: 1px solid lightgrey;
   text: #fff;
   cursor: pointer;
+}
+.order-list{
+  border: 1px solid lightgrey;
+  border-top: 0px;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  margin-top: 0;
 }
 .commentsbox{
   /* width: 80%; */
