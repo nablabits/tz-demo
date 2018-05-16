@@ -33,12 +33,17 @@
                   {% for order in orders %}
                   <tr>
                     <th>
-                      <a href="{% url 'customer_edit' pk=order.pk%}">
+                      <a href="{% url 'customer_edit' pk=order.pk %}">
                         {{ order.customer }}
                         <i class="fa fa-edit"></i>
                       </a>
                     </th>
-                    <th>{{ order.ref_name}} <i class="fa fa-edit"></i></th>
+                    <th>
+                      <a href="{% url 'order_edit' pk=order.pk%}">
+                        {{ order.ref_name}}
+                        <i class="fa fa-edit"></i>
+                      </a>
+                    </th>
                     <th>
                       {{ order.delivery}}
                       {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}

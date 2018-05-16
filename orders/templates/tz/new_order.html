@@ -3,7 +3,13 @@
 {% block newcustomer %}
 <section class="f-section">
   <div class="container">
-    <h3>Nuevo pedido:</h3>
+    <h3>
+      {% if edit %}
+        Edición de pedido:
+      {% else %}
+        Nuevo Pedido:
+      {% endif %}
+    </h3>
     <form method="post">
       {% csrf_token %}
       {{ form.non_field_errors }}
