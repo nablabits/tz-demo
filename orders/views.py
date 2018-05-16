@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from .models import Comment, Customer, Order, CommentCheck
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm
@@ -63,6 +63,19 @@ def new_customer(request):
                        'footer': False,
                        })
 
+
+@login_required
+def customer_edit(request, pk):
+    """Edit an already created customer."""
+    customer = get_object_or_404(Customer, pk=pk)
+    if request.method == "POST":
+        form = CustomerForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
+    else:
+        form = CustomerForm(instance=customer)
+    return render(request, 'tz/new_customer.html',
+                  {'form': form})
 
 @login_required()
 def new_order(request):

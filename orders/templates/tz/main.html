@@ -32,7 +32,12 @@
                 <tbody>
                   {% for order in orders %}
                   <tr>
-                    <th>{{ order.customer }} <i class="fa fa-edit"></i></th>
+                    <th>
+                      <a href="{% url 'customer_edit' pk=order.pk%}">
+                        {{ order.customer }}
+                        <i class="fa fa-edit"></i>
+                      </a>
+                    </th>
                     <th>{{ order.ref_name}} <i class="fa fa-edit"></i></th>
                     <th>
                       {{ order.delivery}}
