@@ -1,0 +1,49 @@
+{% extends "tz/base.html" %}
+{% block orders %}
+<section id="search" class="f-section">
+  <div class="container-fluid">
+    <div class="d-flex my-4">
+      <div class="mx-auto">
+        <form class="form-inline">
+          <input class="form-control" type="search" placeholder="Buscar Pedido" aria-label="Buscar">
+          <button class="btn btn-outline-success my-2 my-sm-0 mx-sm-2" type="submit">Buscar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="container">
+  <h3>Todos los pedidos:</h3>
+  <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Cliente</th>
+      <th scope="col">Referencia</th>
+      <th scope="col">Entrega</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for order in orders %}
+    <tr>
+      <th>
+        <a href="#">
+          {{ order.customer }}
+          <i class="fa fa-edit"></i>
+        </a>
+      </th>
+      <th>
+        <a href="#">
+          {{ order.ref_name}}
+          <i class="fa fa-edit"></i>
+        </a>
+      </th>
+      <th>
+        {{ order.delivery}}
+        {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
+      </th>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

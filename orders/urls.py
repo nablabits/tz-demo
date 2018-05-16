@@ -6,6 +6,8 @@ from . import views
 urlpatterns = [
     # the root view
     path('', views.main, name='main'),
+    path('orders', views.orderlist, name='orderlist'),
+    path('customers', views.customerlist, name='customerlist'),
     path('new_customer/', views.new_customer, name='new_customer'),
     path('new_order/', views.new_order, name='new_order'),
     re_path(r'^(?P<pk>[0-9]+)/customer/$',

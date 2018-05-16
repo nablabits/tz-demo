@@ -13,8 +13,6 @@
     <script src="{% static 'tz/js/customjs.js' %}"></script>
   </head>
   <body>
-    <aside id="sidebar">
-    </aside>
     <header class="fixed-top">
       <div class="container">
         <div class="d-flex">
@@ -30,9 +28,32 @@
           <span><i class="fa fa-history"></i> {{ now|date:"d/m" }}; {{ now|time:"H:i" }}</span>
         </div>
       </div>
+      <div class="d-md-none menu">
+        <a href="#sidebar" data-toggle="collapse">
+          <i class="fa fa-3x fa-bars"></i>
+        </a>
+      </div>
     </header>
+    <aside id="sidebar" class="collapse bg-light">
+      <ul>
+        <li>Clientes:</li>
+          <ul>
+            <li><a href="{% url 'customerlist' %}">Buscar cliente</a></li>
+            <li><a href="{% url 'new_customer' %}">Nuevo cliente</a></li>
+          </ul>
+        <li>Pedidos:</li>
+        <ul>
+          <li><a href="{% url 'orderlist' %}">Todos los pedidos</a></li>
+          <li><a href="{% url 'new_order' %}">Nuevo pedido</a>
+          </li>
+        </ul>
+        <li><i class="fa fa-sign-out"></i> Cerrar sesión</li>
+      </ul>
+    </aside>
     {% block homeview %}{% endblock %}
     {% block newcustomer %}{% endblock %}
+    {% block orders %}{% endblock %}
+    {% block customers %}{% endblock %}
     {% if footer %}
     <footer>
       <div class="fixed-bottom">

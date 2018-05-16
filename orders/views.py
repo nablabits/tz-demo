@@ -21,23 +21,35 @@ def main(request):
     cur_user = request.user
     now = datetime.now()
 
+    settings = {'orders': orders,
+                'orders_count': orders_count,
+                'comments': comments,
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Inicio',
+                'footer': True,
+                }
 
-    dict4view = {'orders': orders,
-                 'orders_count': orders_count,
-                 'comments': comments,
-                 'user': cur_user,
-                 'now': now,
-                 'title': 'TrapuZarrak · Inicio',
-                 'footer': True,
-                 }
-
-    return render(request, 'tz/main.html', dict4view)
+    return render(request, 'tz/main.html', settings)
 
 
 @login_required
 def orderlist(request):
-    """A view to display active orders."""
-    pass
+    """Display active orders or search'em."""
+    orders = Order.objects.all().order_by('delivery')
+
+    cur_user = request.user
+    now = datetime.now()
+
+    settings = {'orders': orders,
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Pedidos',
+                'footer': True,
+                }
+
+    return render(request, 'tz/orders.html', settings)
+
 
 @login_required()
 def new_customer(request):
@@ -80,6 +92,26 @@ def customer_edit(request, pk):
                    'edit': True,
                    })
 
+
+@login_required
+def customerlist(request):
+    """A view to display customers or search'em."""
+    customers = Customer.objects.all().order_by('name')
+
+    cur_user = request.user
+    now = datetime.now()
+    # count_orders = Customer.orders_made
+
+    settings = {'customers': customers,
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Clientes',
+                'footer': True,
+                }
+
+    return render(request, 'tz/customers.html', settings)
+
+
 @login_required()
 def new_order(request):
     """Create new customers with a form view."""
@@ -104,6 +136,7 @@ def new_order(request):
                        'title': 'TrapuZarrak · Nuevo Pedido',
                        'footer': False,
                        })
+
 
 @login_required
 def order_edit(request, pk):

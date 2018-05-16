@@ -17,6 +17,19 @@ header{
   border-bottom: 1px solid #ccc;
   padding-top: 1.5em;
 }
+aside{
+  width: 80%;
+  position: absolute;
+  top: 10vh;
+  height: 90vh;
+  border-right: 1px solid lightgrey;
+  font-size: 2em;
+}
+.menu{
+  position: absolute;
+  left: 1em;
+  top: 1.5em;
+}
 .f-section{
   margin-top: 130px;
 }
