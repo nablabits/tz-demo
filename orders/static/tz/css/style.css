@@ -17,13 +17,22 @@ header{
   border-bottom: 1px solid #ccc;
   padding-top: 1.5em;
 }
-aside{
+.aside-narrow{
   width: 80%;
   position: absolute;
-  top: 10vh;
-  height: 90vh;
+  top: 7vh;
+  height: 93vh;
   border-right: 1px solid lightgrey;
   font-size: 2em;
+  z-index: 1;
+  padding-top: 1em;
+}
+.aside-wide{
+ margin-top: 7vh;
+ border-right: 1px solid lightgrey;
+ font-size: 2em;
+ height: 93vh;
+ padding-top: 1em;
 }
 .menu{
   position: absolute;
