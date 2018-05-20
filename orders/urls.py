@@ -14,6 +14,8 @@ urlpatterns = [
             views.customer_edit, name='customer_edit'),
     re_path(r'^(?P<pk>[0-9]+)/order/$',
             views.order_edit, name='order_edit'),
+    re_path(r'^orderview/(?P<pk>[0-9]+)$',
+            views.order_view, name='order_view'),
     path('accounts/login/', auth_views.login, name='login'),
     path('accounts/logout/', auth_views.logout, name='logout'),
 ]

@@ -1,0 +1,29 @@
+{% extends "tz/base.html" %}
+{% block orderview %}
+<section id="order_detail" class="f-section">
+  <div class="container">
+    <div class="d-flex mb-4">
+      <h3 class="mr-auto">Pedido no.{{ order.pk }} del {{order.inbox_date | date:"j/n/Y"}}</h3>
+      <button class="btn btn-outline-success btn-lg">
+        <i class="fa fa-edit"></i> Modificar pedido
+      </button>
+    </div>
+    {% if order.overdue %}
+    <div class="alert alert-warning" role="alert">
+      <i class="fa fa-warning text-danger mr-2"></i>
+      <strong>Atención!</strong>
+      La entrega de este pedido se programó para el {{order.delivery | date:"j/n"}}
+    </div>
+    {% endif %}
+    <div class="d-flex mt-4 order_header">
+      <h4 class="mr-auto">
+        <a href="{% url 'customer_edit' pk=order.pk %}">
+          <strong>Cliente: </strong>{{order.customer}}
+          <i class="fa fa-edit pl-2"></i>
+        </a>
+      </h4>
+      <h4><strong>Referencia:</strong> {{order.ref_name}}</h4>
+    </div>
+  </div>
+</section>
+{% endblock %}

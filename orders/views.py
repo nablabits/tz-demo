@@ -139,6 +139,12 @@ def new_order(request):
 
 
 @login_required
+def order_view(request, pk):
+    order = get_object_or_404(Order, pk=pk)
+    return render(request, 'tz/order_view.html', {'order': order})
+
+
+@login_required
 def order_edit(request, pk):
     """Edit an already created order."""
     order = get_object_or_404(Order, pk=pk)

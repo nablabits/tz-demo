@@ -77,3 +77,9 @@ header{
   color: #fff;
   box-shadow: -3px 2px 5px #555;
 }
+.order_details{
+  font-size: 1.5em;
+}
+.order_header{
+  border-bottom: 1px solid lightgrey;
+}

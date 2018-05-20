@@ -13,56 +13,55 @@
       </div>
     </section>
     <section id="last_orders">
-      <div class="container">
+      <div class="container mb-4">
         <div class="d-flex justify-content-center">
           <div class="w-75">
             <div class="ordersbox p-4 mt-2" data-toggle="collapse" data-target="#orders-list">
-              <h3><i class="fa fa-star fa-pull-left"></i>{{orders_count}} pedidos activos</h3>
-              <p>Pulsa para mostralos</p>
-            </div>
+            <h3><i class="fa fa-star fa-pull-left"></i>{{orders_count}} pedidos activos</h3>
+            <p>Pulsa para mostralos</p>
+          </div>
             <div class="collapse order-list" id="orders-list">
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th scope="col">Cliente</th>
-                    <th scope="col">Referencia</th>
-                    <th scope="col">Entrega</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for order in orders %}
-                  <tr>
-                    <th>
-                      <a href="{% url 'customer_edit' pk=order.pk %}">
-                        {{ order.customer }}
-                        <i class="fa fa-edit"></i>
-                      </a>
-                    </th>
-                    <th>
-                      <a href="{% url 'order_edit' pk=order.pk%}">
-                        {{ order.ref_name}}
-                        <i class="fa fa-edit"></i>
-                      </a>
-                    </th>
-                    <th>
-                      {{ order.delivery}}
-                      {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
-                    </th>
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Referencia</th>
+                  <th scope="col">Entrega</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for order in orders %}
+                <tr>
+                  <th>
+                      {{ order.customer }}
+                  </th>
+                  <th>
+                      {{ order.ref_name}}
+                  </th>
+                  <th>
+                    {{ order.delivery}}
+                    {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
+                    <a href="{% url 'order_view' pk=order.pk %}">
+                      <i class="fa fa-eye pull-right"></i>
+                    </a>
+                  </th>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
           </div>
         </div>
       </div>
     </section>
     <section id="last_commets">
-      <div class="container-fluid">
+      <div class="container mt-4">
         <div class="d-flex justify-content-center">
-          <div class="commentsbox p-4 my-2">
+          <div class="w-75">
+            <div class="commentsbox p-4 my-2">
             <h3><i class="fa fa-envelope fa-pull-left"></i>2 mensajes sin leer</h3>
             <p>Pulsa para mostralos</p>
+          </div>
           </div>
         </div>
       </div>
