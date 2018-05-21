@@ -72,6 +72,10 @@ class Order(models.Model):
     def overdue(self):
         return date.today() > self.delivery
 
+    @property
+    def pending(self):
+        return self.prepaid - self.budget
+
 
 class Comment(models.Model):
     """Keep the comments by order & user."""
