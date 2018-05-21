@@ -141,7 +141,16 @@ def new_order(request):
 @login_required
 def order_view(request, pk):
     order = get_object_or_404(Order, pk=pk)
-    return render(request, 'tz/order_view.html', {'order': order})
+    cur_user = request.user
+    now = datetime.now()
+    settings = {'order': order,
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Ver Pedido',
+                'footer': True,
+                }
+
+    return render(request, 'tz/order_view.html', settings)
 
 
 @login_required
