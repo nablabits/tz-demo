@@ -24,10 +24,7 @@
     {% endif %}
     <div class="d-flex mt-4 order_header">
       <h4 class="mr-auto">
-        <a href="{% url 'customer_edit' pk=order.pk %}">
           <strong>Cliente: </strong>{{order.customer}}
-          <i class="fa fa-edit pl-2"></i>
-        </a>
       </h4>
       <h4><strong>Referencia:</strong> {{order.ref_name}}</h4>
     </div>

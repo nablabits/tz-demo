@@ -21,7 +21,7 @@ header{
   width: 80%;
   position: absolute;
   top: 7vh;
-  height: 93vh;
+  height: auto;
   border-right: 1px solid lightgrey;
   font-size: 2em;
   z-index: 1;
@@ -31,8 +31,9 @@ header{
  margin-top: 7vh;
  border-right: 1px solid lightgrey;
  font-size: 2em;
- height: 93vh;
+ height: auto;
  padding-top: 1em;
+ min-height: 93vh;
 }
 .menu{
   position: absolute;

@@ -77,14 +77,13 @@ def new_customer(request):
 
 
 @login_required
-def customer_edit(request, pk):
-    """Edit an already created customer."""
-    order = get_object_or_404(Order, pk=pk)
-    customer = get_object_or_404(Customer, name=order.customer)
+def customer_edit(request, pk, customer_pk):
+    customer = get_object_or_404(Customer, pk=pk)
     if request.method == "POST":
         form = CustomerForm(request.POST, instance=customer)
         if form.is_valid():
             form.save()
+            return redirect('customer_view')
     else:
         form = CustomerForm(instance=customer)
     return render(request, 'tz/new_customer.html',
@@ -110,6 +109,20 @@ def customerlist(request):
                 }
 
     return render(request, 'tz/customers.html', settings)
+
+
+@login_required
+def customer_view(request, pk):
+    customer = get_object_or_404(Customer, pk=pk)
+    cur_user = request.user
+    now = datetime.now()
+    settings = {'customer': customer,
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Ver cliente',
+                'footer': True,
+                }
+    return render(request, 'tz/customer_view.html', settings)
 
 
 @login_required()
@@ -161,6 +174,7 @@ def order_edit(request, pk):
         form = OrderForm(request.POST, instance=order)
         if form.is_valid():
             form.save()
+            return redirect('order_view', pk=order.pk)
     else:
         form = OrderForm(instance=order)
     return render(request, 'tz/new_order.html',

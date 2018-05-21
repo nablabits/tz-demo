@@ -1,7 +1,7 @@
 {% extends "tz/base.html" %}
 {% load widget_tweaks %}
 {% block newcustomer %}
-<section class="f-section">
+<section class="mb-5 f-section">
   <div class="container">
     <h3>
       {% if edit %}
@@ -26,7 +26,11 @@
           {% endif %}
         </div>
       {% endfor %}
+      {% if edit %}
+      <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Modificar</button>
+      {% else %}
       <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Crear</button>
+      {% endif %}
     </form>
   </div>
 </section>

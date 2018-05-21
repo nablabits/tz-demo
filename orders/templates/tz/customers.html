@@ -17,28 +17,21 @@
   <table class="table">
   <thead>
     <tr>
-      <th scope="col">Alta</th>
       <th scope="col">Nombre</th>
+      <th scope="col">Alta</th>
       <th scope="col">Pedidos</th>
     </tr>
   </thead>
   <tbody>
     {% for customer in customers %}
     <tr>
-      <th>
-        <a href="#">
-          {{ customer.creation }}
-          <i class="fa fa-edit"></i>
-        </a>
-      </th>
-      <th>
-        <a href="#">
-          {{ customer.name }}
-          <i class="fa fa-edit"></i>
-        </a>
-      </th>
+      <th>{{ customer.name }}</th>
+      <th>{{ customer.creation | date:"j/n/Y" }}</th>
       <th>
         {{ customer.orders_made }}
+        <a href="{% url 'customer_view' pk=customer.pk %}">
+          <i class="fa fa-edit pull-right"></i>
+        </a>
       </th>
     </tr>
     {% endfor %}
