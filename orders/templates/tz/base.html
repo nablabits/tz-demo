@@ -39,12 +39,12 @@
       <li>Clientes:</li>
         <ul>
           <li><a href="{% url 'customerlist' %}">Buscar cliente</a></li>
-          <li><a href="{% url 'new_customer' %}">Nuevo cliente</a></li>
+          <li><a href="{% url 'customer_new' %}">Nuevo cliente</a></li>
         </ul>
       <li>Pedidos:</li>
       <ul>
         <li><a href="{% url 'orderlist' %}">Todos los pedidos</a></li>
-        <li><a href="{% url 'new_order' %}">Nuevo pedido</a>
+        <li><a href="{% url 'order_new' %}">Nuevo pedido</a>
         </li>
       </ul>
       <li><i class="fa fa-sign-out"></i> Cerrar sesión</li>
@@ -56,10 +56,10 @@
           <nav class="nav flex-column">
             <a class="nav-item nav-link" href="{% url 'main' %}"><i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
             <a class="nav-item nav-link" href="{% url 'customerlist' %}"><i class="fa fa-fw fa-search pr-2"></i> Buscar cliente</a>
-            <a class="nav-item nav-link" href="{% url 'new_customer' %}"><i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
+            <a class="nav-item nav-link" href="{% url 'customer_new' %}"><i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
             <a class="nav-item nav-link" href="{% url 'orderlist' %}"><i class="fa fa-fw fa-list pr-2"></i> Todos los pedidos</a>
-            <a class="nav-item nav-link" href="{% url 'new_order' %}"><i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
-            <a class="nav-item nav-link" href="{% url 'new_order' %}"><i class="fa fa-fw fa-euro pr-2"></i> Pendiente de pago</a>
+            <a class="nav-item nav-link" href="{% url 'order_new' %}"><i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
+            <a class="nav-item nav-link" href="{% url 'order_new' %}"><i class="fa fa-fw fa-euro pr-2"></i> Pendiente de pago</a>
             <a class="nav-item nav-link" href="#"><i class="fa fa-fw fa-sign-out pr-2"></i> Cerrar sesión</a>
           </nav>
         </div>

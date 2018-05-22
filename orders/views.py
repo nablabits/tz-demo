@@ -6,7 +6,7 @@ from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
 
-# First check is a valid User
+# Root View
 @login_required()
 def main(request):
     """Create the root view."""
@@ -33,9 +33,10 @@ def main(request):
     return render(request, 'tz/main.html', settings)
 
 
+# Order related views
 @login_required
 def orderlist(request):
-    """Display active orders or search'em."""
+    """Display all orders or search'em."""
     orders = Order.objects.all().order_by('delivery')
 
     cur_user = request.user
@@ -51,50 +52,69 @@ def orderlist(request):
     return render(request, 'tz/orders.html', settings)
 
 
+@login_required
+def order_view(request, pk):
+    """Show all details for an specific order."""
+    order = get_object_or_404(Order, pk=pk)
+    cur_user = request.user
+    now = datetime.now()
+    settings = {'order': order,
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Ver Pedido',
+                'footer': True,
+                }
+
+    return render(request, 'tz/order_view.html', settings)
+
+
 @login_required()
-def new_customer(request):
+def order_new(request):
     """Create new customers with a form view."""
     if request.method == "POST":
         """ When coming from edit view, save the changes (if they are valid)
         and jump to main page
         """
-        form = CustomerForm(request.POST)
+        form = OrderForm(request.POST)
 
         if form.is_valid():
             customer = form.save(commit=False)
             customer.creation = timezone.now()
+            customer.user = request.user
             customer.save()
             return redirect('main')
-    else:
-        form = CustomerForm()
-        now = datetime.now()
-        return render(request, 'tz/new_customer.html',
-                      {'form': form,
-                       'now': now,
-                       'title': 'TrapuZarrak · Nuevo Cliente',
-                       'footer': False,
-                       })
+        else:
+            form = OrderForm()
+            now = datetime.now()
+            settings = {'form': form,
+                        'now': now,
+                        'title': 'TrapuZarrak · Nuevo Pedido',
+                        'footer': False,
+                        }
+            return render(request, 'tz/order_new.html', settings)
 
 
 @login_required
-def customer_edit(request, pk, customer_pk):
-    customer = get_object_or_404(Customer, pk=pk)
+def order_edit(request, pk):
+    """Edit an already created order."""
+    order = get_object_or_404(Order, pk=pk)
     if request.method == "POST":
-        form = CustomerForm(request.POST, instance=customer)
+        form = OrderForm(request.POST, instance=order)
         if form.is_valid():
             form.save()
-            return redirect('customer_view')
-    else:
-        form = CustomerForm(instance=customer)
-    return render(request, 'tz/new_customer.html',
-                  {'form': form,
-                   'edit': True,
-                   })
+            return redirect('order_view', pk=order.pk)
+        else:
+            form = OrderForm(instance=order)
+            return render(request, 'tz/order_new.html',
+                          {'form': form,
+                           'edit': True,
+                           })
 
 
+# Customer related views
 @login_required
 def customerlist(request):
-    """A view to display customers or search'em."""
+    """Display all customers or search'em."""
     customers = Customer.objects.all().order_by('name')
 
     cur_user = request.user
@@ -126,58 +146,41 @@ def customer_view(request, pk):
 
 
 @login_required()
-def new_order(request):
+def customer_new(request):
     """Create new customers with a form view."""
     if request.method == "POST":
         """ When coming from edit view, save the changes (if they are valid)
         and jump to main page
         """
-        form = OrderForm(request.POST)
+        form = CustomerForm(request.POST)
 
         if form.is_valid():
             customer = form.save(commit=False)
             customer.creation = timezone.now()
-            customer.user = request.user
             customer.save()
             return redirect('main')
     else:
-        form = OrderForm()
+        form = CustomerForm()
         now = datetime.now()
-        return render(request, 'tz/new_order.html',
+        return render(request, 'tz/customer_new.html',
                       {'form': form,
                        'now': now,
-                       'title': 'TrapuZarrak · Nuevo Pedido',
+                       'title': 'TrapuZarrak · Nuevo Cliente',
                        'footer': False,
                        })
 
 
 @login_required
-def order_view(request, pk):
-    order = get_object_or_404(Order, pk=pk)
-    cur_user = request.user
-    now = datetime.now()
-    settings = {'order': order,
-                'user': cur_user,
-                'now': now,
-                'title': 'TrapuZarrak · Ver Pedido',
-                'footer': True,
-                }
-
-    return render(request, 'tz/order_view.html', settings)
-
-
-@login_required
-def order_edit(request, pk):
-    """Edit an already created order."""
-    order = get_object_or_404(Order, pk=pk)
+def customer_edit(request, pk, customer_pk):
+    customer = get_object_or_404(Customer, pk=pk)
     if request.method == "POST":
-        form = OrderForm(request.POST, instance=order)
+        form = CustomerForm(request.POST, instance=customer)
         if form.is_valid():
             form.save()
-            return redirect('order_view', pk=order.pk)
+            return redirect('customer_view')
     else:
-        form = OrderForm(instance=order)
-    return render(request, 'tz/new_order.html',
+        form = CustomerForm(instance=customer)
+    return render(request, 'tz/new_customer.html',
                   {'form': form,
                    'edit': True,
                    })

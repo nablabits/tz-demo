@@ -4,20 +4,26 @@ from . import views
 
 
 urlpatterns = [
-    # the root view
+    # The root url
     path('', views.main, name='main'),
+
+    # Order related urls
     path('orders', views.orderlist, name='orderlist'),
-    path('customers', views.customerlist, name='customerlist'),
-    path('new_customer/', views.new_customer, name='new_customer'),
-    path('new_order/', views.new_order, name='new_order'),
-    re_path(r'^(?P<pk>[0-9]+)/customer/$',
-            views.customer_edit, name='customer_edit'),
-    re_path(r'^(?P<pk>[0-9]+)/order/$',
-            views.order_edit, name='order_edit'),
-    re_path(r'^orderview/(?P<pk>[0-9]+)$',
+    re_path(r'^order_view/(?P<pk>[0-9]+)$',
             views.order_view, name='order_view'),
-    re_path(r'^customerview/(?P<pk>[0-9]+)$',
+    path('order_new/', views.order_new, name='order_new'),
+    re_path(r'^order_edit/(?P<pk>[0-9]+)$',
+            views.order_edit, name='order_edit'),
+
+    # Customer related urls
+    path('customers', views.customerlist, name='customerlist'),
+    re_path(r'^customer_view/(?P<pk>[0-9]+)$',
             views.customer_view, name='customer_view'),
+    path('customer_new/', views.customer_new, name='customer_new'),
+    re_path(r'^customer/(?P<pk>[0-9]+)$',
+            views.customer_edit, name='customer_edit'),
+
+    # Loging related urls
     path('accounts/login/', auth_views.login, name='login'),
     path('accounts/logout/', auth_views.logout, name='logout'),
 ]
