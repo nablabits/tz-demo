@@ -26,7 +26,11 @@
           {% endif %}
         </div>
       {% endfor %}
+      {% if edit %}
+      <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Modificar</button>
+      {% else %}
       <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Crear</button>
+      {% endif %}
     </form>
   </div>
 </section>

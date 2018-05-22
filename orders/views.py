@@ -83,15 +83,15 @@ def order_new(request):
             customer.user = request.user
             customer.save()
             return redirect('main')
-        else:
-            form = OrderForm()
-            now = datetime.now()
-            settings = {'form': form,
-                        'now': now,
-                        'title': 'TrapuZarrak · Nuevo Pedido',
-                        'footer': False,
-                        }
-            return render(request, 'tz/order_new.html', settings)
+    else:
+        form = OrderForm()
+        now = datetime.now()
+        settings = {'form': form,
+                    'now': now,
+                    'title': 'TrapuZarrak · Nuevo Pedido',
+                    'footer': False,
+                    }
+        return render(request, 'tz/order_new.html', settings)
 
 
 @login_required
@@ -133,6 +133,7 @@ def customerlist(request):
 
 @login_required
 def customer_view(request, pk):
+    """Display details for an especific customer."""
     customer = get_object_or_404(Customer, pk=pk)
     cur_user = request.user
     now = datetime.now()
@@ -171,7 +172,8 @@ def customer_new(request):
 
 
 @login_required
-def customer_edit(request, pk, customer_pk):
+def customer_edit(request, pk):
+    """Edit or update a customer's data."""
     customer = get_object_or_404(Customer, pk=pk)
     if request.method == "POST":
         form = CustomerForm(request.POST, instance=customer)
@@ -180,7 +182,7 @@ def customer_edit(request, pk, customer_pk):
             return redirect('customer_view')
     else:
         form = CustomerForm(instance=customer)
-    return render(request, 'tz/new_customer.html',
+    return render(request, 'tz/customer_new.html',
                   {'form': form,
                    'edit': True,
                    })

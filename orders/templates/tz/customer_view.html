@@ -13,5 +13,27 @@
         </a>
       </div>
     </div>
+    <div class="d-flex mt-4 order_header">
+      <h4 class="mr-auto">
+          <strong>Nombre: </strong>{{customer.name}}
+      </h4>
+      <h4><strong>Pedidos:</strong> {{customer.orders_made}}</h4>
+    </div>
+    <div class="card mt-4">
+      <h4 class="card-header font-weight-bold">Detalles:</h4>
+      <div class="card-body">
+        <ul class="order_details">
+          <li>Dirección:
+            {{customer.address}},
+            {% if customer.cp %}{{customer.cp}}{% else %}No definido{% endif %},
+            {% if customer.city %}{{customer.city}}{% else %}No definido{% endif %},
+          </li>
+          <li>Telefono: <a href="tel:{{customer.phone}}">{{customer.phone}}</a></li>
+          <li>Email: <a href="mailto:{{customer.email}}">{{customer.email}}</a></li>
+          <li>Notificaciones: {% if customer.notif %}Sí{% else %}No{% endif %}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
 </section>
 {% endblock %}
