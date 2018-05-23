@@ -113,10 +113,12 @@ def order_edit(request, pk):
 
 
 # Order related views (JSON for ajax)
-def order_status(request, pk):
+def order_status(request):
     """Return order status in JSON mode so Ajax can implement."""
+    pk = request.GET.get('pk', None)
     order = get_object_or_404(Order, pk=pk)
     return JsonResponse({'status': order.status})
+
 
 # Customer related views
 @login_required
