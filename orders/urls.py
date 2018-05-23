@@ -15,6 +15,9 @@ urlpatterns = [
     re_path(r'^order_edit/(?P<pk>[0-9]+)$',
             views.order_edit, name='order_edit'),
 
+    # Order related urls (JSON)
+    path('order/status', views.order_status, name='order_status'),
+
     # Customer related urls
     path('customers', views.customerlist, name='customerlist'),
     re_path(r'^customer_view/(?P<pk>[0-9]+)$',

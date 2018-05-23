@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.http import JsonResponse
 from .models import Comment, Customer, Order, CommentCheck
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm
@@ -110,6 +111,12 @@ def order_edit(request, pk):
                            'edit': True,
                            })
 
+
+# Order related views (JSON for ajax)
+def order_status(request, pk):
+    """Return order status in JSON mode so Ajax can implement."""
+    order = get_object_or_404(Order, pk=pk)
+    return JsonResponse({'status': order.status})
 
 # Customer related views
 @login_required
