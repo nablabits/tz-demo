@@ -39,11 +39,14 @@ def main(request):
 def orderlist(request):
     """Display all orders or search'em."""
     orders = Order.objects.all().order_by('delivery')
+    active = orders.exclude(status=7).order_by('delivery')
+    delivered = orders.filter(status=7).order_by('delivery')
 
     cur_user = request.user
     now = datetime.now()
 
-    settings = {'orders': orders,
+    settings = {'active': active,
+                'delivered': delivered,
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Pedidos',
@@ -57,6 +60,7 @@ def orderlist(request):
 def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
+
     cur_user = request.user
     now = datetime.now()
     settings = {'order': order,

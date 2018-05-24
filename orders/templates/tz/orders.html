@@ -23,7 +23,10 @@
     </tr>
   </thead>
   <tbody>
-    {% for order in orders %}
+    <tr>
+      <th colspan="3" class="text-center p-0 m-0 table-info">Activos</th>
+    </tr>
+    {% for order in active %}
     <tr>
       <th>
           {{ order.customer }}
@@ -34,6 +37,25 @@
       <th>
         {{ order.delivery | date:"j/n/Y"}}
         {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
+        <a href="{% url 'order_view' pk=order.pk %}">
+          <i class="fa fa-eye pull-right"></i>
+        </a>
+      </th>
+    </tr>
+    {% endfor %}
+    <tr>
+      <th colspan="3" class="text-center p-0 m-0 table-success">Entregados</th>
+    </tr>
+    {% for order in delivered %}
+    <tr>
+      <th>
+          {{ order.customer }}
+      </th>
+      <th>
+          {{ order.ref_name}}
+      </th>
+      <th>
+        {{ order.delivery | date:"j/n/Y"}}
         <a href="{% url 'order_view' pk=order.pk %}">
           <i class="fa fa-eye pull-right"></i>
         </a>
