@@ -104,12 +104,12 @@ def order_edit(request, pk):
         if form.is_valid():
             form.save()
             return redirect('order_view', pk=order.pk)
-        else:
-            form = OrderForm(instance=order)
-            return render(request, 'tz/order_new.html',
-                          {'form': form,
-                           'edit': True,
-                           })
+    else:
+        form = OrderForm(instance=order)
+        return render(request, 'tz/order_new.html',
+                      {'form': form,
+                       'edit': True,
+                       })
 
 
 # Order related views (JSON for ajax)
@@ -144,9 +144,22 @@ def customerlist(request):
 def customer_view(request, pk):
     """Display details for an especific customer."""
     customer = get_object_or_404(Customer, pk=pk)
+    orders = Order.objects.filter(customer=customer)
+    active = orders.exclude(status=7).order_by('delivery')
+    delivered = orders.filter(status=7).order_by('delivery')
+
+    # Evaluate pending orders
+    pending = []
+    for order in orders:
+        if order.pending < 0:
+            pending.append(order)
+
     cur_user = request.user
     now = datetime.now()
     settings = {'customer': customer,
+                'orders_active': active,
+                'orders_delivered': delivered,
+                'pending': pending,
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Ver cliente',

@@ -4,34 +4,37 @@
 <section class="mb-5 f-section">
   <div class="container">
     <h3>
-      {% if edit %}
-        Edición de pedido:
-      {% else %}
-        Nuevo Pedido:
-      {% endif %}
+        {% if edit %}
+          Edición de pedido:
+        {% else %}
+          Nuevo Pedido:
+        {% endif %}
     </h3>
-    <form method="post">
-      {% csrf_token %}
-      {{ form.non_field_errors }}
-      {% for hidden_field in form.hidden_fields %}
-        {{ hidden_field }}
-      {% endfor %}
+    <div class="d-flex justify-content-md-center col-md-10">
 
-      {% for field in form.visible_fields %}
-        <div class="form-group">
-          {{ field.label_tag }}
-          {% render_field field class="form-control" %}
-          {% if field.help_text %}
-            <small class="form-text text-muted">{{ field.help_text }}</small>
-          {% endif %}
-        </div>
-      {% endfor %}
-      {% if edit %}
-      <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Modificar</button>
-      {% else %}
-      <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Crear</button>
-      {% endif %}
-    </form>
+      <form method="post">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+        {% for hidden_field in form.hidden_fields %}
+          {{ hidden_field }}
+        {% endfor %}
+
+        {% for field in form.visible_fields %}
+          <div class="form-group">
+            {{ field.label_tag }}
+            {% render_field field class="form-control" %}
+            {% if field.help_text %}
+              <small class="form-text text-muted">{{ field.help_text }}</small>
+            {% endif %}
+          </div>
+        {% endfor %}
+        {% if edit %}
+        <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Modificar</button>
+        {% else %}
+        <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Crear</button>
+        {% endif %}
+      </form>
+    </div>
   </div>
 </section>
 {% endblock %}

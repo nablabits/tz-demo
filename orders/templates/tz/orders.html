@@ -26,20 +26,17 @@
     {% for order in orders %}
     <tr>
       <th>
-        <a href="#">
           {{ order.customer }}
-          <i class="fa fa-edit"></i>
-        </a>
       </th>
       <th>
-        <a href="#">
           {{ order.ref_name}}
-          <i class="fa fa-edit"></i>
-        </a>
       </th>
       <th>
-        {{ order.delivery}}
+        {{ order.delivery | date:"j/n/Y"}}
         {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
+        <a href="{% url 'order_view' pk=order.pk %}">
+          <i class="fa fa-eye pull-right"></i>
+        </a>
       </th>
     </tr>
     {% endfor %}

@@ -34,6 +34,56 @@
         </ul>
       </div>
     </div>
+    <div class="card mt-4">
+      <h4 class="card-header font-weight-bold">Pedidos:</h4>
+      <div class="card-body">
+        <ul class="order_details">
+            <p class="font-weight-bold mb-0">Activos:</p>
+          {% if orders_active %}
+            {% for order in orders_active %}
+            <li>
+              {{order.ref_name}}: entrega el {{order.delivery | date:"j/n/Y"}}
+              {% if order.overdue %}<i class="fa fa-warning text-danger pl-2"></i> {% endif %}
+              <a href="{% url 'order_view' pk=order.pk %}">
+                <i class="fa fa-eye pull-right"></i>
+              </a>
+            </li>
+            {% endfor %}
+            {% else %}
+              <small class="pl-2 mt-0 text-muted">No se encontró ningún pedido</small>
+            {% endif %}
+          <p class="font-weight-bold mb-0 mt-3">Entregados:</p>
+          {% if orders_delivered %}
+            {% for order in orders_delivered %}
+            <li>
+              {{order.ref_name}}: entrega el {{order.delivery | date:"j/n/Y"}}
+              {% if order.overdue %}<i class="fa fa-warning text-danger pl-2"></i> {% endif %}
+              <a href="{% url 'order_view' pk=order.pk %}">
+                <i class="fa fa-eye pull-right"></i>
+              </a>
+            </li>
+            {% endfor %}
+          {% else %}
+            <small class="pl-2 mt-0 text-muted">No se encontró ningún pedido</small>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+    <div class="card mt-4">
+      <h4 class="card-header font-weight-bold">Pendiente de pago:</h4>
+      <div class="card-body">
+        <ul class="order_details">
+          {% for order in pending %}
+          <li>
+            {{order.ref_name}}: {{order.pending}}€
+            <a href="{% url 'order_view' pk=order.pk %}">
+              <i class="fa fa-eye pull-right"></i>
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
   </div>
 </section>
 {% endblock %}
