@@ -12,7 +12,7 @@
           <button class="btn btn-outline-success"><i class="fa fa-edit"></i> Editar</button>
         </a>
         <a href="#">
-          <button class="ml-2 btn btn-outline-success"><i class="fa fa-upload"></i> Adjuntar</button>
+          <button class="ml-2 btn btn-outline-success"><i class="fa fa-paperclip"></i> Adjuntar</button>
         </a>
       </div>
     </div>
@@ -70,6 +70,23 @@
           <li>Largo: {{order.lenght}}</li>
           <li>Observaciones:<br>{{order.others}}</li>
         </ul>
+      </div>
+    </div>
+    <div class="card mt-4">
+      <div class="card-header">
+        <div class="row px-2">
+          <h4 class="font-weight-bold mr-auto">Comentarios:</h4>
+          <button class="ml-2 btn btn-outline-success" id="add-comment"><i class="fa fa-comment"></i> Comentar</button>
+        </div>
+      </div>
+      <div class="card-body order_details">
+          {% include 'includes/comment_list.html' %}
+      </div>
+    </div>
+    <div class="modal fade" id="modal-comment">
+      <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
       </div>
     </div>
   </div>

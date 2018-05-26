@@ -26,7 +26,11 @@ urlpatterns = [
     re_path(r'^customer/(?P<pk>[0-9]+)$',
             views.customer_edit, name='customer_edit'),
 
+    # Comment related urls
+    path('comment/add/', views.comment_add, name='comment_add'),
+
     # Loging related urls
     path('accounts/login/', auth_views.login, name='login'),
     path('accounts/logout/', auth_views.logout, name='logout'),
+
 ]

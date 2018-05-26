@@ -1,0 +1,14 @@
+<div id="comment_list">
+{% if comments %}
+<ul>
+  {% for comment in comments %}
+    <li>El {{comment.creation | date:"j/n"}}
+      a las {{comment.creation | date:"H:i"}}
+      {{comment.user}} comentó:<br>
+    {{ comment.comment}}</li>
+  {% endfor %}
+</ul>
+{% else %}
+  <span class="text-muted">No hay comentarios aún</span>
+{% endif %}
+</div>

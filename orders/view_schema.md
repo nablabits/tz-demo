@@ -12,5 +12,7 @@
   | /customer_new | customer_new | tz/customer_new | customer_new |
   | /customer_edit/_no._ | customer_edit | tz/customer_edit | customer_edit |
   | --- | --- | --- | --- |
+  | /comment/add | comment_add | JsonResponse | commnet_add |
+  | --- | --- | --- | --- |
   | /accounts/login | auth_views_login | - | login |
   | /accounts/logout | auth_views_logout | - | logout |

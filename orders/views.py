@@ -1,8 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, CommentCheck
 from django.utils import timezone
-from .forms import CustomerForm, OrderForm
+from .forms import CustomerForm, OrderForm, CommentForm
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
@@ -60,10 +61,12 @@ def orderlist(request):
 def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
+    comments = Comment.objects.filter(reference=order).order_by('-creation')
 
     cur_user = request.user
     now = datetime.now()
     settings = {'order': order,
+                'comments': comments,
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Ver Pedido',
@@ -172,6 +175,37 @@ def customer_view(request, pk):
     return render(request, 'tz/customer_view.html', settings)
 
 
+# Comment related views
+def comment_add(request):
+    data = dict()
+
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.creation = timezone.now()
+            comment.user = request.user
+            comment.save()
+            data['form_is_valid'] = True
+            comments = Comment.objects.all().order_by('-creation')
+            template = 'includes/comment_list.html'
+            data['html_comment_list'] = render_to_string(template,
+                                                         {'comments': comments}
+                                                         )
+        else:
+            data['form_is_valid'] = False
+    else:
+        form = CommentForm()
+
+    context = {'form': form}
+    data['html_form'] = render_to_string('includes/comment_add.html',
+                                         context,
+                                         request=request,
+                                         )
+    return JsonResponse(data)
+
+
+# Login related views
 @login_required()
 def customer_new(request):
     """Create new customers with a form view."""

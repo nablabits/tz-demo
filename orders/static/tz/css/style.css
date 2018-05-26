@@ -23,17 +23,17 @@ header{
   top: 7vh;
   height: auto;
   border-right: 1px solid lightgrey;
-  font-size: 2em;
+  font-size: 1.5em;
   z-index: 1;
   padding-top: 1em;
 }
 .aside-wide{
- margin-top: 7vh;
+ margin: 10vh 1em 0em auto;
  border-right: 1px solid lightgrey;
- font-size: 2em;
+ font-size: 1.5em;
  height: auto;
- padding-top: 1em;
- min-height: 93vh;
+
+ min-height: 90vh;
 }
 .menu{
   position: absolute;

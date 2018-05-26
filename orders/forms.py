@@ -19,3 +19,11 @@ class OrderForm(forms.ModelForm):
         fields = ('customer', 'ref_name', 'delivery',
                   'waist', 'chest', 'hip', 'lenght', 'others',
                   'budget', 'prepaid')
+
+
+class CommentForm(forms.ModelForm):
+    """Add commnets using a form."""
+
+    class Meta:
+        model = Comment
+        fields = ('reference', 'comment')
