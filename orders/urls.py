@@ -16,7 +16,9 @@ urlpatterns = [
             views.order_edit, name='order_edit'),
 
     # Order related urls (JSON)
-    path('order/status', views.order_status, name='order_status'),
+    path('order/get_status', views.order_get_status, name='order_get_status'),
+    path('order/update_status', views.order_update_status,
+         name='order_update_status'),
 
     # Customer related urls
     path('customers', views.customerlist, name='customerlist'),

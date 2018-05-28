@@ -5,7 +5,7 @@ $(function () {
     /* Gets the current order status */
     var pk = $('#order_detail')
     $.ajax({
-      url: '/order/status',
+      url: '/order/get_status',
       data: {'pk': pk.attr('data-pk')},
       dataType: 'json',
       success: function (data) {
@@ -38,9 +38,20 @@ $(function () {
 
   var updateStatus = function () {
     /* Updates current order status */
+    var pk = $('#order_detail')
+    var status = $(this).attr('data-status')
+    $.ajax({
+      url: '/order/update_status',
+      data: {'pk': pk.attr('data-pk'), 'status': status},
+      dataType: 'json',
+      success: function (data) {
+        $('#order-status').html(data.html_status)
+        getStatus()
+      }
+    })
   }
 
-  var loadForm = function () {
+  var loadCommentForm = function () {
     $.ajax({
       url: '/comment/add',
       type: 'get',
@@ -53,8 +64,9 @@ $(function () {
       }
     })
   }
+  getStatus()
 
-  var saveForm = function () {
+  var saveCommentForm = function () {
     console.log('clicked modal')
     var form = $(this)
     $.ajax({
@@ -76,9 +88,19 @@ $(function () {
     return false
   }
 
-  getStatus()
+
+  // Update Status
+  $('#order-status').on('click', '.js-order-inbox', updateStatus)
+  $('#order-status').on('click','.js-order-waiting', updateStatus)
+  $('#order-status').on('click','.js-order-preparing', updateStatus)
+  $('#order-status').on('click','.js-order-performing', updateStatus)
+  $('#order-status').on('click','.js-order-workshop', updateStatus)
+  $('#order-status').on('click','.js-order-outbox', updateStatus)
+  $('#order-status').on('click','.js-order-delivered', updateStatus)
 
   // Add comment
-  $('#add-comment').click(loadForm)
-  $('#modal-comment').on('submit', '.js-add-comment-form', saveForm)
+  $('#add-comment').click(loadCommentForm)
+  $('#modal-comment').on('submit', '.js-add-comment-form', saveCommentForm)
+
+
 })
