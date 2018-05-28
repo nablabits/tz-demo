@@ -128,6 +128,7 @@ def order_get_status(request):
     template = 'includes/order_status.html'
     data['html_status'] = render_to_string(template)
     data['status'] = order.status
+    data['pending'] = order.pending
     return JsonResponse(data)
 
 

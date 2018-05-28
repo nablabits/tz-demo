@@ -32,6 +32,12 @@ $(function () {
             $('.js-order-delivered').addClass('active')
             break
         }
+        if (data.pending != 0) {
+          $('.js-paid').addClass('d-none')
+          $('.js-unpaid').html(data.pending + '€')
+        }else{
+          $('.js-unpaid').addClass('d-none')
+        }
       }
     })
   }
@@ -64,7 +70,6 @@ $(function () {
       }
     })
   }
-  getStatus()
 
   var saveCommentForm = function () {
     console.log('clicked modal')
@@ -88,6 +93,8 @@ $(function () {
     return false
   }
 
+  // Get order's status on first load
+  getStatus()
 
   // Update Status
   $('#order-status').on('click', '.js-order-inbox', updateStatus)
