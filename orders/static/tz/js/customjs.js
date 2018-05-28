@@ -94,20 +94,21 @@ $(function () {
   }
 
   // Get order's status on first load
-  getStatus()
+  if (document.getElementById('order-status')) {
+    console.log('order-status exists')
+    getStatus()
+  }
 
   // Update Status
   $('#order-status').on('click', '.js-order-inbox', updateStatus)
-  $('#order-status').on('click','.js-order-waiting', updateStatus)
-  $('#order-status').on('click','.js-order-preparing', updateStatus)
-  $('#order-status').on('click','.js-order-performing', updateStatus)
-  $('#order-status').on('click','.js-order-workshop', updateStatus)
-  $('#order-status').on('click','.js-order-outbox', updateStatus)
-  $('#order-status').on('click','.js-order-delivered', updateStatus)
+  $('#order-status').on('click', '.js-order-waiting', updateStatus)
+  $('#order-status').on('click', '.js-order-preparing', updateStatus)
+  $('#order-status').on('click', '.js-order-performing', updateStatus)
+  $('#order-status').on('click', '.js-order-workshop', updateStatus)
+  $('#order-status').on('click', '.js-order-outbox', updateStatus)
+  $('#order-status').on('click', '.js-order-delivered', updateStatus)
 
   // Add comment
   $('#add-comment').click(loadCommentForm)
   $('#modal-comment').on('submit', '.js-add-comment-form', saveCommentForm)
-
-
 })
