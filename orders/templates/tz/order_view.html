@@ -25,6 +25,8 @@
       </div>
     </div>
     {% endif %}
+
+    <!-- Header -->
     <div class="d-flex mt-4 order_header">
       <h4 class="mr-auto">
           <strong>Cliente: </strong>{{order.customer}}
@@ -34,6 +36,8 @@
     <div id="order-status">
       {% include 'includes/order_status.html' %}
     </div>
+
+    <!-- Order Details -->
     <div class="card mt-4">
       <h4 class="card-header font-weight-bold">Detalles:</h4>
       <div class="card-body">
@@ -46,17 +50,21 @@
         </ul>
       </div>
     </div>
+
+    <!-- Order Comments -->
     <div class="card mt-4">
       <div class="card-header">
         <div class="row px-2">
           <h4 class="font-weight-bold mr-auto">Comentarios:</h4>
-          <button class="ml-2 btn btn-outline-success" id="add-comment"><i class="fa fa-comment"></i> Comentar</button>
+          <button class="ml-2 btn btn-outline-success" id="add-comment" data-pk="{{order.pk}}"><i class="fa fa-comment"></i> Comentar</button>
         </div>
       </div>
       <div class="card-body order_details">
           {% include 'includes/comment_list.html' %}
       </div>
     </div>
+
+    <!-- Modal form -->
     <div class="modal fade" id="modal-comment">
       <div class="modal-dialog">
         <div class="modal-content">

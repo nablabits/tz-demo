@@ -1,4 +1,4 @@
-/* global $ alert */
+/* global $  */
 $(function () {
 /* Functions */
   var getStatus = function () {
@@ -32,10 +32,10 @@ $(function () {
             $('.js-order-delivered').addClass('active')
             break
         }
-        if (data.pending != 0) {
+        if (data.pending !== 0) {
           $('.js-paid').addClass('d-none')
           $('.js-unpaid').html(data.pending + '€')
-        }else{
+        } else {
           $('.js-unpaid').addClass('d-none')
         }
       }
@@ -72,17 +72,15 @@ $(function () {
   }
 
   var saveCommentForm = function () {
-    console.log('clicked modal')
     var form = $(this)
+    var pk = $('#add-comment').attr('data-pk')
     $.ajax({
       url: form.attr('action'),
-      data: form.serialize(),
+      data: form.serialize() + '&' + $.param({'pk': pk}),
       type: form.attr('method'),
       dataType: 'json',
       success: function (data) {
-        console.log(data.form_is_valid)
         if (data.form_is_valid) {
-          alert('Comentario enviado')
           $('#comment_list').html(data.html_comment_list)
           $('#modal-comment').modal('hide')
         } else {

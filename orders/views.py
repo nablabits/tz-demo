@@ -16,7 +16,7 @@ def main(request):
     orders = Order.objects.exclude(status=7).order_by('delivery')
     orders_count = len(orders)
 
-    # Query last commnents on active orders
+    # Query last comments on active orders
     comments = Comment.objects.filter(reference__in=orders)
     comments = comments.order_by('-creation')
 
@@ -146,7 +146,6 @@ def order_update_status(request):
     return JsonResponse(data)
 
 
-
 # Customer related views
 @login_required
 def customerlist(request):
@@ -200,14 +199,18 @@ def comment_add(request):
     data = dict()
 
     if request.method == 'POST':
+        pk = request.POST.get('pk', None)
+        order = get_object_or_404(Order, pk=pk)
         form = CommentForm(request.POST)
         if form.is_valid():
             comment = form.save(commit=False)
             comment.creation = timezone.now()
             comment.user = request.user
+            comment.reference = order
             comment.save()
             data['form_is_valid'] = True
-            comments = Comment.objects.all().order_by('-creation')
+            comments = Comment.objects.filter(reference=order)
+            comments = comments.order_by('-creation')
             template = 'includes/comment_list.html'
             data['html_comment_list'] = render_to_string(template,
                                                          {'comments': comments}

@@ -1,6 +1,6 @@
 {% load widget_tweaks %}
 
-<form method="post" action="{% url 'comment_add' %}" class="js-add-comment-form">
+<form method="post" action="{% url 'comment_add' %}" class="js-add-comment-form" data-pk="{{ order.pk }}">
   {% csrf_token %}
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
