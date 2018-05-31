@@ -12,18 +12,25 @@
           <button class="btn btn-outline-success"><i class="fa fa-edit"></i> Editar</button>
         </a>
         <a href="#">
-          <button class="ml-2 btn btn-outline-success"><i class="fa fa-paperclip"></i> Adjuntar</button>
+          <button class="ml-2 btn btn-outline-success" id="add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
         </a>
       </div>
     </div>
     {% if order.overdue %}
-    <div class="d-flex">
-      <div class="alert alert-warning" role="alert">
-        <i class="fa fa-warning text-danger mr-2"></i>
-        <strong>Atención!</strong>
-        La entrega de este pedido se programó para el {{order.delivery | date:"j/n"}}
+      <div class="d-flex">
+        <div class="alert alert-warning" role="alert">
+          <i class="fa fa-warning text-danger mr-2"></i>
+          <strong>Atención!</strong>
+          La entrega de este pedido se programó para el {{order.delivery | date:"j/n"}}
+        </div>
       </div>
-    </div>
+    {% endif %}
+    {% if files %}
+      {% for file in files %}
+          Archivos adjuntos: <a href="{{ file.document.url }}">{{file.document.name}}</a>
+      {% endfor %}
+    {% else %}
+      No files yet
     {% endif %}
 
     <!-- Header -->
@@ -64,7 +71,15 @@
       </div>
     </div>
 
-    <!-- Modal form -->
+    <!-- Upload Modal form -->
+    <div class="modal fade" id="modal-upload">
+      <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
+      </div>
+    </div>
+
+    <!-- Comments Modal form -->
     <div class="modal fade" id="modal-comment">
       <div class="modal-dialog">
         <div class="modal-content">

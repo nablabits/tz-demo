@@ -77,6 +77,15 @@ class Order(models.Model):
         return self.prepaid - self.budget
 
 
+class Document(models.Model):
+    """Manage the file upload."""
+
+    description = models.CharField(max_length=255, blank=True)
+    document = models.FileField(upload_to='documents/')
+    uploaded = models.DateField(default=timezone.now)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+
+
 class Comment(models.Model):
     """Keep the comments by order & user."""
 

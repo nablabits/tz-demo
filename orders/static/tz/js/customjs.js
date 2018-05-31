@@ -1,4 +1,4 @@
-/* global $  */
+/* global $  alert */
 $(function () {
 /* Functions */
   var getStatus = function () {
@@ -57,6 +57,38 @@ $(function () {
     })
   }
 
+  var loadUploadForm = function () {
+    $.ajax({
+      url: '/upload/file',
+      type: 'get',
+      dataType: 'json',
+      beforeSend: function () {
+        $('#modal-upload').modal('show')
+      },
+      success: function (data) {
+        $('#modal-upload .modal-content').html(data.html_form)
+      }
+    })
+  }
+
+  var saveUploadForm = function () {
+    var form = $(this)
+    var pk = $('#add-file').attr('data-pk')
+    $.ajax({
+      url: form.attr('action'),
+      data: form.serialize() + '&' + $.param({'pk': pk}),
+      type: form.attr('method'),
+      success: function (data) {
+        if (data.form_is_valid) {
+          alert('File uploaded successfully')
+          $('#modal-upload').modal('hide')
+        } else {
+          $('#modal-upload .modal-content').html(data.html_form)
+        }
+      }
+    })
+  }
+
   var loadCommentForm = function () {
     $.ajax({
       url: '/comment/add',
@@ -109,4 +141,8 @@ $(function () {
   // Add comment
   $('#add-comment').click(loadCommentForm)
   $('#modal-comment').on('submit', '.js-add-comment-form', saveCommentForm)
+
+  // Upload file
+  $('#add-file').click(loadUploadForm)
+  $('#modal-upload').on('submit', '.js-upload-file-form', saveUploadForm)
 })

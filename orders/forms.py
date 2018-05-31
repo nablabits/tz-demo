@@ -1,5 +1,5 @@
 from django import forms
-from .models import Customer, Order, Comment
+from .models import Customer, Order, Comment, Document
 
 
 class CustomerForm(forms.ModelForm):
@@ -19,6 +19,14 @@ class OrderForm(forms.ModelForm):
         fields = ('customer', 'ref_name', 'delivery',
                   'waist', 'chest', 'hip', 'lenght', 'others',
                   'budget', 'prepaid')
+
+
+class DocumentForm(forms.ModelForm):
+    """Create a form to upload files."""
+
+    class Meta:
+        model = Document
+        fields = ('description', 'document', )
 
 
 class CommentForm(forms.ModelForm):

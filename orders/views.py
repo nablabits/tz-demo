@@ -1,9 +1,9 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, CommentCheck
+from .models import Comment, Customer, Order, Document
 from django.utils import timezone
-from .forms import CustomerForm, OrderForm, CommentForm
+from .forms import CustomerForm, OrderForm, CommentForm, DocumentForm
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
@@ -62,11 +62,13 @@ def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
     comments = Comment.objects.filter(reference=order).order_by('-creation')
+    files = Document.objects.filter(order=order)
 
     cur_user = request.user
     now = datetime.now()
     settings = {'order': order,
                 'comments': comments,
+                'files': files,
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Ver Pedido',
@@ -119,7 +121,7 @@ def order_edit(request, pk):
                        })
 
 
-# Order related views (JSON for ajax)
+# Order related views (Ajax implementation)
 def order_get_status(request):
     """Return order status in JSON mode so Ajax can implement."""
     data = dict()
@@ -143,6 +145,65 @@ def order_update_status(request):
     template = 'includes/order_status.html'
     data['html_status'] = render_to_string(template)
     data['status'] = order.status
+    return JsonResponse(data)
+
+
+def order_upload_file(request):
+    data = dict()
+
+    if request.method == 'POST':
+        # pk = request.POST.get('pk', None)
+        order = get_object_or_404(Order, pk=3)
+        form = DocumentForm(request.POST, request.FILES)
+        if form.is_valid():
+            upload = form.save(commit=False)
+            upload.order = order
+            upload.save()
+            data['form_is_valid'] = True
+            return JsonResponse(data)
+        else:
+            data['form_is_valid'] = False
+    else:
+        form = DocumentForm()
+
+    context = {'form': form}
+    data['html_form'] = render_to_string('includes/upload_file.html',
+                                         context,
+                                         request=request
+                                         )
+    return JsonResponse(data)
+
+
+def comment_add(request):
+    data = dict()
+
+    if request.method == 'POST':
+        pk = request.POST.get('pk', None)
+        order = get_object_or_404(Order, pk=pk)
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.creation = timezone.now()
+            comment.user = request.user
+            comment.reference = order
+            comment.save()
+            data['form_is_valid'] = True
+            comments = Comment.objects.filter(reference=order)
+            comments = comments.order_by('-creation')
+            template = 'includes/comment_list.html'
+            data['html_comment_list'] = render_to_string(template,
+                                                         {'comments': comments}
+                                                         )
+        else:
+            data['form_is_valid'] = False
+    else:
+        form = CommentForm()
+
+    context = {'form': form}
+    data['html_form'] = render_to_string('includes/comment_add.html',
+                                         context,
+                                         request=request,
+                                         )
     return JsonResponse(data)
 
 
@@ -192,40 +253,6 @@ def customer_view(request, pk):
                 'footer': True,
                 }
     return render(request, 'tz/customer_view.html', settings)
-
-
-# Comment related views
-def comment_add(request):
-    data = dict()
-
-    if request.method == 'POST':
-        pk = request.POST.get('pk', None)
-        order = get_object_or_404(Order, pk=pk)
-        form = CommentForm(request.POST)
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.creation = timezone.now()
-            comment.user = request.user
-            comment.reference = order
-            comment.save()
-            data['form_is_valid'] = True
-            comments = Comment.objects.filter(reference=order)
-            comments = comments.order_by('-creation')
-            template = 'includes/comment_list.html'
-            data['html_comment_list'] = render_to_string(template,
-                                                         {'comments': comments}
-                                                         )
-        else:
-            data['form_is_valid'] = False
-    else:
-        form = CommentForm()
-
-    context = {'form': form}
-    data['html_form'] = render_to_string('includes/comment_add.html',
-                                         context,
-                                         request=request,
-                                         )
-    return JsonResponse(data)
 
 
 # Login related views
