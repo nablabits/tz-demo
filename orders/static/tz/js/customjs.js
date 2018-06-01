@@ -9,6 +9,7 @@ $(function () {
       data: {'pk': pk.attr('data-pk')},
       dataType: 'json',
       success: function (data) {
+        $('#order-status').html(data.html_status)
         switch (data.status) {
           case '1':
             $('.js-order-inbox').addClass('active')
@@ -31,12 +32,6 @@ $(function () {
           case '7':
             $('.js-order-delivered').addClass('active')
             break
-        }
-        if (data.pending !== 0) {
-          $('.js-paid').addClass('d-none')
-          $('.js-unpaid').html(data.pending + '€')
-        } else {
-          $('.js-unpaid').addClass('d-none')
         }
       }
     })
@@ -151,6 +146,7 @@ $(function () {
       success: function (data) {
         if (data.form_is_valid) {
           $('#order-status').html(data.html_status)
+          getStatus()
           $('#modal-close-order').modal('hide')
         } else {
           $('#modal-close-order .modal-content').html(data.html_form)
@@ -184,8 +180,4 @@ $(function () {
   // Close order
   $('#order-status').on('click', '.js-order-delivered', loadCloseForm)
   $('#modal-close-order').on('submit', '.js-close-order-form', saveCloseForm)
-
-  // Update payments
-  // $('#order-status').on('click', '.js-paid', loadCloseForm)
-  // $('#order-status').on('click', '.js-unpaid', loadCloseForm)
 })

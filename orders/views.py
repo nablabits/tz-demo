@@ -129,9 +129,12 @@ def order_get_status(request):
     pk = request.GET.get('pk', None)
     order = get_object_or_404(Order, pk=pk)
     template = 'includes/order_status.html'
-    data['html_status'] = render_to_string(template)
+    data['html_status'] = render_to_string(template, {'order': order})
     data['status'] = order.status
-    data['pending'] = order.pending
+    if order.pending == 0:
+        data['paid'] = True
+    else:
+        data['paid'] = False
     return JsonResponse(data)
 
 
