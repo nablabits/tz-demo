@@ -25,6 +25,8 @@
         </div>
       </div>
     {% endif %}
+    
+    <!-- Attached files -->
     {% if files %}
       {% for file in files %}
           Archivos adjuntos: <a href="{{ file.document.url }}">{{file.document.name}}</a>
@@ -73,6 +75,14 @@
 
     <!-- Upload Modal form -->
     <div class="modal fade" id="modal-upload">
+      <div class="modal-dialog">
+        <div class="modal-content">
+        </div>
+      </div>
+    </div>
+
+    <!-- Close order Modal form -->
+    <div class="modal fade" id="modal-close-order">
       <div class="modal-dialog">
         <div class="modal-content">
         </div>

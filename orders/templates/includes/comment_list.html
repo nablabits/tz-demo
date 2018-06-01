@@ -4,7 +4,7 @@
   {% for comment in comments %}
     <li>El {{comment.creation | date:"j/n"}}
       a las {{comment.creation | date:"H:i"}}
-      {{comment.user}} comentó:<br>
+      {{comment.user}} comentó en {{comment.reference}}:<br>
     {{ comment.comment}}</li>
   {% endfor %}
 </ul>

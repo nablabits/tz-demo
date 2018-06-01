@@ -156,7 +156,7 @@ $(function () {
           $('#modal-close-order .modal-content').html(data.html_form)
         }
       }
-    })
+    });
     return false
   }
 
@@ -183,7 +183,7 @@ $(function () {
 
   // Close order
   $('#order-status').on('click', '.js-order-delivered', loadCloseForm)
-  $('#modal-close-order').on('submit', '.js-close-order-form', saveCloseForm)
+  $('#order-status').on('submit', '.js-close-order-form', saveCloseForm)
 
   // Update payments
   // $('#order-status').on('click', '.js-paid', loadCloseForm)

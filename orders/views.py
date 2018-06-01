@@ -4,6 +4,7 @@ from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, Document
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm, DocumentForm
+from .forms import OrderCloseForm
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
@@ -139,7 +140,6 @@ def order_update_status(request):
     pk = request.GET.get('pk', None)
     order = get_object_or_404(Order, pk=pk)
     status = request.GET.get('status')
-    print('status is:', status)
     order.status = status
     order.save()
     template = 'includes/order_status.html'
@@ -152,15 +152,14 @@ def order_upload_file(request):
     data = dict()
 
     if request.method == 'POST':
-        # pk = request.POST.get('pk', None)
-        order = get_object_or_404(Order, pk=3)
+        pk = request.POST.get('pk', None)
+        order = get_object_or_404(Order, pk=pk)
         form = DocumentForm(request.POST, request.FILES)
         if form.is_valid():
             upload = form.save(commit=False)
             upload.order = order
             upload.save()
             data['form_is_valid'] = True
-            return JsonResponse(data)
         else:
             data['form_is_valid'] = False
     else:
@@ -201,6 +200,38 @@ def comment_add(request):
 
     context = {'form': form}
     data['html_form'] = render_to_string('includes/comment_add.html',
+                                         context,
+                                         request=request,
+                                         )
+    return JsonResponse(data)
+
+
+def order_close(request):
+    data = dict()
+
+    if request.method == 'POST':
+        pk = request.POST.get('pk')
+        order = get_object_or_404(Order, pk=pk)
+        form = OrderCloseForm(request.POST, instance=order)
+        if form.is_valid():
+            form.save()
+            order.status = 7
+            order.save()
+            data['form_is_valid'] = True
+            template = 'includes/order_status.html'
+            data['status'] = order.status
+            data['html_status'] = render_to_string(template, {'order': order})
+        else:
+            data['form_is_valid'] = False
+    else:
+        pk = request.GET.get('pk', None)
+        order = get_object_or_404(Order, pk=pk)
+        form = OrderCloseForm(instance=order)
+
+    context = {'form': form,
+               'order': order,
+               }
+    data['html_form'] = render_to_string('includes/close_order.html',
                                          context,
                                          request=request,
                                          )

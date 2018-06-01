@@ -35,3 +35,11 @@ class CommentForm(forms.ModelForm):
     class Meta:
         model = Comment
         fields = ('comment', )
+
+
+class OrderCloseForm(forms.ModelForm):
+    """Close orders using a form."""
+
+    class Meta:
+        model = Order
+        fields = ('prepaid', 'workshop')

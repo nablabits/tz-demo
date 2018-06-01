@@ -1,0 +1,86 @@
+body{
+  font-family: dosis;
+  color: #555;
+}
+a{color: #555;}
+h1, h2 {
+  font-family: Oswald;
+  color: #555;
+}
+h3, h4, h5 {
+  font-family: dosis;
+  color: #555;
+}
+header{
+  width: 100%;
+  background-color: #62DDBD;
+  border-bottom: 1px solid #ccc;
+  padding-top: 1.5em;
+}
+.aside-narrow{
+  width: 80%;
+  position: absolute;
+  top: 7vh;
+  height: auto;
+  border-right: 1px solid lightgrey;
+  font-size: 1.5em;
+  z-index: 1;
+  padding-top: 1em;
+}
+.aside-wide{
+ margin: 10vh 1em 0em auto;
+ border-right: 1px solid lightgrey;
+ font-size: 1.5em;
+ height: auto;
+
+ min-height: 90vh;
+}
+.menu{
+  position: absolute;
+  left: 1em;
+  top: 1.5em;
+}
+.f-section{
+  margin-top: 130px;
+}
+.intro_text{
+  font-size: 35px;
+}
+.ordersbox{
+  background-color: #C4FF84;
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+  border: 1px solid lightgrey;
+  text: #fff;
+  cursor: pointer;
+}
+.order-list{
+  border: 1px solid lightgrey;
+  border-top: 0px;
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  margin-top: 0;
+}
+.commentsbox{
+  /* width: 80%; */
+  background-color: #84DCFF;
+  border-radius: 5px;
+  border: 1px solid lightgrey;
+  text: #fff;
+}
+.add_new{
+  float: right;
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: 1px transparent;
+  background-color: #E040FB;
+  color: #fff;
+  box-shadow: -3px 2px 5px #555;
+}
+.order_details{
+  font-size: 1.5em;
+}
+.order_header{
+  border-bottom: 1px solid lightgrey;
+}
