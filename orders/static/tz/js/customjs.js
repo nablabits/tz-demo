@@ -70,10 +70,8 @@ $(function () {
   }
 
   var saveUploadForm = function () {
-    console.log('saveuploadForm called');
     var form = $(this)
     var data = form.serialize()
-    console.log('serialize', data);
     $.ajax({
       url: form.attr('action'),
       data: data,
@@ -87,7 +85,6 @@ $(function () {
         }
       }
     })
-    // return false
   }
 
   var loadCommentForm = function () {

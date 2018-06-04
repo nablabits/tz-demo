@@ -26,15 +26,6 @@
       </div>
     {% endif %}
 
-    <!-- Attached files -->
-    {% if files %}
-      {% for file in files %}
-          Archivos adjuntos: <a href="{{ file.document.url }}">{{file.document.name}}</a>
-      {% endfor %}
-    {% else %}
-      No files yet
-    {% endif %}
-
     <!-- Header -->
     <div class="d-flex mt-4 order_header">
       <h4 class="mr-auto">
@@ -56,6 +47,22 @@
           <li>Largo: {{order.lenght}}</li>
           <li>Observaciones:<br>{{order.others}}</li>
         </ul>
+        <!-- Attached files -->
+        <div class="d-flex-column">
+          <p class="order_details">Archivos adjuntos:</p>
+          {% if files %}
+            {% for file in files %}
+            <div class="my-2">
+              <a href="{{ file.document.url }}">
+                <button class="ml-2 mr-3 btn btn-outline-success" id="{{file.pk}}"><i class="fa fa-paperclip"></i> {{file.document.name}}</button>
+              </a>
+                <i class="fa fa-trash fa-2x" id="delete-file" data-pk="{{file.pk}}"></i>
+            </div>
+            {% endfor %}
+          {% else %}
+            No files yet
+          {% endif %}
+        </div>
       </div>
     </div>
 
