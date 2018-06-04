@@ -54,10 +54,12 @@ $(function () {
   }
 
   var loadUploadForm = function () {
+    var pk = $('#order_detail').attr('data-pk')
     $.ajax({
       url: '/upload/file',
       type: 'get',
       dataType: 'json',
+      data: {'pk': pk},
       beforeSend: function () {
         $('#modal-upload').modal('show')
       },
@@ -68,11 +70,13 @@ $(function () {
   }
 
   var saveUploadForm = function () {
+    console.log('saveuploadForm called');
     var form = $(this)
-    var pk = $('#add-file').attr('data-pk')
+    var data = form.serialize()
+    console.log('serialize', data);
     $.ajax({
       url: form.attr('action'),
-      data: form.serialize() + '&' + $.param({'pk': pk}),
+      data: data,
       type: form.attr('method'),
       success: function (data) {
         if (data.form_is_valid) {
@@ -83,7 +87,7 @@ $(function () {
         }
       }
     })
-    return false
+    // return false
   }
 
   var loadCommentForm = function () {

@@ -158,17 +158,21 @@ def order_upload_file(request):
         pk = request.POST.get('pk', None)
         order = get_object_or_404(Order, pk=pk)
         form = DocumentForm(request.POST, request.FILES)
+        print('files:', request.FILES)
         if form.is_valid():
             upload = form.save(commit=False)
             upload.order = order
             upload.save()
             data['form_is_valid'] = True
+            return redirect('order_view', pk=pk)
         else:
             data['form_is_valid'] = False
     else:
         form = DocumentForm()
+        pk = request.GET.get('pk', None)
+        order = get_object_or_404(Order, pk=pk)
 
-    context = {'form': form}
+    context = {'form': form, 'order': order}
     data['html_form'] = render_to_string('includes/upload_file.html',
                                          context,
                                          request=request
