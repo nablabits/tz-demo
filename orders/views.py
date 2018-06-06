@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views import View
 from django.http import JsonResponse
 from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, Document
@@ -146,7 +147,7 @@ def order_update_status(request):
     order.status = status
     order.save()
     template = 'includes/order_status.html'
-    data['html_status'] = render_to_string(template)
+    data['html_status'] = render_to_string(template, {'order': order})
     data['status'] = order.status
     return JsonResponse(data)
 
@@ -179,6 +180,76 @@ def order_upload_file(request):
                                          )
     return JsonResponse(data)
 
+
+def order_delete_file(request):
+    data = dict()
+
+    if request.method == 'POST':
+        pk = request.POST.get('pk', None)
+        file = get_object_or_404(Document, pk=pk)
+    else:
+        pk = request.GET.get('pk', None)
+        file = get_object_or_404(Document, pk=pk)
+        context = {'file': file}
+        data['html_form'] = render_to_string('includes/delete_file.html',
+                                             context,
+                                             request=request
+                                             )
+        return JsonResponse(data)
+
+
+class OrderActions(View):
+    """Unify all the actions in a single view.
+
+    With this view we'll be able to edit, upload & delete files, add comments or close the order.
+    """
+    def get(self, request):
+        data = dict()
+        pk = self.request.GET.get('pk', None)
+        action = self.request.GET.get('action', None)
+
+        if not pk or not action:
+            raise ValueError('Get data was poor')
+
+        # Case #1) edit the order
+        if action == 'order-edit':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderForm(instance=order)
+            context = {'form': form, 'order': order}
+            template = 'includes/edit_form.html'
+
+        # Case #2) add a comment
+        elif action == 'order-comment':
+            order = get_object_or_404(Order, pk=pk)
+            form = CommentForm()
+            context = {'form': form, 'order': order}
+            template = 'includes/comment_add.html'
+
+        # Case #3) Upload a file
+        elif action == 'order-file':
+            order = get_object_or_404(Order, pk=pk)
+            form = DocumentForm()
+            context = {'form': form, 'order': order}
+            template = 'includes/upload_file.html'
+
+        # Case #4) close order
+        elif action == 'order-close':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderCloseForm(instance=order)
+            context = {'form': form, 'order': order}
+            template = 'includes/close_order.html'
+
+        # Case #5) Delete file
+        elif action == 'order-file-delete':
+            file = get_object_or_404(Document, pk=pk)
+            context = {'file': file}
+            template = 'includes/delete_file.html'
+
+        data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
+
+    def post(self, request):
+        pass
 
 def comment_add(request):
     data = dict()

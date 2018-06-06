@@ -23,7 +23,10 @@ urlpatterns = [
          name='order_update_status'),
     path('comment/add/', views.comment_add, name='comment_add'),
     path('upload/file/', views.order_upload_file, name='order_upload'),
+    path('delete/file/', views.order_delete_file, name='order_file_delete'),
     path('order/close/', views.order_close, name='order_close'),
+    # Great unification
+    path('order/action/', views.OrderActions.as_view(), name='order_actions'),
 
     # Customer related urls
     path('customers', views.customerlist, name='customerlist'),

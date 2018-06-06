@@ -8,11 +8,13 @@
         <h4 class="mr-auto">Creado el {{order.inbox_date | date:"j/n/Y"}}</h4>
       </div>
       <div class="d-flex">
-        <a href="{% url 'order_edit' pk=order.pk %}">
-          <button class="btn btn-outline-success"><i class="fa fa-edit"></i> Editar</button>
+        <a href="#">
+          <button class="btn btn-outline-success" id="order-edit"  data-pk="{{order.pk}}">
+            <i class="fa fa-edit"></i> Editar
+          </button>
         </a>
         <a href="#">
-          <button class="ml-2 btn btn-outline-success" id="add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
+          <button class="ml-2 btn btn-outline-success" id="order-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
         </a>
       </div>
     </div>
@@ -56,7 +58,7 @@
               <a href="{{ file.document.url }}">
                 <button class="ml-2 mr-3 btn btn-outline-success" id="{{file.pk}}"><i class="fa fa-paperclip"></i> {{file.document.name}}</button>
               </a>
-                <i class="fa fa-trash fa-2x" id="delete-file" data-pk="{{file.pk}}"></i>
+                <i class="fa fa-trash fa-2x" id="order-file-delete" data-pk="{{file.pk}}"></i>
             </div>
             {% endfor %}
           {% else %}
@@ -71,7 +73,7 @@
       <div class="card-header">
         <div class="row px-2">
           <h4 class="font-weight-bold mr-auto">Comentarios:</h4>
-          <button class="ml-2 btn btn-outline-success" id="add-comment" data-pk="{{order.pk}}"><i class="fa fa-comment"></i> Comentar</button>
+          <button class="ml-2 btn btn-outline-success" id="order-comment" data-pk="{{order.pk}}"><i class="fa fa-comment"></i> Comentar</button>
         </div>
       </div>
       <div class="card-body order_details">
@@ -79,29 +81,14 @@
       </div>
     </div>
 
-    <!-- Upload Modal form -->
-    <div class="modal fade" id="modal-upload">
+    <!-- Action Modal -->
+    <div class="modal fade" id="action-modal">
       <div class="modal-dialog">
         <div class="modal-content">
         </div>
       </div>
     </div>
 
-    <!-- Close order Modal form -->
-    <div class="modal fade" id="modal-close-order">
-      <div class="modal-dialog">
-        <div class="modal-content">
-        </div>
-      </div>
-    </div>
-
-    <!-- Comments Modal form -->
-    <div class="modal fade" id="modal-comment">
-      <div class="modal-dialog">
-        <div class="modal-content">
-        </div>
-      </div>
-    </div>
   </div>
 </section>
 {% endblock %}

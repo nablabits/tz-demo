@@ -13,7 +13,7 @@
   </div>
   <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
     <button type="button" class="btn btn-outline-success js-order-outbox" data-status="6">En espera</button>
-    <button type="button" class="btn btn-outline-success js-order-delivered" data-status="7">Entregado</button>
+    <button type="button" class="btn btn-outline-success js-order-delivered" data-status="7" id="order-close" data-pk="{{order.pk}}">Entregado</button>
   </div>
     <button type="button" class="btn btn-outline-success active {%if order.paid %}d-none{% endif %}">
       <i class="fa fa-euro"></i> Cobrado
