@@ -14,16 +14,9 @@ urlpatterns = [
     re_path(r'^order_view/(?P<pk>[0-9]+)$',
             views.order_view, name='order_view'),
     path('order_new/', views.order_new, name='order_new'),
-    re_path(r'^order_edit/(?P<pk>[0-9]+)$',
-            views.order_edit, name='order_edit'),
 
     # Order related urls (AJAX implementation)
-    path('order/get_status/', views.order_get_status, name='order_get_status'),
-    path('order/update_status/', views.order_update_status,
-         name='order_update_status'),
-    path('comment/add/', views.comment_add, name='comment_add'),
-    path('upload/file/', views.order_upload_file, name='order_upload'),
-    path('order/close/', views.order_close, name='order_close'),
+    path('order/action/', views.OrderActions.as_view(), name='order_actions'),
 
     # Customer related urls
     path('customers', views.customerlist, name='customerlist'),

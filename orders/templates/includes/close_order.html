@@ -1,6 +1,6 @@
 {% load widget_tweaks %}
 
-<form method="post" action="{% url 'order_close' %}" class="js-close-order-form" data-pk="{{ order.pk }}">
+<form method="post" action="{% url 'order_actions' %}" class="js-send-form" data-action="order-close">
   {% csrf_token %}
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -21,7 +21,9 @@
     {% endfor %}
   </div>
   <input type="hidden" name="pk" value="{{ order.pk }}">
+  <input type="hidden" name="action" value="order-close">
   <div class="modal-footer">
+      <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cancelar</button>
     <button type="submit" class="btn btn-outline-success">Cerrar pedido</button>
   </div>
 </form>

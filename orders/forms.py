@@ -12,7 +12,7 @@ class CustomerForm(forms.ModelForm):
 
 
 class OrderForm(forms.ModelForm):
-    """Create a form to add new orders."""
+    """Create a form to add or edit orders."""
 
     class Meta:
         model = Order

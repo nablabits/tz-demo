@@ -1,22 +1,23 @@
-<div class="d-flex mt-4">
-  <h4><strong>Status:</strong></h4>
-</div>
-<div class="d-flex flex-column flex-md-row mt-2 pl-2">
-  <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
-    <button type="button" class="btn btn-outline-success js-order-inbox" data-status="1">Recibido</button>
+
+  <div class="d-flex mt-4">
+    <h4><strong>Status:{{order.status}}</strong></h4>
   </div>
-  <div class="btn-group mr-2 mb-2 mb-md-0" role="group" aria-label="Basic example">
-      <button type="button" class="btn btn-outline-success js-order-waiting" data-status="2">En cola</button>
-      <button type="button" class="btn btn-outline-success js-order-preparing" data-status="3">Preparando</button>
-      <button type="button" class="btn btn-outline-success js-order-performing" data-status="4">En Proceso</button>
-      <button type="button" class="btn btn-outline-success js-order-workshop" data-status="5">Acabado</button>
+  <div class="d-flex flex-column flex-md-row mt-2 pl-2">
+    <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '1' %}active{% endif %}" data-pk="{{order.pk}}" data-status="1">Recibido</button>
+    </div>
+    <div class="btn-group mr-2 mb-2 mb-md-0" role="group" aria-label="Basic example">
+        <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '2' %}active{% endif %}" data-pk="{{order.pk}}" data-status="2">En cola</button>
+        <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '3' %}active{% endif %}" data-pk="{{order.pk}}" data-status="3">Preparando</button>
+        <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '4' %}active{% endif %}" data-pk="{{order.pk}}" data-status="4">En Proceso</button>
+        <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '5' %}active{% endif %}" data-pk="{{order.pk}}" data-status="5">Acabado</button>
+    </div>
+    <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '6' %}active{% endif %}" data-pk="{{order.pk}}" data-status="6">En espera</button>
+      <button type="button" class="btn btn-outline-success {% if order.status == '7' %}active{% endif %}" id="order-close" data-pk="{{order.pk}}">Entregado</button>
+    </div>
+      <button type="button" class="btn btn-outline-success active {%if order.pending != 0 %}d-none{% endif %}">
+        <i class="fa fa-euro"></i> Cobrado
+      </button>
+      <button type="button" class="btn btn-outline-danger {%if order.pending == 0 %}d-none{% endif %}">{{order.pending}}</button>
   </div>
-  <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
-    <button type="button" class="btn btn-outline-success js-order-outbox" data-status="6">En espera</button>
-    <button type="button" class="btn btn-outline-success js-order-delivered" data-status="7">Entregado</button>
-  </div>
-    <button type="button" class="btn btn-outline-success active {%if order.paid %}d-none{% endif %}">
-      <i class="fa fa-euro"></i> Cobrado
-    </button>
-    <button type="button" class="btn btn-outline-danger {% if not order.paid %}d-none{% endif %}">{{order.pending}}</button>
-</div>

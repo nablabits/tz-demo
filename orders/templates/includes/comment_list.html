@@ -1,14 +1,22 @@
-<div id="comment_list">
-{% if comments %}
-<ul>
-  {% for comment in comments %}
-    <li>El {{comment.creation | date:"j/n"}}
-      a las {{comment.creation | date:"H:i"}}
-      {{comment.user}} comentó en {{comment.reference}}:<br>
-    {{ comment.comment}}</li>
-  {% endfor %}
-</ul>
-{% else %}
-  <span class="text-muted">No hay comentarios aún</span>
-{% endif %}
-</div>
+<div class="card mt-4" id="comment-list">
+      <div class="card-header">
+        <div class="row px-2">
+          <h4 class="font-weight-bold mr-auto">Comentarios:</h4>
+          <button class="ml-2 btn btn-outline-success" id="order-comment" data-pk="{{order.pk}}"><i class="fa fa-comment"></i> Comentar</button>
+        </div>
+      </div>
+      <div class="card-body order_details">
+        {% if comments %}
+        <ul>
+          {% for comment in comments %}
+            <li>El {{comment.creation | date:"j/n"}}
+              a las {{comment.creation | date:"H:i"}}
+              {{comment.user}} comentó:<br>
+            {{ comment.comment}}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+          <span class="text-muted">No hay comentarios aún</span>
+        {% endif %}
+      </div>
+    </div>

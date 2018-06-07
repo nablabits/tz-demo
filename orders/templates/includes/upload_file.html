@@ -1,5 +1,5 @@
 {% load widget_tweaks %}
-<form method="post" action="{% url 'order_upload' %}" class="js-upload-file-form" data-pk="{{ order.pk }}" enctype="multipart/form-data">
+<form method="post" action="{% url 'order_actions' %}" class="js-send-form" data-action="order-file" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -19,6 +19,7 @@
     {% endfor %}
   </div>
   <input type="hidden" name="pk" value="{{ order.pk }}">
+  <input type="hidden" name="action" value="order-file">
   <div class="modal-footer">
     <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>
     <button type="submit" class="btn btn-outline-success">Subir</button>
