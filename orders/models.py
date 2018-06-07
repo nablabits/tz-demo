@@ -77,6 +77,32 @@ class Order(models.Model):
         return self.prepaid - self.budget
 
 
+class OrderItem(models.Model):
+    """Each order has several clothes."""
+
+    ITEMS = (
+        ('1', 'Falda'),
+        ('2', 'Camisa'),
+        ('3', 'Corpiño'),
+        ('4', 'Pañuelo'),
+        ('5', 'Delantal'),
+        ('6', 'Chaqueta'),
+        ('7', 'Chaleco')
+    )
+    SIZES = (
+        ('1', 'XS'),
+        ('2', 'S'),
+        ('3', 'M'),
+        ('4', 'L'),
+        ('5', 'XL'),
+        ('6', 'XXL'),
+    )
+    item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
+    size = models.CharField('Talla', max_length=1, choices=SIZES, default='1')
+    qty = models.IntegerField('Cantidad', default=1)
+    reference = models.ForeignKey(Order, on_delete=models.CASCADE)
+
+
 class Document(models.Model):
     """Manage the file upload."""
 
