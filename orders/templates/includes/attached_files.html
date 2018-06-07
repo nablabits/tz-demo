@@ -1,0 +1,19 @@
+<div class="card mt-4" id="attached-files">
+  <h4 class="card-header font-weight-bold">Archivos adjuntos:</h4>
+  <div class="card-body">
+    <div class="d-flex-column">
+      {% if files %}
+        {% for file in files %}
+        <div class="my-2">
+          <a href="{{ file.document.url }}">
+            <button class="ml-2 mr-3 btn btn-outline-success" id="{{file.pk}}"><i class="fa fa-paperclip"></i> {{file.document.name}}</button>
+          </a>
+            <i class="fa fa-trash fa-2x" id="order-file-delete" data-pk="{{file.pk}}"></i>
+        </div>
+        {% endfor %}
+      {% else %}
+        No files yet
+      {% endif %}
+    </div>
+  </div>
+</div>

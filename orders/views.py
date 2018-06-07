@@ -82,7 +82,7 @@ def order_view(request, pk):
 
 @login_required()
 def order_new(request):
-    """Create new customers with a form view."""
+    """Create new orders with a form view."""
     if request.method == "POST":
         """ When coming from edit view, save the changes (if they are valid)
         and jump to main page
@@ -106,39 +106,7 @@ def order_new(request):
         return render(request, 'tz/order_new.html', settings)
 
 
-@login_required
-def order_edit(request, pk):
-    """Edit an already created order."""
-    order = get_object_or_404(Order, pk=pk)
-    if request.method == "POST":
-        form = OrderForm(request.POST, instance=order)
-        if form.is_valid():
-            form.save()
-            return redirect('order_view', pk=order.pk)
-    else:
-        form = OrderForm(instance=order)
-        return render(request, 'tz/order_new.html',
-                      {'form': form,
-                       'edit': True,
-                       })
-
-
 # Order related views (Ajax implementation)
-def order_get_status(request):
-    """Return order status in JSON mode so Ajax can implement."""
-    data = dict()
-    pk = request.GET.get('pk', None)
-    order = get_object_or_404(Order, pk=pk)
-    template = 'includes/order_status.html'
-    data['html_status'] = render_to_string(template, {'order': order})
-    data['status'] = order.status
-    if order.pending == 0:
-        data['paid'] = True
-    else:
-        data['paid'] = False
-    return JsonResponse(data)
-
-
 def order_update_status(request):
     data = dict()
     pk = request.GET.get('pk', None)
@@ -149,35 +117,6 @@ def order_update_status(request):
     template = 'includes/order_status.html'
     data['html_status'] = render_to_string(template, {'order': order})
     data['status'] = order.status
-    return JsonResponse(data)
-
-
-def order_upload_file(request):
-    data = dict()
-
-    if request.method == 'POST':
-        pk = request.POST.get('pk', None)
-        order = get_object_or_404(Order, pk=pk)
-        form = DocumentForm(request.POST, request.FILES)
-        print('files:', request.FILES)
-        if form.is_valid():
-            upload = form.save(commit=False)
-            upload.order = order
-            upload.save()
-            data['form_is_valid'] = True
-            return redirect('order_view', pk=pk)
-        else:
-            data['form_is_valid'] = False
-    else:
-        form = DocumentForm()
-        pk = request.GET.get('pk', None)
-        order = get_object_or_404(Order, pk=pk)
-
-    context = {'form': form, 'order': order}
-    data['html_form'] = render_to_string('includes/upload_file.html',
-                                         context,
-                                         request=request
-                                         )
     return JsonResponse(data)
 
 
@@ -199,7 +138,7 @@ def order_delete_file(request):
 
 
 class OrderActions(View):
-    """Unify all the actions in a single view.
+    """Unify all the AJAX actions in a single view.
 
     With this view we'll be able to edit, upload & delete files, add comments or close the order.
     """
@@ -209,111 +148,129 @@ class OrderActions(View):
         action = self.request.GET.get('action', None)
 
         if not pk or not action:
-            raise ValueError('Get data was poor')
+            raise ValueError('Unexpected GET data')
 
         # Case #1) edit the order
         if action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
             form = OrderForm(instance=order)
-            context = {'form': form, 'order': order}
             template = 'includes/edit_form.html'
 
         # Case #2) add a comment
         elif action == 'order-comment':
             order = get_object_or_404(Order, pk=pk)
             form = CommentForm()
-            context = {'form': form, 'order': order}
             template = 'includes/comment_add.html'
 
         # Case #3) Upload a file
         elif action == 'order-file':
             order = get_object_or_404(Order, pk=pk)
             form = DocumentForm()
-            context = {'form': form, 'order': order}
             template = 'includes/upload_file.html'
 
         # Case #4) close order
         elif action == 'order-close':
             order = get_object_or_404(Order, pk=pk)
             form = OrderCloseForm(instance=order)
-            context = {'form': form, 'order': order}
             template = 'includes/close_order.html'
 
         # Case #5) Delete file
         elif action == 'order-file-delete':
             file = get_object_or_404(Document, pk=pk)
-            context = {'file': file}
             template = 'includes/delete_file.html'
+
+        if action == 'order-file-delete':
+            context = {'file': file}
+        else:
+            context = {'form': form, 'order': order}
 
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
 
     def post(self, request):
-        pass
+        data = dict()
+        pk = self.request.POST.get('pk', None)
+        action = self.request.POST.get('action', None)
 
-def comment_add(request):
-    data = dict()
+        if not pk or not action:
+            raise ValueError('POST data was poor')
 
-    if request.method == 'POST':
-        pk = request.POST.get('pk', None)
-        order = get_object_or_404(Order, pk=pk)
-        form = CommentForm(request.POST)
-        if form.is_valid():
-            comment = form.save(commit=False)
-            comment.creation = timezone.now()
-            comment.user = request.user
-            comment.reference = order
-            comment.save()
-            data['form_is_valid'] = True
-            comments = Comment.objects.filter(reference=order)
-            comments = comments.order_by('-creation')
-            template = 'includes/comment_list.html'
-            data['html_comment_list'] = render_to_string(template,
-                                                         {'comments': comments}
-                                                         )
-        else:
-            data['form_is_valid'] = False
-    else:
-        form = CommentForm()
+        # Case #1) edit the order
+        if action == 'order-edit':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderForm(request.POST, instance=order)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#order-details'
+                context = {'form': form, 'order': order}
+                template = 'includes/order_details.html'
+            else:
+                data['form_is_valid'] = False
 
-    context = {'form': form}
-    data['html_form'] = render_to_string('includes/comment_add.html',
-                                         context,
-                                         request=request,
-                                         )
-    return JsonResponse(data)
+        # Case #2) add a comment
+        elif action == 'order-comment':
+            order = get_object_or_404(Order, pk=pk)
+            form = CommentForm(request.POST)
+            if form.is_valid():
+                comment = form.save(commit=False)
+                comment.creation = timezone.now()
+                comment.user = request.user
+                comment.reference = order
+                comment.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#comment-list'
+                comments = Comment.objects.filter(reference=order)
+                comments = comments.order_by('-creation')
+                context = {'form': form, 'order': order, 'comments': comments}
+                template = 'includes/comment_list.html'
+            else:
+                data['form_is_valid'] = False
 
+        # Case #3) Upload a file
+        elif action == 'order-file':
+            order = get_object_or_404(Order, pk=pk)
+            form = DocumentForm(request.POST, request.FILES)
+            if form.is_valid():
+                upload = form.save(commit=False)
+                upload.order = order
+                upload.save()
+                data['form_is_valid'] = True
+                return redirect('order_view', pk=pk)
+            else:
+                data['form_is_valid'] = False
 
-def order_close(request):
-    data = dict()
+        # Case #4) close order
+        elif action == 'order-close':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderCloseForm(request.POST, instance=order)
+            if form.is_valid():
+                close = form.save(commit=False)
+                close.status = 7
+                close.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#order-status'
+                template = 'includes/order_status.html'
+                context = {'form': form, 'order': order}
 
-    if request.method == 'POST':
-        pk = request.POST.get('pk')
-        order = get_object_or_404(Order, pk=pk)
-        form = OrderCloseForm(request.POST, instance=order)
-        if form.is_valid():
-            form.save()
-            order.status = 7
+        # # Case #5) Delete file
+        # elif action == 'order-file-delete':
+        #     file = get_object_or_404(Document, pk=pk)
+        #     template = 'includes/delete_file.html'
+
+        # Case #6) Update status
+        elif action == 'update-status':
+            status = self.request.POST.get('status', None)
+            order = get_object_or_404(Order, pk=pk)
+            order.status = status
             order.save()
             data['form_is_valid'] = True
+            data['html_id'] = '#order-status'
             template = 'includes/order_status.html'
-            data['status'] = order.status
-            data['html_status'] = render_to_string(template, {'order': order})
-        else:
-            data['form_is_valid'] = False
-    else:
-        pk = request.GET.get('pk', None)
-        order = get_object_or_404(Order, pk=pk)
-        form = OrderCloseForm(instance=order)
+            context = {'order': order}
 
-    context = {'form': form,
-               'order': order,
-               }
-    data['html_form'] = render_to_string('includes/close_order.html',
-                                         context,
-                                         request=request,
-                                         )
-    return JsonResponse(data)
+        data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
 
 
 # Customer related views

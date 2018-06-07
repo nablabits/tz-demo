@@ -1,6 +1,6 @@
 {% load widget_tweaks %}
 
-<form method="post">
+<form method="post" action="{% url 'order_actions' %}" class="js-send-form" data-action="order-edit">
   {% csrf_token %}
   {{ form.non_field_errors }}
   {% for hidden_field in form.hidden_fields %}
@@ -22,6 +22,8 @@
       {% endif %}
     </div>
   {% endfor %}
+  <input type="hidden" name="pk" value="{{ order.pk }}">
+  <input type="hidden" name="action" value="order-edit">
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>
