@@ -11,9 +11,9 @@ urlpatterns = [
 
     # Order related urls
     path('orders', views.orderlist, name='orderlist'),
-    re_path(r'^order_view/(?P<pk>[0-9]+)$',
+    re_path(r'^order/view/(?P<pk>[0-9]+)$',
             views.order_view, name='order_view'),
-    path('order_new/', views.order_new, name='order_new'),
+    path('order/new/', views.order_new, name='order_new'),
 
     # Order related urls (AJAX implementation)
     path('order/action/', views.OrderActions.as_view(), name='order_actions'),
