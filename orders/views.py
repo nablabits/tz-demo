@@ -2,10 +2,10 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.http import JsonResponse
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, Document
+from .models import Comment, Customer, Order, Document, OrderItem
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm, DocumentForm
-from .forms import OrderCloseForm
+from .forms import OrderCloseForm, OrderItemForm
 from django.contrib.auth.decorators import login_required
 from datetime import datetime
 
@@ -65,10 +65,12 @@ def order_view(request, pk):
     order = get_object_or_404(Order, pk=pk)
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     files = Document.objects.filter(order=order)
+    items = OrderItem.objects.filter(reference=order)
 
     cur_user = request.user
     now = datetime.now()
     settings = {'order': order,
+                'items': items,
                 'comments': comments,
                 'files': files,
                 'user': cur_user,
@@ -149,6 +151,12 @@ class OrderActions(View):
         elif action == 'order-file-delete':
             file = get_object_or_404(Document, pk=pk)
             template = 'includes/delete_file.html'
+
+        # Case #7) Add item
+        elif action == 'order-add-item':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderItemForm()
+            template = 'includes/add-item.html'
 
         if action == 'order-file-delete':
             context = {'file': file}
@@ -246,6 +254,22 @@ class OrderActions(View):
             data['html_id'] = '#order-status'
             template = 'includes/order_status.html'
             context = {'order': order}
+
+        # Case #7) Add item
+        if action == 'order-add-item':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderItemForm(request.POST)
+            template = 'includes/order_details.html'
+            items = OrderItem.objects.filter(reference=order)
+            context = {'form': form, 'order': order, 'items': items}
+            if form.is_valid():
+                add_item = form.save(commit=False)
+                add_item.reference = order
+                add_item.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#order-details'
+            else:
+                data['form_is_valid'] = False
 
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)

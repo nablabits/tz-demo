@@ -1,5 +1,5 @@
 from django import forms
-from .models import Customer, Order, Comment, Document
+from .models import Customer, Order, OrderItem, Comment, Document
 
 
 class CustomerForm(forms.ModelForm):
@@ -19,6 +19,14 @@ class OrderForm(forms.ModelForm):
         fields = ('customer', 'ref_name', 'delivery',
                   'waist', 'chest', 'hip', 'lenght', 'others',
                   'budget', 'prepaid')
+
+
+class OrderItemForm(forms.ModelForm):
+    """Add items using a form."""
+
+    class Meta:
+        model = OrderItem
+        fields = ('item', 'size', 'qty')
 
 
 class DocumentForm(forms.ModelForm):

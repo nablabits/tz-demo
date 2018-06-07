@@ -1,12 +1,36 @@
-<div class="card mt-4" id="order-details">
-  <h4 class="card-header font-weight-bold">Detalles:</h4>
-  <div class="card-body">
-    <ul class="order_details">
+<div class="card mt-4">
+  <div class="card-header">
+    <div class="row px-2">
+      <h4 class="font-weight-bold mr-auto">Detalles:</h4>
+      <button class="ml-2 btn btn-outline-success" id="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Item</button>
+    </div>
+  </div>
+  <div class="card-body order_details">
+    <ul class="">
       <li>Cintura: {{order.waist}}</li>
       <li>Pecho: {{order.chest}}</li>
       <li>Cadera: {{order.hip}}</li>
       <li>Largo: {{order.lenght}}</li>
       <li>Observaciones:<br>{{order.others}}</li>
     </ul>
+    <h4>Items:</h4>
+    <div class="d-flex-column">
+      {% if items %}
+        {% for item in items %}
+        <div class="my-2">
+            <span>{{item.get_item_display}}</span>
+            <button class="ml-2 mr-3 btn btn-outline-success js-item-edit" id="order-file-edit" data-pk="{{file.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
+            <button class="ml-2 mr-3 btn btn-outline-danger js-item-delete" id="order-file-delete" data-pk="{{file.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="d-flex">
+        <div class="alert alert-info" role="alert">
+          <i class="fa fa-info mr-2"></i>
+          No se ha añadido ningun item
+        </div>
+      </div>
+      {% endif %}
+    </div>
   </div>
 </div>
