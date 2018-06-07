@@ -16,10 +16,6 @@ urlpatterns = [
     path('order_new/', views.order_new, name='order_new'),
 
     # Order related urls (AJAX implementation)
-    path('order/update_status/', views.order_update_status,
-         name='order_update_status'),
-    path('delete/file/', views.order_delete_file, name='order_file_delete'),
-    # Great unification
     path('order/action/', views.OrderActions.as_view(), name='order_actions'),
 
     # Customer related urls

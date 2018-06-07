@@ -106,42 +106,13 @@ def order_new(request):
         return render(request, 'tz/order_new.html', settings)
 
 
-# Order related views (Ajax implementation)
-def order_update_status(request):
-    data = dict()
-    pk = request.GET.get('pk', None)
-    order = get_object_or_404(Order, pk=pk)
-    status = request.GET.get('status')
-    order.status = status
-    order.save()
-    template = 'includes/order_status.html'
-    data['html_status'] = render_to_string(template, {'order': order})
-    data['status'] = order.status
-    return JsonResponse(data)
-
-
-def order_delete_file(request):
-    data = dict()
-
-    if request.method == 'POST':
-        pk = request.POST.get('pk', None)
-        file = get_object_or_404(Document, pk=pk)
-    else:
-        pk = request.GET.get('pk', None)
-        file = get_object_or_404(Document, pk=pk)
-        context = {'file': file}
-        data['html_form'] = render_to_string('includes/delete_file.html',
-                                             context,
-                                             request=request
-                                             )
-        return JsonResponse(data)
-
-
 class OrderActions(View):
     """Unify all the AJAX actions in a single view.
 
-    With this view we'll be able to edit, upload & delete files, add comments or close the order.
+    With this view we'll be able to edit, upload & delete files, add comments
+    or close the order.
     """
+
     def get(self, request):
         data = dict()
         pk = self.request.GET.get('pk', None)
