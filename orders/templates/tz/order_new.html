@@ -3,13 +3,7 @@
 {% block newcustomer %}
 <section class="mb-5 f-section">
   <div class="container">
-    <h3>
-        {% if edit %}
-          Edición de pedido:
-        {% else %}
-          Nuevo Pedido:
-        {% endif %}
-    </h3>
+    <h3>Nuevo Pedido:</h3>
     <div class="d-flex justify-content-md-center col-md-10">
 
       <form method="post">
@@ -28,11 +22,7 @@
             {% endif %}
           </div>
         {% endfor %}
-        {% if edit %}
-        <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Modificar</button>
-        {% else %}
         <button type="submit" class="btn btn-outline-success my-2 my-sm-0 mx-sm-2">Crear</button>
-        {% endif %}
       </form>
     </div>
   </div>

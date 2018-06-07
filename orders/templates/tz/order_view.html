@@ -19,7 +19,7 @@
         </a>
       </div>
     </div>
-    {% if order.overdue %}
+    {% if order.overdue and order.status != '7' %}
       <div class="d-flex">
         <div class="alert alert-warning" role="alert">
           <i class="fa fa-warning text-danger mr-2"></i>
