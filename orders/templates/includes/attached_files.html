@@ -8,7 +8,7 @@
           <a href="{{ file.document.url }}">
             <button class="ml-2 mr-3 btn btn-outline-success" id="{{file.pk}}"><i class="fa fa-paperclip"></i> {{file.document.name}}</button>
           </a>
-            <button class="ml-2 mr-3 btn btn-outline-danger" id="order-file-delete" data-pk="{{file.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
+            <button class="ml-2 mr-3 btn btn-outline-danger js-file-delete" id="order-file-delete" data-pk="{{file.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
         </div>
         {% endfor %}
       {% else %}
