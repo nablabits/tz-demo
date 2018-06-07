@@ -80,7 +80,7 @@ class Order(models.Model):
 class Document(models.Model):
     """Manage the file upload."""
 
-    description = models.CharField(max_length=255, blank=True)
+    description = models.CharField('descripcion', max_length=255, blank=True)
     document = models.FileField(upload_to='documents/')
     uploaded = models.DateField(default=timezone.now)
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
