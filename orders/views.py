@@ -225,9 +225,16 @@ class OrderActions(View):
                 context = {'form': form, 'order': order}
 
         # # Case #5) Delete file
-        # elif action == 'order-file-delete':
-        #     file = get_object_or_404(Document, pk=pk)
-        #     template = 'includes/delete_file.html'
+        elif action == 'order-file-delete':
+            # file = get_object_or_404(Document, pk=pk)
+            file = Document.objects.select_related('order').get(pk=pk)
+            order = file.order
+            files = Document.objects.filter(order=order)
+            file.delete()
+            data['form_is_valid'] = True
+            data['html_id'] = '#attached-files'
+            context = {'files': files}
+            template = 'includes/attached_files.html'
 
         # Case #6) Update status
         elif action == 'update-status':
