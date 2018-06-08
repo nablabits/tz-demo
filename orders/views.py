@@ -127,36 +127,47 @@ class OrderActions(View):
         if action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
             form = OrderForm(instance=order)
-            template = 'includes/edit_form.html'
+            template = 'includes/edit/edit_order.html'
 
         # Add item
         elif action == 'order-add-item':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm()
-            template = 'includes/add-item.html'
+            template = 'includes/add/add_item.html'
+
+        # Edit item
+        elif action == 'order-edit-item':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderItemForm(instance=order)
+            template = 'includes/edit/edit_item.html'
+
+        # Delete item
+        elif action == 'order-edit-item':
+            order = get_object_or_404(Order, pk=pk)
+            template = 'includes/delete/delete_item.html'
 
         # Close order
         elif action == 'order-close':
             order = get_object_or_404(Order, pk=pk)
             form = OrderCloseForm(instance=order)
-            template = 'includes/close_order.html'
+            template = 'includes/edit/close_order.html'
 
         # Add a comment
         elif action == 'order-comment':
             order = get_object_or_404(Order, pk=pk)
             form = CommentForm()
-            template = 'includes/comment_add.html'
+            template = 'includes/add/comment_add.html'
 
         # Upload a file
         elif action == 'order-file':
             order = get_object_or_404(Order, pk=pk)
             form = DocumentForm()
-            template = 'includes/upload_file.html'
+            template = 'includes/add/upload_file.html'
 
         # Delete file
         elif action == 'order-file-delete':
             file = get_object_or_404(Document, pk=pk)
-            template = 'includes/delete_file.html'
+            template = 'includes/delete/delete_file.html'
 
         # Load proper context
         if action == 'order-file-delete':
@@ -199,6 +210,20 @@ class OrderActions(View):
                 add_item = form.save(commit=False)
                 add_item.reference = order
                 add_item.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#order-details'
+            else:
+                data['form_is_valid'] = False
+
+        # Add item
+        if action == 'order-edit-item':
+            item = OrderItem.objects.select_related('order').get(pk=pk)
+            form = OrderItemForm(request.POST, instance=item)
+            template = 'includes/order_details.html'
+            items = OrderItem.objects.filter(reference=order)
+            context = {'form': form, 'order': order, 'items': items}
+            if form.is_valid():
+                form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-details'
             else:
@@ -251,7 +276,6 @@ class OrderActions(View):
 
         # Delete file
         elif action == 'order-file-delete':
-            # file = get_object_or_404(Document, pk=pk)
             file = Document.objects.select_related('order').get(pk=pk)
             order = file.order
             files = Document.objects.filter(order=order)

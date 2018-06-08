@@ -19,8 +19,8 @@
         {% for item in items %}
         <div class="my-2">
             <span>{{item.get_item_display}}</span>
-            <button class="ml-2 mr-3 btn btn-outline-success js-item-edit" id="order-file-edit" data-pk="{{file.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
-            <button class="ml-2 mr-3 btn btn-outline-danger js-item-delete" id="order-file-delete" data-pk="{{file.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
+            <button class="ml-2 mr-3 btn btn-outline-success js-item-edit" id="order-edit-item" data-pk="{{item.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
+            <button class="ml-2 mr-3 btn btn-outline-danger js-item-delete" id="order-delete-item" data-pk="{{item.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
         </div>
         {% endfor %}
       {% else %}

@@ -86,6 +86,7 @@ $(function () {
   $('#order-comment').click(loadActionForm)
   $('#order-file').click(loadActionForm)
   $('#order-details').on('click', '#order-add-item', loadActionForm)
+  $('#order-details').on('click', '#order-edit-item', loadActionForm)
   $('.js-file-delete').on('click', loadActionForm)
   $('#order-status').on('click', '#order-close', loadActionForm)
 
