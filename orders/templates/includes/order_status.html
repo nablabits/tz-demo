@@ -14,7 +14,7 @@
     </div>
     <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
       <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '6' %}active{% endif %}" data-pk="{{order.pk}}" data-status="6">En espera</button>
-      <button type="button" class="btn btn-outline-success {% if order.status == '7' %}active{% endif %}" id="order-close" data-pk="{{order.pk}}">Entregado</button>
+      <button type="button" class="btn btn-outline-success js-close-order {% if order.status == '7' %}active{% endif %}" id="order-close" data-pk="{{order.pk}}">Entregado</button>
     </div>
       <button type="button" class="btn btn-outline-success active {%if order.pending != 0 %}d-none{% endif %}">
         <i class="fa fa-euro"></i> Cobrado

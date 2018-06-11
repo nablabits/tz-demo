@@ -15,7 +15,7 @@
           </button>
         </a>
         <a href="#">
-          <button class="ml-2 btn btn-outline-success" id="order-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
+          <button class="ml-2 btn btn-outline-success" id="order-add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
         </a>
       </div>
     </div>
@@ -46,8 +46,11 @@
     <div id="order-details">
     {% include 'includes/order_details.html' %}
     </div>
+
     <!-- Attached files -->
-    {% include 'includes/attached_files.html' %}
+    <div id="file-list">
+    {% include 'includes/file_list.html' %}
+    </div>
 
     <!-- Order Comments -->
     <div id="comment-list">

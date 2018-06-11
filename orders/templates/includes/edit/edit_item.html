@@ -22,8 +22,8 @@
       {% endif %}
     </div>
   {% endfor %}
-  <input type="hidden" name="pk" value="{{ order.pk }}">
-  <input type="hidden" name="action" value="order-add-item">
+  <input type="hidden" name="pk" value="{{ item.pk }}">
+  <input type="hidden" name="action" value="order-edit-item">
   </div>
   <div class="modal-footer">
     <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>

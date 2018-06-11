@@ -83,12 +83,14 @@ $(function () {
 
   // actions
   $('#order-edit').click(loadActionForm)
-  $('#order-comment').click(loadActionForm)
-  $('#order-file').click(loadActionForm)
-  $('#order-details').on('click', '#order-add-item', loadActionForm)
-  $('#order-details').on('click', '#order-edit-item', loadActionForm)
-  $('.js-file-delete').on('click', loadActionForm)
-  $('#order-status').on('click', '#order-close', loadActionForm)
+  $('#order-status').on('click', '.js-close-order', loadActionForm)
+  $('#order-add-comment').click(loadActionForm)
+  $('#order-details').on('click', '.js-add-item', loadActionForm)
+  $('#order-details').on('click', '.js-edit-item', loadActionForm)
+  $('#order-details').on('click', '.js-delete-item', loadActionForm)
+  $('#order-add-file').click(loadActionForm)
+  $('#file-list').on('click', '.js-delete-file', loadActionForm)
+  // $('.js-delete-file').on('click', loadActionForm)
 
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
   $('#order-status').on('click', '.js-order-status', updateStatus)

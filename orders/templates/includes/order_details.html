@@ -2,7 +2,7 @@
   <div class="card-header">
     <div class="row px-2">
       <h4 class="font-weight-bold mr-auto">Detalles:</h4>
-      <button class="ml-2 btn btn-outline-success" id="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Item</button>
+      <button class="ml-2 btn btn-outline-success js-add-item" id="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Item</button>
     </div>
   </div>
   <div class="card-body order_details">
@@ -14,23 +14,36 @@
       <li>Observaciones:<br>{{order.others}}</li>
     </ul>
     <h4>Items:</h4>
-    <div class="d-flex-column">
-      {% if items %}
-        {% for item in items %}
-        <div class="my-2">
-            <span>{{item.get_item_display}}</span>
-            <button class="ml-2 mr-3 btn btn-outline-success js-item-edit" id="order-edit-item" data-pk="{{item.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
-            <button class="ml-2 mr-3 btn btn-outline-danger js-item-delete" id="order-delete-item" data-pk="{{item.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
-        </div>
-        {% endfor %}
-      {% else %}
-      <div class="d-flex">
-        <div class="alert alert-info" role="alert">
-          <i class="fa fa-info mr-2"></i>
-          No se ha añadido ningun item
-        </div>
-      </div>
-      {% endif %}
+    {% if items %}
+    <table class="table">
+    <thead>
+      <tr>
+        <th scope="col">Elemento</th>
+        <th scope="col">Talla</th>
+        <th scope="col">Cantidad</th>
+        <th scope="col">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in items %}
+      <tr>
+        <th scope="row">{{item.get_item_display}}</th>
+        <th>{{item.size}}</th>
+        <th>{{item.qty}}</th>
+        <th>
+          <button class="ml-2 mr-3 btn btn-outline-success js-edit-item" id="order-edit-item" data-pk="{{item.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
+          <button class="ml-2 mr-3 btn btn-outline-danger js-delete-item" id="order-delete-item" data-pk="{{item.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
+        </th>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="d-flex">
+    <div class="alert alert-info" role="alert">
+      <i class="fa fa-info mr-2"></i> No se ha añadido ningún item
     </div>
+  </div>
+  {% endif %}
   </div>
 </div>
