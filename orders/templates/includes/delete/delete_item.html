@@ -1,5 +1,5 @@
 {% load widget_tweaks %}
-<form method="post" action="{% url 'order_actions' %}" class="js-send-form" data-action="order-file-delete">
+<form method="post" action="{% url 'order_actions' %}" class="js-send-form">
   {% csrf_token %}
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
@@ -8,7 +8,7 @@
     <h4 class="modal-title">Eliminar item</h4>
   </div>
   <div class="modal-body">
-    <p>Realmente borrar el item {{item.item}}?</p>
+    <p>Realmente borrar el item {{item.get_item_display}}?</p>
   </div>
   <input type="hidden" name="pk" value="{{ item.pk }}">
   <input type="hidden" name="action" value="order-delete-item">

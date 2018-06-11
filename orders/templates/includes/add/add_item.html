@@ -1,6 +1,6 @@
 {% load widget_tweaks %}
 
-<form method="post" action="{% url 'order_actions' %}" class="js-send-form" data-action="order-add-item">
+<form method="post" action="{% url 'order_actions' %}" class="js-send-form">
   {% csrf_token %}
   {{ form.non_field_errors }}
   {% for hidden_field in form.hidden_fields %}
