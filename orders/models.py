@@ -90,7 +90,7 @@ class OrderItem(models.Model):
         ('7', 'Chaleco')
     )
     item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
-    size = models.CharField('Talla', max_length=1, default='1')
+    size = models.CharField('Talla', max_length=3, default='1')
     qty = models.IntegerField('Cantidad', default=1)
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
 
