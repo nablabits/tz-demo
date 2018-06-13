@@ -1,5 +1,5 @@
 {% load widget_tweaks %}
-<form method="post" action="{% url 'order_actions' %}" class="js-send-form" enctype="multipart/form-data">
+<form method="post" action="{% url 'order_actions' %}" enctype="multipart/form-data">
   {% csrf_token %}
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-label="Close">

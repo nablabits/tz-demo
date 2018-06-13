@@ -76,7 +76,7 @@ $(function () {
         }
       }
     })
-    if (action !== 'order-file') {
+    if (action !== 'order-add-file') {
       return false
     }
   }
