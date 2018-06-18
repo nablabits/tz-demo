@@ -39,7 +39,8 @@ class Order(models.Model):
         ('5', 'WorkShop'),
         # Shop
         ('6', 'Outbox'),
-        ('7', 'Delivered')
+        ('7', 'Delivered'),
+        ('8', 'Cancelled')
     )
 
     inbox_date = models.DateTimeField(default=timezone.now)

@@ -158,6 +158,12 @@ class OrderActions(View):
             context = {'order': order, 'form': form}
             template = 'includes/edit/close_order.html'
 
+        # Cancel order (GET)
+        elif action == 'order-cancel':
+            order = get_object_or_404(Order, pk=pk)
+            context = {'order': order}
+            template = 'includes/delete/order_cancel.html'
+
         # Add a comment (GET)
         elif action == 'order-add-comment':
             order = get_object_or_404(Order, pk=pk)
@@ -205,6 +211,16 @@ class OrderActions(View):
                 template = 'includes/order_details.html'
             else:
                 data['form_is_valid'] = False
+
+        # Cancel the order (POST)
+        elif action == 'order-cancel':
+            order = get_object_or_404(Order, pk=pk)
+            order.status = 8
+            order.save()
+            data['form_is_valid'] = True
+            data['html_id'] = '#order-status'
+            template = 'includes/order_status.html'
+            context = {'order': order}
 
         # Add item (POST)
         elif action == 'order-add-item':

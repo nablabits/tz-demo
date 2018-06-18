@@ -84,6 +84,7 @@ $(function () {
   // actions
   $('#order-edit').click(loadActionForm)
   $('#order-status').on('click', '.js-close-order', loadActionForm)
+  $('#order-cancel').click(loadActionForm)
   $('#order-add-comment').click(loadActionForm)
   $('#order-details').on('click', '.js-add-item', loadActionForm)
   $('#order-details').on('click', '.js-edit-item', loadActionForm)

@@ -17,6 +17,9 @@
         <a href="#">
           <button class="ml-2 btn btn-outline-success" id="order-add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
         </a>
+        <a href="#">
+          <button class="ml-2 btn btn-outline-danger" id="order-cancel" data-pk="{{order.pk}}"><i class="fa fa-close"></i> Anular</button>
+        </a>
       </div>
     </div>
     {% if order.overdue and order.status != '7' %}
@@ -38,9 +41,19 @@
     </div>
 
     <!-- Status -->
+    {% if order.status == '8' %}
+    <div class="d-flex mt-2">
+      <div class="alert alert-warning" role="alert">
+        <i class="fa fa-warning text-danger mr-2"></i>
+        <strong>Ops!</strong>
+        Este pedido está anulado
+      </div>
+    </div>
+    {% else %}
     <div id="order-status">
     {% include 'includes/order_status.html' %}
     </div>
+    {% endif %}
 
     <!-- Order Details -->
     <div id="order-details">
