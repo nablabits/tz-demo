@@ -1,6 +1,6 @@
 {% extends "tz/base.html" %}
 {% block orderview %}
-<section id="order_detail" data-pk="{{ order.pk }}" class="f-section">
+<section id="order_view" data-pk="{{ order.pk }}" class="f-section">
   <div class="container">
     <div class="row mb-4">
       <div class="d-flex-column mr-auto">
@@ -8,7 +8,7 @@
         <h4 class="mr-auto">Creado el {{order.inbox_date | date:"j/n/Y"}}</h4>
         <h4 class="mr-auto">Entrega el {{order.delivery | date:"j/n/Y"}}</h4>
       </div>
-      <div class="d-flex">
+      <div class="{% if order.status == '8' %}d-none{% else %}d-flex{% endif %}">
         <a href="#">
           <button class="btn btn-outline-success" id="order-edit"  data-pk="{{order.pk}}">
             <i class="fa fa-edit"></i> Editar
@@ -18,11 +18,11 @@
           <button class="ml-2 btn btn-outline-success" id="order-add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
         </a>
         <a href="#">
-          <button class="ml-2 btn btn-outline-danger" id="order-cancel" data-pk="{{order.pk}}"><i class="fa fa-close"></i> Anular</button>
+          <button class="ml-2 btn btn-outline-danger js-order-cancel" data-status="8" data-pk="{{order.pk}}"><i class="fa fa-close"></i> Anular</button>
         </a>
       </div>
     </div>
-    {% if order.overdue and order.status != '7' %}
+    {% if order.overdue and order.status not in '78' %}
       <div class="d-flex">
         <div class="alert alert-warning" role="alert">
           <i class="fa fa-warning text-danger mr-2"></i>
@@ -45,8 +45,11 @@
     <div class="d-flex mt-2">
       <div class="alert alert-warning" role="alert">
         <i class="fa fa-warning text-danger mr-2"></i>
-        <strong>Ops!</strong>
+        <strong>Atención!</strong>
         Este pedido está anulado
+        <a href="#">
+          <button class="ml-2 btn btn-warning js-order-reactivate" data-status="1" data-pk="{{order.pk}}"><i class="fa fa-reload"></i> Reactivar</button>
+        </a>
       </div>
     </div>
     {% else %}

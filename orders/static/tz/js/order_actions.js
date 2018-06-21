@@ -38,8 +38,11 @@ $(function () {
       type: 'post',
       dataType: 'json',
       success: function (data) {
-        // $('#order-status').html(data.html)
-        $(data.html_id).html(data.html)
+        if (data.redirect) {
+          location.reload()
+        } else {
+          $(data.html_id).html(data.html)
+        }
       }
     })
     return false
@@ -81,18 +84,19 @@ $(function () {
     }
   }
 
-  // actions
+  // actions (GET)
   $('#order-edit').click(loadActionForm)
   $('#order-status').on('click', '.js-close-order', loadActionForm)
-  $('#order-cancel').click(loadActionForm)
   $('#order-add-comment').click(loadActionForm)
   $('#order-details').on('click', '.js-add-item', loadActionForm)
   $('#order-details').on('click', '.js-edit-item', loadActionForm)
   $('#order-details').on('click', '.js-delete-item', loadActionForm)
   $('#order-add-file').click(loadActionForm)
   $('#file-list').on('click', '.js-delete-file', loadActionForm)
-  // $('.js-delete-file').on('click', loadActionForm)
 
+  // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
   $('#order-status').on('click', '.js-order-status', updateStatus)
+  $('.js-order-cancel').click(updateStatus)
+  $('.js-order-reactivate').click(updateStatus)
 })
