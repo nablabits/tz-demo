@@ -1,6 +1,6 @@
   | mount | view | template | reverse |
   | --- | --- | --- | --- |
-  | / | main | main | tz/main | main |
+  | / | main | tz/main | main |
   | --- | --- | --- | --- |
   | /orders | orderlist | tz/orders | orderlist |
   | /order/view/_no._ | order_view | tz/order_view | order_view |

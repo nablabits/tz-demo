@@ -1,0 +1,23 @@
+<table class="table">
+<thead>
+  <tr>
+    <th scope="col">Nombre</th>
+    <th scope="col">Alta</th>
+    <th scope="col">Pedidos</th>
+  </tr>
+</thead>
+<tbody>
+  {% for customer in customers %}
+  <tr>
+    <th>{{ customer.name }}</th>
+    <th>{{ customer.creation | date:"j/n/Y" }}</th>
+    <th>
+      {{ customer.orders_made }}
+      <a href="{% url 'customer_view' pk=customer.pk %}">
+        <i class="fa fa-eye pull-right"></i>
+      </a>
+    </th>
+  </tr>
+  {% endfor %}
+</tbody>
+</table>

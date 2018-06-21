@@ -13,29 +13,14 @@
   </div>
 </section>
 <div class="container">
-  <h3>Todos los clientes:</h3>
-  <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Nombre</th>
-      <th scope="col">Alta</th>
-      <th scope="col">Pedidos</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for customer in customers %}
-    <tr>
-      <th>{{ customer.name }}</th>
-      <th>{{ customer.creation | date:"j/n/Y" }}</th>
-      <th>
-        {{ customer.orders_made }}
-        <a href="{% url 'customer_view' pk=customer.pk %}">
-          <i class="fa fa-eye pull-right"></i>
-        </a>
-      </th>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+  <div class="d-flex-column mb-2">
+    <h3>Todos los clientes:</h3>
+    <a href="#">
+      <button class="btn btn-outline-success" id="customer-add"  data-pk="{{order.pk}}">
+        <i class="fa fa-plus"></i> Nuevo cliente
+      </button>
+    </a>
+  </div>
+  {% include 'includes/customer_list.html' %}
 </div>
 {% endblock %}

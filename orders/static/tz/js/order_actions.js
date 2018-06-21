@@ -31,7 +31,7 @@ $(function () {
     var status = $(this).attr('data-status')
     var action = 'update-status'
     $.ajax({
-      url: '/order/action/',
+      url: '/actions/',
       data: $.param({
         'pk': pk, 'status': status, 'action': action
       }),
@@ -52,7 +52,7 @@ $(function () {
     var action = $(this).attr('id')
     var pk = $(this).attr('data-pk')
     $.ajax({
-      url: '/order/action/',
+      url: '/actions/',
       data: {'pk': pk, 'action': action},
       dataType: 'json',
       beforeSend: function () {
@@ -97,6 +97,7 @@ $(function () {
   $('#order-details').on('click', '.js-delete-item', loadActionForm)
   $('#order-add-file').click(loadActionForm)
   $('#file-list').on('click', '.js-delete-file', loadActionForm)
+  $('.js-customer-add').click(loadActionForm)
 
   // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
