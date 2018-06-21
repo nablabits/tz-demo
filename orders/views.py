@@ -259,9 +259,6 @@ class OrderActions(View):
                 data['form_is_valid'] = True
                 data['redirect'] = True
                 return JsonResponse(data)
-                # data['html_id'] = '#order-status'
-                # template = 'includes/order_status.html'
-                # context = {'form': form, 'order': order}
 
         # Add a comment (POST)
         elif action == 'order-comment':
