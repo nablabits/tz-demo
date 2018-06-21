@@ -1,4 +1,4 @@
-/* global $ jQuery */
+/* global $ jQuery location */
 $(function () {
 /* Functions */
   $.ajaxSetup({
@@ -74,8 +74,12 @@ $(function () {
       dataType: 'json',
       success: function (data) {
         if (data.form_is_valid) {
-          $(data.html_id).html(data.html)
-          $('#action-modal').modal('hide')
+          if (data.redirect) {
+            location.reload()
+          } else {
+            $(data.html_id).html(data.html)
+            $('#action-modal').modal('hide')
+          }
         }
       }
     })

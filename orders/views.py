@@ -257,9 +257,11 @@ class OrderActions(View):
                 close.status = 7
                 close.save()
                 data['form_is_valid'] = True
-                data['html_id'] = '#order-status'
-                template = 'includes/order_status.html'
-                context = {'form': form, 'order': order}
+                data['redirect'] = True
+                return JsonResponse(data)
+                # data['html_id'] = '#order-status'
+                # template = 'includes/order_status.html'
+                # context = {'form': form, 'order': order}
 
         # Add a comment (POST)
         elif action == 'order-comment':
@@ -313,7 +315,7 @@ class OrderActions(View):
             order = get_object_or_404(Order, pk=pk)
             order.status = status
             order.save()
-            if status in ('8', '1'):
+            if status in ('1', '8'):
                 data['redirect'] = True
                 return JsonResponse(data)
             else:
