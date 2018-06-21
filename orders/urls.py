@@ -16,7 +16,7 @@ urlpatterns = [
     path('order/new/', views.order_new, name='order_new'),
 
     # Order related urls (AJAX implementation)
-    path('actions/', views.OrderActions.as_view(), name='actions'),
+    path('actions/', views.Actions.as_view(), name='actions'),
 
     # Customer related urls
     path('customers', views.customerlist, name='customerlist'),

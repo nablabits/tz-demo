@@ -108,11 +108,11 @@ def order_new(request):
         return render(request, 'tz/order_new.html', settings)
 
 
-class OrderActions(View):
+class Actions(View):
     """Unify all the AJAX actions in a single view.
 
     With this view we'll be able to edit, upload & delete files, add comments
-    or close the order.
+    or close orders. While let CRUD with customers
     """
 
     def get(self, request):
