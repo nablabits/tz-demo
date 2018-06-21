@@ -38,7 +38,7 @@ $(function () {
       type: 'post',
       dataType: 'json',
       success: function (data) {
-        if (data.redirect) {
+        if (data.reload) {
           location.reload()
         } else {
           $(data.html_id).html(data.html)
@@ -74,7 +74,8 @@ $(function () {
       dataType: 'json',
       success: function (data) {
         if (data.form_is_valid) {
-          if (data.redirect) {
+          if (data.reload) {
+            $('#action-modal').modal('hide')
             location.reload()
           } else {
             $(data.html_id).html(data.html)
@@ -89,6 +90,7 @@ $(function () {
   }
 
   // actions (GET)
+  $('#order-add').click(loadActionForm)
   $('#order-edit').click(loadActionForm)
   $('#order-status').on('click', '.js-close-order', loadActionForm)
   $('#order-add-comment').click(loadActionForm)
@@ -105,3 +107,4 @@ $(function () {
   $('.js-order-cancel').click(updateStatus)
   $('.js-order-reactivate').click(updateStatus)
 })
+reload

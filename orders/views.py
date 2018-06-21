@@ -123,8 +123,14 @@ class Actions(View):
         if not pk or not action:
             raise ValueError('Unexpected GET data')
 
+        # Add new order
+        if action == 'order-add':
+            form = OrderForm()
+            context = {'form': form}
+            template = 'includes/add/add_order.html'
+
         # Edit the order (GET)
-        if action == 'order-edit':
+        elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
             form = OrderForm(instance=order)
             context = {'order': order, 'form': form}
@@ -192,8 +198,17 @@ class Actions(View):
         if not pk or not action:
             raise ValueError('POST data was poor')
 
+        # New Order
+        if action == 'order-new':
+            form = OrderForm(request.POST)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['new'] = True
+                return JsonResponse(data)
+
         # Edit the order (POST)
-        if action == 'order-edit':
+        elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
             form = OrderForm(request.POST, instance=order)
             if form.is_valid():
@@ -257,7 +272,7 @@ class Actions(View):
                 close.status = 7
                 close.save()
                 data['form_is_valid'] = True
-                data['redirect'] = True
+                data['reload'] = True
                 return JsonResponse(data)
 
         # Add a comment (POST)
@@ -313,7 +328,7 @@ class Actions(View):
             order.status = status
             order.save()
             if status in ('1', '8'):
-                data['redirect'] = True
+                data['reload'] = True
                 return JsonResponse(data)
             else:
                 data['form_is_valid'] = True

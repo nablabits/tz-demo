@@ -50,12 +50,18 @@
       <div class="row">
         <div class="d-none d-lg-block col aside-wide bg-light">
           <nav class="nav flex-column">
-            <a class="nav-item nav-link" href="{% url 'main' %}"><i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
-            <a class="nav-item nav-link" href="{% url 'customerlist' %}"><i class="fa fa-fw fa-search pr-2"></i> Buscar cliente</a>
-            <a class="nav-item nav-link" href="{% url 'customer_new' %}"><i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
-            <a class="nav-item nav-link" href="{% url 'orderlist' %}"><i class="fa fa-fw fa-list pr-2"></i> Todos los pedidos</a>
-            <a class="nav-item nav-link" href="{% url 'order_new' %}"><i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
-            <a class="nav-item nav-link" href="{% url 'order_new' %}"><i class="fa fa-fw fa-euro pr-2"></i> Pendiente de pago</a>
+            <a class="nav-item nav-link" href="{% url 'main' %}">
+              <i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
+            <a class="nav-item nav-link" href="{% url 'customerlist' %}">
+              <i class="fa fa-fw fa-search pr-2"></i> Buscar cliente</a>
+            <a class="nav-item nav-link" href="{% url 'customer_new' %}">
+              <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
+            <a class="nav-item nav-link" href="{% url 'orderlist' %}">
+              <i class="fa fa-fw fa-list pr-2"></i> Todos los pedidos</a>
+            <a class="nav-item nav-link" href="#" id="order-add" data-pk="0">
+              <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
+            <a class="nav-item nav-link" href="{% url 'order_new' %}">
+              <i class="fa fa-fw fa-euro pr-2"></i> Pendiente de pago</a>
             <a class="nav-item nav-link" href="#"><i class="fa fa-fw fa-sign-out pr-2"></i> Cerrar sesión</a>
           </nav>
         </div>
