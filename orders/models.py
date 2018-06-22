@@ -111,6 +111,7 @@ class Comment(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
     comment = models.TextField(default='')
+    read = models.BooleanField('Leido', default=False)
 
     def __str__(self):
         """Force object name."""
