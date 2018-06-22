@@ -65,8 +65,7 @@
           {% if orders_delivered %}
             {% for order in orders_delivered %}
             <li>
-              {{order.ref_name}}: entrega el {{order.delivery | date:"j/n/Y"}}
-              {% if order.overdue %}<i class="fa fa-warning text-danger pl-2"></i> {% endif %}
+              {{order.ref_name}}: entregado el {{order.delivery | date:"j/n/Y"}}
               <a href="{% url 'order_view' pk=order.pk %}">
                 <i class="fa fa-eye pull-right"></i>
               </a>
@@ -82,6 +81,9 @@
       <h4 class="card-header font-weight-bold">Pendiente de pago:</h4>
       <div class="card-body">
         <ul class="order_details">
+          {% if not pending %}
+          <small class="pl-2 mt-0 text-muted">No se encontró ningún pedido pendiente de pago</small>
+          {% endif %}
           {% for order in pending %}
           <li>
             {{order.ref_name}}: {{order.pending}}€
