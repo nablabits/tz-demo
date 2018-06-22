@@ -315,6 +315,7 @@ class Actions(View):
             if form.is_valid():
                 close = form.save(commit=False)
                 close.status = 7
+                close.delivery = timezone.now()
                 close.save()
                 data['form_is_valid'] = True
                 data['reload'] = True
