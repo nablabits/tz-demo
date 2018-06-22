@@ -49,7 +49,7 @@ $(function () {
   }
 
   var loadActionForm = function () {
-    var action = $(this).attr('id')
+    var action = $(this).attr('data-action')
     var pk = $(this).attr('data-pk')
     $.ajax({
       url: '/actions/',
@@ -90,14 +90,14 @@ $(function () {
   }
 
   // actions (GET)
-  $('#order-add').click(loadActionForm)
-  $('#order-edit').click(loadActionForm)
+  $('.js-order-add').click(loadActionForm)
+  $('.js-order-edit').click(loadActionForm)
   $('#order-status').on('click', '.js-close-order', loadActionForm)
-  $('#order-add-comment').click(loadActionForm)
+  $('.js-order-add-comment').click(loadActionForm)
   $('#order-details').on('click', '.js-add-item', loadActionForm)
   $('#order-details').on('click', '.js-edit-item', loadActionForm)
   $('#order-details').on('click', '.js-delete-item', loadActionForm)
-  $('#order-add-file').click(loadActionForm)
+  $('.js-order-add-file').click(loadActionForm)
   $('#file-list').on('click', '.js-delete-file', loadActionForm)
   $('.js-customer-add').click(loadActionForm)
 

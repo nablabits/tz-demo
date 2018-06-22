@@ -13,7 +13,6 @@ urlpatterns = [
     path('orders', views.orderlist, name='orderlist'),
     re_path(r'^order/view/(?P<pk>[0-9]+)$',
             views.order_view, name='order_view'),
-    # path('order/new/', views.order_new, name='order_new'),
 
     # Order related urls (AJAX implementation)
     path('actions/', views.Actions.as_view(), name='actions'),

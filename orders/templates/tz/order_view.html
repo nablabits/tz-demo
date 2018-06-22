@@ -10,12 +10,12 @@
       </div>
       <div class="{% if order.status == '8' %}d-none{% else %}d-flex{% endif %}">
         <a href="#">
-          <button class="btn btn-outline-success" id="order-edit"  data-pk="{{order.pk}}">
+          <button class="btn btn-outline-success js-order-edit" data-action="order-edit"  data-pk="{{order.pk}}">
             <i class="fa fa-edit"></i> Editar
           </button>
         </a>
         <a href="#">
-          <button class="ml-2 btn btn-outline-success" id="order-add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
+          <button class="ml-2 btn btn-outline-success js-order-add-file" data-action="order-add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
         </a>
         <a href="#">
           <button class="ml-2 btn btn-outline-danger js-order-cancel" data-status="8" data-pk="{{order.pk}}"><i class="fa fa-close"></i> Anular</button>

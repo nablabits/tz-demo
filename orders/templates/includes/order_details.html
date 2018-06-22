@@ -2,7 +2,7 @@
   <div class="card-header">
     <div class="row px-2">
       <h4 class="font-weight-bold mr-auto">Detalles:</h4>
-      <button class="ml-2 btn btn-outline-success js-add-item" id="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Item</button>
+      <button class="ml-2 btn btn-outline-success js-add-item" data-action="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Item</button>
     </div>
   </div>
   <div class="card-body order_details">
@@ -31,8 +31,8 @@
         <th>{{item.size}}</th>
         <th>{{item.qty}}</th>
         <th>
-          <button class="ml-2 mr-3 btn btn-outline-success js-edit-item" id="order-edit-item" data-pk="{{item.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
-          <button class="ml-2 mr-3 btn btn-outline-danger js-delete-item" id="order-delete-item" data-pk="{{item.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
+          <button class="ml-2 mr-3 btn btn-outline-success js-edit-item" data-action="order-edit-item" data-pk="{{item.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
+          <button class="ml-2 mr-3 btn btn-outline-danger js-delete-item" data-action="order-delete-item" data-pk="{{item.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
         </th>
       </tr>
       {% endfor %}

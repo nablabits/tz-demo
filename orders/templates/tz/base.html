@@ -40,7 +40,7 @@
       <li>Pedidos:</li>
       <ul>
         <li><a href="{% url 'orderlist' %}">Todos los pedidos</a></li>
-        <li><a href="#" class="js-add-order">Nuevo pedido</a>
+        <li><a href="#" class="js-order-add" data-action="order-add" data-pk="0">Nuevo pedido</a>
         </li>
       </ul>
       <li><i class="fa fa-sign-out"></i> Cerrar sesión</li>
@@ -58,7 +58,7 @@
               <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
             <a class="nav-item nav-link" href="{% url 'orderlist' %}">
               <i class="fa fa-fw fa-list pr-2"></i> Todos los pedidos</a>
-            <a class="nav-item nav-link" href="#" id="order-add" data-pk="0">
+            <a class="nav-item nav-link js-order-add" href="#" data-action="order-add" data-pk="0">
               <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
             <a class="nav-item nav-link" href="#">
               <i class="fa fa-fw fa-euro pr-2"></i> Pendiente de pago</a>

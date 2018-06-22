@@ -82,32 +82,6 @@ def order_view(request, pk):
     return render(request, 'tz/order_view.html', settings)
 
 
-# @login_required()
-# def order_new(request):
-#     """Create new orders with a form view."""
-#     if request.method == "POST":
-#         """ When coming from edit view, save the changes (if they are valid)
-#         and jump to main page
-#         """
-#         form = OrderForm(request.POST)
-#
-#         if form.is_valid():
-#             customer = form.save(commit=False)
-#             customer.creation = timezone.now()
-#             customer.user = request.user
-#             customer.save()
-#             return redirect('main')
-#     else:
-#         form = OrderForm()
-#         now = datetime.now()
-#         settings = {'form': form,
-#                     'now': now,
-#                     'title': 'TrapuZarrak · Nuevo Pedido',
-#                     'footer': False,
-#                     }
-#         return render(request, 'tz/order_new.html', settings)
-
-
 class Actions(View):
     """Unify all the AJAX actions in a single view.
 
