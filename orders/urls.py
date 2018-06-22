@@ -21,9 +21,6 @@ urlpatterns = [
     path('customers', views.customerlist, name='customerlist'),
     re_path(r'^customer_view/(?P<pk>[0-9]+)$',
             views.customer_view, name='customer_view'),
-    path('customer_new/', views.customer_new, name='customer_new'),
-    re_path(r'^customer/(?P<pk>[0-9]+)$',
-            views.customer_edit, name='customer_edit'),
 
     # Loging related urls
     path('accounts/login/', auth_views.login, name='login'),

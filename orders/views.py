@@ -97,18 +97,39 @@ class Actions(View):
         if not pk or not action:
             raise ValueError('Unexpected GET data')
 
-        ### Add actions ###
-        # Add new order
+        """ Add actions """
+        # Add order
         if action == 'order-add':
             form = OrderForm()
             context = {'form': form}
             template = 'includes/add/add_order.html'
 
-        # Add new new customer
-        if action == 'customer-add':
+        # Add customer
+        elif action == 'customer-add':
             form = CustomerForm()
             context = {'form': form}
             template = 'includes/add/add_customer.html'
+
+        # Add item (GET)
+        elif action == 'order-add-item':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderItemForm()
+            context = {'order': order, 'form': form}
+            template = 'includes/add/add_item.html'
+
+        # Add a comment (GET)
+        elif action == 'order-add-comment':
+            order = get_object_or_404(Order, pk=pk)
+            form = CommentForm()
+            context = {'order': order, 'form': form}
+            template = 'includes/add/add_comment.html'
+
+        # Add file (GET)
+        elif action == 'order-add-file':
+            order = get_object_or_404(Order, pk=pk)
+            form = DocumentForm()
+            context = {'order': order, 'form': form}
+            template = 'includes/add/add_file.html'
 
         # Edit the order (GET)
         elif action == 'order-edit':
@@ -117,12 +138,19 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/edit/edit_order.html'
 
-        # Add item (GET)
-        elif action == 'order-add-item':
+        # Edit customer (GET)
+        elif action == 'customer-edit':
+            customer = get_object_or_404(Customer, pk=pk)
+            form = CustomerForm(instance=customer)
+            context = {'customer': customer, 'form': form}
+            template = 'includes/edit/edit_customer.html'
+
+        # Close order (GET)
+        elif action == 'order-close':
             order = get_object_or_404(Order, pk=pk)
-            form = OrderItemForm()
+            form = OrderCloseForm(instance=order)
             context = {'order': order, 'form': form}
-            template = 'includes/add/add_item.html'
+            template = 'includes/edit/close_order.html'
 
         # Edit item (GET)
         elif action == 'order-edit-item':
@@ -138,32 +166,17 @@ class Actions(View):
             context = {'item': item}
             template = 'includes/delete/delete_item.html'
 
-        # Close order (GET)
-        elif action == 'order-close':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderCloseForm(instance=order)
-            context = {'order': order, 'form': form}
-            template = 'includes/edit/close_order.html'
-
-        # Add a comment (GET)
-        elif action == 'order-add-comment':
-            order = get_object_or_404(Order, pk=pk)
-            form = CommentForm()
-            context = {'order': order, 'form': form}
-            template = 'includes/add/add_comment.html'
-
-        # Upload a file (GET)
-        elif action == 'order-add-file':
-            order = get_object_or_404(Order, pk=pk)
-            form = DocumentForm()
-            context = {'order': order, 'form': form}
-            template = 'includes/add/add_file.html'
-
         # Delete file (GET)
         elif action == 'order-delete-file':
             file = get_object_or_404(Document, pk=pk)
             context = {'file': file}
             template = 'includes/delete/delete_file.html'
+
+        # Delete Customer (GET)
+        elif action == 'customer-delete':
+            customer = get_object_or_404(Customer, pk=pk)
+            context = {'customer': customer}
+            template = 'includes/delete/delete_customer.html'
 
         else:
             raise NameError('Action was not recogniced')
@@ -256,10 +269,20 @@ class Actions(View):
             if form.is_valid():
                 form.save()
                 data['form_is_valid'] = True
-                data['html_id'] = '#order-details'
-                items = OrderItem.objects.filter(reference=order)
-                context = {'form': form, 'order': order, 'items': items}
-                template = 'includes/order_details.html'
+                data['reload'] = True
+                return JsonResponse(data)
+            else:
+                data['form_is_valid'] = False
+
+        # Edit Customer (POST)
+        elif action == 'customer-edit':
+            customer = get_object_or_404(Customer, pk=pk)
+            form = CustomerForm(request.POST, instance=customer)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['reload'] = True
+                return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
 
@@ -327,6 +350,12 @@ class Actions(View):
             context = {'files': files}
             template = 'includes/file_list.html'
 
+        # Delete customer (POST)
+        elif action == 'customer-delete':
+            customer = get_object_or_404(Customer, pk=pk)
+            customer.delete()
+            return redirect('customerlist')
+
         else:
             raise NameError('Action was not recogniced')
 
@@ -380,46 +409,3 @@ def customer_view(request, pk):
                 'footer': True,
                 }
     return render(request, 'tz/customer_view.html', settings)
-
-
-# Login related views
-@login_required()
-def customer_new(request):
-    """Create new customers with a form view."""
-    if request.method == "POST":
-        """ When coming from edit view, save the changes (if they are valid)
-        and jump to main page
-        """
-        form = CustomerForm(request.POST)
-
-        if form.is_valid():
-            customer = form.save(commit=False)
-            customer.creation = timezone.now()
-            customer.save()
-            return redirect('main')
-    else:
-        form = CustomerForm()
-        now = datetime.now()
-        return render(request, 'tz/customer_new.html',
-                      {'form': form,
-                       'now': now,
-                       'title': 'TrapuZarrak · Nuevo Cliente',
-                       'footer': False,
-                       })
-
-
-@login_required
-def customer_edit(request, pk):
-    """Edit or update a customer's data."""
-    customer = get_object_or_404(Customer, pk=pk)
-    if request.method == "POST":
-        form = CustomerForm(request.POST, instance=customer)
-        if form.is_valid():
-            form.save()
-            return redirect('customer_view')
-    else:
-        form = CustomerForm(instance=customer)
-    return render(request, 'tz/customer_new.html',
-                  {'form': form,
-                   'edit': True,
-                   })
