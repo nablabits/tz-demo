@@ -35,7 +35,7 @@
       <li>Clientes:</li>
         <ul>
           <li><a href="{% url 'customerlist' %}">Buscar cliente</a></li>
-          <li><a href="#" class="js-customer-add">Nuevo cliente</a></li>
+          <li><a href="#" class="js-customer-add" data-action="customer-add" data-pk="0">Nuevo cliente</a></li>
         </ul>
       <li>Pedidos:</li>
       <ul>
@@ -54,7 +54,7 @@
               <i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
             <a class="nav-item nav-link" href="{% url 'customerlist' %}">
               <i class="fa fa-fw fa-search pr-2"></i> Buscar cliente</a>
-            <a class="nav-item nav-link" href="{% url 'customer_new' %}">
+            <a class="nav-item nav-link js-customer-add" href="#" data-action="customer-add" data-pk="0">
               <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
             <a class="nav-item nav-link" href="{% url 'orderlist' %}">
               <i class="fa fa-fw fa-list pr-2"></i> Todos los pedidos</a>

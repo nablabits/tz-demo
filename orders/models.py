@@ -20,7 +20,6 @@ class Customer(models.Model):
         """Get the name of the entry."""
         return self.name
 
-    # @property
     def orders_made(self):
         orders = len(Order.objects.filter(customer=self.pk))
         return orders

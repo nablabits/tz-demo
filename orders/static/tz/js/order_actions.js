@@ -107,4 +107,3 @@ $(function () {
   $('.js-order-cancel').click(updateStatus)
   $('.js-order-reactivate').click(updateStatus)
 })
-reload

@@ -97,11 +97,18 @@ class Actions(View):
         if not pk or not action:
             raise ValueError('Unexpected GET data')
 
+        ### Add actions ###
         # Add new order
         if action == 'order-add':
             form = OrderForm()
             context = {'form': form}
             template = 'includes/add/add_order.html'
+
+        # Add new new customer
+        if action == 'customer-add':
+            form = CustomerForm()
+            context = {'form': form}
+            template = 'includes/add/add_customer.html'
 
         # Edit the order (GET)
         elif action == 'order-edit':
@@ -172,7 +179,7 @@ class Actions(View):
         if not pk or not action:
             raise ValueError('POST data was poor')
 
-        # New Order
+        # Add Order
         if action == 'order-new':
             form = OrderForm(request.POST)
             if form.is_valid():
@@ -182,17 +189,31 @@ class Actions(View):
                 order.save()
                 return redirect('order_view', pk=order.pk)
 
-        # Edit the order (POST)
-        elif action == 'order-edit':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderForm(request.POST, instance=order)
+        # Add Customer
+        elif action == 'customer-new':
+            form = CustomerForm(request.POST)
             if form.is_valid():
-                form.save()
+                customer = form.save(commit=False)
+                customer.creation = timezone.now()
+                customer.save()
+                return redirect('customer_view', pk=customer.pk)
+
+        # Add comment (POST)
+        elif action == 'order-comment':
+            order = get_object_or_404(Order, pk=pk)
+            form = CommentForm(request.POST)
+            if form.is_valid():
+                comment = form.save(commit=False)
+                comment.creation = timezone.now()
+                comment.user = request.user
+                comment.reference = order
+                comment.save()
                 data['form_is_valid'] = True
-                data['html_id'] = '#order-details'
-                items = OrderItem.objects.filter(reference=order)
-                context = {'form': form, 'order': order, 'items': items}
-                template = 'includes/order_details.html'
+                data['html_id'] = '#comment-list'
+                comments = Comment.objects.filter(reference=order)
+                comments = comments.order_by('-creation')
+                context = {'form': form, 'comments': comments}
+                template = 'includes/comment_list.html'
             else:
                 data['form_is_valid'] = False
 
@@ -212,64 +233,7 @@ class Actions(View):
             else:
                 data['form_is_valid'] = False
 
-        # Edit item (POST)
-        elif action == 'order-edit-item':
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            order = item.reference
-            form = OrderItemForm(request.POST, instance=item)
-            template = 'includes/order_details.html'
-            items = OrderItem.objects.filter(reference=order)
-            context = {'form': form, 'order': order, 'items': items}
-            if form.is_valid():
-                form.save()
-                data['form_is_valid'] = True
-                data['html_id'] = '#order-details'
-            else:
-                data['form_is_valid'] = False
-
-        # Delete item (POST) define
-        elif action == 'order-delete-item':
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            order = item.reference
-            items = OrderItem.objects.filter(reference=order)
-            item.delete()
-            data['form_is_valid'] = True
-            data['html_id'] = '#order-details'
-            context = {'order': order, 'items': items}
-            template = 'includes/order_details.html'
-
-        # Close order (POST)
-        elif action == 'order-close':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderCloseForm(request.POST, instance=order)
-            if form.is_valid():
-                close = form.save(commit=False)
-                close.status = 7
-                close.save()
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-
-        # Add a comment (POST)
-        elif action == 'order-comment':
-            order = get_object_or_404(Order, pk=pk)
-            form = CommentForm(request.POST)
-            if form.is_valid():
-                comment = form.save(commit=False)
-                comment.creation = timezone.now()
-                comment.user = request.user
-                comment.reference = order
-                comment.save()
-                data['form_is_valid'] = True
-                data['html_id'] = '#comment-list'
-                comments = Comment.objects.filter(reference=order)
-                comments = comments.order_by('-creation')
-                context = {'form': form, 'comments': comments}
-                template = 'includes/comment_list.html'
-            else:
-                data['form_is_valid'] = False
-
-        # Upload a file (POST)
+        # Add file (POST)
         elif action == 'order-add-file':
             order = get_object_or_404(Order, pk=pk)
             form = DocumentForm(request.POST, request.FILES)
@@ -285,16 +249,46 @@ class Actions(View):
                 template = 'includes/add/add_file.html'
                 data['form_is_valid'] = False
 
-        # Delete file (POST)
-        elif action == 'order-delete-file':
-            file = Document.objects.select_related('order').get(pk=pk)
-            order = file.order
-            files = Document.objects.filter(order=order)
-            file.delete()
-            data['form_is_valid'] = True
-            data['html_id'] = '#file-list'
-            context = {'files': files}
-            template = 'includes/file_list.html'
+        # Edit order (POST)
+        elif action == 'order-edit':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderForm(request.POST, instance=order)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#order-details'
+                items = OrderItem.objects.filter(reference=order)
+                context = {'form': form, 'order': order, 'items': items}
+                template = 'includes/order_details.html'
+            else:
+                data['form_is_valid'] = False
+
+        # Edit item (POST)
+        elif action == 'order-edit-item':
+            item = OrderItem.objects.select_related('reference').get(pk=pk)
+            order = item.reference
+            form = OrderItemForm(request.POST, instance=item)
+            template = 'includes/order_details.html'
+            items = OrderItem.objects.filter(reference=order)
+            context = {'form': form, 'order': order, 'items': items}
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#order-details'
+            else:
+                data['form_is_valid'] = False
+
+        # Close order (POST)
+        elif action == 'order-close':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderCloseForm(request.POST, instance=order)
+            if form.is_valid():
+                close = form.save(commit=False)
+                close.status = 7
+                close.save()
+                data['form_is_valid'] = True
+                data['reload'] = True
+                return JsonResponse(data)
 
         # Update status (POST)
         elif action == 'update-status':
@@ -310,6 +304,28 @@ class Actions(View):
                 data['html_id'] = '#order-status'
                 template = 'includes/order_status.html'
                 context = {'order': order}
+
+        # Delete item (POST) define
+        elif action == 'order-delete-item':
+            item = OrderItem.objects.select_related('reference').get(pk=pk)
+            order = item.reference
+            items = OrderItem.objects.filter(reference=order)
+            item.delete()
+            data['form_is_valid'] = True
+            data['html_id'] = '#order-details'
+            context = {'order': order, 'items': items}
+            template = 'includes/order_details.html'
+
+        # Delete file (POST)
+        elif action == 'order-delete-file':
+            file = Document.objects.select_related('order').get(pk=pk)
+            order = file.order
+            files = Document.objects.filter(order=order)
+            file.delete()
+            data['form_is_valid'] = True
+            data['html_id'] = '#file-list'
+            context = {'files': files}
+            template = 'includes/file_list.html'
 
         else:
             raise NameError('Action was not recogniced')
