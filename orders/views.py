@@ -98,13 +98,20 @@ class Actions(View):
             raise ValueError('Unexpected GET data')
 
         """ Add actions """
-        # Add order
+        # Add order (GET)
         if action == 'order-add':
             form = OrderForm()
             context = {'form': form}
             template = 'includes/add/add_order.html'
 
-        # Add customer
+        # Add order from customer (GET)
+        if action == 'order-from-customer':
+            customer = get_object_or_404(Customer, pk=pk)
+            form = OrderForm(initial={'customer': customer})
+            context = {'form': form}
+            template = 'includes/add/add_order.html'
+
+        # Add customer (GET)
         elif action == 'customer-add':
             form = CustomerForm()
             context = {'form': form}
@@ -192,7 +199,7 @@ class Actions(View):
         if not pk or not action:
             raise ValueError('POST data was poor')
 
-        # Add Order
+        # Add Order (POST)
         if action == 'order-new':
             form = OrderForm(request.POST)
             if form.is_valid():
@@ -202,7 +209,7 @@ class Actions(View):
                 order.save()
                 return redirect('order_view', pk=order.pk)
 
-        # Add Customer
+        # Add Customer (POST)
         elif action == 'customer-new':
             form = CustomerForm(request.POST)
             if form.is_valid():
