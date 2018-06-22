@@ -62,11 +62,11 @@ header{
   margin-top: 0;
 }
 .commentsbox{
-  /* width: 80%; */
   background-color: #84DCFF;
   border-radius: 5px;
   border: 1px solid lightgrey;
   text: #fff;
+  cursor: pointer;
 }
 .add_new{
   float: right;

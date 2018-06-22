@@ -16,18 +16,23 @@ def main(request):
     """Create the root view."""
     # Query all active orders
     orders = Order.objects.exclude(status=7).order_by('delivery')
+    orders = Order.objects.exclude(status=8)
     orders_count = len(orders)
+
+    cur_user = request.user
 
     # Query last comments on active orders
     comments = Comment.objects.filter(reference__in=orders)
+    comments = Comment.objects.exclude(user=cur_user)
     comments = comments.order_by('-creation')
+    comments_count = len(comments)
 
-    cur_user = request.user
     now = datetime.now()
 
     settings = {'orders': orders,
                 'orders_count': orders_count,
                 'comments': comments,
+                'comments_count': comments_count,
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Inicio',

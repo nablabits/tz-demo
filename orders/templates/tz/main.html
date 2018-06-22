@@ -17,39 +17,39 @@
         <div class="d-flex justify-content-center">
           <div class="w-75">
             <div class="ordersbox p-4 mt-2" data-toggle="collapse" data-target="#orders-list">
-            <h3><i class="fa fa-star fa-pull-left"></i>{{orders_count}} pedidos activos</h3>
-            <p>Pulsa para mostralos</p>
-          </div>
+              <h3><i class="fa fa-star fa-pull-left"></i>{{orders_count}} pedidos activos</h3>
+              <p>Pulsa para mostralos</p>
+            </div>
             <div class="collapse order-list" id="orders-list">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th scope="col">Cliente</th>
-                  <th scope="col">Referencia</th>
-                  <th scope="col">Entrega</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for order in orders %}
-                <tr>
-                  <th>
-                      {{ order.customer }}
-                  </th>
-                  <th>
-                      {{ order.ref_name}}
-                  </th>
-                  <th>
-                    {{ order.delivery}}
-                    {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
-                    <a href="{% url 'order_view' pk=order.pk %}">
-                      <i class="fa fa-eye pull-right"></i>
-                    </a>
-                  </th>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Referencia</th>
+                    <th scope="col">Entrega</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for order in orders %}
+                  <tr>
+                    <th>
+                        {{ order.customer }}
+                    </th>
+                    <th>
+                        {{ order.ref_name}}
+                    </th>
+                    <th>
+                      {{ order.delivery}}
+                      {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
+                      <a href="{% url 'order_view' pk=order.pk %}">
+                        <i class="fa fa-eye pull-right"></i>
+                      </a>
+                    </th>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -58,10 +58,34 @@
       <div class="container mt-4">
         <div class="d-flex justify-content-center">
           <div class="w-75">
-            <div class="commentsbox p-4 my-2">
-            <h3><i class="fa fa-envelope fa-pull-left"></i>2 mensajes sin leer</h3>
-            <p>Pulsa para mostralos</p>
-          </div>
+            <div class="commentsbox p-4 mt-2" data-toggle="collapse" data-target="#comments-list">
+              <h3><i class="fa fa-envelope fa-pull-left"></i>{{comments_count}} mensajes sin leer</h3>
+              {% if comments_count != 0 %}
+                <p>Pulsa para mostralos</p>
+              {% endif %}
+            </div>
+            <div class="collapse order-list" id="comments-list">
+              {% if comments_count == 0 %}
+              <p class="text-muted">No hay mensajes sin leer</p>
+              {% endif %}
+                {% for comment in comments %}
+                <div class="d-flex flex-column pt-3 px-2">
+                  <p class="pr-2 order_details">
+                    <strong>{{comment.user}} comentó:</strong><br>
+                    {{ comment.comment}}<br>
+                    <small>
+                      Comentado el {{comment.creation | date:"j/n"}} a las {{comment.creation | date:"H:i"}} en
+                      <a href="{% url 'order_view' pk=comment.reference.pk %}">{{comment.reference.ref_name}}</a>
+                    </small>
+                  </p>
+                  <a href="#" class="">
+                    <button class="btn btn-outline-success js-comment-read" data-action="comment-read"  data-pk="{{comment.pk}}">
+                      <i class="fa fa-envelope"></i> Marcar como leido
+                    </button>
+                  </a>
+                </div>
+                {% endfor %}
+            </div>
           </div>
         </div>
       </div>
