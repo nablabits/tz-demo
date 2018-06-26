@@ -69,7 +69,7 @@
               <p class="text-muted">No hay mensajes sin leer</p>
               {% endif %}
                 {% for comment in comments %}
-                <div class="d-flex flex-column pt-3 px-2">
+                <div class="d-flex flex-column mb-2 pt-3 px-2">
                   <p class="pr-2 order_details">
                     <strong>{{comment.user}} comentó:</strong><br>
                     {{ comment.comment}}<br>
@@ -78,11 +78,14 @@
                       <a href="{% url 'order_view' pk=comment.reference.pk %}">{{comment.reference.ref_name}}</a>
                     </small>
                   </p>
-                  <a href="#" class="">
-                    <button class="btn btn-outline-success js-comment-read" data-action="comment-read"  data-pk="{{comment.pk}}">
+                  <form method="post" action="{% url 'actions' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="pk" value="{{comment.pk}}">
+                    <input type="hidden" name="action" value="comment-read">
+                    <button type="submit" class="btn btn-outline-success">
                       <i class="fa fa-envelope"></i> Marcar como leido
                     </button>
-                  </a>
+                  </form>
                 </div>
                 {% endfor %}
             </div>

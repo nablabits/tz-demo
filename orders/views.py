@@ -22,8 +22,8 @@ def main(request):
     cur_user = request.user
 
     # Query last comments on active orders
-    comments = Comment.objects.filter(reference__in=orders)
     comments = Comment.objects.exclude(user=cur_user)
+    comments = comments.exclude(read=True)
     comments = comments.order_by('-creation')
     comments_count = len(comments)
 
@@ -241,6 +241,13 @@ class Actions(View):
                 template = 'includes/comment_list.html'
             else:
                 data['form_is_valid'] = False
+
+        # Mark comment as read
+        elif action == 'comment-read':
+            comment = get_object_or_404(Comment, pk=pk)
+            comment.read = True
+            comment.save()
+            return redirect('main')
 
         # Add item (POST)
         elif action == 'order-add-item':
