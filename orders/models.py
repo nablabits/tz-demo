@@ -118,12 +118,3 @@ class Comment(models.Model):
         name = ('El ' + str(self.creation.date()) +
                 ', ' + str(self.user) + ' comentó en ' + str(self.reference))
         return name
-
-
-class CommentCheck(models.Model):
-    """Mark the comment as read."""
-
-    creation = models.DateTimeField(default=timezone.now)
-    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
-    user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    read = models.BooleanField('Leido', default=False)
