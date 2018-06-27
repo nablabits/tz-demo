@@ -3,11 +3,18 @@
 </div>
 <div class="d-flex flex-column mb-4 w-75 mx-auto">
   <h5 class="font-weight-bold text-center">Resultados de la búsqueda</h5>
-    {% for order in query_result %}
+    {% for row in query_result %}
+    {% if model == 'orders' %}
     <span class="text-center my-2">
-      <a href="{% url 'order_view' pk=order.pk %}" class="search_link">{{ order.ref_name}}</a>
+      <a href="{% url 'order_view' pk=row.pk %}" class="search_link">{{ row.ref_name}}</a>
       de
-      <a href="{% url 'customer_view' pk=order.customer.pk %}" class="search_link">{{ order.customer }}</a>
+      <a href="{% url 'customer_view' pk=row.customer.pk %}" class="search_link">{{ row.customer }}</a>
     </span>
+    {% endif %}
+    {% if model == 'customers' %}
+    <span class="text-center my-2">
+      <a href="{% url 'customer_view' pk=row.pk %}" class="search_link">{{ row.name }}</a>
+    </span>
+    {% endif %}
     {% endfor %}
 </div>

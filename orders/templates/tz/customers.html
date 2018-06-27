@@ -1,17 +1,6 @@
 {% extends "tz/base.html" %}
 {% block customers %}
-<section id="search" class="f-section">
-  <div class="container-fluid">
-    <div class="d-flex my-4">
-      <div class="mx-auto">
-        <form class="form-inline">
-          <input class="form-control" type="search" placeholder="Buscar Cliente" aria-label="Buscar">
-          <button class="btn btn-outline-success my-2 my-sm-0 mx-sm-2" type="submit">Buscar</button>
-        </form>
-      </div>
-    </div>
-  </div>
-</section>
+{% include 'includes/search_box.html' %}
 <div class="container">
   <div class="d-flex-column mb-2">
     <h3>Todos los clientes:</h3>

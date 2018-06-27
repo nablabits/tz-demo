@@ -35,6 +35,8 @@ def main(request):
                 'comments_count': comments_count,
                 'user': cur_user,
                 'now': now,
+                'search_on': 'orders',
+                'placeholder': 'Buscar pedido',
                 'title': 'TrapuZarrak · Inicio',
                 'footer': True,
                 }
@@ -42,19 +44,23 @@ def main(request):
     return render(request, 'tz/main.html', settings)
 
 def search(request):
+    """Perform a search on orders or custmers."""
     if request.method == 'POST':
         data = dict()
         search_on = request.POST.get('search-on')
         search_obj = request.POST.get('search-obj')
         if search_on == 'orders':
             table = Order.objects.all()
+            query_result = table.filter(ref_name__icontains=search_obj)
+            model = 'orders'
         elif search_on == 'customers':
-            pass
+            table = Customer.objects.all()
+            query_result = table.filter(name__icontains=search_obj)
+            model = 'customers'
         else:
             raise ValueError('Search on undefined')
-        query_result = table.filter(ref_name__icontains=search_obj)
         template = 'includes/search_results.html'
-        context = {'query_result': query_result}
+        context = {'query_result': query_result, 'model': model}
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
     else:
@@ -75,6 +81,8 @@ def orderlist(request):
                 'delivered': delivered,
                 'user': cur_user,
                 'now': now,
+                'placeholder': 'Buscar pedido',
+                'search_on': 'orders',
                 'title': 'TrapuZarrak · Pedidos',
                 'footer': True,
                 }
@@ -414,6 +422,8 @@ def customerlist(request):
     settings = {'customers': customers,
                 'user': cur_user,
                 'now': now,
+                'search_on': 'customers',
+                'placeholder': 'Buscar cliente',
                 'title': 'TrapuZarrak · Clientes',
                 'footer': True,
                 }
