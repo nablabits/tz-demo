@@ -16,7 +16,7 @@ def main(request):
     """Create the root view."""
     # Query all active orders
     orders = Order.objects.exclude(status=7).order_by('delivery')
-    orders = Order.objects.exclude(status=8)
+    orders = orders.exclude(status=8)
     orders_count = len(orders)
 
     cur_user = request.user

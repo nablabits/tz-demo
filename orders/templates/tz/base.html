@@ -30,6 +30,8 @@
         </a>
       </div>
     </header>
+
+    <!-- Mobile menu -->
     <div class="collapse bg-light aside-narrow" id="sidebar">
       <ul>
       <li>Clientes:</li>
@@ -44,24 +46,25 @@
         </li>
       </ul>
       <li><i class="fa fa-sign-out"></i> Cerrar sesión</li>
-    </ul>
+      </ul>
     </div>
+
     <div class="container-fluid">
       <div class="row">
+
+        <!-- PC menu -->
         <div class="d-none d-lg-block col aside-wide bg-light">
-          <nav class="nav flex-column">
+          <nav class="nav d-flex flex-column align-items-end">
             <a class="nav-item nav-link" href="{% url 'main' %}">
               <i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
             <a class="nav-item nav-link" href="{% url 'customerlist' %}">
-              <i class="fa fa-fw fa-search pr-2"></i> Buscar cliente</a>
-            <a class="nav-item nav-link js-customer-add" href="#" data-action="customer-add" data-pk="0">
-              <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
+              <i class="fa fa-fw fa-search pr-2"></i> Clientes</a>
             <a class="nav-item nav-link" href="{% url 'orderlist' %}">
-              <i class="fa fa-fw fa-list pr-2"></i> Todos los pedidos</a>
+              <i class="fa fa-fw fa-list pr-2"></i> Pedidos</a>
+              <a class="nav-item nav-link js-customer-add" href="#" data-action="customer-add" data-pk="0">
+                <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
             <a class="nav-item nav-link js-order-add" href="#" data-action="order-add" data-pk="0">
               <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
-            <a class="nav-item nav-link" href="#">
-              <i class="fa fa-fw fa-euro pr-2"></i> Pendiente de pago</a>
             <a class="nav-item nav-link" href="#"><i class="fa fa-fw fa-sign-out pr-2"></i> Cerrar sesión</a>
           </nav>
         </div>
@@ -72,8 +75,10 @@
           {% block newcustomer %}{% endblock %}
           {% block orders %}{% endblock %}
           {% block customers %}{% endblock %}
+        </div>
+        <div class="col-md-1">
+        </div>
       </div>
-    </div>
     <!-- Action Modal -->
     <div class="modal fade" id="action-modal">
       <div class="modal-dialog">
