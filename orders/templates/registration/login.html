@@ -1,16 +1,13 @@
 {% load staticfiles %}
 <html>
-  <head>
-    <title>Trapu Zaharrak App · Login</title>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/css/bootstrap.min.css" integrity="sha384-/Y6pD6FV/Vv2HJnA6t+vslU6fwYXjCFtcEpHbNJ0lyAFsXTsjBbfaDjzALeQsN6M" crossorigin="anonymous">
-    <link rel="stylesheet" id="cff-font-awesome-css"  href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css?ver=4.5.0' type='text/css' media='all'" />
-    <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
-    <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
-    <script src="https://code.jquery.com/jquery-3.2.1.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.11.0/umd/popper.min.js" integrity="sha384-b/U6ypiBEHpOf/4+1nzFpr53nxSS+GLCkfwBdFNTxtclqqenISfwAzpKaMNFNmj4" crossorigin="anonymous"></script>
-    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta/js/bootstrap.min.js" integrity="sha384-h0AbiXch4ZDo7tp9hKZ4TsHbi047NrKGLO3SEJAg45jXxnGIfYzk4Si90RDIqNm1" crossorigin="anonymous"></script>
-  </head>
-  <body>
+<head>
+  <title>{{title}}</title>
+  <link rel="stylesheet" href="{% static 'tz/css/bootstrap.min.css' %}">
+  <link rel="stylesheet" id="cff-font-awesome-css"  href="{% static 'tz/css/font-awesome.min.css' %}" />
+  <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
+</head>
+<body>
     <header>
       <div class="container">
         <div class="d-flex">
@@ -40,5 +37,9 @@
         </div>
       </div>
     </section>
+    <script src="{% static 'tz/js/jquery-3.2.1.min.js' %}"></script>
+    <script src="{% static 'tz/js/popper.min.js' %}"></script>
+    <script src="{% static 'tz/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'tz/js/order_actions.js' %}"></script>
   </body>
 </html>

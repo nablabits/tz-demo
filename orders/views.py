@@ -7,6 +7,8 @@ from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm, DocumentForm
 from .forms import OrderCloseForm, OrderItemForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import logout
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import datetime
 
 
@@ -43,6 +45,7 @@ def main(request):
 
     return render(request, 'tz/main.html', settings)
 
+
 def search(request):
     """Perform a search on orders or custmers."""
     if request.method == 'POST':
@@ -66,6 +69,7 @@ def search(request):
     else:
         raise TypeError('Invalid request method')
 
+
 # Order related views
 @login_required
 def orderlist(request):
@@ -73,6 +77,14 @@ def orderlist(request):
     orders = Order.objects.all().order_by('delivery')
     active = orders.exclude(status=7).order_by('delivery')
     delivered = orders.filter(status=7).order_by('delivery')
+    page = request.GET.get('page', 1)
+    paginator = Paginator(delivered, 3)
+    try:
+        delivered = paginator.page(page)
+    except PageNotAnInteger:
+        delivered = paginator.page(1)
+    except EmptyPage:
+        delivered = paginator.page(paginator.num_pages)
 
     cur_user = request.user
     now = datetime.now()
@@ -215,6 +227,11 @@ class Actions(View):
             customer = get_object_or_404(Customer, pk=pk)
             context = {'customer': customer}
             template = 'includes/delete/delete_customer.html'
+
+        # logout
+        elif action == 'logout':
+            context = dict()
+            template = 'registration/logout.html'
 
         else:
             raise NameError('Action was not recogniced')
@@ -401,6 +418,12 @@ class Actions(View):
             customer = get_object_or_404(Customer, pk=pk)
             customer.delete()
             return redirect('customerlist')
+
+        # logout (POST)
+        elif action == 'logout':
+            template = ''
+            context = ''
+            logout(request)
 
         else:
             raise NameError('Action was not recogniced')

@@ -117,6 +117,7 @@ $(function () {
   $('.js-customer-add').click(loadActionForm)
   $('.js-customer-edit').click(loadActionForm)
   $('.js-customer-delete').click(loadActionForm)
+  $('.js-logout').click(loadActionForm)
 
   // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
