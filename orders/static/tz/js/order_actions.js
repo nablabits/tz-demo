@@ -89,6 +89,21 @@ $(function () {
     }
   }
 
+  var searchAction = function () {
+    var form = $(this)
+    $.ajax({
+      url: form.attr('action'),
+      data: form.serialize(),
+      type: 'post',
+      dataType: 'json',
+      success: function(data) {
+        $('#search-results').html(data.html)
+        $('#search-results').collapse('show')
+      }
+    })
+    return false
+  }
+
   // actions (GET)
   $('.js-order-add').click(loadActionForm)
   $('.js-order-edit').click(loadActionForm)
@@ -108,4 +123,5 @@ $(function () {
   $('#order-status').on('click', '.js-order-status', updateStatus)
   $('.js-order-cancel').click(updateStatus)
   $('.js-order-reactivate').click(updateStatus)
+  $('#search').on('submit', '.js-search-order', searchAction)
 })

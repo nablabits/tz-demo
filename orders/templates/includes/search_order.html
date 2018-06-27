@@ -1,0 +1,16 @@
+<section id="search" class="f-section">
+  <div class="container">
+    <div class="d-flex mt-4">
+      <div class="mx-auto">
+        <form class="form-inline js-search-order" method="post" action="{% url 'search' %}">
+          {% csrf_token %}
+          <input type="hidden" name="search-on" value="orders">
+          <input class="form-control" type="search" placeholder="Buscar Pedido" aria-label="Buscar" name="search-obj">
+          <button class="btn btn-outline-success my-2 my-sm-0 mx-sm-2" type="submit">Buscar</button>
+        </form>
+      </div>
+    </div>
+    <div class="collapse" id="search-results">
+    </div>
+  </div>
+</section>

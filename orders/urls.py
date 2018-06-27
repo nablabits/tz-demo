@@ -8,6 +8,7 @@ from . import views
 urlpatterns = [
     # The root url
     path('', views.main, name='main'),
+    path('search', views.search, name='search'),
 
     # Order related urls
     path('orders', views.orderlist, name='orderlist'),

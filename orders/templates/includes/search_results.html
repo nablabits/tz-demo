@@ -1,0 +1,13 @@
+<div class="d-flex mx-auto w-50">
+  <button type="button" class="close ml-auto" data-toggle="collapse" data-target="#search-results">&times;</button>
+</div>
+<div class="d-flex flex-column mb-4 w-75 mx-auto">
+  <h5 class="font-weight-bold text-center">Resultados de la búsqueda</h5>
+    {% for order in query_result %}
+    <span class="text-center my-2">
+      <a href="{% url 'order_view' pk=order.pk %}" class="search_link">{{ order.ref_name}}</a>
+      de
+      <a href="{% url 'customer_view' pk=order.customer.pk %}" class="search_link">{{ order.customer }}</a>
+    </span>
+    {% endfor %}
+</div>

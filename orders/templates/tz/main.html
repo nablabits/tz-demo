@@ -1,17 +1,6 @@
 {% extends "tz/base.html" %}
 {% block homeview %}
-    <section id="search" class="f-section">
-      <div class="container-fluid">
-        <div class="d-flex my-4">
-          <div class="mx-auto">
-            <form class="form-inline">
-              <input class="form-control" type="search" placeholder="Buscar Pedido" aria-label="Buscar">
-              <button class="btn btn-outline-success my-2 my-sm-0 mx-sm-2" type="submit">Buscar</button>
-            </form>
-          </div>
-        </div>
-      </div>
-    </section>
+    {% include 'includes/search_order.html' %}
     <section id="last_orders">
       <div class="container mb-4">
         <div class="d-flex justify-content-center">

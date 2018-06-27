@@ -41,6 +41,24 @@ def main(request):
 
     return render(request, 'tz/main.html', settings)
 
+def search(request):
+    if request.method == 'POST':
+        data = dict()
+        search_on = request.POST.get('search-on')
+        search_obj = request.POST.get('search-obj')
+        if search_on == 'orders':
+            table = Order.objects.all()
+        elif search_on == 'customers':
+            pass
+        else:
+            raise ValueError('Search on undefined')
+        query_result = table.filter(ref_name__icontains=search_obj)
+        template = 'includes/search_results.html'
+        context = {'query_result': query_result}
+        data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
+    else:
+        raise TypeError('Invalid request method')
 
 # Order related views
 @login_required
@@ -110,7 +128,7 @@ class Actions(View):
             template = 'includes/add/add_order.html'
 
         # Add order from customer (GET)
-        if action == 'order-from-customer':
+        elif action == 'order-from-customer':
             customer = get_object_or_404(Customer, pk=pk)
             form = OrderForm(initial={'customer': customer})
             context = {'form': form}

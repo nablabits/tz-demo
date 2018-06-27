@@ -84,3 +84,7 @@ header{
 .order_header{
   border-bottom: 1px solid lightgrey;
 }
+.search_link{
+  color: #449B84;
+  font-weight: bold;
+}
