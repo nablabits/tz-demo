@@ -79,23 +79,26 @@
         <div class="col-md-1">
         </div>
       </div>
+
     <!-- Action Modal -->
-    <div class="modal fade" id="action-modal">
-      <div class="modal-dialog">
-        <div class="modal-content">
+      <div class="modal fade" id="action-modal">
+        <div class="modal-dialog">
+          <div class="modal-content">
+          </div>
         </div>
       </div>
-    </div>
-    {% if footer %}
-    <footer>
-      <div class="fixed-bottom">
-        <button class="m-3 add_new"><i class="fa fa-plus fa-2x"></i></button>
-      </div>
-    </footer>
-    {% endif %}
+
+      {% if footer %}
+      <footer class="d-block d-sm-none">
+        <div class="fixed-bottom">
+          <button class="m-3 add_new"><i class="fa fa-plus fa-2x"></i></button>
+        </div>
+      </footer>
+      {% endif %}
     <script src="{% static 'tz/js/jquery-3.2.1.min.js' %}"></script>
     <script src="{% static 'tz/js/popper.min.js' %}"></script>
     <script src="{% static 'tz/js/bootstrap.min.js' %}"></script>
     <script src="{% static 'tz/js/order_actions.js' %}"></script>
+    </div>
   </body>
 </html>
