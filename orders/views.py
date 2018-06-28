@@ -38,7 +38,7 @@ def main(request):
                 'user': cur_user,
                 'now': now,
                 'search_on': 'orders',
-                'placeholder': 'Buscar pedido',
+                'placeholder': 'Buscar pedido (referencia)',
                 'title': 'TrapuZarrak · Inicio',
                 'footer': True,
                 }
@@ -75,10 +75,10 @@ def search(request):
 def orderlist(request):
     """Display all orders or search'em."""
     orders = Order.objects.all().order_by('delivery')
-    active = orders.exclude(status=7).order_by('delivery')
-    delivered = orders.filter(status=7).order_by('delivery')
+    active = orders.exclude(status__in=[7, 8]).order_by('delivery')
+    delivered = orders.filter(status=7).order_by('delivery')[:50]
     page = request.GET.get('page', 1)
-    paginator = Paginator(delivered, 3)
+    paginator = Paginator(delivered, 5)
     try:
         delivered = paginator.page(page)
     except PageNotAnInteger:
@@ -86,14 +86,17 @@ def orderlist(request):
     except EmptyPage:
         delivered = paginator.page(paginator.num_pages)
 
+    on_page = len(delivered)
+
     cur_user = request.user
     now = datetime.now()
 
     settings = {'active': active,
                 'delivered': delivered,
+                'on_page': on_page,
                 'user': cur_user,
                 'now': now,
-                'placeholder': 'Buscar pedido',
+                'placeholder': 'Buscar pedido (referencia)',
                 'search_on': 'orders',
                 'title': 'TrapuZarrak · Pedidos',
                 'footer': True,
@@ -424,6 +427,7 @@ class Actions(View):
             template = ''
             context = ''
             logout(request)
+            return redirect('login')
 
         else:
             raise NameError('Action was not recogniced')

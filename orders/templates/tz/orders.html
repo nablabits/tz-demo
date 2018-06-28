@@ -1,7 +1,7 @@
 {% extends "tz/base.html" %}
 {% block orders %}
 {% include 'includes/search_box.html' %}
-<div class="container">
+<div class="container" id="#order-list">
   <h3>Todos los pedidos:</h3>
   <table class="table">
   <thead>
@@ -33,7 +33,19 @@
     </tr>
     {% endfor %}
     <tr>
-      <th colspan="3" class="text-center p-0 m-0 table-success">Entregados</th>
+      <th colspan="3" class="text-center p-0 m-0 table-success">Entregados
+      </th>
+    </tr>
+    <tr>
+      <th colspan="3" class="p-0 m-0">
+        <small class="float-right"> Mostrando:
+          {% if delivered.paginator.count > 5 %}
+            {{on_page}}/{{delivered.paginator.count}}
+          {% else %}
+            {{delivered.number}}/{{delivered.paginator.count}}
+          {% endif %}
+        </small>
+      </th>
     </tr>
     {% for order in delivered %}
     <tr>
@@ -53,5 +65,39 @@
     {% endfor %}
   </tbody>
 </table>
+
+{% if delivered.has_other_pages %}
+  <nav aria-label="Order navigation">
+  <ul class="pagination justify-content-center">
+    {% if delivered.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ delivered.previous_page_number }}">&laquo;</a>
+      </li>
+    {% else %}
+      <li class="page-item disabled">
+        <a class="page-link" href="#" tabindex="-1">&laquo;</a>
+      </li>
+    {% endif %}
+
+    {% for i in delivered.paginator.page_range %}
+      {% if delivered.number == i %}
+        <li class="page-item active"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+      {% else %}
+          <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+      {% endif %}
+    {% endfor %}
+
+    {% if delivered.has_next %}
+      <li class="page-item">
+      <a class="page-link" href="?page={{ delivered.next_page_number }}">&raquo;</a>
+    </li>
+    {% else %}
+      <li class="page-item disabled">
+      <a class="page-link" href="#" tabindex="-1">&raquo;</a>
+    </li>
+    {% endif %}
+  </ul>
+  </nav>
+{% endif %}
 </div>
 {% endblock %}
