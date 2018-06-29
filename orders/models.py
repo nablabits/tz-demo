@@ -46,8 +46,7 @@ class Order(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True)
     ref_name = models.CharField('Referencia', max_length=32)
-    delivery = models.DateField('Entrega prevista',
-                                blank=True, default=timezone.now)
+    delivery = models.DateField('Entrega prevista', blank=True)
     status = models.CharField(max_length=1, choices=STATUS, default='1')
 
     # Measures
@@ -87,7 +86,8 @@ class OrderItem(models.Model):
         ('4', 'Pañuelo'),
         ('5', 'Delantal'),
         ('6', 'Corpiño'),
-        ('7', 'Chaleco')
+        ('7', 'Chaleco'),
+        ('8', 'Gerriko')
     )
     item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
     size = models.CharField('Talla', max_length=3, default='1')
@@ -110,7 +110,7 @@ class Comment(models.Model):
     creation = models.DateTimeField('Cuando', default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
-    comment = models.TextField(default='')
+    comment = models.TextField('Comentario', default='')
     read = models.BooleanField('Leido', default=False)
 
     def __str__(self):
