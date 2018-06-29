@@ -86,14 +86,11 @@ def orderlist(request):
     except EmptyPage:
         delivered = paginator.page(paginator.num_pages)
 
-    on_page = len(delivered)
-
     cur_user = request.user
     now = datetime.now()
 
     settings = {'active': active,
                 'delivered': delivered,
-                'on_page': on_page,
                 'user': cur_user,
                 'now': now,
                 'placeholder': 'Buscar pedido (referencia)',
@@ -441,10 +438,17 @@ class Actions(View):
 def customerlist(request):
     """Display all customers or search'em."""
     customers = Customer.objects.all().order_by('name')
+    page = request.GET.get('page', 1)
+    paginator = Paginator(customers, 5)
+    try:
+        customers = paginator.page(page)
+    except PageNotAnInteger:
+        customers = paginator.page(1)
+    except EmptyPage:
+        customers = paginator.page(paginator.num_pages)
 
     cur_user = request.user
     now = datetime.now()
-    # count_orders = Customer.orders_made
 
     settings = {'customers': customers,
                 'user': cur_user,

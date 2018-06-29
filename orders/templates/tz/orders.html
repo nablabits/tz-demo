@@ -36,17 +36,6 @@
       <th colspan="3" class="text-center p-0 m-0 table-success">Entregados
       </th>
     </tr>
-    <tr>
-      <th colspan="3" class="p-0 m-0">
-        <small class="float-right"> Mostrando:
-          {% if delivered.paginator.count > 5 %}
-            {{on_page}}/{{delivered.paginator.count}}
-          {% else %}
-            {{delivered.number}}/{{delivered.paginator.count}}
-          {% endif %}
-        </small>
-      </th>
-    </tr>
     {% for order in delivered %}
     <tr>
       <th>
