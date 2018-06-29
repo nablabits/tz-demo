@@ -9,6 +9,7 @@ from .forms import OrderCloseForm, OrderItemForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Count
 from datetime import datetime
 
 
@@ -437,7 +438,7 @@ class Actions(View):
 @login_required
 def customerlist(request):
     """Display all customers or search'em."""
-    customers = Customer.objects.all().order_by('name')
+    customers = Customer.objects.annotate(num_orders=Count('order'))
     page = request.GET.get('page', 1)
     paginator = Paginator(customers, 5)
     try:

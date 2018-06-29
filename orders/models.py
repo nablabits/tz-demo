@@ -20,11 +20,6 @@ class Customer(models.Model):
         """Get the name of the entry."""
         return self.name
 
-    def orders_made(self):
-        orders = len(Order.objects.filter(customer=self.pk))
-        return orders
-
-
 class Order(models.Model):
     """The main object, store the order info."""
 
