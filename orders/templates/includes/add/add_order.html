@@ -13,15 +13,7 @@
     <h4 class="modal-title">Nuevo Pedido</h4>
   </div>
   <div class="modal-body">
-  {% for field in form.visible_fields %}
-    <div class="form-group">
-      {{ field.label_tag }}
-      {% render_field field class="form-control" %}
-      {% if field.help_text %}
-        <small class="form-text text-muted">{{ field.help_text }}</small>
-      {% endif %}
-    </div>
-  {% endfor %}
+    {% include 'includes/common/order_form_common.html' %}
   <input type="hidden" name="pk" value="0">
   <input type="hidden" name="action" value="order-new">
   </div>

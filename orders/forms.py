@@ -1,5 +1,6 @@
 from django import forms
 from .models import Customer, Order, OrderItem, Comment, Document
+from django.db.models import Count
 
 
 class CustomerForm(forms.ModelForm):
@@ -20,6 +21,11 @@ class OrderForm(forms.ModelForm):
                   'waist', 'chest', 'hip', 'lenght', 'others',
                   'budget', 'prepaid')
 
+    def __init__(self, *args, **kwargs):
+        super(OrderForm, self).__init__(*args, **kwargs)
+        queryset = Customer.objects.annotate(num_orders=Count('order'))[:10]
+        self.fields['customer'].queryset = queryset
+        self.fields['customer'].label = 'Cliente'
 
 class OrderItemForm(forms.ModelForm):
     """Add items using a form."""
