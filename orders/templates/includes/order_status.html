@@ -19,5 +19,5 @@
       <button type="button" class="btn btn-outline-success active {%if order.pending != 0 %}d-none{% endif %}">
         <i class="fa fa-euro"></i> Cobrado
       </button>
-      <button type="button" class="btn btn-outline-danger {%if order.pending == 0 %}d-none{% endif %}">{{order.pending}}</button>
+      <button type="button" class="btn btn-outline-danger js-pay-now {%if order.pending == 0 %}d-none{% endif %}" data-action="order-pay-now" data-pk="{{order.pk}}">{{order.pending}}</button>
   </div>

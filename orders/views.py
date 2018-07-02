@@ -189,7 +189,7 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/edit/edit_order.html'
 
-        # Edit the order (GET)
+        # Edit the date (GET)
         elif action == 'order-edit-date':
             order = get_object_or_404(Order, pk=pk)
             context = {'order': order}
@@ -201,6 +201,12 @@ class Actions(View):
             form = CustomerForm(instance=customer)
             context = {'customer': customer, 'form': form}
             template = 'includes/edit/edit_customer.html'
+
+        # Collect order (GET)
+        elif action == 'order-pay-now':
+            order = get_object_or_404(Order, pk=pk)
+            context = {'order': order}
+            template = 'includes/edit/pay_order.html'
 
         # Close order (GET)
         elif action == 'order-close':
@@ -343,7 +349,7 @@ class Actions(View):
             else:
                 data['form_is_valid'] = False
 
-        # Edit order (POST)
+        # Edit date (POST)
         elif action == 'order-edit-date':
             order = get_object_or_404(Order, pk=pk)
             new_date = self.request.POST.get('delivery', None)
@@ -379,6 +385,16 @@ class Actions(View):
                 data['html_id'] = '#order-details'
             else:
                 data['form_is_valid'] = False
+
+        # Collect order (POST)
+        elif action == 'order-pay-now':
+            order = get_object_or_404(Order, pk=pk)
+            order.prepaid = order.budget
+            order.save()
+            data['form_is_valid'] = True
+            data['html_id'] = '#order-status'
+            template = 'includes/order_status.html'
+            context = {'order': order}
 
         # Close order (POST)
         elif action == 'order-close':
