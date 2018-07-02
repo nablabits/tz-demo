@@ -32,7 +32,7 @@ class OrderItemForm(forms.ModelForm):
 
     class Meta:
         model = OrderItem
-        fields = ('item', 'size', 'qty')
+        fields = ('item', 'size', 'qty', 'description')
 
 
 class DocumentForm(forms.ModelForm):

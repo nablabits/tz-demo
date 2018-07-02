@@ -20,6 +20,7 @@ class Customer(models.Model):
         """Get the name of the entry."""
         return self.name
 
+
 class Order(models.Model):
     """The main object, store the order info."""
 
@@ -87,6 +88,7 @@ class OrderItem(models.Model):
     item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
     size = models.CharField('Talla', max_length=3, default='1')
     qty = models.IntegerField('Cantidad', default=1)
+    description = models.CharField('descripcion', max_length=255, blank=True)
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
 
 

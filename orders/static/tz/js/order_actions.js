@@ -96,7 +96,7 @@ $(function () {
       data: form.serialize(),
       type: 'post',
       dataType: 'json',
-      success: function(data) {
+      success: function (data) {
         $('#search-results').html(data.html)
         $('#search-results').collapse('show')
       }
