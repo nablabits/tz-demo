@@ -1,5 +1,10 @@
 <div class="card mt-4">
-  <h4 class="card-header font-weight-bold">Archivos adjuntos:</h4>
+  <div class="card-header">
+    <div class="row px-2">
+      <h4 class="font-weight-bold mr-auto">Archivos adjuntos:</h4>
+      <button class="ml-2 btn btn-outline-success js-order-add-file" data-action="order-add-file" data-pk="{{order.pk}}"><i class="fa fa-paperclip"></i> Adjuntar</button>
+    </div>
+  </div>
   <div class="card-body order_details">
     <div class="d-flex-column">
       {% if files %}
