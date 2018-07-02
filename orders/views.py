@@ -189,6 +189,12 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/edit/edit_order.html'
 
+        # Edit the order (GET)
+        elif action == 'order-edit-date':
+            order = get_object_or_404(Order, pk=pk)
+            context = {'order': order}
+            template = 'includes/edit/edit_date.html'
+
         # Edit customer (GET)
         elif action == 'customer-edit':
             customer = get_object_or_404(Customer, pk=pk)
@@ -336,6 +342,16 @@ class Actions(View):
                 return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
+
+        # Edit order (POST)
+        elif action == 'order-edit-date':
+            order = get_object_or_404(Order, pk=pk)
+            new_date = self.request.POST.get('delivery', None)
+            order.delivery = new_date
+            order.save()
+            data['form_is_valid'] = True
+            data['reload'] = True
+            return JsonResponse(data)
 
         # Edit Customer (POST)
         elif action == 'customer-edit':

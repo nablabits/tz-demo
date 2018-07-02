@@ -107,6 +107,7 @@ $(function () {
   // actions (GET)
   $('.js-order-add').click(loadActionForm)
   $('.js-order-edit').click(loadActionForm)
+  $('.js-order-edit-date').click(loadActionForm)
   $('#order-status').on('click', '.js-close-order', loadActionForm)
   $('.js-order-add-comment').click(loadActionForm)
   $('#order-details').on('click', '.js-add-item', loadActionForm)
