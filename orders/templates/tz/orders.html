@@ -25,7 +25,11 @@
       </th>
       <th>
         {{ order.delivery | date:"j/n/Y"}}
-        {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
+        {% if order.overdue %}
+          <a class="js-popover" tabindex="0" data-trigger="focus" role="button" data-toggle="popover" title="Atención" data-content="Este pedido está fuera de fecha">
+            <i class="fa fa-warning text-danger px-2"></i>
+          </a>
+        {% endif %}
         <a href="{% url 'order_view' pk=order.pk %}">
           <i class="fa fa-eye pull-right"></i>
         </a>
