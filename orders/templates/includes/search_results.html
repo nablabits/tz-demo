@@ -1,20 +1,26 @@
-<div class="d-flex mx-auto w-50">
-  <button type="button" class="close ml-auto" data-toggle="collapse" data-target="#search-results">&times;</button>
-</div>
-<div class="d-flex flex-column mb-0 w-75 mx-auto">
-  <h5 class="font-weight-bold text-center">Resultados de la búsqueda</h5>
-    {% for row in query_result %}
-    {% if model == 'orders' %}
-    <span class="text-center my-2">
-      <a href="{% url 'order_view' pk=row.pk %}" class="search_link">{{ row.ref_name}}</a>
-      de
-      <a href="{% url 'customer_view' pk=row.customer.pk %}" class="search_link">{{ row.customer }}</a>
-    </span>
+<div class="d-flex mb-0 justify-content-center">
+  <div class="d-inline-flex flex-column p-3 search_results_wrapper">
+    <h5 class="font-weight-bold">Resultados de la búsqueda</h5>
+      {% if query_result %}
+        {% for row in query_result %}
+          {% if model == 'orders' %}
+          <span class="my-2">
+            <a href="{% url 'order_view' pk=row.pk %}" class="search_link">{{ row.ref_name}}</a>
+            de
+            <a href="{% url 'customer_view' pk=row.customer.pk %}" class="search_link">{{ row.customer }}</a>
+          </span>
+        {% endif %}
+        {% if model == 'customers' %}
+          <span class="my-2">
+            <a href="{% url 'customer_view' pk=row.pk %}" class="search_link">{{ row.name }}</a>
+          </span>
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      <span class="my-2">No se encontraron coincidencias</span>
     {% endif %}
-    {% if model == 'customers' %}
-    <span class="text-center my-2">
-      <a href="{% url 'customer_view' pk=row.pk %}" class="search_link">{{ row.name }}</a>
-    </span>
-    {% endif %}
-    {% endfor %}
+    <div class="d-inline-flex mx-auto">
+      <button type="button" class="btn btn-outline-success btn-sm" data-toggle="collapse" data-target="#search-results">Cerrar</button>
+    </div>
+  </div>
 </div>
