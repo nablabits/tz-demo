@@ -23,9 +23,10 @@ class OrderForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(OrderForm, self).__init__(*args, **kwargs)
-        queryset = Customer.objects.annotate(num_orders=Count('order'))[:10]
-        self.fields['customer'].queryset = queryset
         self.fields['customer'].label = 'Cliente'
+        queryset = Customer.objects.annotate(num_orders=Count('order'))
+        self.fields['customer'].queryset = queryset
+
 
 class OrderItemForm(forms.ModelForm):
     """Add items using a form."""
