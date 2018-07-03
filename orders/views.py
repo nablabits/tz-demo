@@ -59,7 +59,11 @@ def search(request):
             model = 'orders'
         elif search_on == 'customers':
             table = Customer.objects.all()
-            query_result = table.filter(name__icontains=search_obj)
+            try:
+                int(search_obj)
+                query_result = table.filter(phone__icontains=search_obj)
+            except ValueError:
+                query_result = table.filter(name__icontains=search_obj)
             model = 'customers'
         else:
             raise ValueError('Search on undefined')
