@@ -504,8 +504,9 @@ def customer_view(request, pk):
     """Display details for an especific customer."""
     customer = get_object_or_404(Customer, pk=pk)
     orders = Order.objects.filter(customer=customer)
-    active = orders.exclude(status=7).order_by('delivery')
+    active = orders.exclude(status__in=[7, 8]).order_by('delivery')
     delivered = orders.filter(status=7).order_by('delivery')
+    cancelled = orders.filter(status=8).order_by('delivery')
 
     # Evaluate pending orders
     pending = []
@@ -518,7 +519,9 @@ def customer_view(request, pk):
     settings = {'customer': customer,
                 'orders_active': active,
                 'orders_delivered': delivered,
+                'orders_cancelled': cancelled,
                 'pending': pending,
+                'orders_made': len(orders),
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Ver cliente',
