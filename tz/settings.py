@@ -25,7 +25,7 @@ SECRET_KEY = '9yqjw=xyyf!aq87_fitj&#&h9k385-twt)gf1co@u(z+lk1o-$'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['tzit.herokuapp.com',]
 
 LOGIN_REDIRECT_URL = '/'
 
@@ -124,3 +124,5 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
