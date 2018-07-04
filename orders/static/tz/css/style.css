@@ -91,3 +91,11 @@ header{
 .search_results_wrapper{
   border-left: 1px solid #ddd;
 }
+
+.js-view-list-item > th{
+  cursor: pointer;
+}
+
+.js-view-list-item:hover{
+  background-color: #f5f5f5;
+}
