@@ -14,7 +14,6 @@ class Customer(models.Model):
     email = models.EmailField('Email', max_length=64, blank=True)
     CIF = models.CharField('CIF', max_length=10, blank=True)
     cp = models.IntegerField('CP')
-    notif = models.BooleanField(default=False)
 
     def __str__(self):
         """Get the name of the entry."""

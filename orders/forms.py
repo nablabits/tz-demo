@@ -9,7 +9,7 @@ class CustomerForm(forms.ModelForm):
     class Meta:
         model = Customer
         fields = ('name', 'address', 'city', 'phone', 'email',
-                  'CIF', 'cp', 'notif')
+                  'CIF', 'cp')
 
 
 class OrderForm(forms.ModelForm):
