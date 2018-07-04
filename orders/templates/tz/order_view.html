@@ -37,6 +37,7 @@
     </div>
 
     <!-- Status -->
+    <div id="order-status">
     {% if order.status == '8' %}
     <div class="d-flex mt-2">
       <div class="alert alert-warning" role="alert">
@@ -48,8 +49,23 @@
         </a>
       </div>
     </div>
+    {% endif %}
+    {% if order.status == '7' %}
+    <div class="d-flex mt-2">
+      <div class="alert alert-info" role="alert">
+        <i class="fa fa-info-circle text-info mr-2"></i>
+        Este pedido está entregado
+        {% if order.pending == 0 %}
+          y cobrado ({{order.budget}}€)
+        {% else %}
+         aunque está pendiente de pago
+         <button class="ml-2 btn btn-info js-pay-now" data-action="order-pay-now" data-pk="{{order.pk}}"><i class="fa fa-euro"></i> Cobrar</button>
+        {% endif %}
+          <button class="ml-2 btn btn-info js-order-reactivate" data-status="1" data-pk="{{order.pk}}"><i class="fa fa-history"></i> Reabrir</button>
+      </div>
+    </div>
     {% else %}
-    <div id="order-status">
+
     {% include 'includes/order_status.html' %}
     </div>
     {% endif %}

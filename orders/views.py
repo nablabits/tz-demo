@@ -115,12 +115,18 @@ def order_view(request, pk):
     files = Document.objects.filter(order=order)
     items = OrderItem.objects.filter(reference=order)
 
+    if order.status == 7 and order.budget == order.prepaid:
+        closed = True
+    else:
+        closed = False
+
     cur_user = request.user
     now = datetime.now()
     settings = {'order': order,
                 'items': items,
                 'comments': comments,
                 'files': files,
+                'closed': closed,
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Ver Pedido',
@@ -396,6 +402,7 @@ class Actions(View):
             order.prepaid = order.budget
             order.save()
             data['form_is_valid'] = True
+            data['reload'] = True
             data['html_id'] = '#order-status'
             template = 'includes/order_status.html'
             context = {'order': order}
