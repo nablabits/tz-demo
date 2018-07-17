@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'orders',
     'widget_tweaks',
+    'coverage',
 ]
 
 MIDDLEWARE = [

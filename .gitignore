@@ -6,3 +6,5 @@ venv
 *~
 media
 .env
+.coverage
+htmlcov
