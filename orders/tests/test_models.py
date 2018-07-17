@@ -12,7 +12,8 @@ class ModelTest(TestCase):
         """Create the necessary items on database at once."""
 
         # Create a user
-        User.objects.create(username='user', is_staff=True, is_superuser=True)
+        User.objects.create_user(username='user', is_staff=True,
+                                 is_superuser=True)
 
         # Create a customer
         Customer.objects.create(name='Customer Test',
