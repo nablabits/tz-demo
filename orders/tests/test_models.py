@@ -10,8 +10,11 @@ class ModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         """Create the necessary items on database at once."""
+
+        # Create a user
         User.objects.create(username='user', is_staff=True, is_superuser=True)
 
+        # Create a customer
         Customer.objects.create(name='Customer Test',
                                 address='This computer',
                                 city='No city',
@@ -20,6 +23,7 @@ class ModelTest(TestCase):
                                 CIF='5555G',
                                 cp='48100')
 
+        # Create  an order
         Order.objects.create(user=User.objects.get(pk=1),
                              customer=Customer.objects.get(pk=1),
                              ref_name='example',
@@ -33,6 +37,7 @@ class ModelTest(TestCase):
                              prepaid=1000,
                              workshop=120)
 
+        # Create comment
         Comment.objects.create(user=User.objects.get(pk=1),
                                reference=Order.objects.get(pk=1),
                                comment='This is a comment')
