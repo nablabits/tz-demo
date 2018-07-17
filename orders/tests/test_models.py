@@ -1,5 +1,5 @@
 from django.test import TestCase
-from orders.models import Customer, Order, Document, OrderItem, Comment
+from orders.models import Customer, Order, Comment
 from django.contrib.auth.models import User
 from datetime import date
 
