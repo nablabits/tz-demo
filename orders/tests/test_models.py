@@ -52,14 +52,17 @@ class ModelTest(TestCase):
     def test_order_creation(self):
         """Test the order creation."""
         order = Order.objects.get(pk=1)
+        today = date.today()
+        order_str = str(today) + ' Customer Test example'
         self.assertTrue(isinstance(order, Order))
-        self.assertEqual(order.__str__(), '2018-07-17 Customer Test example')
+        self.assertEqual(order.__str__(), order_str)
         self.assertTrue(order.overdue)
         self.assertEqual(order.pending, -1000)
 
     def test_comment_creation(self):
         comment = Comment.objects.get(pk=1)
-        comment_str = ('El 2018-07-17, user comentó en 2018-07-17 Customer' +
-                       ' Test example')
+        today = date.today()
+        comment_str = ('El ' + str(today) + ', user comentó en ' +
+                       str(today) + ' Customer Test example')
         self.assertTrue(isinstance(comment, Comment))
         self.assertEqual(comment.__str__(), comment_str)
