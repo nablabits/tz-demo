@@ -47,7 +47,18 @@ class StandardViewsTest(TestCase):
     """Test the standard views."""
 
     def setUp(self):
-        """Create the necessary items on database at once."""
+        """Create the necessary items on database at once.
+
+        Will be created:
+            5 Customers
+            20 Orders (random customer) where:
+                The first 10 are delivered
+                first order has:
+                    5 items (exact one each other)
+                    10 comments (divided in 2 users) & First comment read
+                    Is closed
+                11th order is cancelled
+        """
         # Create users
         regular = User.objects.create_user(username='regular', password='test')
         another = User.objects.create_user(username='another', password='test')
@@ -90,18 +101,31 @@ class StandardViewsTest(TestCase):
                 user = regular
             else:
                 user = another
-            pk = randint(1, 5)
-            order = Order.objects.get(ref_name='example%s' % pk)
+            order = Order.objects.get(ref_name='example0')
             Comment.objects.create(user=user,
                                    reference=order,
                                    comment='Comment%s' % comment)
 
-        # deliver 10 orders
+        # Create some items
+        items_count = 5
+        for item in range(items_count):
+            order = Order.objects.get(ref_name='example0')
+            OrderItem.objects.create(item=1, size='XL', qty=5,
+                                     description='notes',
+                                     reference=order)
+
+        # deliver the first 10 orders
         order_bulk_edit = Order.objects.all().order_by('inbox_date')[:10]
         for order in order_bulk_edit:
-            # order.ref_name = 'example delivered'
+            order.ref_name = 'example delivered'
             order.status = 7
             order.save()
+
+        # Have a closed order (delivered & paid)
+        order = Order.objects.filter(status=7)[0]
+        order.ref_name = 'example closed'
+        order.prepaid = order.budget
+        order.save()
 
         # Have a cancelled order
         order = Order.objects.get(ref_name='example10')
@@ -110,12 +134,15 @@ class StandardViewsTest(TestCase):
         order.save()
 
         # Have a read comment
-        comment = Comment.objects.get(comment='Comment6')
-        order.ref_name = 'example cancelled'
-        order.status = 8
-        order.save()
+        order = Order.objects.get(ref_name='example closed')
+        comment = Comment.objects.filter(reference=order)
+        comment = comment.get(comment='Comment0')
+        comment.read = True
+        comment.comment = 'read comment'
+        comment.save()
 
     def test_main_view(self):
+        """Test the main view."""
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
@@ -127,7 +154,7 @@ class StandardViewsTest(TestCase):
         # Test context variables
         self.assertEqual(str(resp.context['orders'][0].ref_name), 'example15')
         self.assertEqual(resp.context['orders_count'], 9)
-        self.assertEqual(resp.context['comments_count'], 5)
+        self.assertEqual(resp.context['comments_count'], 4)
         self.assertEqual(str(resp.context['comments'][0].comment), 'Comment8')
         self.assertEqual(str(resp.context['user']), 'regular')
 
@@ -157,10 +184,28 @@ class StandardViewsTest(TestCase):
         self.assertTrue(delivered.has_next)
         self.assertEqual(delivered.number, 1)
         self.assertEqual(len(delivered), 5)
-        self.assertEqual(str(delivered[0].ref_name), 'example0')
+        self.assertEqual(str(delivered[0].ref_name), 'example delivered')
 
-    def test_order_view(self):
+    def test_order_closed_view(self):
+        """Test a particular order instance.
+
+        The order tested is a closed order with 10 comments one of them read.
+        """
+        order = Order.objects.get(ref_name='example closed')
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
-        resp = self.client.get(reverse('order_view', kwargs={'pk': 1}))
+        resp = self.client.get(reverse('order_view', kwargs={'pk': order.pk}))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/order_view.html')
+
+        order = resp.context['order']
+        comments = resp.context['comments']
+        items = resp.context['items']
+
+        self.assertEqual(order.ref_name, 'example closed')
+        self.assertEqual(len(comments), 10)
+        self.assertEqual(len(items), 5)
+        self.assertTrue(resp.context['closed'])
+        self.assertTrue(comments[9].read)

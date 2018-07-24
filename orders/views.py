@@ -115,7 +115,7 @@ def order_view(request, pk):
     files = Document.objects.filter(order=order)
     items = OrderItem.objects.filter(reference=order)
 
-    if order.status == 7 and order.budget == order.prepaid:
+    if order.status == '7' and order.budget == order.prepaid:
         closed = True
     else:
         closed = False
