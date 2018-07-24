@@ -121,16 +121,16 @@ class StandardViewsTest(TestCase):
             order.status = 7
             order.save()
 
-        # Have a closed order (delivered & paid)
-        order = Order.objects.filter(status=7)[0]
-        order.ref_name = 'example closed'
-        order.prepaid = order.budget
-        order.save()
-
         # Have a cancelled order
         order = Order.objects.get(ref_name='example10')
         order.ref_name = 'example cancelled'
         order.status = 8
+        order.save()
+
+        # Have a closed order (delivered & paid)
+        order = Order.objects.filter(status=7)[0]
+        order.ref_name = 'example closed'
+        order.prepaid = order.budget
         order.save()
 
         # Have a read comment
@@ -140,6 +140,11 @@ class StandardViewsTest(TestCase):
         comment.read = True
         comment.comment = 'read comment'
         comment.save()
+
+        # Have a file uploaded
+        order = Order.objects.get(ref_name='example closed')
+        Document.objects.create(description='Uploaded File',
+                                order=order)
 
     def test_main_view(self):
         """Test the main view."""
@@ -189,7 +194,8 @@ class StandardViewsTest(TestCase):
     def test_order_closed_view(self):
         """Test a particular order instance.
 
-        The order tested is a closed order with 10 comments one of them read.
+        The order tested is a closed order with 10 comments, one of them read,
+        5 items and 1 file.
         """
         order = Order.objects.get(ref_name='example closed')
         login = self.client.login(username='regular', password='test')
@@ -203,9 +209,44 @@ class StandardViewsTest(TestCase):
         order = resp.context['order']
         comments = resp.context['comments']
         items = resp.context['items']
+        files = resp.context['files']
 
         self.assertEqual(order.ref_name, 'example closed')
         self.assertEqual(len(comments), 10)
         self.assertEqual(len(items), 5)
+        self.assertEqual(len(files), 1)
         self.assertTrue(resp.context['closed'])
         self.assertTrue(comments[9].read)
+
+    def test_customer_list(self):
+        """Test the main features on customer list."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get(reverse('customerlist'))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/customers.html')
+
+        ctx = resp.context
+        self.assertEqual(str(ctx['user']), 'regular')
+
+        # Customers are ordered by order number
+        self.assertGreaterEqual(ctx['customers'][0].num_orders,
+                                ctx['customers'][1].num_orders)
+        self.assertGreaterEqual(ctx['customers'][1].num_orders,
+                                ctx['customers'][2].num_orders)
+        self.assertGreaterEqual(ctx['customers'][2].num_orders,
+                                ctx['customers'][3].num_orders)
+        self.assertGreaterEqual(ctx['customers'][3].num_orders,
+                                ctx['customers'][4].num_orders)
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#

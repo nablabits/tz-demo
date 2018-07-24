@@ -482,6 +482,7 @@ class Actions(View):
 def customerlist(request):
     """Display all customers or search'em."""
     customers = Customer.objects.annotate(num_orders=Count('order'))
+    customers = customers.order_by('-num_orders')
     page = request.GET.get('page', 1)
     paginator = Paginator(customers, 5)
     try:
