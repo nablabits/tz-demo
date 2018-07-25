@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, Document, OrderItem, Comment
-from django.urls import reverse, resolve
+from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
 
@@ -282,6 +282,31 @@ class StandardViewsTest(TestCase):
         self.assertEqual(len(resp.context['orders_cancelled']), 0)
         self.assertEqual(resp.context['orders_made'], 10)
         self.assertEqual(len(resp.context['pending']), 9)
+
+
+class ActionsGetMethod(TestCase):
+    """Test the get methods on Actions view."""
+
+    @classmethod
+    def setUpTestData(cls):
+        regular = User.objects.create_user(username='regular', password='test')
+        regular.save()
+        cls.client = Client()
+
+    def test_no_pk_raises_error(self):
+        with self.assertRaisesMessage(ValueError, 'Unexpected GET data'):
+            self.client.get(reverse('actions'), {'action': 'order-add'})
+
+    def test_no_action_raises_error(self):
+        with self.assertRaisesMessage(ValueError, 'Unexpected GET data'):
+            self.client.get(reverse('actions'), {'pk': 5})
+
+    def test_add_order(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': None, 'action': 'order-add'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertJSONEqual(resp, 'value')
+
 #
 #
 #
