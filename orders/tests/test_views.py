@@ -79,7 +79,7 @@ class StandardViewsTest(TestCase):
         # Create some orders
         orders_count = 20
         for order in range(orders_count):
-            pk = randint(0, 4)
+            pk = randint(1, 9)  # The first customer should have no order
             customer = Customer.objects.get(name='Customer%s' % pk)
             delivery = date.today() + timedelta(days=order % 5)
             Order.objects.create(user=regular,
@@ -121,12 +121,6 @@ class StandardViewsTest(TestCase):
             order.status = 7
             order.save()
 
-        # Have a cancelled order
-        order = Order.objects.get(ref_name='example10')
-        order.ref_name = 'example cancelled'
-        order.status = 8
-        order.save()
-
         # Have a closed order (delivered & paid)
         order = Order.objects.filter(status=7)[0]
         order.ref_name = 'example closed'
@@ -157,8 +151,8 @@ class StandardViewsTest(TestCase):
         self.assertTemplateUsed(resp, 'tz/main.html')
 
         # Test context variables
-        self.assertEqual(str(resp.context['orders'][0].ref_name), 'example15')
-        self.assertEqual(resp.context['orders_count'], 9)
+        self.assertEqual(str(resp.context['orders'][0].ref_name), 'example10')
+        self.assertEqual(resp.context['orders_count'], 10)
         self.assertEqual(resp.context['comments_count'], 4)
         self.assertEqual(str(resp.context['comments'][0].comment), 'Comment8')
         self.assertEqual(str(resp.context['user']), 'regular')
@@ -174,7 +168,7 @@ class StandardViewsTest(TestCase):
         self.assertTemplateUsed(resp, 'tz/orders.html')
 
         # Test context vars
-        self.assertEqual(str(resp.context['active'][0].ref_name), 'example15')
+        self.assertEqual(str(resp.context['active'][0].ref_name), 'example10')
         self.assertEqual(str(resp.context['user']), 'regular')
 
     def test_order_list_paginator(self):
@@ -259,6 +253,35 @@ class StandardViewsTest(TestCase):
         self.assertEqual(customers.next_page_number(), 2)
         self.assertEqual(len(customers), 5)
 
+    def test_customer_view(self):
+        """Test the customer details view.
+
+        Let the 10 delivered orders be owned by the tested customer who should
+        have no previous orders.
+        """
+        customer = Customer.objects.all()[0]
+        no_orders = Order.objects.filter(customer=customer)
+        self.assertEqual(len(no_orders), 0)
+
+        orders = Order.objects.filter(status=7)
+        for order in orders:
+            order.customer = customer
+            order.save()
+
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get(reverse('customer_view',
+                                       kwargs={'pk': customer.pk}))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/customer_view.html')
+
+        self.assertEqual(len(resp.context['orders_active']), 0)
+        self.assertEqual(len(resp.context['orders_delivered']), 10)
+        self.assertEqual(len(resp.context['orders_cancelled']), 0)
+        self.assertEqual(resp.context['orders_made'], 10)
+        self.assertEqual(len(resp.context['pending']), 9)
 #
 #
 #
