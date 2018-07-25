@@ -66,7 +66,7 @@ class StandardViewsTest(TestCase):
         another.save()
 
         # Create some customers
-        customer_count = 5
+        customer_count = 10
         for customer in range(customer_count):
             Customer.objects.create(name='Customer%s' % customer,
                                     address='This computer',
@@ -185,8 +185,9 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('orderlist'))
 
         delivered = resp.context['delivered']
-        self.assertTrue(delivered.has_previous)
-        self.assertTrue(delivered.has_next)
+        self.assertFalse(delivered.has_previous())
+        self.assertTrue(delivered.has_next())
+        self.assertTrue(delivered.has_other_pages())
         self.assertEqual(delivered.number, 1)
         self.assertEqual(len(delivered), 5)
         self.assertEqual(str(delivered[0].ref_name), 'example delivered')
@@ -240,6 +241,24 @@ class StandardViewsTest(TestCase):
                                 ctx['customers'][3].num_orders)
         self.assertGreaterEqual(ctx['customers'][3].num_orders,
                                 ctx['customers'][4].num_orders)
+
+    def test_customer_list_paginator(self):
+        """Test paginator functionality on customer list."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get('/customers')
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/customers.html')
+
+        customers = resp.context['customers']
+        self.assertFalse(customers.has_previous())
+        self.assertTrue(customers.has_next())
+        self.assertTrue(customers.has_other_pages())
+        self.assertEqual(customers.next_page_number(), 2)
+        self.assertEqual(len(customers), 5)
+
 #
 #
 #
