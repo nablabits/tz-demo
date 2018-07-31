@@ -260,6 +260,11 @@ class Actions(View):
             raise NameError('Action was not recogniced')
 
         data['html'] = render_to_string(template, context, request=request)
+        data['template'] = template
+        add_to_context = []
+        for k in context:
+            add_to_context.append(k)
+        data['context'] = add_to_context
         return JsonResponse(data)
 
     def post(self, request):

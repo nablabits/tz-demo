@@ -1,9 +1,12 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
+from django.core.exceptions import ObjectDoesNotExist
 from orders.models import Customer, Order, Document, OrderItem, Comment
 from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
+import json
+import ast
 
 
 class NotLoggedInTest(TestCase):
@@ -291,6 +294,29 @@ class ActionsGetMethod(TestCase):
     def setUpTestData(cls):
         regular = User.objects.create_user(username='regular', password='test')
         regular.save()
+        Customer.objects.create(name='Customer',
+                                address='This computer',
+                                city='No city',
+                                phone='666666666',
+                                email='customer@example.com',
+                                CIF='5555G',
+                                cp='48100')
+        customer = Customer.objects.get(name='Customer')
+        Order.objects.create(user=regular,
+                             customer=customer,
+                             ref_name='example',
+                             delivery=date.today(),
+                             waist=randint(10, 50),
+                             chest=randint(10, 50),
+                             hip=randint(10, 50),
+                             lenght=randint(10, 50),
+                             others='Custom notes',
+                             budget=2000,
+                             prepaid=0)
+        order = Order.objects.get(ref_name='example')
+        OrderItem.objects.create(item=1, size='XL', qty=5,
+                                 description='notes',
+                                 reference=order)
         cls.client = Client()
 
     def test_no_pk_raises_error(self):
@@ -301,11 +327,254 @@ class ActionsGetMethod(TestCase):
         with self.assertRaisesMessage(ValueError, 'Unexpected GET data'):
             self.client.get(reverse('actions'), {'pk': 5})
 
+    def test_invalid_action_raises_error(self):
+        with self.assertRaisesMessage(NameError, 'Action was not recogniced'):
+            self.client.get(reverse('actions'), {'pk': 5, 'action': 'null'})
+
     def test_add_order(self):
         resp = self.client.get(reverse('actions'),
                                {'pk': None, 'action': 'order-add'})
         self.assertEqual(resp.status_code, 200)
-        self.assertJSONEqual(resp, 'value')
+
+    def test_add_order_context(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': None, 'action': 'order-add'})
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_order.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'form')
+
+    def test_add_customer(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': None, 'action': 'customer-add'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_customer.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'form')
+
+    def test_add_order_from_customer_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 290, 'action': 'order-from-customer'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_add_order_from_customer(self):
+        customer = Customer.objects.get(name='Customer')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': customer.pk,
+                               'action': 'order-from-customer'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_order.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'form')
+
+    def test_add_item_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 290, 'action': 'order-add-item'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_add_item(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-add-item'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_item.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'order':
+            self.assertEqual(context[1], 'form')
+        elif context[0] == 'form':
+            self.assertEqual(context[1], 'order')
+        else:
+            self.assertEqual(context[0], 'Not recognized')
+
+    def test_add_comments_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 290, 'action': 'order-add-comment'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_add_comment(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-add-comment'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_comment.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'order':
+            self.assertEqual(context[1], 'form')
+        elif context[0] == 'form':
+            self.assertEqual(context[1], 'order')
+        else:
+            self.assertEqual(context[0], 'Not recognized')
+
+    def test_add_file_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200, 'action': 'order-add-file'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_add_file(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-add-file'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_file.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'order':
+            self.assertEqual(context[1], 'form')
+        elif context[0] == 'form':
+            self.assertEqual(context[1], 'order')
+        else:
+            self.assertEqual(context[0], 'Not recognized')
+
+    def test_edit_order_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200, 'action': 'order-edit'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_edit_order(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-edit'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/edit/edit_order.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'order':
+            self.assertEqual(context[1], 'form')
+        elif context[0] == 'form':
+            self.assertEqual(context[1], 'order')
+        else:
+            self.assertEqual(context[0], 'Not recognized')
+
+    def test_edit_order_date_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200, 'action': 'order-edit-date'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_edit_order_date(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-edit-date'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/edit/edit_date.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'order')
+
+    def test_edit_customer_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200, 'action': 'customer-edit'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_edit_customer(self):
+        customer = Customer.objects.get(name='Customer')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': customer.pk, 'action': 'customer-edit'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/edit/edit_customer.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'customer':
+            self.assertEqual(context[1], 'form')
+        elif context[0] == 'form':
+            self.assertEqual(context[1], 'customer')
+        else:
+            self.assertEqual(context[0], 'Not recognized')
+
+    def test_collect_order_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200, 'action': 'order-pay-now'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_collect_order(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-pay-now'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/edit/pay_order.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'order')
+
+    def test_close_order_returns_404_with_pk_out_of_range(self):
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200, 'action': 'order-close'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_close_order(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-close'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/edit/close_order.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'order':
+            self.assertEqual(context[1], 'form')
+        elif context[0] == 'form':
+            self.assertEqual(context[1], 'order')
+        else:
+            self.assertEqual(context[0], 'Not recognized')
+
+    def test_edit_item_raises_execption_with_pk_out_of_range(self):
+        with self.assertRaises(ObjectDoesNotExist):
+            self.client.get(reverse('actions'),
+                            {'pk': 290, 'action': 'order-edit-item'})
+
+    def test_edit_item(self):
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk, 'action': 'order-edit-item'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/edit/edit_item.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'form':
+            self.assertEqual(context[1], 'item')
+        elif context[0] == 'item':
+            self.assertEqual(context[1], 'form')
+        else:
+            self.assertEqual(context[0], 'Not recognized')
+
 
 #
 #
