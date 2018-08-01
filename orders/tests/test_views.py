@@ -1,45 +1,55 @@
+"""The main test suite for views. backend."""
+
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from django.core.exceptions import ObjectDoesNotExist
 from orders.models import Customer, Order, Document, OrderItem, Comment
+from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
 import json
-import ast
 
 
 class NotLoggedInTest(TestCase):
-    """Not logged in users should go to a login page."""
+    """Not logged in users should go to a login page.
+
+    On successful login, they're redirected to the view requested.
+    """
 
     def setUp(self):
+        """Set up the tests."""
         self.client = Client()
 
     def test_not_logged_in_on_main_view(self):
+        """Test not logged in users should be redirected to login."""
         login_url = '/accounts/login/?next=/'
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
     def test_not_logged_in_on_orders_list_view(self):
+        """Test not logged in users should be redirected to login."""
         login_url = '/accounts/login/?next=/orders'
         resp = self.client.get(reverse('orderlist'))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
     def test_not_logged_in_on_order_view(self):
+        """Test not logged in users should be redirected to login."""
         login_url = '/accounts/login/?next=/order/view/1'
         resp = self.client.get(reverse('order_view', kwargs={'pk': 1}))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
     def test_not_logged_in_on_customers_list_view(self):
+        """Test not logged in users should be redirected to login."""
         login_url = '/accounts/login/?next=/orders'
         resp = self.client.get(reverse('orderlist'))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
     def test_not_logged_in_on_customer_view(self):
+        """Test not logged in users should be redirected to login."""
         login_url = '/accounts/login/?next=/customers'
         resp = self.client.get(reverse('customerlist'))
         self.assertEqual(resp.status_code, 302)
@@ -288,10 +298,15 @@ class StandardViewsTest(TestCase):
 
 
 class ActionsGetMethod(TestCase):
-    """Test the get methods on Actions view."""
+    """Test the get method on Actions view."""
 
     @classmethod
     def setUpTestData(cls):
+        """Set up some data for the tests.
+
+        We should create a user, a customer, an order, an item and a file to
+        play with.
+        """
         regular = User.objects.create_user(username='regular', password='test')
         regular.save()
 
@@ -328,23 +343,31 @@ class ActionsGetMethod(TestCase):
         cls.client = Client()
 
     def test_no_pk_raises_error(self):
+        """Raise an error when no pk is given.
+
+        Edit and delete actions must have a pk reference (customer or order).
+        """
         with self.assertRaisesMessage(ValueError, 'Unexpected GET data'):
             self.client.get(reverse('actions'), {'action': 'order-add'})
 
     def test_no_action_raises_error(self):
+        """Raise an error when no action is given."""
         with self.assertRaisesMessage(ValueError, 'Unexpected GET data'):
             self.client.get(reverse('actions'), {'pk': 5})
 
     def test_invalid_action_raises_error(self):
+        """Raise an error when action doesn't match any condition."""
         with self.assertRaisesMessage(NameError, 'Action was not recogniced'):
             self.client.get(reverse('actions'), {'pk': 5, 'action': 'null'})
 
     def test_add_order(self):
+        """Return code 200 on order-add action."""
         resp = self.client.get(reverse('actions'),
                                {'pk': None, 'action': 'order-add'})
         self.assertEqual(resp.status_code, 200)
 
     def test_add_order_context(self):
+        """Test context dictionaries and template."""
         resp = self.client.get(reverse('actions'),
                                {'pk': None, 'action': 'order-add'})
         self.assertIsInstance(resp.content, bytes)
@@ -356,9 +379,15 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'form')
 
     def test_add_customer(self):
+        """Return code 200 on customer-add action."""
         resp = self.client.get(reverse('actions'),
                                {'pk': None, 'action': 'customer-add'})
         self.assertEqual(resp.status_code, 200)
+
+    def test_add_customer_context(self):
+        """Test context dictionaries and template."""
+        resp = self.client.get(reverse('actions'),
+                               {'pk': None, 'action': 'customer-add'})
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
@@ -368,11 +397,17 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'form')
 
     def test_add_order_from_customer_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error.
+
+        Hi numbers are given to avoid db previous entries (though they should
+        be deleted).
+        """
         resp = self.client.get(reverse('actions'),
                                {'pk': 290, 'action': 'order-from-customer'})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_order_from_customer(self):
+        """Test context dictionaries and template."""
         customer = Customer.objects.get(name='Customer')
         resp = self.client.get(reverse('actions'),
                                {'pk': customer.pk,
@@ -387,11 +422,16 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'form')
 
     def test_add_item_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 290, 'action': 'order-add-item'})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_item(self):
+        """Test context dictionaries and template.
+
+        The index for the context items seems to be a bit random (why?).
+        """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk, 'action': 'order-add-item'})
@@ -410,11 +450,16 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[0], 'Not recognized')
 
     def test_add_comments_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 290, 'action': 'order-add-comment'})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_comment(self):
+        """Test context dictionaries and template.
+
+        The index for the context items seems to be a bit random (why?).
+        """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk, 'action': 'order-add-comment'})
@@ -433,11 +478,16 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[0], 'Not recognized')
 
     def test_add_file_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-add-file'})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_file(self):
+        """Test context dictionaries and template.
+
+        The index for the context items seems to be a bit random (why?).
+        """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk, 'action': 'order-add-file'})
@@ -456,11 +506,16 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[0], 'Not recognized')
 
     def test_edit_order_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-edit'})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_order(self):
+        """Test context dictionaries and template.
+
+        The index for the context items seems to be a bit random (why?).
+        """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk, 'action': 'order-edit'})
@@ -479,11 +534,13 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[0], 'Not recognized')
 
     def test_edit_order_date_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-edit-date'})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_order_date(self):
+        """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk, 'action': 'order-edit-date'})
@@ -497,11 +554,16 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'order')
 
     def test_edit_customer_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'customer-edit'})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_customer(self):
+        """Test context dictionaries and template.
+
+        The index for the context items seems to be a bit random (why?).
+        """
         customer = Customer.objects.get(name='Customer')
         resp = self.client.get(reverse('actions'),
                                {'pk': customer.pk, 'action': 'customer-edit'})
@@ -520,11 +582,13 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[0], 'Not recognized')
 
     def test_collect_order_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-pay-now'})
         self.assertEqual(resp.status_code, 404)
 
     def test_collect_order(self):
+        """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk, 'action': 'order-pay-now'})
@@ -538,11 +602,16 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'order')
 
     def test_close_order_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-close'})
         self.assertEqual(resp.status_code, 404)
 
     def test_close_order(self):
+        """Test context dictionaries and template.
+
+        The index for the context items seems to be a bit random (why?).
+        """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk, 'action': 'order-close'})
@@ -561,11 +630,16 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[0], 'Not recognized')
 
     def test_edit_item_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-edit-item'})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_item(self):
+        """Test context dictionaries and template.
+
+        The index for the context items seems to be a bit random (why?).
+        """
         order = Order.objects.get(ref_name='example')
         item = OrderItem.objects.get(reference=order)
         resp = self.client.get(reverse('actions'),
@@ -585,11 +659,13 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[0], 'Not recognized')
 
     def test_delete_item_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-delete-item'})
         self.assertEqual(resp.status_code, 404)
 
     def test_delete_item(self):
+        """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         item = OrderItem.objects.get(reference=order)
         resp = self.client.get(reverse('actions'),
@@ -604,11 +680,13 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'item')
 
     def test_delete_file_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'order-delete-file'})
         self.assertEqual(resp.status_code, 404)
 
     def test_delete_file(self):
+        """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         file = Document.objects.get(order=order)
         resp = self.client.get(reverse('actions'),
@@ -623,14 +701,17 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'file')
 
     def test_delete_customer_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
                                {'pk': 200, 'action': 'customer-delete'})
         self.assertEqual(resp.status_code, 404)
 
     def test_delete_customer(self):
+        """Test context dictionaries and template."""
         customer = Customer.objects.get(name='Customer')
         resp = self.client.get(reverse('actions'),
-                               {'pk': customer.pk, 'action': 'customer-delete'})
+                               {'pk': customer.pk,
+                               'action': 'customer-delete'})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -641,6 +722,7 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'customer')
 
     def test_logout(self):
+        """Test context dictionaries and template."""
         resp = self.client.get(reverse('actions'),
                                {'pk': None, 'action': 'logout'})
         self.assertEqual(resp.status_code, 200)
@@ -653,6 +735,143 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(len(context), 0)
 
 
+class ActionsPostMethod(TestCase):
+    """Test the post method on Actions view."""
+
+    def setUp(self):
+        """Set up some data for the tests.
+
+        We should create a user, a customer, an order, a comment, an item and a
+        file to play with.
+        """
+        regular = User.objects.create_user(username='regular', password='test')
+        regular.save()
+
+        # Create customer
+        Customer.objects.create(name='Customer',
+                                address='This computer',
+                                city='No city',
+                                phone='666666666',
+                                email='customer@example.com',
+                                CIF='5555G',
+                                cp='48100')
+
+        # Create order
+        customer = Customer.objects.get(name='Customer')
+        Order.objects.create(user=regular,
+                             customer=customer,
+                             ref_name='example',
+                             delivery=date.today(),
+                             waist=randint(10, 50),
+                             chest=randint(10, 50),
+                             hip=randint(10, 50),
+                             lenght=randint(10, 50),
+                             others='Custom notes',
+                             budget=2000,
+                             prepaid=0)
+
+        # Create Comment, Item & Document
+        order = Order.objects.get(ref_name='example')
+        Comment.objects.create(user=regular,
+                               reference=order,
+                               comment='Example comment')
+        OrderItem.objects.create(item=1, size='XL', qty=5,
+                                 description='notes',
+                                 reference=order)
+        Document.objects.create(description='Uploaded File',
+                                order=order)
+        self.client = Client()
+
+    def test_no_pk_raises_error(self):
+        """Raise an error when no pk is given."""
+        with self.assertRaisesMessage(ValueError, 'POST data was poor'):
+            self.client.post(reverse('actions'), {'action': 'order-add'})
+
+    def test_no_action_raises_error(self):
+        """Raise an error when no action is given."""
+        with self.assertRaisesMessage(ValueError, 'POST data was poor'):
+            self.client.post(reverse('actions'), {'pk': 5})
+
+    def test_invalid_action_raises_error(self):
+        """Raise an error when action doesn't match any condition."""
+        with self.assertRaisesMessage(NameError, 'Action was not recogniced'):
+            self.client.post(reverse('actions'), {'pk': 5, 'action': 'null'})
+
+    def test_order_new_adds_an_order(self):
+        """Test new order creation."""
+        customer = Customer.objects.get(name='Customer')
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        self.client.post(reverse('actions'), {'customer': customer.pk,
+                                              'ref_name': 'created',
+                                              'delivery': date.today(),
+                                              'waist': '1',
+                                              'chest': '2',
+                                              'hip': '3.4',
+                                              'lenght': 5,
+                                              'others': 'None',
+                                              'budget': '1000',
+                                              'prepaid': '100',
+                                              'pk': 'None',
+                                              'action': 'order-new'
+                                              })
+        order_created = Order.objects.get(ref_name='created')
+        self.assertTrue(order_created)
+
+    def test_order_new_redirects_to_order_page(self):
+        """Test redirection to recently created order."""
+        customer = Customer.objects.get(name='Customer')
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.post(reverse('actions'),
+                                {'customer': customer.pk,
+                                 'ref_name': 'created',
+                                 'delivery': date.today(),
+                                 'waist': '1',
+                                 'chest': '2',
+                                 'hip': '3.4',
+                                 'lenght': 5,
+                                 'others': 'None',
+                                 'budget': '1000',
+                                 'prepaid': '100',
+                                 'pk': 'None',
+                                 'action': 'order-new'
+                                 })
+
+        order_created = Order.objects.get(ref_name='created')
+        url = '/order/view/%s' % order_created.pk
+        self.assertRedirects(resp, url)
+
+    def test_invalid_order_new_returns_to_form_again(self):
+        """When form is not valid JsonResponse should be sent again."""
+        customer = Customer.objects.get(name='Customer')
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.post(reverse('actions'),
+                                {'customer': customer.pk,
+                                 'ref_name': 'created',
+                                 'delivery': date.today(),
+                                 'waist': '1',
+                                 'chest': '2',
+                                 'invalid_field': '3.4',
+                                 'lenght': 5,
+                                 'others': 'None',
+                                 'budget': '1000',
+                                 'prepaid': '100',
+                                 'pk': 'None',
+                                 'action': 'order-new'
+                                 })
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_order.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'form')
 
 #
 #

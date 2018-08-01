@@ -1,3 +1,5 @@
+"""Define all the views for the app."""
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.http import JsonResponse
@@ -140,10 +142,21 @@ class Actions(View):
     """Unify all the AJAX actions in a single view.
 
     With this view we'll be able to edit, upload & delete files, add comments
-    or close orders. While let CRUD with customers
+    or close orders. While let CRUD with customers.
+    Get method should load the correct template for the modal, while POST
+    method processes the update.
     """
 
     def get(self, request):
+        """Return a JsonResponse with the data to load modal.
+
+        This method returns a template, sometimes with a form, for the modal
+        depending the action given. The template is returned as string using
+        render_to_string method.
+
+        Every action must have a valid pk, but order-add, customer-add & logout
+        otherwise an error is raised(404).
+        """
         data = dict()
         pk = self.request.GET.get('pk', None)
         action = self.request.GET.get('action', None)
@@ -289,6 +302,9 @@ class Actions(View):
                 order.user = request.user
                 order.save()
                 return redirect('order_view', pk=order.pk)
+            else:
+                context = {'form': form}
+                template = 'includes/add/add_order.html'
 
         # Add Customer (POST)
         elif action == 'customer-new':
@@ -482,6 +498,13 @@ class Actions(View):
 
         else:
             raise NameError('Action was not recogniced')
+
+        # Test stuff
+        data['template'] = template
+        add_to_context = []
+        for k in context:
+            add_to_context.append(k)
+        data['context'] = add_to_context
 
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
