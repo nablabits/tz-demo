@@ -314,6 +314,9 @@ class Actions(View):
                 customer.creation = timezone.now()
                 customer.save()
                 return redirect('customer_view', pk=customer.pk)
+            else:
+                context = {'form': form}
+                template = 'includes/add/add_customer.html'
 
         # Add comment (POST)
         elif action == 'order-comment':
@@ -409,6 +412,7 @@ class Actions(View):
 
         # Edit item (POST)
         elif action == 'order-edit-item':
+            get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             order = item.reference
             form = OrderItemForm(request.POST, instance=item)
@@ -463,6 +467,7 @@ class Actions(View):
 
         # Delete item (POST) define
         elif action == 'order-delete-item':
+            get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             order = item.reference
             items = OrderItem.objects.filter(reference=order)
@@ -474,6 +479,7 @@ class Actions(View):
 
         # Delete file (POST)
         elif action == 'order-delete-file':
+            get_object_or_404(Document, pk=pk)
             file = Document.objects.select_related('order').get(pk=pk)
             order = file.order
             files = Document.objects.filter(order=order)

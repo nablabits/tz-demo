@@ -799,10 +799,11 @@ class ActionsPostMethod(TestCase):
 
     def test_order_new_adds_an_order(self):
         """Test new order creation."""
-        customer = Customer.objects.get(name='Customer')
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
+
+        customer = Customer.objects.get(name='Customer')
         self.client.post(reverse('actions'), {'customer': customer.pk,
                                               'ref_name': 'created',
                                               'delivery': date.today(),
@@ -816,8 +817,7 @@ class ActionsPostMethod(TestCase):
                                               'pk': 'None',
                                               'action': 'order-new'
                                               })
-        order_created = Order.objects.get(ref_name='created')
-        self.assertTrue(order_created)
+        self.assertTrue(Order.objects.get(ref_name='created'))
 
     def test_order_new_redirects_to_order_page(self):
         """Test redirection to recently created order."""
@@ -873,7 +873,93 @@ class ActionsPostMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'form')
 
-#
+    def test_customer_new_adds_customer(self):
+        """Test new customer creation."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+        self.client.post(reverse('actions'), {'name': 'New Customer',
+                                              'address': 'example address',
+                                              'city': 'Mungia',
+                                              'phone': '123456789',
+                                              'email': 'johndoe@example.com',
+                                              'CIF': '123456789F',
+                                              'cp': '12345',
+                                              'pk': None,
+                                              'action': 'customer-new'
+                                              })
+        self.assertTrue(Customer.objects.get(name='New Customer'))
+
+    def test_customer_new_redirects_to_customer_page(self):
+        """Test redirection to recently created customer."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+        resp = self.client.post(reverse('actions'),
+                                {'name': 'New Customer',
+                                 'address': 'example address',
+                                 'city': 'Mungia',
+                                 'phone': '123456789',
+                                 'email': 'johndoe@example.com',
+                                 'CIF': '123456789F',
+                                 'cp': '12345',
+                                 'pk': None,
+                                 'action': 'customer-new'
+                                 })
+        customer_created = Customer.objects.get(name='New Customer')
+        url = '/customer_view/%s' % customer_created.pk
+        self.assertRedirects(resp, url)
+
+    def test_invalid_customer_new_returns_to_form_again(self):
+        """When form is not valid JsonResponse should be sent again."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+        resp = self.client.post(reverse('actions'),
+                                {'name': 'New Customer',
+                                 'address': 'example address',
+                                 'city': 'Mungia',
+                                 'invalid-phone-field-name': '123456789',
+                                 'email': 'johndoe@example.com',
+                                 'CIF': '123456789F',
+                                 'cp': '12345',
+                                 'pk': None,
+                                 'action': 'customer-new'
+                                 })
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_customer.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'form')
+
+    def test_pk_out_of_range_raises_404(self):
+        """Raises a 404 when pk is out of index."""
+        actions = ('order-comment',
+                   'comment-read',
+                   'order-add-item',
+                   'order-add-file',
+                   'order-edit',
+                   'order-edit-date',
+                   'order-edit-item',
+                   'order-pay-now',
+                   'order-close',
+                   'update-status',
+                   'customer-edit',
+                   'order-delete-item',
+                   'order-delete-file',
+                   'customer-delete'
+                   )
+        for action in actions:
+            resp = self.client.post(reverse('actions'),
+                                    {'pk': 2000, 'action': action})
+            self.assertEqual(resp.status_code, 404)
+
 #
 #
 #
