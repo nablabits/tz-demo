@@ -227,6 +227,7 @@ class Actions(View):
 
         # Edit item (GET)
         elif action == 'order-edit-item':
+            get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             order = item.reference
             form = OrderItemForm(instance=item)
@@ -235,6 +236,7 @@ class Actions(View):
 
         # Delete item (GET)
         elif action == 'order-delete-item':
+            get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             context = {'item': item}
             template = 'includes/delete/delete_item.html'
@@ -260,11 +262,14 @@ class Actions(View):
             raise NameError('Action was not recogniced')
 
         data['html'] = render_to_string(template, context, request=request)
+
+        # Test stuff
         data['template'] = template
         add_to_context = []
         for k in context:
             add_to_context.append(k)
         data['context'] = add_to_context
+
         return JsonResponse(data)
 
     def post(self, request):
