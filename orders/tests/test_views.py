@@ -960,8 +960,25 @@ class ActionsPostMethod(TestCase):
                                     {'pk': 2000, 'action': action})
             self.assertEqual(resp.status_code, 404)
 
-#
-#
+    def test_comment_adds_comment(self):
+        """Test the proper insertion of comments."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+        order = Order.objects.get(ref_name='example')
+        self.client.post(reverse('actions'), {'action': 'order-comment',
+                                              'pk': order.pk,
+                                              'comment': 'Entered comment'})
+        comment = Comment.objects.get(comment='Entered comment')
+        user = User.objects.get(username='regular')
+        self.assertTrue(comment)
+        self.assertEqual(comment.reference, order)
+        self.assertEqual(comment.user, user)
+
+    def test_comment_add_context_response(self):
+        """Next item."""
+        pass
 #
 #
 #
