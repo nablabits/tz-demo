@@ -782,6 +782,18 @@ class ActionsPostMethod(TestCase):
                                 order=order)
         self.client = Client()
 
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        context_is_valid = 0
+        for item in context:
+            for var in vars:
+                if item == var:
+                    context_is_valid += 1
+        if context_is_valid == len(vars):
+            return True
+        else:
+            return False
+
     def test_no_pk_raises_error(self):
         """Raise an error when no pk is given."""
         with self.assertRaisesMessage(ValueError, 'POST data was poor'):
@@ -1002,10 +1014,9 @@ class ActionsPostMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#comment-list')
-        if context[1] == 'form':
-            self.assertEqual(context[0], 'comments')
-        if context[1] == 'comments':
-            self.assertEqual(context[0], 'form')
+        vars = ('comments', 'form')
+        context_is_valid = self.context_vars(context, vars)
+        self.assertTrue(context_is_valid)
 
     def test_comment_add_invalid_form_returns_to_form_again(self):
         """Not valid forms should return to the form again."""
@@ -1082,15 +1093,12 @@ class ActionsPostMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#order-details')
-        context_vars = ('form', 'order', 'items')
-        context_is_valid = 0
-        for item in context:
-            for var in context_vars:
-                if item == var:
-                    context_is_valid += 1
-        self.assertEqual(context_is_valid, len(context_vars))
+        vars = ('form', 'order', 'items')
+        context_is_valid = self.context_vars(context, vars)
+        self.assertTrue(context_is_valid)
 
     def test_item_add_invalid_form_returns_to_form_again(self):
+        """Test item add invalid form behaviour."""
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
@@ -1109,13 +1117,9 @@ class ActionsPostMethod(TestCase):
         self.assertFalse(data['form_is_valid'])
         self.assertEqual(template, 'includes/add/add_item.html')
         self.assertIsInstance(context, list)
-        context_vars = ('form', 'order')
-        context_is_valid = 0
-        for item in context:
-            for var in context_vars:
-                if item == var:
-                    context_is_valid += 1
-        self.assertEqual(context_is_valid, len(context_vars))
+        vars = ('form', 'order')
+        context_is_valid = self.context_vars(context, vars)
+        self.assertTrue(context_is_valid)
 #
 #
 #
