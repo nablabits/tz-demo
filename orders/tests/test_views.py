@@ -3,6 +3,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, Document, OrderItem, Comment
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
@@ -1248,7 +1249,44 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['context'][0], 'form')
         self.assertEqual(data['template'], 'includes/add/add_order.html')
 
-#
+    def test_edit_date_successful(self):
+        """Test the correct quick-edit date."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': order.pk,
+                                 'action': 'order-edit-date'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+
+    def test_edit_date_returns_false_with_invalid_dates_objs(self):
+        """No datetime objects should return false to form_is_valid."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'delivery': 'invalid data',
+                                 'pk': order.pk,
+                                 'action': 'order-edit-date'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+
+    def text_edit_date_raises_error(self):
+        """Invalid dates should raise an exception."""
+        order = Order.objects.get(ref_name='example')
+        with self.assertRaises(ValidationError):
+            self.client.post(reverse('actions'),
+                             {'delivery': 'invalid data',
+                              'pk': order.pk,
+                              'action': 'order-edit-date'
+                              })
 #
 #
 #
