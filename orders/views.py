@@ -336,6 +336,8 @@ class Actions(View):
                 template = 'includes/comment_list.html'
             else:
                 data['form_is_valid'] = False
+                context = {'order': order, 'form': form}
+                template = 'includes/add/add_comment.html'
 
         # Mark comment as read
         elif action == 'comment-read':
@@ -505,13 +507,15 @@ class Actions(View):
         else:
             raise NameError('Action was not recogniced')
 
-        # Test stuff
+        # Test stuff. Since it's not very straightforward extract this data
+        # from render_to_string method, we'll pass them as keys in JSON
         data['template'] = template
         add_to_context = []
         for k in context:
             add_to_context.append(k)
         data['context'] = add_to_context
 
+        # Now render_to_string the html for JSON response
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
 

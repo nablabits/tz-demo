@@ -1001,7 +1001,28 @@ class ActionsPostMethod(TestCase):
             self.assertEqual(context[0], 'comments')
         if context[1] == 'comments':
             self.assertEqual(context[0], 'form')
-#
+
+    def test_comment_add_invalid_form_returns_to_form_again(self):
+        """Not valid forms should return to the form again."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'order-comment',
+                                 'pk': order.pk})
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(template, 'includes/add/add_comment.html')
+        self.assertIsInstance(context, list)
+        if context[0] == 'order':
+            self.assertEqual(context[1], 'form')
+        if context[0] == 'form':
+            self.assertEqual(context[1], 'order')
+
+
 #
 #
 #

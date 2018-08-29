@@ -106,7 +106,7 @@ class Comment(models.Model):
     creation = models.DateTimeField('Cuando', default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
-    comment = models.TextField('Comentario', default='')
+    comment = models.TextField('Comentario')
     read = models.BooleanField('Leido', default=False)
 
     def __str__(self):
