@@ -8,6 +8,7 @@ from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
 import json
+import io
 
 
 class NotLoggedInTest(TestCase):
@@ -1120,6 +1121,23 @@ class ActionsPostMethod(TestCase):
         vars = ('form', 'order')
         context_is_valid = self.context_vars(context, vars)
         self.assertTrue(context_is_valid)
+
+    def test_add_file_adds_a_file(self):
+        """Test the proper file creation."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+        order = Order.objects.get(ref_name='example')
+        test_file = io.StringIO('Example text')
+        self.client.post(reverse('actions'),
+                         {'action': 'order-add-file',
+                          'pk': order.pk,
+                          'description': 'New file',
+                          'document': test_file})
+        file = Document.objects.get(description='New file')
+        self.assertTrue(file)
+        self.assertEqual(file.order, order)
 #
 #
 #
