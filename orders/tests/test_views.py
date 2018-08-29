@@ -737,14 +737,32 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(len(context), 0)
 
 
-class ActionsPostMethod(TestCase):
-    """Test the post method on Actions view."""
+class ActionsPostMethodRaises(TestCase):
+    """Test the correct raise of errors in post method."""
+
+    def test_no_pk_raises_error(self):
+        """Raise an error when no pk is given."""
+        with self.assertRaisesMessage(ValueError, 'POST data was poor'):
+            self.client.post(reverse('actions'), {'action': 'order-add'})
+
+    def test_no_action_raises_error(self):
+        """Raise an error when no action is given."""
+        with self.assertRaisesMessage(ValueError, 'POST data was poor'):
+            self.client.post(reverse('actions'), {'pk': 5})
+
+    def test_invalid_action_raises_error(self):
+        """Raise an error when action doesn't match any condition."""
+        with self.assertRaisesMessage(NameError, 'Action was not recogniced'):
+            self.client.post(reverse('actions'), {'pk': 5, 'action': 'null'})
+
+
+class ActionsPostMethodCreate(TestCase):
+    """Test the post method on Actions view to add new elements."""
 
     def setUp(self):
         """Set up some data for the tests.
 
-        We should create a user, a customer, an order, a comment, an item and a
-        file to play with.
+        We should create a user, a customer and an order to play with.
         """
         regular = User.objects.create_user(username='regular', password='test')
         regular.save()
@@ -791,21 +809,6 @@ class ActionsPostMethod(TestCase):
             return True
         else:
             return False
-
-    def test_no_pk_raises_error(self):
-        """Raise an error when no pk is given."""
-        with self.assertRaisesMessage(ValueError, 'POST data was poor'):
-            self.client.post(reverse('actions'), {'action': 'order-add'})
-
-    def test_no_action_raises_error(self):
-        """Raise an error when no action is given."""
-        with self.assertRaisesMessage(ValueError, 'POST data was poor'):
-            self.client.post(reverse('actions'), {'pk': 5})
-
-    def test_invalid_action_raises_error(self):
-        """Raise an error when action doesn't match any condition."""
-        with self.assertRaisesMessage(NameError, 'Action was not recogniced'):
-            self.client.post(reverse('actions'), {'pk': 5, 'action': 'null'})
 
     def test_order_new_adds_an_order(self):
         """Test new order creation."""
@@ -1131,6 +1134,9 @@ class ActionsPostMethod(TestCase):
         vars = ('form', 'order')
         context_is_valid = self.context_vars(context, vars)
         self.assertTrue(context_is_valid)
+
+
+
 #
 #
 #
