@@ -772,17 +772,6 @@ class ActionsPostMethod(TestCase):
                              budget=2000,
                              prepaid=0)
 
-        # Create Comment, Item & Document
-        order = Order.objects.get(ref_name='example')
-        Comment.objects.create(user=regular,
-                               reference=order,
-                               comment='Example comment')
-        OrderItem.objects.create(item=1, size='XL', qty=5,
-                                 description='notes',
-                                 reference=order)
-        Document.objects.create(description='Uploaded File',
-                                order=order)
-
         # Load client
         self.client = Client()
 
@@ -1016,10 +1005,14 @@ class ActionsPostMethod(TestCase):
 
     def test_mark_comment_as_read_returns_to_main(self):
         """Mark comments as read should redirect to main view."""
-        comment = Comment.objects.get(comment='Example comment')
+        order = Order.objects.get(ref_name='example')
+        self.client.post(reverse('actions'), {'action': 'order-comment',
+                                              'pk': order.pk,
+                                              'comment': 'Entered comment'})
+        comment = Comment.objects.get(comment='Entered comment')
         resp = self.client.post(reverse('actions'), {'action': 'comment-read',
                                                      'pk': comment.pk})
-        read_comment = Comment.objects.get(comment='Example comment')
+        read_comment = Comment.objects.get(comment='Entered comment')
         url = '/'
         self.assertTrue(read_comment.read)
         self.assertEqual(resp.status_code, 302)
