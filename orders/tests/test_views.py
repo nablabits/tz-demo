@@ -1117,6 +1117,27 @@ class ActionsPostMethod(TestCase):
         url = '/order/view/%s' % order.pk
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, url)
+
+    def test_add_files_invalid_form_returns_to_form_again(self):
+        """Test file add invalid form behaviour."""
+        order = Order.objects.get(ref_name='example')
+
+        # Missing file, so should be not valid
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'order-add-file',
+                                 'pk': order.pk,
+                                 'description': 'New file'})
+
+        # Now try the behaviour
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(template, 'includes/add/add_file.html')
+        self.assertIsInstance(context, list)
+        vars = ('form', 'order')
+        context_is_valid = self.context_vars(context, vars)
+        self.assertTrue(context_is_valid)
 #
 #
 #
