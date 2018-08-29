@@ -977,8 +977,30 @@ class ActionsPostMethod(TestCase):
         self.assertEqual(comment.user, user)
 
     def test_comment_add_context_response(self):
-        """Next item."""
-        pass
+        """Test the content of the response."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'order-comment',
+                                 'pk': order.pk,
+                                 'comment': 'Entered comment'})
+
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/comment_list.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['html_id'], '#comment-list')
+        if context[1] == 'form':
+            self.assertEqual(context[0], 'comments')
+        if context[1] == 'comments':
+            self.assertEqual(context[0], 'form')
 #
 #
 #
