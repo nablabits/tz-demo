@@ -1037,6 +1037,82 @@ class ActionsPostMethod(TestCase):
         self.assertTrue(read_comment.read)
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, url)
+
+    def test_item_add_adds_item(self):
+        """Test the proper insertion of items."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        order = Order.objects.get(ref_name='example')
+        self.client.post(reverse('actions'),
+                         {'action': 'order-add-item',
+                          'pk': order.pk,
+                          'item': '1',
+                          'size': 'xs',
+                          'qty': 2,
+                          'description': 'added item'
+                          })
+        item = OrderItem.objects.get(description='added item')
+        self.assertTrue(item)
+        self.assertEqual(item.reference, order)
+
+    def test_item_add_context_response(self):
+        """Test the response given by add item."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'order-add-item',
+                                 'pk': order.pk,
+                                 'item': '1',
+                                 'size': 'xs',
+                                 'qty': 2,
+                                 'description': 'added item'
+                                 })
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/order_details.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['html_id'], '#order-details')
+        context_vars = ('form', 'order', 'items')
+        context_is_valid = 0
+        for item in context:
+            for var in context_vars:
+                if item == var:
+                    context_is_valid += 1
+        self.assertEqual(context_is_valid, len(context_vars))
+
+    def test_item_add_invalid_form_returns_to_form_again(self):
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'order-add-item',
+                                 'pk': order.pk,
+                                 'item': '1',
+                                 'size': 'xs',
+                                 'qty': 2.5,
+                                 'description': 'invalid item'
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(template, 'includes/add/add_item.html')
+        self.assertIsInstance(context, list)
+        context_vars = ('form', 'order')
+        context_is_valid = 0
+        for item in context:
+            for var in context_vars:
+                if item == var:
+                    context_is_valid += 1
+        self.assertEqual(context_is_valid, len(context_vars))
 #
 #
 #

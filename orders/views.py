@@ -352,16 +352,18 @@ class Actions(View):
         elif action == 'order-add-item':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm(request.POST)
-            template = 'includes/order_details.html'
-            items = OrderItem.objects.filter(reference=order)
-            context = {'form': form, 'order': order, 'items': items}
             if form.is_valid():
                 add_item = form.save(commit=False)
                 add_item.reference = order
                 add_item.save()
+                items = OrderItem.objects.filter(reference=order)
+                template = 'includes/order_details.html'
+                context = {'form': form, 'order': order, 'items': items}
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-details'
             else:
+                context = {'order': order, 'form': form}
+                template = 'includes/add/add_item.html'
                 data['form_is_valid'] = False
 
         # Add file (POST)
