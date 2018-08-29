@@ -1174,10 +1174,17 @@ class ActionsPostMethodEdit(TestCase):
         # Load client
         self.client = Client()
 
-        # Log the user in
-        # login = self.client.login(username='regular', password='test')
-        # if not login:
-        #     raise RuntimeError('Couldn\'t login')
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        context_is_valid = 0
+        for item in context:
+            for var in vars:
+                if item == var:
+                    context_is_valid += 1
+        if context_is_valid == len(vars):
+            return True
+        else:
+            return False
 
     def test_edit_order_edits_the_order(self):
         """Test the correct edition for fields."""
@@ -1197,11 +1204,14 @@ class ActionsPostMethodEdit(TestCase):
                                  'pk': order.pk,
                                  'action': 'order-edit'
                                  })
+        # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
         self.assertTrue(data['reload'])
+
+        # Test if the fields were modified
         mod_order = Order.objects.get(pk=order.pk)
         self.assertEqual(mod_order.ref_name, 'modified')
         self.assertEqual(str(mod_order.delivery), '2017-01-01')
@@ -1212,6 +1222,32 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(mod_order.others, 'None')
         self.assertEqual(mod_order.budget, 1000)
         self.assertEqual(mod_order.prepaid, 100)
+
+    def test_edit_order_not_valid_returns_to_form(self):
+        """Test rejected edit order forms."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'ref_name': 'modified',
+                                 'customer': 'wrong customer',
+                                 'delivery': date(2017, 1, 1),
+                                 'waist': '1',
+                                 'chest': '2',
+                                 'hip': '3',
+                                 'lenght': 5,
+                                 'others': 'None',
+                                 'budget': '1000',
+                                 'prepaid': '100',
+                                 'pk': order.pk,
+                                 'action': 'order-edit'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['context'][0], 'form')
+        self.assertEqual(data['template'], 'includes/add/add_order.html')
+
 #
 #
 #
