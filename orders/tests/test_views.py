@@ -869,6 +869,7 @@ class ActionsPostMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
+        self.assertFalse(data['form_is_valid'])
         self.assertEqual(template, 'includes/add/add_order.html')
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'form')
@@ -934,6 +935,7 @@ class ActionsPostMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
+        self.assertFalse(data['form_is_valid'])
         self.assertEqual(template, 'includes/add/add_customer.html')
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'form')

@@ -303,6 +303,7 @@ class Actions(View):
                 order.save()
                 return redirect('order_view', pk=order.pk)
             else:
+                data['form_is_valid'] = False
                 context = {'form': form}
                 template = 'includes/add/add_order.html'
 
@@ -315,6 +316,7 @@ class Actions(View):
                 customer.save()
                 return redirect('customer_view', pk=customer.pk)
             else:
+                data['form_is_valid'] = False
                 context = {'form': form}
                 template = 'includes/add/add_customer.html'
 
