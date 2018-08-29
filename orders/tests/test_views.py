@@ -9,6 +9,7 @@ from datetime import date, timedelta
 from random import randint
 import json
 import io
+import os
 
 
 class NotLoggedInTest(TestCase):
@@ -1093,9 +1094,29 @@ class ActionsPostMethod(TestCase):
                           'pk': order.pk,
                           'description': 'New file',
                           'document': test_file})
-        file = Document.objects.get(description='New file')
-        self.assertTrue(file)
-        self.assertEqual(file.order, order)
+        # Get rid of the temp file
+        document = Document.objects.get(description='New file')
+        os.remove('media/' + str(document.document))
+
+        self.assertTrue(document)
+        self.assertEqual(document.order, order)
+
+    def test_add_files_redirects_to_order_view(self):
+        """Test the response given by add file."""
+        order = Order.objects.get(ref_name='example')
+        test_file = io.StringIO('Example text')
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'order-add-file',
+                                 'pk': order.pk,
+                                 'description': 'New file',
+                                 'document': test_file})
+        # Get rid of the temp file
+        document = Document.objects.get(description='New file')
+        os.remove('media/' + str(document.document))
+        # Now try the redirect
+        url = '/order/view/%s' % order.pk
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, url)
 #
 #
 #

@@ -374,7 +374,6 @@ class Actions(View):
                 upload = form.save(commit=False)
                 upload.order = order
                 upload.save()
-                data['form_is_valid'] = True
                 return redirect('order_view', pk=pk)
             else:
                 context = {'order': order, 'form': form}
