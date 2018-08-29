@@ -1136,7 +1136,82 @@ class ActionsPostMethodCreate(TestCase):
         self.assertTrue(context_is_valid)
 
 
+class ActionsPostMethodEdit(TestCase):
+    """Test the post method on Actions view to add new elements."""
 
+    def setUp(self):
+        """Set up some data for the tests.
+
+        We should create a user, a customer, an order, a comment, an item and a
+        file to play with.
+        """
+        regular = User.objects.create_user(username='regular', password='test')
+        regular.save()
+
+        # Create customer
+        Customer.objects.create(name='Customer',
+                                address='This computer',
+                                city='No city',
+                                phone='666666666',
+                                email='customer@example.com',
+                                CIF='5555G',
+                                cp='48100')
+
+        # Create order
+        customer = Customer.objects.get(name='Customer')
+        Order.objects.create(user=regular,
+                             customer=customer,
+                             ref_name='example',
+                             delivery=date.today(),
+                             waist=randint(10, 50),
+                             chest=randint(10, 50),
+                             hip=randint(10, 50),
+                             lenght=randint(10, 50),
+                             others='Custom notes',
+                             budget=2000,
+                             prepaid=0)
+
+        # Load client
+        self.client = Client()
+
+        # Log the user in
+        # login = self.client.login(username='regular', password='test')
+        # if not login:
+        #     raise RuntimeError('Couldn\'t login')
+
+    def test_edit_order_edits_the_order(self):
+        """Test the correct edition for fields."""
+        order = Order.objects.get(ref_name='example')
+        customer = Customer.objects.get(name='Customer')
+        resp = self.client.post(reverse('actions'),
+                                {'ref_name': 'modified',
+                                 'customer': customer.pk,
+                                 'delivery': date(2017, 1, 1),
+                                 'waist': '1',
+                                 'chest': '2',
+                                 'hip': '3',
+                                 'lenght': 5,
+                                 'others': 'None',
+                                 'budget': '1000',
+                                 'prepaid': '100',
+                                 'pk': order.pk,
+                                 'action': 'order-edit'
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+        mod_order = Order.objects.get(pk=order.pk)
+        self.assertEqual(mod_order.ref_name, 'modified')
+        self.assertEqual(str(mod_order.delivery), '2017-01-01')
+        self.assertEqual(mod_order.waist, 1)
+        self.assertEqual(mod_order.chest, 2)
+        self.assertEqual(mod_order.hip, 3)
+        self.assertEqual(mod_order.lenght, 5)
+        self.assertEqual(mod_order.others, 'None')
+        self.assertEqual(mod_order.budget, 1000)
+        self.assertEqual(mod_order.prepaid, 100)
 #
 #
 #
