@@ -1024,8 +1024,19 @@ class ActionsPostMethod(TestCase):
         if context[0] == 'form':
             self.assertEqual(context[1], 'order')
 
-
-#
+    def test_mark_comment_as_read_returns_to_main(self):
+        """Mark comments as read should redirect to main view."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        comment = Comment.objects.get(comment='Example comment')
+        resp = self.client.post(reverse('actions'), {'action': 'comment-read',
+                                                     'pk': comment.pk})
+        read_comment = Comment.objects.get(comment='Example comment')
+        url = '/'
+        self.assertTrue(read_comment.read)
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, url)
 #
 #
 #
