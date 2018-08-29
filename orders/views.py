@@ -377,7 +377,6 @@ class Actions(View):
                 data['form_is_valid'] = True
                 return redirect('order_view', pk=pk)
             else:
-                raise ValueError('form is not valid')
                 context = {'order': order, 'form': form}
                 template = 'includes/add/add_file.html'
                 data['form_is_valid'] = False
