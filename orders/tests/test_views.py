@@ -850,13 +850,15 @@ class ActionsPostMethod(TestCase):
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
+
+        # hip field is missing
         resp = self.client.post(reverse('actions'),
                                 {'customer': customer.pk,
                                  'ref_name': 'created',
                                  'delivery': date.today(),
                                  'waist': '1',
                                  'chest': '2',
-                                 'invalid_field': '3.4',
+                                 'invalid-hip-field': '2.2',
                                  'lenght': 5,
                                  'others': 'None',
                                  'budget': '1000',
@@ -864,6 +866,7 @@ class ActionsPostMethod(TestCase):
                                  'pk': 'None',
                                  'action': 'order-new'
                                  })
+
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
