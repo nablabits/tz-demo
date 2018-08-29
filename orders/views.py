@@ -11,6 +11,7 @@ from .forms import OrderCloseForm, OrderItemForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.core.exceptions import ValidationError
 from django.db.models import Count
 from datetime import datetime
 
@@ -399,9 +400,13 @@ class Actions(View):
             order = get_object_or_404(Order, pk=pk)
             new_date = self.request.POST.get('delivery', None)
             order.delivery = new_date
-            order.save()
-            data['form_is_valid'] = True
-            data['reload'] = True
+            try:
+                order.save()
+            except ValidationError:
+                data['form_is_valid'] = False
+            else:
+                data['form_is_valid'] = True
+                data['reload'] = True
             return JsonResponse(data)
 
         # Edit Customer (POST)
