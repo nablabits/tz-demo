@@ -781,7 +781,14 @@ class ActionsPostMethod(TestCase):
                                  reference=order)
         Document.objects.create(description='Uploaded File',
                                 order=order)
+
+        # Load client
         self.client = Client()
+
+        # Log the user in
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
 
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
@@ -812,10 +819,6 @@ class ActionsPostMethod(TestCase):
 
     def test_order_new_adds_an_order(self):
         """Test new order creation."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-
         customer = Customer.objects.get(name='Customer')
         self.client.post(reverse('actions'), {'customer': customer.pk,
                                               'ref_name': 'created',
@@ -835,9 +838,6 @@ class ActionsPostMethod(TestCase):
     def test_order_new_redirects_to_order_page(self):
         """Test redirection to recently created order."""
         customer = Customer.objects.get(name='Customer')
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         resp = self.client.post(reverse('actions'),
                                 {'customer': customer.pk,
                                  'ref_name': 'created',
@@ -860,9 +860,6 @@ class ActionsPostMethod(TestCase):
     def test_invalid_order_new_returns_to_form_again(self):
         """When form is not valid JsonResponse should be sent again."""
         customer = Customer.objects.get(name='Customer')
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
 
         # hip field is missing
         resp = self.client.post(reverse('actions'),
@@ -892,10 +889,6 @@ class ActionsPostMethod(TestCase):
 
     def test_customer_new_adds_customer(self):
         """Test new customer creation."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-
         self.client.post(reverse('actions'), {'name': 'New Customer',
                                               'address': 'example address',
                                               'city': 'Mungia',
@@ -910,10 +903,6 @@ class ActionsPostMethod(TestCase):
 
     def test_customer_new_redirects_to_customer_page(self):
         """Test redirection to recently created customer."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-
         resp = self.client.post(reverse('actions'),
                                 {'name': 'New Customer',
                                  'address': 'example address',
@@ -931,10 +920,6 @@ class ActionsPostMethod(TestCase):
 
     def test_invalid_customer_new_returns_to_form_again(self):
         """When form is not valid JsonResponse should be sent again."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-
         resp = self.client.post(reverse('actions'),
                                 {'name': 'New Customer',
                                  'address': 'example address',
@@ -980,10 +965,6 @@ class ActionsPostMethod(TestCase):
 
     def test_comment_adds_comment(self):
         """Test the proper insertion of comments."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-
         order = Order.objects.get(ref_name='example')
         self.client.post(reverse('actions'), {'action': 'order-comment',
                                               'pk': order.pk,
@@ -996,10 +977,6 @@ class ActionsPostMethod(TestCase):
 
     def test_comment_add_context_response(self):
         """Test the content of the response."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-comment',
@@ -1021,9 +998,6 @@ class ActionsPostMethod(TestCase):
 
     def test_comment_add_invalid_form_returns_to_form_again(self):
         """Not valid forms should return to the form again."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-comment',
@@ -1041,9 +1015,6 @@ class ActionsPostMethod(TestCase):
 
     def test_mark_comment_as_read_returns_to_main(self):
         """Mark comments as read should redirect to main view."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         comment = Comment.objects.get(comment='Example comment')
         resp = self.client.post(reverse('actions'), {'action': 'comment-read',
                                                      'pk': comment.pk})
@@ -1055,9 +1026,6 @@ class ActionsPostMethod(TestCase):
 
     def test_item_add_adds_item(self):
         """Test the proper insertion of items."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         order = Order.objects.get(ref_name='example')
         self.client.post(reverse('actions'),
                          {'action': 'order-add-item',
@@ -1073,9 +1041,6 @@ class ActionsPostMethod(TestCase):
 
     def test_item_add_context_response(self):
         """Test the response given by add item."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-add-item',
@@ -1100,9 +1065,6 @@ class ActionsPostMethod(TestCase):
 
     def test_item_add_invalid_form_returns_to_form_again(self):
         """Test item add invalid form behaviour."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-add-item',
@@ -1124,10 +1086,6 @@ class ActionsPostMethod(TestCase):
 
     def test_add_file_adds_a_file(self):
         """Test the proper file creation."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-
         order = Order.objects.get(ref_name='example')
         test_file = io.StringIO('Example text')
         self.client.post(reverse('actions'),
