@@ -1171,6 +1171,13 @@ class ActionsPostMethodEdit(TestCase):
                              others='Custom notes',
                              budget=2000,
                              prepaid=0)
+        # Create an item
+        order = Order.objects.get(ref_name='example')
+        OrderItem.objects.create(item=1,
+                                 size='XL',
+                                 qty=1,
+                                 description='example item',
+                                 reference=order)
 
         # Load client
         self.client = Client()
@@ -1330,13 +1337,33 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('customer', 'form')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/edit/edit_customer.html')
-        vars = ('customer', 'form')
         self.assertTrue(self.context_vars(data['context'], vars))
 
+    def test_edit_item_edits_item(self):
+        """Test the correct item edition."""
+        item = OrderItem.objects.get(description='example item')
+        resp = self.client.post(reverse('actions'),
+                                {'item': 2,
+                                 'size': 'L',
+                                 'qty': 2,
+                                 'description': 'Modified item',
+                                 'pk': item.pk,
+                                 'action': 'order-edit-item'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('order', 'form', 'items')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/order_details.html')
+        self.assertEqual(data['html_id'], '#order-details')
+        self.assertTrue(self.context_vars(data['context'], vars))
 #
 #
 #

@@ -429,14 +429,16 @@ class Actions(View):
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             order = item.reference
             form = OrderItemForm(request.POST, instance=item)
-            template = 'includes/order_details.html'
             items = OrderItem.objects.filter(reference=order)
-            context = {'form': form, 'order': order, 'items': items}
             if form.is_valid():
+                context = {'form': form, 'order': order, 'items': items}
+                template = 'includes/order_details.html'
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-details'
             else:
+                context = {'item': item, 'form': form}
+                template = 'includes/edit/edit_item.html'
                 data['form_is_valid'] = False
 
         # Collect order (POST)
