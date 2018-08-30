@@ -445,6 +445,7 @@ class Actions(View):
         elif action == 'order-pay-now':
             order = get_object_or_404(Order, pk=pk)
             order.prepaid = order.budget
+            # DEBUG: missing an exception
             order.save()
             data['form_is_valid'] = True
             data['reload'] = True

@@ -1348,7 +1348,7 @@ class ActionsPostMethodEdit(TestCase):
         """Test the correct item edition."""
         item = OrderItem.objects.get(description='example item')
         resp = self.client.post(reverse('actions'),
-                                {'item': 2,
+                                {'item': '2',
                                  'size': 'L',
                                  'qty': 2,
                                  'description': 'Modified item',
@@ -1364,6 +1364,30 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/order_details.html')
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
+
+        # Test if the fields were modified
+        mod_item = OrderItem.objects.get(pk=item.pk)
+        self.assertEqual(mod_item.item, '2')
+        self.assertEqual(mod_item.size, 'L')
+        self.assertEqual(mod_item.qty, 2)
+        self.assertEqual(mod_item.description, 'Modified item')
+
+    def test_edit_item_invalid_returns_to_form(self):
+        """Test rejected forms."""
+        item = OrderItem.objects.get(description='example item')
+        resp = self.client.post(reverse('actions'),
+                                {'qty': 'invalid qty',
+                                 'pk': item.pk,
+                                 'action': 'order-edit-item'
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('form', 'item')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/edit/edit_item.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
 #
 #
 #
