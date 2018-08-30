@@ -1243,11 +1243,12 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('order', 'form')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['context'][0], 'form')
         self.assertEqual(data['template'], 'includes/add/add_order.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_edit_date_successful(self):
         """Test the correct quick-edit date."""

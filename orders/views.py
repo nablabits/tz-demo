@@ -392,7 +392,7 @@ class Actions(View):
                 return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
-                context = {'form': form}
+                context = {'order': order, 'form': form}
                 template = 'includes/add/add_order.html'
 
         # Edit date (POST)
