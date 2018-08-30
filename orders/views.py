@@ -420,6 +420,8 @@ class Actions(View):
                 return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
+                context = {'customer': customer, 'form': form}
+                template = 'includes/edit/edit_customer.html'
 
         # Edit item (POST)
         elif action == 'order-edit-item':

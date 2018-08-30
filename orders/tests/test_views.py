@@ -1287,6 +1287,55 @@ class ActionsPostMethodEdit(TestCase):
                               'pk': order.pk,
                               'action': 'order-edit-date'
                               })
+
+    def test_edit_customer_edits_customer(self):
+        """Test the correct edition for fields."""
+        customer = Customer.objects.get(name='Customer')
+        resp = self.client.post(reverse('actions'),
+                                {'name': 'modified Customer',
+                                 'address': 'Another computer',
+                                 'city': 'Mod city',
+                                 'phone': 5555,
+                                 'email': 'modified@example.com',
+                                 'CIF': '4444E',
+                                 'cp': 48200,
+                                 'pk': customer.pk,
+                                 'action': 'customer-edit'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+
+        # Test if the fields were modified
+        mod_customer = Customer.objects.get(pk=customer.pk)
+        self.assertEqual(mod_customer.name, 'modified Customer')
+        self.assertEqual(mod_customer.address, 'Another computer')
+        self.assertEqual(mod_customer.city, 'Mod city')
+        self.assertEqual(mod_customer.phone, 5555)
+        self.assertEqual(mod_customer.email, 'modified@example.com')
+        self.assertEqual(mod_customer.CIF, '4444E')
+        self.assertEqual(mod_customer.cp, 48200)
+
+    def test_edit_customer_invalid_returns_to_form(self):
+        """Test when forms are rejected."""
+        customer = Customer.objects.get(name='Customer')
+        resp = self.client.post(reverse('actions'),
+                                {'phone': 'invalid phone',
+                                 'pk': customer.pk,
+                                 'action': 'customer-edit'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/edit/edit_customer.html')
+        vars = ('customer', 'form')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
 #
 #
 #
