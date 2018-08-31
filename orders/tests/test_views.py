@@ -3,7 +3,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, Document, OrderItem, Comment
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
@@ -1473,6 +1473,34 @@ class ActionsPostMethodEdit(TestCase):
                 self.assertEqual(template, 'includes/order_status.html')
                 self.assertEqual(data['html_id'], '#order-status')
                 self.assertTrue(data['context'][0], 'order')
+
+    def test_delete_item_deletes_the_item(self):
+        """Test the proper deletion of items."""
+        item = OrderItem.objects.get(description='example item')
+        self.client.post(reverse('actions'), {'pk': item.pk,
+                                              'action': 'order-delete-item'
+                                              })
+        with self.assertRaises(ObjectDoesNotExist):
+            OrderItem.objects.get(pk=item.pk)
+
+    def test_delete_item_context_response(self):
+        """Test the response on deletion of items."""
+        item = OrderItem.objects.get(description='example item')
+        resp = self.client.post(reverse('actions'),
+                                {'pk': item.pk,
+                                 'action': 'order-delete-item'
+                                 })
+
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('order', 'items')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/order_details.html')
+        self.assertEqual(data['html_id'], '#order-details')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
 
 #
 #
