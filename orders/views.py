@@ -445,13 +445,16 @@ class Actions(View):
         elif action == 'order-pay-now':
             order = get_object_or_404(Order, pk=pk)
             order.prepaid = order.budget
-            # DEBUG: missing an exception
-            order.save()
-            data['form_is_valid'] = True
-            data['reload'] = True
-            data['html_id'] = '#order-status'
-            template = 'includes/order_status.html'
-            context = {'order': order}
+            try:
+                order.save()
+            except ValidationError:
+                data['form_is_valid'] = False
+            else:
+                data['form_is_valid'] = True
+                data['reload'] = True
+                data['html_id'] = '#order-status'
+                template = 'includes/order_status.html'
+                context = {'order': order}
 
         # Close order (POST)
         elif action == 'order-close':
