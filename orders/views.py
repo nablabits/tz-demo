@@ -468,6 +468,10 @@ class Actions(View):
                 data['form_is_valid'] = True
                 data['reload'] = True
                 return JsonResponse(data)
+            else:
+                data['form_is_valid'] = False
+                context = {'order': order, 'form': form}
+                template = 'includes/edit/close_order.html'
 
         # Update status (POST)
         elif action == 'update-status':
