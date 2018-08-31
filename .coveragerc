@@ -1,0 +1,8 @@
+[run]
+omit =
+  venv/*
+  media/*
+  orders/tests/*
+  manage.py
+  tz/__init__.py
+  orders/__init__.py
