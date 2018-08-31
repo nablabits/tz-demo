@@ -1422,6 +1422,25 @@ class ActionsPostMethodEdit(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertTrue(data['reload'])
         self.assertEqual(closed_order.status, '7')
+
+    def test_close_order_rejected(self):
+        """Test when a form is not valid."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'prepaid': 'invalid price',
+                                 'workshop': 200,
+                                 'pk': order.pk,
+                                 'action': 'order-close'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('order', 'form')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/edit/close_order.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
 #
 #
 #
