@@ -1440,6 +1440,20 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/edit/close_order.html')
         self.assertTrue(self.context_vars(data['context'], vars))
 
+    def test_update_status_returns_false_on_raising_error(self):
+        """Invalid statuses should raise an exception."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'), {'pk': order.pk,
+                                                     'action': 'update-status',
+                                                     'status': '9'
+                                                     })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+
 #
 #
 #

@@ -477,15 +477,22 @@ class Actions(View):
             status = self.request.POST.get('status', None)
             order = get_object_or_404(Order, pk=pk)
             order.status = status
-            order.save()
-            if status in ('1', '8'):
+            try:
+                order.full_clean()
+            except ValidationError:
+                data['form_is_valid'] = False
                 data['reload'] = True
                 return JsonResponse(data)
             else:
-                data['form_is_valid'] = True
-                data['html_id'] = '#order-status'
-                template = 'includes/order_status.html'
-                context = {'order': order}
+                if status in ('1', '8'):
+                    data['reload'] = True
+                    return JsonResponse(data)
+                else:
+                    order.save()
+                    data['form_is_valid'] = True
+                    data['html_id'] = '#order-status'
+                    template = 'includes/order_status.html'
+                    context = {'order': order}
 
         # Delete item (POST) define
         elif action == 'order-delete-item':
