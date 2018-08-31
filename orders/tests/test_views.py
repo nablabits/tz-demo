@@ -1405,6 +1405,23 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/order_status.html')
         self.assertEqual(data['context'][0], 'order')
 
+    def test_close_order_succesful(self):
+        """Test the proper close of orders."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'prepaid': 2000,
+                                 'workshop': 200,
+                                 'pk': order.pk,
+                                 'action': 'order-close'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        closed_order = Order.objects.get(pk=order.pk)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+        self.assertEqual(closed_order.status, '7')
 #
 #
 #
