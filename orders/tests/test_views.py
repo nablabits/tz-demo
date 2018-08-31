@@ -1400,7 +1400,6 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertTrue(data['reload'])
         self.assertEqual(data['html_id'], '#order-status')
         self.assertEqual(data['template'], 'includes/order_status.html')
         self.assertEqual(data['context'][0], 'order')

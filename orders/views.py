@@ -451,7 +451,6 @@ class Actions(View):
                 data['form_is_valid'] = False
             else:
                 data['form_is_valid'] = True
-                data['reload'] = True
                 data['html_id'] = '#order-status'
                 template = 'includes/order_status.html'
                 context = {'order': order}
