@@ -1454,6 +1454,26 @@ class ActionsPostMethodEdit(TestCase):
         self.assertFalse(data['form_is_valid'])
         self.assertTrue(data['reload'])
 
+    def tests_update_status_successful(self):
+        """Test the proper status change."""
+        order = Order.objects.get(ref_name='example')
+        for i in range(1, 9):
+            with self.subTest(i=i):
+                resp = self.client.post(reverse('actions'),
+                                        {'pk': order.pk,
+                                         'action': 'update-status',
+                                         'status': str(i)
+                                         })
+                # Test the response object
+                data = json.loads(str(resp.content, 'utf-8'))
+                template = data['template']
+                self.assertIsInstance(resp, JsonResponse)
+                self.assertIsInstance(resp.content, bytes)
+                self.assertTrue(data['form_is_valid'])
+                self.assertEqual(template, 'includes/order_status.html')
+                self.assertEqual(data['html_id'], '#order-status')
+                self.assertTrue(data['context'][0], 'order')
+
 #
 #
 #

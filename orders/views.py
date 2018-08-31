@@ -484,15 +484,11 @@ class Actions(View):
                 data['reload'] = True
                 return JsonResponse(data)
             else:
-                if status in ('1', '8'):
-                    data['reload'] = True
-                    return JsonResponse(data)
-                else:
-                    order.save()
-                    data['form_is_valid'] = True
-                    data['html_id'] = '#order-status'
-                    template = 'includes/order_status.html'
-                    context = {'order': order}
+                order.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#order-status'
+                template = 'includes/order_status.html'
+                context = {'order': order}
 
         # Delete item (POST) define
         elif action == 'order-delete-item':
