@@ -447,7 +447,7 @@ class Actions(View):
             order.prepaid = order.budget
             try:
                 order.save()
-            except ValidationError:
+            except ValidationError:  # pragma: no cover
                 data['form_is_valid'] = False
             else:
                 data['form_is_valid'] = True
