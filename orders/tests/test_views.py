@@ -1388,6 +1388,23 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/edit/edit_item.html')
         self.assertTrue(self.context_vars(data['context'], vars))
 
+    def test_collect_order_succesful(self):
+        """Test the proper mark-as-paid method."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.post(reverse('actions'),
+                                {'pk': order.pk,
+                                 'action': 'order-pay-now'
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+        self.assertEqual(data['html_id'], '#order-status')
+        self.assertEqual(data['template'], 'includes/order_status.html')
+        self.assertEqual(data['context'][0], 'order')
+
 #
 #
 #
