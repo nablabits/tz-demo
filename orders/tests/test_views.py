@@ -203,7 +203,7 @@ class StandardViewsTest(TestCase):
         self.assertEqual(len(delivered), 5)
         self.assertEqual(str(delivered[0].ref_name), 'example delivered')
 
-    def test_paginator_not_an_int_exception(self):
+    def test_order_list_paginator_not_an_int_exception(self):
         """When page is not an int, paginator should go to the first one.
 
         That is because the exception was catch.
@@ -219,7 +219,7 @@ class StandardViewsTest(TestCase):
         self.assertTrue(delivered.has_other_pages())
         self.assertEqual(delivered.number, 1)
 
-    def test_paginator_empty_exception(self):
+    def test_order_list_paginator_empty_exception(self):
         """When page given is empty, paginator should go to the last one.
 
         That is because the exception was catch.
