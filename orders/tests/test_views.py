@@ -303,6 +303,39 @@ class StandardViewsTest(TestCase):
         self.assertEqual(customers.next_page_number(), 2)
         self.assertEqual(len(customers), 5)
 
+    def test_customer_paginator_not_an_int_exception(self):
+        """When page is not an int, paginator should go to the first one.
+
+        That is because the exception was catch.
+        """
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get(reverse('customerlist'), {'page': 'invalid'})
+
+        customers = resp.context['customers']
+        self.assertFalse(customers.has_previous())
+        self.assertTrue(customers.has_next())
+        self.assertTrue(customers.has_other_pages())
+        self.assertEqual(customers.number, 1)
+
+    def test_customer_paginator_empty_exception(self):
+        """When page given is empty, paginator should go to the last one.
+
+        That is because the exception was catch.
+        """
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get(reverse('customerlist'), {'page': 20})
+
+        customers = resp.context['customers']
+        self.assertEqual(customers.number, 2)
+        self.assertTrue(customers.has_previous())
+        self.assertFalse(customers.has_next())
+        self.assertTrue(customers.has_other_pages())
+        self.assertEqual(len(customers), 5)
+
     def test_customer_view(self):
         """Test the customer details view.
 
