@@ -1501,7 +1501,28 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
 
+    def test_delete_customer_deletes_customer(self):
+        """Test the proper deletion of customers."""
+        customer = Customer.objects.get(name='Customer')
+        self.client.post(reverse('actions'), {'pk': customer.pk,
+                                              'action': 'customer-delete'
+                                              })
+        with self.assertRaises(ObjectDoesNotExist):
+            OrderItem.objects.get(pk=customer.pk)
 
+    def test_delete_customer_returns_to_custmer_list(self):
+        """Test the proper deletion of customers."""
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+        customer = Customer.objects.get(name='Customer')
+        resp = self.client.post(reverse('actions'),
+                                {'pk': customer.pk,
+                                 'action': 'customer-delete'
+                                 })
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, reverse('customerlist'))
 #
 #
 #
