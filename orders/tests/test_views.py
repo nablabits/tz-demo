@@ -4,6 +4,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, Document, OrderItem, Comment
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.paginator import InvalidPage
 from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
@@ -201,6 +202,19 @@ class StandardViewsTest(TestCase):
         self.assertEqual(delivered.number, 1)
         self.assertEqual(len(delivered), 5)
         self.assertEqual(str(delivered[0].ref_name), 'example delivered')
+
+    def test_paginator_not_an_int_exception(self):
+        """When page is not an int, paginator should return 1.
+
+        That is because the exception was catch.
+        """
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get(reverse('orderlist'), {'page': 'invalid'})
+
+        delivered = resp.context['delivered']
+        self.assertEqual(delivered.number, 1)
 
     def test_order_closed_view(self):
         """Test a particular order instance.
