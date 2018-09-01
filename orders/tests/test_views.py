@@ -1523,6 +1523,13 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, reverse('customerlist'))
+
+    def test_logout_succesfull(self):
+        """Test the proper logout from app."""
+        resp = self.client.post(reverse('actions'), {'pk': None,
+                                                     'action': 'logout'})
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, reverse('login'))
 #
 #
 #

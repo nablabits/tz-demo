@@ -522,8 +522,6 @@ class Actions(View):
 
         # logout (POST)
         elif action == 'logout':
-            template = ''
-            context = ''
             logout(request)
             return redirect('login')
 
