@@ -367,6 +367,139 @@ class StandardViewsTest(TestCase):
         self.assertEqual(len(resp.context['pending']), 9)
 
 
+class SearchBoxTest(TestCase):
+    """Test the standard views."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once.
+
+        Will be created:
+            5 Customers
+            20 Orders (random customer) where:
+                The first 10 are delivered
+                first order has:
+                    5 items (exact one each other)
+                    10 comments (divided in 2 users) & First comment read
+                    Is closed
+                11th order is cancelled
+        """
+        # Create users
+        regular = User.objects.create_user(username='regular', password='test')
+        another = User.objects.create_user(username='another', password='test')
+        regular.save()
+        another.save()
+
+        # Create some customers
+        customer_count = 10
+        for customer in range(customer_count):
+            Customer.objects.create(name='Customer%s' % customer,
+                                    address='This computer',
+                                    city='No city',
+                                    phone='666666666',
+                                    email='customer%s@example.com' % customer,
+                                    CIF='5555G',
+                                    cp='48100')
+
+        # Create some orders
+        orders_count = 20
+        for order in range(orders_count):
+            pk = randint(1, 9)  # The first customer should have no order
+            customer = Customer.objects.get(name='Customer%s' % pk)
+            delivery = date.today() + timedelta(days=order % 5)
+            Order.objects.create(user=regular,
+                                 customer=customer,
+                                 ref_name='example%s' % order,
+                                 delivery=delivery,
+                                 waist=randint(10, 50),
+                                 chest=randint(10, 50),
+                                 hip=randint(10, 50),
+                                 lenght=randint(10, 50),
+                                 others='Custom notes',
+                                 budget=2000,
+                                 prepaid=0)
+
+        # Create comments
+        comments_count = 10
+        for comment in range(comments_count):
+            if comment % 2:
+                user = regular
+            else:
+                user = another
+            order = Order.objects.get(ref_name='example0')
+            Comment.objects.create(user=user,
+                                   reference=order,
+                                   comment='Comment%s' % comment)
+
+        # Create some items
+        items_count = 5
+        for item in range(items_count):
+            order = Order.objects.get(ref_name='example0')
+            OrderItem.objects.create(item=1, size='XL', qty=5,
+                                     description='notes',
+                                     reference=order)
+
+        # deliver the first 10 orders
+        order_bulk_edit = Order.objects.all().order_by('inbox_date')[:10]
+        for order in order_bulk_edit:
+            order.ref_name = 'example delivered'
+            order.status = 7
+            order.save()
+
+        # Have a closed order (delivered & paid)
+        order = Order.objects.filter(status=7)[0]
+        order.ref_name = 'example closed'
+        order.prepaid = order.budget
+        order.save()
+
+        # Have a read comment
+        order = Order.objects.get(ref_name='example closed')
+        comment = Comment.objects.filter(reference=order)
+        comment = comment.get(comment='Comment0')
+        comment.read = True
+        comment.comment = 'read comment'
+        comment.save()
+
+        # Have a file uploaded
+        order = Order.objects.get(ref_name='example closed')
+        Document.objects.create(description='Uploaded File',
+                                order=order)
+
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        context_is_valid = 0
+        for item in context:
+            for var in vars:
+                if item == var:
+                    context_is_valid += 1
+        if context_is_valid == len(vars):
+            return True
+        else:
+            return False
+
+    def test_search_box_invalid_method(self):
+        """Search must be POST method."""
+        with self.assertRaises(TypeError):
+            self.client.get(reverse('search'))
+
+    def test_search_box_invalid_search_on(self):
+        """Search_on fields should be either orders or customers."""
+        with self.assertRaises(ValueError):
+            self.client.post(reverse('search'), {'search-on': 'invalid'})
+
+    def test_search_box_on_orders(self):
+        """Test search orders."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'orders',
+                                 'search-obj': 'example1'})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
+
 class ActionsGetMethod(TestCase):
     """Test the get method on Actions view."""
 
