@@ -498,6 +498,13 @@ class SearchBoxTest(TestCase):
         self.assertIsInstance(resp.content, bytes)
         self.assertEquals(data['template'], 'includes/search_results.html')
         self.assertTrue(self.context_vars(data['context'], vars))
+        # Continue HERE
+        # if data['context'][0] == 'query_result':
+        #     # self.assertEquals(len(data['context'][0]), 1)
+        #     self.assertEquals(data['context'][1], 'orders')
+        # else:
+        #     # self.assertEquals(len(data['context'][1]), 1)
+        #     self.assertEquals(data['context'][0], 'orders')
 
 
 class ActionsGetMethod(TestCase):
