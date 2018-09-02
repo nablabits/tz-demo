@@ -156,13 +156,14 @@ class StandardViewsTest(TestCase):
         Document.objects.create(description='Uploaded File',
                                 order=order)
 
-    def test_main_view(self):
-        """Test the main view."""
+        # Now login to avoid the 404
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
-        resp = self.client.get(reverse('main'))
 
+    def test_main_view(self):
+        """Test the main view."""
+        resp = self.client.get(reverse('main'))
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/main.html')
 
@@ -175,11 +176,7 @@ class StandardViewsTest(TestCase):
 
     def test_order_list(self):
         """Test the main features on order list."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         resp = self.client.get(reverse('orderlist'))
-
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/orders.html')
 
@@ -189,9 +186,6 @@ class StandardViewsTest(TestCase):
 
     def test_order_list_paginator(self):
         """Test paginator functionality on order list."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         resp = self.client.get(reverse('orderlist'))
 
         delivered = resp.context['delivered']
@@ -209,9 +203,6 @@ class StandardViewsTest(TestCase):
         5 items and 1 file.
         """
         order = Order.objects.get(ref_name='example closed')
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         resp = self.client.get(reverse('order_view', kwargs={'pk': order.pk}))
 
         self.assertEqual(resp.status_code, 200)
@@ -231,9 +222,6 @@ class StandardViewsTest(TestCase):
 
     def test_customer_list(self):
         """Test the main features on customer list."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         resp = self.client.get(reverse('customerlist'))
 
         self.assertEqual(resp.status_code, 200)
@@ -254,9 +242,6 @@ class StandardViewsTest(TestCase):
 
     def test_customer_list_paginator(self):
         """Test paginator functionality on customer list."""
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
         resp = self.client.get('/customers')
 
         self.assertEqual(resp.status_code, 200)
