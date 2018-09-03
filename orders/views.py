@@ -74,19 +74,23 @@ def search(request):
         template = 'includes/search_results.html'
         context = {'query_result': query_result, 'model': model}
 
-        # Test stuff. Since it's not very straightforward extract this data
-        # from render_to_string method, we'll pass them as keys in JSON
-        data['template'] = template
-        add_to_context = []
-        for k in context:
-            add_to_context.append(k)
-        data['context'] = add_to_context
-        data['model'] = model
-        data['query_result'] = len(query_result)
-        if model == 'orders':
-            data['query_result_name'] = query_result[0].ref_name
-        else:
-            data['query_result_name'] = query_result[0].name
+        """
+        Test stuff. Since it's not very straightforward extract this data
+        from render_to_string() method, we'll pass them as keys in JSON but
+        just for testing purposes.
+        """
+        if request.POST.get('test'):
+            data['template'] = template
+            add_to_context = []
+            for k in context:
+                add_to_context.append(k)
+            data['context'] = add_to_context
+            data['model'] = model
+            data['query_result'] = len(query_result)
+            if model == 'orders':
+                data['query_result_name'] = query_result[0].ref_name
+            else:
+                data['query_result_name'] = query_result[0].name
 
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)

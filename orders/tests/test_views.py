@@ -476,7 +476,8 @@ class SearchBoxTest(TestCase):
         """Test search orders."""
         resp = self.client.post(reverse('search'),
                                 {'search-on': 'orders',
-                                 'search-obj': 'example11'})
+                                 'search-obj': 'example11',
+                                 'test': True})
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('query_result', 'model')
         self.assertIsInstance(resp, JsonResponse)
@@ -491,7 +492,8 @@ class SearchBoxTest(TestCase):
         """Test search customers by name."""
         resp = self.client.post(reverse('search'),
                                 {'search-on': 'customers',
-                                 'search-obj': 'Customer1'})
+                                 'search-obj': 'Customer1',
+                                 'test': True})
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('query_result', 'model')
         self.assertIsInstance(resp, JsonResponse)
@@ -506,7 +508,8 @@ class SearchBoxTest(TestCase):
         """Test search customers by phone."""
         resp = self.client.post(reverse('search'),
                                 {'search-on': 'customers',
-                                 'search-obj': 666666665})
+                                 'search-obj': 666666665,
+                                 'test': True})
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('query_result', 'model')
         self.assertIsInstance(resp, JsonResponse)
@@ -515,7 +518,7 @@ class SearchBoxTest(TestCase):
         self.assertTrue(self.context_vars(data['context'], vars))
         self.assertEquals(data['model'], 'customers')
         self.assertEquals(data['query_result'], 1)
-        self.assertEquals(data['query_result_name'], 'customer5')
+        self.assertEquals(data['query_result_name'], 'Customer5')
 
 
 class ActionsGetMethod(TestCase):
