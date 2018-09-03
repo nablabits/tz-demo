@@ -381,7 +381,7 @@ class SearchBoxTest(TestCase):
             Customer.objects.create(name='Customer%s' % customer,
                                     address='This computer',
                                     city='No city',
-                                    phone='666666666',
+                                    phone='66666666%s' % customer,
                                     email='customer%s@example.com' % customer,
                                     CIF='5555G',
                                     cp='48100')
@@ -487,8 +487,8 @@ class SearchBoxTest(TestCase):
         self.assertEquals(data['query_result'], 1)
         self.assertEquals(data['query_result_name'], 'example11')
 
-    def test_search_box_on_customers(self):
-        """Test search customers."""
+    def test_search_box_on_customers_str(self):
+        """Test search customers by name."""
         resp = self.client.post(reverse('search'),
                                 {'search-on': 'customers',
                                  'search-obj': 'Customer1'})
@@ -501,6 +501,21 @@ class SearchBoxTest(TestCase):
         self.assertEquals(data['model'], 'customers')
         self.assertEquals(data['query_result'], 1)
         self.assertEquals(data['query_result_name'], 'Customer1')
+
+    def test_search_box_on_customers_int(self):
+        """Test search customers by phone."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'customers',
+                                 'search-obj': 666666665})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEquals(data['model'], 'customers')
+        self.assertEquals(data['query_result'], 1)
+        self.assertEquals(data['query_result_name'], 'customer5')
 
 
 class ActionsGetMethod(TestCase):
