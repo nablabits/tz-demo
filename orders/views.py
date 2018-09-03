@@ -82,7 +82,10 @@ def search(request):
         data['context'] = add_to_context
         data['model'] = model
         data['query_result'] = len(query_result)
-        data['query_result_name'] = query_result[0].ref_name
+        if model == 'orders':
+            data['query_result_name'] = query_result[0].ref_name
+        else:
+            data['query_result_name'] = query_result[0].name
 
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)

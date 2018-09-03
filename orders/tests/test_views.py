@@ -487,6 +487,21 @@ class SearchBoxTest(TestCase):
         self.assertEquals(data['query_result'], 1)
         self.assertEquals(data['query_result_name'], 'example11')
 
+    def test_search_box_on_customers(self):
+        """Test search customers."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'customers',
+                                 'search-obj': 'Customer1'})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEquals(data['model'], 'customers')
+        self.assertEquals(data['query_result'], 1)
+        self.assertEquals(data['query_result_name'], 'Customer1')
+
 
 class ActionsGetMethod(TestCase):
     """Test the get method on Actions view."""
