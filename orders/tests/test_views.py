@@ -472,6 +472,9 @@ class SearchBoxTest(TestCase):
         with self.assertRaises(ValueError):
             self.client.post(reverse('search'), {'search-on': 'invalid'})
 
+        with self.assertRaises(ValueError):
+            self.client.post(reverse('search'), {'search-on': None})
+
     def test_search_box_on_orders(self):
         """Test search orders."""
         resp = self.client.post(reverse('search'),
