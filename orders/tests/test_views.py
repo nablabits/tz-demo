@@ -531,6 +531,21 @@ class SearchBoxTest(TestCase):
         self.assertEquals(data['query_result'], 1)
         self.assertEquals(data['query_result_name'], 'Customer5')
 
+    def test_search_box_case_insensitive(self):
+        """Search should return the same resuslts regardless the case."""
+        resp1 = self.client.post(reverse('search'),
+                                 {'search-on': 'orders',
+                                  'search-obj': 'example11',
+                                  'test': True})
+        resp2 = self.client.post(reverse('search'),
+                                 {'search-on': 'orders',
+                                  'search-obj': 'exaMple11',
+                                  'test': True})
+        data1 = json.loads(str(resp1.content, 'utf-8'))
+        data2 = json.loads(str(resp2.content, 'utf-8'))
+        self.assertEquals(data1['query_result_name'],
+                          data2['query_result_name'])
+
 
 class ActionsGetMethod(TestCase):
     """Test the get method on Actions view."""
@@ -583,28 +598,33 @@ class ActionsGetMethod(TestCase):
         Edit and delete actions must have a pk reference (customer or order).
         """
         with self.assertRaisesMessage(ValueError, 'Unexpected GET data'):
-            self.client.get(reverse('actions'), {'action': 'order-add'})
+            self.client.get(reverse('actions'), {'action': 'order-add',
+                                                 'test': True})
 
     def test_no_action_raises_error(self):
         """Raise an error when no action is given."""
         with self.assertRaisesMessage(ValueError, 'Unexpected GET data'):
-            self.client.get(reverse('actions'), {'pk': 5})
+            self.client.get(reverse('actions'), {'pk': 5, 'test': True})
 
     def test_invalid_action_raises_error(self):
         """Raise an error when action doesn't match any condition."""
         with self.assertRaisesMessage(NameError, 'Action was not recogniced'):
-            self.client.get(reverse('actions'), {'pk': 5, 'action': 'null'})
+            self.client.get(reverse('actions'), {'pk': 5,
+                                                 'action': 'null',
+                                                 'test': True})
 
     def test_add_order(self):
         """Return code 200 on order-add action."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': None, 'action': 'order-add'})
+        resp = self.client.get(reverse('actions'), {'pk': None,
+                                                    'action': 'order-add',
+                                                    'test': True})
         self.assertEqual(resp.status_code, 200)
 
     def test_add_order_context(self):
         """Test context dictionaries and template."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': None, 'action': 'order-add'})
+        resp = self.client.get(reverse('actions'), {'pk': None,
+                                                    'action': 'order-add',
+                                                    'test': True})
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
@@ -615,14 +635,16 @@ class ActionsGetMethod(TestCase):
 
     def test_add_customer(self):
         """Return code 200 on customer-add action."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': None, 'action': 'customer-add'})
+        resp = self.client.get(reverse('actions'), {'pk': None,
+                                                    'action': 'customer-add',
+                                                    'test': True})
         self.assertEqual(resp.status_code, 200)
 
     def test_add_customer_context(self):
         """Test context dictionaries and template."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': None, 'action': 'customer-add'})
+        resp = self.client.get(reverse('actions'), {'pk': None,
+                                                    'action': 'customer-add',
+                                                    'test': True})
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
@@ -638,7 +660,9 @@ class ActionsGetMethod(TestCase):
         be deleted).
         """
         resp = self.client.get(reverse('actions'),
-                               {'pk': 290, 'action': 'order-from-customer'})
+                               {'pk': 290,
+                                'action': 'order-from-customer',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_order_from_customer(self):
@@ -646,7 +670,8 @@ class ActionsGetMethod(TestCase):
         customer = Customer.objects.get(name='Customer')
         resp = self.client.get(reverse('actions'),
                                {'pk': customer.pk,
-                               'action': 'order-from-customer'})
+                                'action': 'order-from-customer',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -659,7 +684,9 @@ class ActionsGetMethod(TestCase):
     def test_add_item_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 290, 'action': 'order-add-item'})
+                               {'pk': 290,
+                                'action': 'order-add-item',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_item(self):
@@ -669,7 +696,9 @@ class ActionsGetMethod(TestCase):
         """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk, 'action': 'order-add-item'})
+                               {'pk': order.pk,
+                                'action': 'order-add-item',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -687,7 +716,9 @@ class ActionsGetMethod(TestCase):
     def test_add_comments_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 290, 'action': 'order-add-comment'})
+                               {'pk': 290,
+                                'action': 'order-add-comment',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_comment(self):
@@ -697,7 +728,9 @@ class ActionsGetMethod(TestCase):
         """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk, 'action': 'order-add-comment'})
+                               {'pk': order.pk,
+                                'action': 'order-add-comment',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -715,7 +748,9 @@ class ActionsGetMethod(TestCase):
     def test_add_file_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-add-file'})
+                               {'pk': 200,
+                                'action': 'order-add-file',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_add_file(self):
@@ -725,7 +760,9 @@ class ActionsGetMethod(TestCase):
         """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk, 'action': 'order-add-file'})
+                               {'pk': order.pk,
+                                'action': 'order-add-file',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -743,7 +780,9 @@ class ActionsGetMethod(TestCase):
     def test_edit_order_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-edit'})
+                               {'pk': 200,
+                                'action': 'order-edit',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_order(self):
@@ -753,7 +792,9 @@ class ActionsGetMethod(TestCase):
         """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk, 'action': 'order-edit'})
+                               {'pk': order.pk,
+                                'action': 'order-edit',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -771,14 +812,18 @@ class ActionsGetMethod(TestCase):
     def test_edit_order_date_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-edit-date'})
+                               {'pk': 200,
+                                'action': 'order-edit-date',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_order_date(self):
         """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk, 'action': 'order-edit-date'})
+                               {'pk': order.pk,
+                                'action': 'order-edit-date',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -791,7 +836,9 @@ class ActionsGetMethod(TestCase):
     def test_edit_customer_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'customer-edit'})
+                               {'pk': 200,
+                                'action': 'customer-edit',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_customer(self):
@@ -801,7 +848,9 @@ class ActionsGetMethod(TestCase):
         """
         customer = Customer.objects.get(name='Customer')
         resp = self.client.get(reverse('actions'),
-                               {'pk': customer.pk, 'action': 'customer-edit'})
+                               {'pk': customer.pk,
+                                'action': 'customer-edit',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -819,14 +868,18 @@ class ActionsGetMethod(TestCase):
     def test_collect_order_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-pay-now'})
+                               {'pk': 200,
+                                'action': 'order-pay-now',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_collect_order(self):
         """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk, 'action': 'order-pay-now'})
+                               {'pk': order.pk,
+                                'action': 'order-pay-now',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -839,7 +892,9 @@ class ActionsGetMethod(TestCase):
     def test_close_order_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-close'})
+                               {'pk': 200,
+                                'action': 'order-close',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_close_order(self):
@@ -849,7 +904,9 @@ class ActionsGetMethod(TestCase):
         """
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk, 'action': 'order-close'})
+                               {'pk': order.pk,
+                                'action': 'order-close',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -867,7 +924,9 @@ class ActionsGetMethod(TestCase):
     def test_edit_item_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-edit-item'})
+                               {'pk': 200,
+                                'action': 'order-edit-item',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_edit_item(self):
@@ -878,7 +937,9 @@ class ActionsGetMethod(TestCase):
         order = Order.objects.get(ref_name='example')
         item = OrderItem.objects.get(reference=order)
         resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk, 'action': 'order-edit-item'})
+                               {'pk': item.pk,
+                                'action': 'order-edit-item',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -896,7 +957,9 @@ class ActionsGetMethod(TestCase):
     def test_delete_item_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-delete-item'})
+                               {'pk': 200,
+                                'action': 'order-delete-item',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_delete_item(self):
@@ -904,7 +967,9 @@ class ActionsGetMethod(TestCase):
         order = Order.objects.get(ref_name='example')
         item = OrderItem.objects.get(reference=order)
         resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk, 'action': 'order-delete-item'})
+                               {'pk': item.pk,
+                                'action': 'order-delete-item',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -917,7 +982,9 @@ class ActionsGetMethod(TestCase):
     def test_delete_file_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'order-delete-file'})
+                               {'pk': 200,
+                                'action': 'order-delete-file',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_delete_file(self):
@@ -925,7 +992,9 @@ class ActionsGetMethod(TestCase):
         order = Order.objects.get(ref_name='example')
         file = Document.objects.get(order=order)
         resp = self.client.get(reverse('actions'),
-                               {'pk': file.pk, 'action': 'order-delete-file'})
+                               {'pk': file.pk,
+                                'action': 'order-delete-file',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -938,7 +1007,9 @@ class ActionsGetMethod(TestCase):
     def test_delete_customer_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': 200, 'action': 'customer-delete'})
+                               {'pk': 200,
+                                'action': 'customer-delete',
+                                'test': True})
         self.assertEqual(resp.status_code, 404)
 
     def test_delete_customer(self):
@@ -946,7 +1017,8 @@ class ActionsGetMethod(TestCase):
         customer = Customer.objects.get(name='Customer')
         resp = self.client.get(reverse('actions'),
                                {'pk': customer.pk,
-                               'action': 'customer-delete'})
+                                'action': 'customer-delete',
+                                'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -959,7 +1031,7 @@ class ActionsGetMethod(TestCase):
     def test_logout(self):
         """Test context dictionaries and template."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': None, 'action': 'logout'})
+                               {'pk': None, 'action': 'logout', 'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))

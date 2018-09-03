@@ -299,12 +299,17 @@ class Actions(View):
 
         data['html'] = render_to_string(template, context, request=request)
 
-        # Test stuff
-        data['template'] = template
-        add_to_context = []
-        for k in context:
-            add_to_context.append(k)
-        data['context'] = add_to_context
+        """
+        Test stuff. Since it's not very straightforward extract this data
+        from render_to_string() method, we'll pass them as keys in JSON but
+        just for testing purposes.
+        """
+        if request.GET.get('test'):
+            data['template'] = template
+            add_to_context = []
+            for k in context:
+                add_to_context.append(k)
+            data['context'] = add_to_context
 
         return JsonResponse(data)
 
