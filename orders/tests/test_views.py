@@ -1531,7 +1531,8 @@ class ActionsPostMethodEdit(TestCase):
                                  'budget': '1000',
                                  'prepaid': '100',
                                  'pk': order.pk,
-                                 'action': 'order-edit'
+                                 'action': 'order-edit',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1567,7 +1568,8 @@ class ActionsPostMethodEdit(TestCase):
                                  'budget': '1000',
                                  'prepaid': '100',
                                  'pk': order.pk,
-                                 'action': 'order-edit'
+                                 'action': 'order-edit',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1584,7 +1586,8 @@ class ActionsPostMethodEdit(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'delivery': date(2017, 1, 1),
                                  'pk': order.pk,
-                                 'action': 'order-edit-date'
+                                 'action': 'order-edit-date',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1599,7 +1602,8 @@ class ActionsPostMethodEdit(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'delivery': 'invalid data',
                                  'pk': order.pk,
-                                 'action': 'order-edit-date'
+                                 'action': 'order-edit-date',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1614,7 +1618,8 @@ class ActionsPostMethodEdit(TestCase):
             self.client.post(reverse('actions'),
                              {'delivery': 'invalid data',
                               'pk': order.pk,
-                              'action': 'order-edit-date'
+                              'action': 'order-edit-date',
+                              'test': True
                               })
 
     def test_edit_customer_edits_customer(self):
@@ -1629,7 +1634,8 @@ class ActionsPostMethodEdit(TestCase):
                                  'CIF': '4444E',
                                  'cp': 48200,
                                  'pk': customer.pk,
-                                 'action': 'customer-edit'
+                                 'action': 'customer-edit',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1654,7 +1660,8 @@ class ActionsPostMethodEdit(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'phone': 'invalid phone',
                                  'pk': customer.pk,
-                                 'action': 'customer-edit'
+                                 'action': 'customer-edit',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1674,7 +1681,8 @@ class ActionsPostMethodEdit(TestCase):
                                  'qty': 2,
                                  'description': 'Modified item',
                                  'pk': item.pk,
-                                 'action': 'order-edit-item'
+                                 'action': 'order-edit-item',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1699,7 +1707,8 @@ class ActionsPostMethodEdit(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'qty': 'invalid qty',
                                  'pk': item.pk,
-                                 'action': 'order-edit-item'
+                                 'action': 'order-edit-item',
+                                 'test': True
                                  })
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('form', 'item')
@@ -1714,7 +1723,8 @@ class ActionsPostMethodEdit(TestCase):
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'pk': order.pk,
-                                 'action': 'order-pay-now'
+                                 'action': 'order-pay-now',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1732,7 +1742,8 @@ class ActionsPostMethodEdit(TestCase):
                                 {'prepaid': 2000,
                                  'workshop': 200,
                                  'pk': order.pk,
-                                 'action': 'order-close'
+                                 'action': 'order-close',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1750,7 +1761,8 @@ class ActionsPostMethodEdit(TestCase):
                                 {'prepaid': 'invalid price',
                                  'workshop': 200,
                                  'pk': order.pk,
-                                 'action': 'order-close'
+                                 'action': 'order-close',
+                                 'test': True
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1766,7 +1778,8 @@ class ActionsPostMethodEdit(TestCase):
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'), {'pk': order.pk,
                                                      'action': 'update-status',
-                                                     'status': '9'
+                                                     'status': '9',
+                                                     'test': True
                                                      })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
@@ -1783,7 +1796,8 @@ class ActionsPostMethodEdit(TestCase):
                 resp = self.client.post(reverse('actions'),
                                         {'pk': order.pk,
                                          'action': 'update-status',
-                                         'status': str(i)
+                                         'status': str(i),
+                                         'test': True
                                          })
                 # Test the response object
                 data = json.loads(str(resp.content, 'utf-8'))
@@ -1799,7 +1813,8 @@ class ActionsPostMethodEdit(TestCase):
         """Test the proper deletion of items."""
         item = OrderItem.objects.get(description='example item')
         self.client.post(reverse('actions'), {'pk': item.pk,
-                                              'action': 'order-delete-item'
+                                              'action': 'order-delete-item',
+                                              'test': True
                                               })
         with self.assertRaises(ObjectDoesNotExist):
             OrderItem.objects.get(pk=item.pk)
@@ -1809,7 +1824,8 @@ class ActionsPostMethodEdit(TestCase):
         item = OrderItem.objects.get(description='example item')
         resp = self.client.post(reverse('actions'),
                                 {'pk': item.pk,
-                                 'action': 'order-delete-item'
+                                 'action': 'order-delete-item',
+                                 'test': True
                                  })
 
         # Test the response object
@@ -1826,7 +1842,8 @@ class ActionsPostMethodEdit(TestCase):
         """Test the proper deletion of customers."""
         customer = Customer.objects.get(name='Customer')
         self.client.post(reverse('actions'), {'pk': customer.pk,
-                                              'action': 'customer-delete'
+                                              'action': 'customer-delete',
+                                              'test': True
                                               })
         with self.assertRaises(ObjectDoesNotExist):
             OrderItem.objects.get(pk=customer.pk)
@@ -1840,7 +1857,8 @@ class ActionsPostMethodEdit(TestCase):
         customer = Customer.objects.get(name='Customer')
         resp = self.client.post(reverse('actions'),
                                 {'pk': customer.pk,
-                                 'action': 'customer-delete'
+                                 'action': 'customer-delete',
+                                 'test': True
                                  })
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, reverse('customerlist'))
@@ -1848,7 +1866,8 @@ class ActionsPostMethodEdit(TestCase):
     def test_logout_succesfull(self):
         """Test the proper logout from app."""
         resp = self.client.post(reverse('actions'), {'pk': None,
-                                                     'action': 'logout'})
+                                                     'action': 'logout',
+                                                     'test': True})
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, reverse('login'))
 #
