@@ -4,8 +4,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, Document, OrderItem, Comment
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.core.paginator import InvalidPage
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
@@ -467,13 +466,22 @@ class SearchBoxTest(TestCase):
         with self.assertRaises(TypeError):
             self.client.get(reverse('search'))
 
+    def test_search_box_empty_string_returns_404(self):
+        """Trying to search empty string should return 404."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'orders',
+                                 'search-obj': ''})
+        self.assertEqual(resp.status_code, 404)
+
     def test_search_box_invalid_search_on(self):
         """Search_on fields should be either orders or customers."""
         with self.assertRaises(ValueError):
-            self.client.post(reverse('search'), {'search-on': 'invalid'})
+            self.client.post(reverse('search'), {'search-on': 'invalid',
+                                                 'search-obj': 'string'})
 
         with self.assertRaises(ValueError):
-            self.client.post(reverse('search'), {'search-on': None})
+            self.client.post(reverse('search'), {'search-on': None,
+                                                 'search-obj': 'string'})
 
     def test_search_box_on_orders(self):
         """Test search orders."""

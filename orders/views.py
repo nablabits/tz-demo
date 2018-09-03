@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, Document, OrderItem
 from django.utils import timezone
@@ -56,6 +56,8 @@ def search(request):
         data = dict()
         search_on = request.POST.get('search-on')
         search_obj = request.POST.get('search-obj')
+        if not search_obj:
+            raise Http404
         if search_on == 'orders':
             table = Order.objects.all()
             query_result = table.filter(ref_name__icontains=search_obj)
