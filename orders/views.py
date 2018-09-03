@@ -80,6 +80,9 @@ def search(request):
         for k in context:
             add_to_context.append(k)
         data['context'] = add_to_context
+        data['model'] = model
+        data['query_result'] = len(query_result)
+        data['query_result_name'] = query_result[0].ref_name
 
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
