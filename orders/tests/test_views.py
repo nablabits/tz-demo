@@ -1129,7 +1129,8 @@ class ActionsPostMethodCreate(TestCase):
                                               'budget': '1000',
                                               'prepaid': '100',
                                               'pk': 'None',
-                                              'action': 'order-new'
+                                              'action': 'order-new',
+                                              'test': True
                                               })
         self.assertTrue(Order.objects.get(ref_name='created'))
 
@@ -1148,7 +1149,8 @@ class ActionsPostMethodCreate(TestCase):
                                  'budget': '1000',
                                  'prepaid': '100',
                                  'pk': 'None',
-                                 'action': 'order-new'
+                                 'action': 'order-new',
+                                 'test': True
                                  })
 
         order_created = Order.objects.get(ref_name='created')
@@ -1172,7 +1174,8 @@ class ActionsPostMethodCreate(TestCase):
                                  'budget': '1000',
                                  'prepaid': '100',
                                  'pk': 'None',
-                                 'action': 'order-new'
+                                 'action': 'order-new',
+                                 'test': True
                                  })
 
         self.assertIsInstance(resp, JsonResponse)
@@ -1195,7 +1198,8 @@ class ActionsPostMethodCreate(TestCase):
                                               'CIF': '123456789F',
                                               'cp': '12345',
                                               'pk': None,
-                                              'action': 'customer-new'
+                                              'action': 'customer-new',
+                                              'test': True
                                               })
         self.assertTrue(Customer.objects.get(name='New Customer'))
 
@@ -1210,7 +1214,8 @@ class ActionsPostMethodCreate(TestCase):
                                  'CIF': '123456789F',
                                  'cp': '12345',
                                  'pk': None,
-                                 'action': 'customer-new'
+                                 'action': 'customer-new',
+                                 'test': True
                                  })
         customer_created = Customer.objects.get(name='New Customer')
         url = '/customer_view/%s' % customer_created.pk
@@ -1227,7 +1232,8 @@ class ActionsPostMethodCreate(TestCase):
                                  'CIF': '123456789F',
                                  'cp': '12345',
                                  'pk': None,
-                                 'action': 'customer-new'
+                                 'action': 'customer-new',
+                                 'test': True
                                  })
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
@@ -1254,7 +1260,7 @@ class ActionsPostMethodCreate(TestCase):
                    'customer-edit',
                    'order-delete-item',
                    'order-delete-file',
-                   'customer-delete'
+                   'customer-delete',
                    )
         for action in actions:
             resp = self.client.post(reverse('actions'),
@@ -1266,7 +1272,8 @@ class ActionsPostMethodCreate(TestCase):
         order = Order.objects.get(ref_name='example')
         self.client.post(reverse('actions'), {'action': 'order-comment',
                                               'pk': order.pk,
-                                              'comment': 'Entered comment'})
+                                              'comment': 'Entered comment',
+                                              'test': True})
         comment = Comment.objects.get(comment='Entered comment')
         user = User.objects.get(username='regular')
         self.assertTrue(comment)
@@ -1279,7 +1286,8 @@ class ActionsPostMethodCreate(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-comment',
                                  'pk': order.pk,
-                                 'comment': 'Entered comment'})
+                                 'comment': 'Entered comment',
+                                 'test': True})
 
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
@@ -1299,7 +1307,8 @@ class ActionsPostMethodCreate(TestCase):
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-comment',
-                                 'pk': order.pk})
+                                 'pk': order.pk,
+                                 'test': True})
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
@@ -1316,10 +1325,12 @@ class ActionsPostMethodCreate(TestCase):
         order = Order.objects.get(ref_name='example')
         self.client.post(reverse('actions'), {'action': 'order-comment',
                                               'pk': order.pk,
-                                              'comment': 'Entered comment'})
+                                              'comment': 'Entered comment',
+                                              'test': True})
         comment = Comment.objects.get(comment='Entered comment')
         resp = self.client.post(reverse('actions'), {'action': 'comment-read',
-                                                     'pk': comment.pk})
+                                                     'pk': comment.pk,
+                                                     'test': True})
         read_comment = Comment.objects.get(comment='Entered comment')
         url = '/'
         self.assertTrue(read_comment.read)
@@ -1335,7 +1346,8 @@ class ActionsPostMethodCreate(TestCase):
                           'item': '1',
                           'size': 'xs',
                           'qty': 2,
-                          'description': 'added item'
+                          'description': 'added item',
+                          'test': True
                           })
         item = OrderItem.objects.get(description='added item')
         self.assertTrue(item)
@@ -1350,7 +1362,8 @@ class ActionsPostMethodCreate(TestCase):
                                  'item': '1',
                                  'size': 'xs',
                                  'qty': 2,
-                                 'description': 'added item'
+                                 'description': 'added item',
+                                 'test': True
                                  })
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
@@ -1374,7 +1387,8 @@ class ActionsPostMethodCreate(TestCase):
                                  'item': '1',
                                  'size': 'xs',
                                  'qty': 2.5,
-                                 'description': 'invalid item'
+                                 'description': 'invalid item',
+                                 'test': True
                                  })
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
@@ -1394,7 +1408,8 @@ class ActionsPostMethodCreate(TestCase):
                          {'action': 'order-add-file',
                           'pk': order.pk,
                           'description': 'New file',
-                          'document': test_file})
+                          'document': test_file,
+                          'test': True})
         # Get rid of the temp file
         document = Document.objects.get(description='New file')
         os.remove('media/' + str(document.document))
@@ -1410,7 +1425,8 @@ class ActionsPostMethodCreate(TestCase):
                                 {'action': 'order-add-file',
                                  'pk': order.pk,
                                  'description': 'New file',
-                                 'document': test_file})
+                                 'document': test_file,
+                                 'test': True})
         # Get rid of the temp file
         document = Document.objects.get(description='New file')
         os.remove('media/' + str(document.document))
@@ -1427,7 +1443,8 @@ class ActionsPostMethodCreate(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-add-file',
                                  'pk': order.pk,
-                                 'description': 'New file'})
+                                 'description': 'New file',
+                                 'test': True})
 
         # Now try the behaviour
         data = json.loads(str(resp.content, 'utf-8'))
