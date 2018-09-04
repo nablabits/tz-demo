@@ -1250,7 +1250,6 @@ class ActionsPostMethodCreate(TestCase):
         actions = ('order-comment',
                    'comment-read',
                    'order-add-item',
-                   'order-add-file',
                    'order-edit',
                    'order-edit-date',
                    'order-edit-item',
@@ -1259,7 +1258,6 @@ class ActionsPostMethodCreate(TestCase):
                    'update-status',
                    'customer-edit',
                    'order-delete-item',
-                   'order-delete-file',
                    'customer-delete',
                    )
         for action in actions:
@@ -1395,63 +1393,6 @@ class ActionsPostMethodCreate(TestCase):
         context = data['context']
         self.assertFalse(data['form_is_valid'])
         self.assertEqual(template, 'includes/add/add_item.html')
-        self.assertIsInstance(context, list)
-        vars = ('form', 'order')
-        context_is_valid = self.context_vars(context, vars)
-        self.assertTrue(context_is_valid)
-
-    def test_add_file_adds_a_file(self):
-        """Test the proper file creation."""
-        order = Order.objects.get(ref_name='example')
-        test_file = io.StringIO('Example text')
-        self.client.post(reverse('actions'),
-                         {'action': 'order-add-file',
-                          'pk': order.pk,
-                          'description': 'New file',
-                          'document': test_file,
-                          'test': True})
-        # Get rid of the temp file
-        document = Document.objects.get(description='New file')
-        os.remove('media/' + str(document.document))
-
-        self.assertTrue(document)
-        self.assertEqual(document.order, order)
-
-    def test_add_files_redirects_to_order_view(self):
-        """Test the response given by add file."""
-        order = Order.objects.get(ref_name='example')
-        test_file = io.StringIO('Example text')
-        resp = self.client.post(reverse('actions'),
-                                {'action': 'order-add-file',
-                                 'pk': order.pk,
-                                 'description': 'New file',
-                                 'document': test_file,
-                                 'test': True})
-        # Get rid of the temp file
-        document = Document.objects.get(description='New file')
-        os.remove('media/' + str(document.document))
-        # Now try the redirect
-        url = '/order/view/%s' % order.pk
-        self.assertEqual(resp.status_code, 302)
-        self.assertRedirects(resp, url)
-
-    def test_add_files_invalid_form_returns_to_form_again(self):
-        """Test file add invalid form behaviour."""
-        order = Order.objects.get(ref_name='example')
-
-        # Missing file, so should be not valid
-        resp = self.client.post(reverse('actions'),
-                                {'action': 'order-add-file',
-                                 'pk': order.pk,
-                                 'description': 'New file',
-                                 'test': True})
-
-        # Now try the behaviour
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/add/add_file.html')
         self.assertIsInstance(context, list)
         vars = ('form', 'order')
         context_is_valid = self.context_vars(context, vars)

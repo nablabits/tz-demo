@@ -114,8 +114,6 @@ $(function () {
   $('#order-details').on('click', '.js-add-item', loadActionForm)
   $('#order-details').on('click', '.js-edit-item', loadActionForm)
   $('#order-details').on('click', '.js-delete-item', loadActionForm)
-  $('.js-order-add-file').click(loadActionForm)
-  $('#file-list').on('click', '.js-delete-file', loadActionForm)
   $('.js-customer-add').click(loadActionForm)
   $('.js-customer-edit').click(loadActionForm)
   $('.js-customer-delete').click(loadActionForm)

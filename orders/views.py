@@ -394,20 +394,6 @@ class Actions(View):
                 template = 'includes/add/add_item.html'
                 data['form_is_valid'] = False
 
-        # Add file (POST)
-        elif action == 'order-add-file':
-            order = get_object_or_404(Order, pk=pk)
-            form = DocumentForm(request.POST, request.FILES)
-            if form.is_valid():
-                upload = form.save(commit=False)
-                upload.order = order
-                upload.save()
-                return redirect('order_view', pk=pk)
-            else:
-                context = {'order': order, 'form': form}
-                template = 'includes/add/add_file.html'
-                data['form_is_valid'] = False
-
         # Edit order (POST)
         elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
@@ -528,18 +514,6 @@ class Actions(View):
             data['html_id'] = '#order-details'
             context = {'order': order, 'items': items}
             template = 'includes/order_details.html'
-
-        # Delete file (POST)
-        elif action == 'order-delete-file':
-            get_object_or_404(Document, pk=pk)
-            file = Document.objects.select_related('order').get(pk=pk)
-            order = file.order
-            files = Document.objects.filter(order=order)
-            file.delete()
-            data['form_is_valid'] = True
-            data['html_id'] = '#file-list'
-            context = {'files': files}
-            template = 'includes/file_list.html'
 
         # Delete customer (POST)
         elif action == 'customer-delete':
