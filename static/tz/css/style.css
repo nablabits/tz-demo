@@ -1,14 +1,14 @@
 body{
-  font-family: dosis;
+  font-family: dosis, sans-serif;
   color: #555;
 }
 a{color: #555;}
 h1, h2 {
-  font-family: Oswald;
+  font-family: Oswald, Helvetica, sans-serif;
   color: #555;
 }
 h3, h4, h5 {
-  font-family: dosis;
+  font-family: dosis, sans-serif;
   color: #555;
 }
 header{
