@@ -26,8 +26,8 @@ class CreationTest(LiveServerTestCase):
         cls.selenium.quit()
         super().tearDownClass()
 
-    def test_create_customer_from_sidebar(self):
-        """Try to create a new customer from sidebar."""
+    def test_create(self):
+        """Try to create every element from every place."""
         # First of all, login
         self.selenium.get(self.live_server_url + '/')
         username_input = self.selenium.find_element_by_id("id_username")
@@ -36,14 +36,14 @@ class CreationTest(LiveServerTestCase):
         password_input.send_keys('test')
         self.selenium.find_element_by_id("submit").click()
 
-        """Create customer from sideBar."""
+        """Create customer from Customer List."""
         # Click the link on the sidebar
         driver = self.selenium.find_element
         driver(By.LINK_TEXT, 'Clientes').click()
         # click add customer
         driver(By.LINK_TEXT, 'Nuevo cliente').click()
 
-        # Wait for the modal loading
+        # Wait for the modal to load
         wait = WebDriverWait(self.selenium, 10)
         name = wait.until(EC.visibility_of_element_located((By.NAME, 'name')))
 
@@ -58,6 +58,28 @@ class CreationTest(LiveServerTestCase):
 
         # submit
         driver(By.ID, 'submit').click()
+        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
+
+        """Create customer from sidebar."""
+        # Click the link on the sidebar
+        driver(By.LINK_TEXT, 'Nuevo cliente').click()
+
+        # Wait for the modal to load
+        wait = WebDriverWait(self.selenium, 10)
+        name = wait.until(EC.visibility_of_element_located((By.NAME, 'name')))
+
+        # Fill up the form
+        name.send_keys('Example2')
+        driver(By.NAME, 'address').send_keys('Address2')
+        driver(By.NAME, 'city').send_keys('Mungia otra vez')
+        driver(By.NAME, 'phone').send_keys(600500400)
+        driver(By.NAME, 'email').send_keys('jon2@jonDoe.es')
+        driver(By.NAME, 'CIF').send_keys('12345677F')
+        driver(By.NAME, 'cp').send_keys(48200)
+
+        # submit
+        driver(By.ID, 'submit').click()
+        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
 #
 #
 #
