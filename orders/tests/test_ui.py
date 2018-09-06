@@ -1,8 +1,9 @@
 from django.contrib.staticfiles.testing import LiveServerTestCase
-from django.test import Client
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-from selenium.webdriver.common.by import By
 from django.contrib.auth.models import User
 
 
@@ -67,11 +68,27 @@ class CreationTest(LiveServerTestCase):
         password_input.send_keys('test')
         self.selenium.find_element_by_id("submit").click()
 
-        # Find the link on sidebar
+        # Click the link on the sidebar
         driver = self.selenium.find_element
         driver(By.LINK_TEXT, 'Clientes').click()
         # click add customer
-        driver(By.CLASS_NAME, 'js-customer-add').click()
+        driver(By.LINK_TEXT, 'Nuevo cliente').click()
+
+        # Wait for the modal loading
+        wait = WebDriverWait(self.selenium, 10)
+        name = wait.until(EC.visibility_of_element_located((By.NAME, 'name')))
+
+        # Fill up the form
+        name.send_keys('Example')
+        driver(By.NAME, 'address').send_keys('Address')
+        driver(By.NAME, 'city').send_keys('Mungia')
+        driver(By.NAME, 'phone').send_keys(600600600)
+        driver(By.NAME, 'email').send_keys('jon@jonDoe.es')
+        driver(By.NAME, 'CIF').send_keys('1123444G')
+        driver(By.NAME, 'cp').send_keys(48100)
+
+        # submit
+        driver(By.ID, 'submit').click()
 #
 #
 #
