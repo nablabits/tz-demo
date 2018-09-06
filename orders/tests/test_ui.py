@@ -14,10 +14,9 @@ class CreationTest(LiveServerTestCase):
     def setUpClass(cls):
         """Set Up the tests in a permanent way."""
         super().setUpClass()
-        cls.selenium = WebDriver()
-        cls.selenium.implicitly_wait(10)
         profile = FirefoxProfile()
         cls.selenium = WebDriver(firefox_profile=profile)
+        cls.selenium.implicitly_wait(10)
         regular = User.objects.create_user(username='regular', password='test')
         regular.save()
 
@@ -37,6 +36,7 @@ class CreationTest(LiveServerTestCase):
         password_input.send_keys('test')
         self.selenium.find_element_by_id("submit").click()
 
+        """Create customer from sideBar."""
         # Click the link on the sidebar
         driver = self.selenium.find_element
         driver(By.LINK_TEXT, 'Clientes').click()
