@@ -49,6 +49,8 @@ class CreationTest(LiveServerTestCase):
         super().setUpClass()
         cls.selenium = WebDriver()
         cls.selenium.implicitly_wait(10)
+        profile = FirefoxProfile()
+        cls.selenium = WebDriver(firefox_profile=profile)
         regular = User.objects.create_user(username='regular', password='test')
         regular.save()
 
