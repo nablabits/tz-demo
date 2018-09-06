@@ -26,22 +26,19 @@ class CreationTest(LiveServerTestCase):
         cls.selenium.quit()
         super().tearDownClass()
 
-    def test_create(self):
-        """Try to create every element from every place."""
-        # First of all, login
+    def test_create_customer(self):
+        """Try to create new customers."""
         self.selenium.get(self.live_server_url + '/')
-        username_input = self.selenium.find_element_by_id("id_username")
-        username_input.send_keys('regular')
-        password_input = self.selenium.find_element_by_id("id_password")
-        password_input.send_keys('test')
-        self.selenium.find_element_by_id("submit").click()
+        driver = self.selenium.find_element
+
+        # First of all, login
+        driver(By.ID, 'id_username').send_keys('regular')
+        driver(By.ID, 'id_password').send_keys('test')
+        driver(By.ID, 'submit').click()
 
         """Create customer from Customer List."""
-        # Click the link on the sidebar
-        driver = self.selenium.find_element
-        driver(By.LINK_TEXT, 'Clientes').click()
-        # click add customer
-        driver(By.LINK_TEXT, 'Nuevo cliente').click()
+        driver(By.LINK_TEXT, 'Clientes').click()  # Click link on sidebar
+        driver(By.LINK_TEXT, 'Nuevo cliente').click()  # Click add customer
 
         # Wait for the modal to load
         wait = WebDriverWait(self.selenium, 10)
@@ -61,8 +58,7 @@ class CreationTest(LiveServerTestCase):
         self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
 
         """Create customer from sidebar."""
-        # Click the link on the sidebar
-        driver(By.LINK_TEXT, 'Nuevo cliente').click()
+        driver(By.LINK_TEXT, 'Nuevo cliente').click()  # Click link on sidebar
 
         # Wait for the modal to load
         wait = WebDriverWait(self.selenium, 10)
