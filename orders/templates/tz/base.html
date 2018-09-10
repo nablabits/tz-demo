@@ -55,17 +55,17 @@
         <!-- PC menu -->
         <div class="d-none d-lg-block col aside-wide bg-light">
           <nav class="nav d-flex flex-column align-items-end">
-            <a class="nav-item nav-link" href="{% url 'main' %}">
+            <a class="nav-item nav-link" href="{% url 'main' %}" id="sidebar-home">
               <i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
-            <a class="nav-item nav-link" href="{% url 'customerlist' %}">
+            <a class="nav-item nav-link" href="{% url 'customerlist' %}" id="sidebar-customers">
               <i class="fa fa-fw fa-search pr-2"></i> Clientes</a>
-            <a class="nav-item nav-link" href="{% url 'orderlist' %}">
+            <a class="nav-item nav-link" href="{% url 'orderlist' %}" id="sidebar-orders">
               <i class="fa fa-fw fa-list pr-2"></i> Pedidos</a>
-              <a class="nav-item nav-link js-customer-add" href="#" data-action="customer-add" data-pk="0">
-                <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
-            <a class="nav-item nav-link js-order-add" href="#" data-action="order-add" data-pk="0">
+            <a class="nav-item nav-link js-customer-add" href="#" data-action="customer-add" data-pk="0" id="sidebar-new-customer">
+              <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
+            <a class="nav-item nav-link js-order-add" href="#" data-action="order-add" data-pk="0" id="sidebar-new-order">
               <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
-            <a class="nav-item nav-link js-logout" data-action="logout" data-pk="0">
+            <a class="nav-item nav-link js-logout" data-action="logout" data-pk="0" id="sidebar-logout">
               <i class="fa fa-fw fa-sign-out pr-2"></i> Cerrar sesión</a>
           </nav>
         </div>
