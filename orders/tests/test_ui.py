@@ -58,7 +58,7 @@ class CreationTest(LiveServerTestCase):
         self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
 
         """Create customer from sidebar."""
-        driver(By.LINK_TEXT, 'Nuevo cliente').click()  # Click link on sidebar
+        driver(By.ID, 'sidebar-new-customer').click()  # Click link on sidebar
 
         # Wait for the modal to load
         wait = WebDriverWait(self.selenium, 10)
@@ -98,6 +98,11 @@ class CreationTest(LiveServerTestCase):
         self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver Pedido')
 
         # TODO: customer should be the last one created. Test It
+        # h4/strong[contains(text(), 'Example2')]
+        # xpath = "//div[@class='order_header']"
+        xpath = "//div[@class='d-flex mt-4 order_header']/h4[1]/strong/following-sibling::text()[1]"
+        # wait.until(EC.visibility_of_element_located((By.XPATH, xpath)))
+        self.assertTrue(driver(By.XPATH, xpath))
 #
 #
 #
