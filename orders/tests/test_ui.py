@@ -76,6 +76,28 @@ class CreationTest(LiveServerTestCase):
         # submit
         driver(By.ID, 'submit').click()
         self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
+
+        """Since we are in customer view, create a new order from there."""
+        driver(By.ID, 'order-add').click()
+
+        # Wait for the modal to load
+        ref = wait.until(EC.visibility_of_element_located((By.NAME,
+                                                           'ref_name')))
+        ref.send_keys('Order1')
+        driver(By.NAME, 'delivery').send_keys('2020-10-12')
+        driver(By.NAME, 'waist').send_keys(10)
+        driver(By.NAME, 'chest').send_keys(20)
+        driver(By.NAME, 'hip').send_keys(30)
+        driver(By.NAME, 'lenght').send_keys(40)
+        driver(By.NAME, 'others').send_keys('Notes')
+        driver(By.NAME, 'budget').send_keys(2000)
+        driver(By.NAME, 'prepaid').send_keys(100)
+
+        # submit
+        driver(By.ID, 'submit').click()
+        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver Pedido')
+
+        # TODO: customer should be the last one created. Test It
 #
 #
 #
