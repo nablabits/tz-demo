@@ -1,5 +1,5 @@
 from django.contrib.staticfiles.testing import LiveServerTestCase
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.firefox.webdriver import WebDriver
@@ -46,7 +46,7 @@ class CreationTest(LiveServerTestCase):
         name = wait.until(EC.visibility_of_element_located((By.NAME, 'name')))
 
         # Fill up the form
-        name.send_keys('Example')
+        name.send_keys('Customer from customer list')
         driver(By.NAME, 'address').send_keys('Address')
         driver(By.NAME, 'city').send_keys('Mungia')
         driver(By.NAME, 'phone').send_keys(600600600)
@@ -65,8 +65,8 @@ class CreationTest(LiveServerTestCase):
         wait = WebDriverWait(self.selenium, 10)
         name = wait.until(EC.visibility_of_element_located((By.NAME, 'name')))
 
-        # Fill up the form
-        name.send_keys('Customer test')
+        # Fill up the order_form_common
+        name.send_keys('Customer from sidebar')
         driver(By.NAME, 'address').send_keys('Address2')
         driver(By.NAME, 'city').send_keys('Mungia otra vez')
         driver(By.NAME, 'phone').send_keys(600500400)
@@ -84,7 +84,7 @@ class CreationTest(LiveServerTestCase):
         # Wait for the modal to load
         ref = wait.until(EC.visibility_of_element_located((By.NAME,
                                                            'ref_name')))
-        ref.send_keys('Order1')
+        ref.send_keys('Order from customer')
         driver(By.NAME, 'delivery').send_keys('2020-10-12')
         driver(By.NAME, 'waist').send_keys(10)
         driver(By.NAME, 'chest').send_keys(20)
@@ -100,9 +100,34 @@ class CreationTest(LiveServerTestCase):
 
         # Customer should be the last one created. Test It
         src = self.selenium.page_source
-        self.assertTrue(re.search(r'Customer test', src))
+        self.assertTrue(re.search(r'Customer from sidebar', src))
+        self.assertTrue(re.search(r'Order from customer', src))
 
         """Create order from sidebar."""
+        driver(By.ID, 'sidebar-new-order').click()  # Click link on sidebar
+        # Wait for the modal to load
+        ref = wait.until(EC.visibility_of_element_located((By.NAME,
+                                                           'ref_name')))
+        ref.send_keys('Order from sidebar')
+        customer = Select(driver(By.NAME, 'customer'))
+        customer.select_by_value('1')  # 'Customer from customer list' customer
+        driver(By.NAME, 'delivery').send_keys('2020-10-12')
+        driver(By.NAME, 'waist').send_keys(10)
+        driver(By.NAME, 'chest').send_keys(20)
+        driver(By.NAME, 'hip').send_keys(30)
+        driver(By.NAME, 'lenght').send_keys(40)
+        driver(By.NAME, 'others').send_keys('Notes')
+        driver(By.NAME, 'budget').send_keys(2000)
+        driver(By.NAME, 'prepaid').send_keys(100)
+
+        # submit
+        driver(By.ID, 'submit').click()
+        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver Pedido')
+
+        # Customer should be the first one created. Test It
+        src = self.selenium.page_source
+        self.assertTrue(re.search(r'Customer from customer list', src))
+        self.assertTrue(re.search(r'Order from sidebar', src))
 #
 #
 #
