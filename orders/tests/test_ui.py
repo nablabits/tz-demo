@@ -104,7 +104,7 @@ class CreationTest(LiveServerTestCase):
         self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
 
     def test_create_orders(self):
-        """Try to create new orders  from customer view & sidebar."""
+        """Try to create new orders from customer view & sidebar."""
         pk = Customer.objects.get(name='Default customer').pk
         url = self.live_server_url + '/customer_view/' + str(pk)
         self.selenium.get(url)
@@ -169,6 +169,27 @@ class CreationTest(LiveServerTestCase):
         self.assertTrue(re.search(r'Default customer', src))
         self.assertTrue(re.search(r'Order from sidebar', src))
 
+    def test_create_item(self):
+        """Create item."""
+        pk = Order.objects.get(ref_name='example').pk
+        url = self.live_server_url + '/order/view/' + str(pk)
+        self.selenium.get(url)
+
+        # First of all, login
+        self.find(By.ID, 'id_username').send_keys('regular')
+        self.find(By.ID, 'id_password').send_keys('test')
+        self.find(By.ID, 'submit').click()
+
+        self.find(By.CLASS_NAME, 'js-add-item').click()
+
+        # Wait for the modal to load
+        conditions = EC.visibility_of_element_located((By.ID, 'id_item'))
+        item = self.wait.until(conditions)
+        Select(item).select_by_value('2')
+        self.find(By.NAME, 'size').send_keys('XL')
+        self.find(By.NAME, 'qty').send_keys(5)
+        self.find(By.NAME, 'description').send_keys('Descripción')
+        self.find(By.ID, 'submit').click()
 
 #
 #
