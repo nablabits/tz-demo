@@ -114,3 +114,20 @@ class Comment(models.Model):
         name = ('El ' + str(self.creation.date()) +
                 ', ' + str(self.user) + ' comentó en ' + str(self.reference))
         return name
+
+
+class Timing(models.Model):
+    """Timing let us track production times.
+
+    Time should be given in hours.
+    """
+
+    ITEMS = OrderItem.ITEMS
+    item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
+    qty = models.IntegerField('Cantidad', default=1)
+    notes = models.TextField('Observaciones', blank=True, null=True)
+    time = models.DecimalField('Tiempo (h)', max_digits=5, decimal_places=2)
+
+    def __str__(self):
+        """Object's representation."""
+        return '{}x{}'.format(self.get_item_display(), self.qty)

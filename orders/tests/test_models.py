@@ -1,6 +1,6 @@
 """Test the app models."""
 from django.test import TestCase
-from orders.models import Customer, Order, Comment
+from orders.models import Customer, Order, Comment, Timing
 from django.contrib.auth.models import User
 from datetime import date
 
@@ -67,3 +67,14 @@ class ModelTest(TestCase):
                        str(today) + ' Customer Test example')
         self.assertTrue(isinstance(comment, Comment))
         self.assertEqual(comment.__str__(), comment_str)
+
+    def test_timing(self):
+        """Test the time creation."""
+        Timing.objects.create(item=1,
+                              qty=5,
+                              time=0.5,
+                              notes='time test')
+        time = Timing.objects.get(notes='time test')
+        self.assertIsInstance(time, Timing)
+        self.assertEqual(time.__str__(),
+                         '{}x{}'.format(time.get_item_display(), time.qty))
