@@ -1,3 +1,4 @@
+"""Test the app models."""
 from django.test import TestCase
 from orders.models import Customer, Order, Comment
 from django.contrib.auth.models import User
@@ -10,7 +11,6 @@ class ModelTest(TestCase):
     @classmethod
     def setUpTestData(cls):
         """Create the necessary items on database at once."""
-
         # Create a user
         User.objects.create_user(username='user', is_staff=True,
                                  is_superuser=True)
@@ -60,6 +60,7 @@ class ModelTest(TestCase):
         self.assertEqual(order.pending, -1000)
 
     def test_comment_creation(self):
+        """Test the comment creation."""
         comment = Comment.objects.get(pk=1)
         today = date.today()
         comment_str = ('El ' + str(today) + ', user comentó en ' +
