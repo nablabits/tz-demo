@@ -2,15 +2,13 @@
 
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from orders.models import Customer, Order, Document, OrderItem, Comment
+from orders.models import Customer, Order, OrderItem, Comment
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
 import json
-import io
-import os
 
 
 class NotLoggedInTest(TestCase):
@@ -151,11 +149,6 @@ class StandardViewsTest(TestCase):
         comment.comment = 'read comment'
         comment.save()
 
-        # Have a file uploaded
-        order = Order.objects.get(ref_name='example closed')
-        Document.objects.create(description='Uploaded File',
-                                order=order)
-
         # Now login to avoid the 404
         login = self.client.login(username='regular', password='test')
         if not login:
@@ -244,12 +237,10 @@ class StandardViewsTest(TestCase):
         order = resp.context['order']
         comments = resp.context['comments']
         items = resp.context['items']
-        files = resp.context['files']
 
         self.assertEqual(order.ref_name, 'example closed')
         self.assertEqual(len(comments), 10)
         self.assertEqual(len(items), 5)
-        self.assertEqual(len(files), 1)
         self.assertTrue(resp.context['closed'])
         self.assertTrue(comments[9].read)
 
@@ -444,11 +435,6 @@ class SearchBoxTest(TestCase):
         comment.comment = 'read comment'
         comment.save()
 
-        # Have a file uploaded
-        order = Order.objects.get(ref_name='example closed')
-        Document.objects.create(description='Uploaded File',
-                                order=order)
-
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
         context_is_valid = 0
@@ -588,8 +574,6 @@ class ActionsGetMethod(TestCase):
         OrderItem.objects.create(item=1, size='XL', qty=5,
                                  description='notes',
                                  reference=order)
-        Document.objects.create(description='Uploaded File',
-                                order=order)
         cls.client = Client()
 
     def test_no_pk_raises_error(self):
@@ -737,38 +721,6 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         self.assertEqual(template, 'includes/add/add_comment.html')
-        self.assertIsInstance(context, list)
-        if context[0] == 'order':
-            self.assertEqual(context[1], 'form')
-        elif context[0] == 'form':
-            self.assertEqual(context[1], 'order')
-        else:
-            self.assertEqual(context[0], 'Not recognized')
-
-    def test_add_file_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-add-file',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_add_file(self):
-        """Test context dictionaries and template.
-
-        The index for the context items seems to be a bit random (why?).
-        """
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk,
-                                'action': 'order-add-file',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/add/add_file.html')
         self.assertIsInstance(context, list)
         if context[0] == 'order':
             self.assertEqual(context[1], 'form')
@@ -978,31 +930,6 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(template, 'includes/delete/delete_item.html')
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'item')
-
-    def test_delete_file_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-delete-file',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_delete_file(self):
-        """Test context dictionaries and template."""
-        order = Order.objects.get(ref_name='example')
-        file = Document.objects.get(order=order)
-        resp = self.client.get(reverse('actions'),
-                               {'pk': file.pk,
-                                'action': 'order-delete-file',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/delete/delete_file.html')
-        self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'file')
 
     def test_delete_customer_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""

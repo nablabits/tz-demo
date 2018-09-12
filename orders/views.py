@@ -4,9 +4,9 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.http import JsonResponse, Http404
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, Document, OrderItem
+from .models import Comment, Customer, Order, OrderItem
 from django.utils import timezone
-from .forms import CustomerForm, OrderForm, CommentForm, DocumentForm
+from .forms import CustomerForm, OrderForm, CommentForm
 from .forms import OrderCloseForm, OrderItemForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -137,7 +137,6 @@ def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
     comments = Comment.objects.filter(reference=order).order_by('-creation')
-    files = Document.objects.filter(order=order)
     items = OrderItem.objects.filter(reference=order)
 
     if order.status == '7' and order.budget == order.prepaid:
@@ -150,7 +149,6 @@ def order_view(request, pk):
     settings = {'order': order,
                 'items': items,
                 'comments': comments,
-                'files': files,
                 'closed': closed,
                 'user': cur_user,
                 'now': now,
@@ -221,13 +219,6 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/add/add_comment.html'
 
-        # Add file (GET)
-        elif action == 'order-add-file':
-            order = get_object_or_404(Order, pk=pk)
-            form = DocumentForm()
-            context = {'order': order, 'form': form}
-            template = 'includes/add/add_file.html'
-
         # Edit the order (GET)
         elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
@@ -276,12 +267,6 @@ class Actions(View):
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             context = {'item': item}
             template = 'includes/delete/delete_item.html'
-
-        # Delete file (GET)
-        elif action == 'order-delete-file':
-            file = get_object_or_404(Document, pk=pk)
-            context = {'file': file}
-            template = 'includes/delete/delete_file.html'
 
         # Delete Customer (GET)
         elif action == 'customer-delete':

@@ -1,5 +1,5 @@
 from django import forms
-from .models import Customer, Order, OrderItem, Comment, Document
+from .models import Customer, Order, OrderItem, Comment
 from django.db.models import Count
 
 
@@ -36,12 +36,12 @@ class OrderItemForm(forms.ModelForm):
         fields = ('item', 'size', 'qty', 'description')
 
 
-class DocumentForm(forms.ModelForm):
-    """Create a form to upload files."""
-
-    class Meta:
-        model = Document
-        fields = ('description', 'document', )
+# class DocumentForm(forms.ModelForm):
+#     """Create a form to upload files."""
+#
+#     class Meta:
+#         model = Document
+#         fields = ('description', 'document', )
 
 
 class CommentForm(forms.ModelForm):

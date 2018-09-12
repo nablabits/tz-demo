@@ -91,13 +91,13 @@ class OrderItem(models.Model):
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
 
 
-class Document(models.Model):
-    """Manage the file upload."""
-
-    description = models.CharField('descripcion', max_length=255, blank=True)
-    document = models.FileField(upload_to='documents/')
-    uploaded = models.DateField(default=timezone.now)
-    order = models.ForeignKey(Order, on_delete=models.CASCADE)
+# class Document(models.Model):
+#     """Manage the file upload."""
+#
+#     description = models.CharField('descripcion', max_length=255, blank=True)
+#     document = models.FileField(upload_to='documents/')
+#     uploaded = models.DateField(default=timezone.now)
+#     order = models.ForeignKey(Order, on_delete=models.CASCADE)
 
 
 class Comment(models.Model):
