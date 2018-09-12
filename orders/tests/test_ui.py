@@ -187,8 +187,11 @@ class CreationTest(LiveServerTestCase):
         conditions = EC.visibility_of_element_located((By.ID, 'id_item'))
         item = self.wait.until(conditions)
 
+        # Try to select all items on the dropdown
+        for value in range(2, 9):
+            Select(item).select_by_value(str(value))
+
         # Fill up the form
-        Select(item).select_by_value('2')
         self.find(By.NAME, 'size').send_keys('XL')
         self.find(By.NAME, 'qty').send_keys(5)
         self.find(By.NAME, 'description').send_keys('Descripción')
