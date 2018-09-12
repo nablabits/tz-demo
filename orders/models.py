@@ -1,3 +1,8 @@
+"""Orders app let manage and control customers, orders and timing.
+
+Its intended use is for business related to tailor made clothes.
+"""
+
 from django.db import models
 from django.utils import timezone
 from datetime import date
@@ -58,21 +63,23 @@ class Order(models.Model):
                                    max_digits=7, decimal_places=2, default=0)
 
     def __str__(self):
-        """Force object name."""
+        """Object's representation."""
         return '%s %s %s' % (self.inbox_date.date(),
                              self.customer, self.ref_name)
 
     @property
     def overdue(self):
+        """Set the overdue property."""
         return date.today() > self.delivery
 
     @property
     def pending(self):
+        """Set the pending amount per order."""
         return self.prepaid - self.budget
 
 
 class OrderItem(models.Model):
-    """Each order has several clothes."""
+    """Each order can have one or several clothes."""
 
     ITEMS = (
         ('1', 'Falda'),
@@ -91,17 +98,8 @@ class OrderItem(models.Model):
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
 
 
-# class Document(models.Model):
-#     """Manage the file upload."""
-#
-#     description = models.CharField('descripcion', max_length=255, blank=True)
-#     document = models.FileField(upload_to='documents/')
-#     uploaded = models.DateField(default=timezone.now)
-#     order = models.ForeignKey(Order, on_delete=models.CASCADE)
-
-
 class Comment(models.Model):
-    """Keep the comments by order & user."""
+    """Store the comments related to the orders."""
 
     creation = models.DateTimeField('Cuando', default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
@@ -110,7 +108,7 @@ class Comment(models.Model):
     read = models.BooleanField('Leido', default=False)
 
     def __str__(self):
-        """Force object name."""
+        """Object's representation."""
         name = ('El ' + str(self.creation.date()) +
                 ', ' + str(self.user) + ' comentó en ' + str(self.reference))
         return name

@@ -1,3 +1,5 @@
+"""Test the user interface using Selenium."""
+
 from django.contrib.staticfiles.testing import LiveServerTestCase
 from selenium.webdriver.support.ui import WebDriverWait, Select
 from selenium.webdriver.support import expected_conditions as EC

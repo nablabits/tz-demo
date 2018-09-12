@@ -1,3 +1,5 @@
+"""Set the url for the views."""
+
 from django.urls import path, re_path
 from django.contrib.auth import views as auth_views
 from django.conf import settings

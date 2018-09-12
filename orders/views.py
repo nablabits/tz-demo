@@ -299,6 +299,10 @@ class Actions(View):
         return JsonResponse(data)
 
     def post(self, request):
+        """Parse the request provided by AJAX.
+
+        Returns can be: JsonResponse(sometimes with 'reload' order) or redirect
+        """
         data = dict()
         pk = self.request.POST.get('pk', None)
         action = self.request.POST.get('action', None)
