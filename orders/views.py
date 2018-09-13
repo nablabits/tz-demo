@@ -7,7 +7,7 @@ from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm
-from .forms import OrderCloseForm, OrderItemForm
+from .forms import OrderCloseForm, OrderItemForm, TimeForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -218,6 +218,12 @@ class Actions(View):
             form = CommentForm()
             context = {'order': order, 'form': form}
             template = 'includes/add/add_comment.html'
+
+        # Add time (GET)
+        elif action == 'time-add':
+            form = TimeForm()
+            context = {'form': form}
+            template = 'includes/add/add_time.html'
 
         # Edit the order (GET)
         elif action == 'order-edit':
