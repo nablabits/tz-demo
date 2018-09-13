@@ -45,14 +45,6 @@ class OrderItemForm(forms.ModelForm):
         fields = ('item', 'size', 'qty', 'description')
 
 
-# class DocumentForm(forms.ModelForm):
-#     """Create a form to upload files."""
-#
-#     class Meta:
-#         model = Document
-#         fields = ('description', 'document', )
-
-
 class CommentForm(forms.ModelForm):
     """Add commnets using a form."""
 
