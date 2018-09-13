@@ -1,7 +1,7 @@
 """Form models used in the app."""
 
 from django import forms
-from .models import Customer, Order, OrderItem, Comment
+from .models import Customer, Order, OrderItem, Comment, Timing
 from django.db.models import Count
 
 
@@ -53,6 +53,16 @@ class CommentForm(forms.ModelForm):
 
         model = Comment
         fields = ('comment', )
+
+
+class TimeForm(forms.ModelForm):
+    """Add times to db."""
+
+    class Meta:
+        """Meta options for a quick design."""
+
+        model = Timing
+        fields = ('item', 'qty', 'time', 'notes')
 
 
 class OrderCloseForm(forms.ModelForm):
