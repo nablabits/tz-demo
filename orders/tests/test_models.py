@@ -72,6 +72,7 @@ class ModelTest(TestCase):
         """Test the time creation."""
         Timing.objects.create(item=1,
                               item_class=2,
+                              activity=2,
                               qty=5,
                               time=0.5,
                               notes='time test')
