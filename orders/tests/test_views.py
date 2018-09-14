@@ -1206,6 +1206,48 @@ class ActionsPostMethodCreate(TestCase):
                                     {'pk': 2000, 'action': action})
             self.assertEqual(resp.status_code, 404)
 
+    def test_time_new_adds_new_time(self):
+        """Test the proper creation of times."""
+        self.client.post(reverse('actions'), {'item': '1',
+                                              'qty': 2,
+                                              'notes': 'Test note',
+                                              'time': 0.5,
+                                              'action': 'time-new',
+                                              'pk': None,
+                                              'test': True})
+
+    def test_time_new_redirects_to_main_page(self):
+        """When adding a time, return to main page."""
+        resp = self.client.post(reverse('actions'),
+                                {'item': '1',
+                                 'qty': 2,
+                                 'notes': 'Test note',
+                                 'time': 0.5,
+                                 'action': 'time-new',
+                                 'pk': None,
+                                 'test': True})
+        self.assertRedirects(resp, reverse('main'))
+
+    def test_invalid_time_new_return_to_form_again(self):
+        """When sending invalid data we shoud recover the form."""
+        resp = self.client.post(reverse('actions'),
+                                {'item': '1',
+                                 'qty': 'this must be int',
+                                 'notes': 'Test note',
+                                 'time': 0.5,
+                                 'action': 'time-new',
+                                 'pk': None,
+                                 'test': True})
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(template, 'includes/add/add_time.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'form')
+
     def test_comment_adds_comment(self):
         """Test the proper insertion of comments."""
         order = Order.objects.get(ref_name='example')
