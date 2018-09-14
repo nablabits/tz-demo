@@ -389,6 +389,17 @@ class Actions(View):
                 template = 'includes/add/add_item.html'
                 data['form_is_valid'] = False
 
+        # Add time
+        elif action == 'time-new':
+            form = TimeForm(request.POST)
+            if form.is_valid():
+                form.save()
+                return redirect('main')
+            else:
+                data['form_is_valid'] = False
+                context = {'form': form}
+                template = 'includes/add/add_time.html'
+
         # Edit order (POST)
         elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
