@@ -89,7 +89,8 @@ class OrderItem(models.Model):
         ('5', 'Delantal'),
         ('6', 'Corpiño'),
         ('7', 'Chaleco'),
-        ('8', 'Gerriko')
+        ('8', 'Gerriko'),
+        ('9', 'Bata')
     )
     item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
     size = models.CharField('Talla', max_length=3, default='1')
@@ -121,7 +122,16 @@ class Timing(models.Model):
     """
 
     ITEMS = OrderItem.ITEMS
+    ITEM_CLASSES = (
+        ('1', 'Standard'),
+        ('2', 'Medium'),
+        ('3', 'Premium')
+    )
     item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
+    item_class = models.CharField('Item',
+                                  max_length=1,
+                                  choices=ITEM_CLASSES,
+                                  default='1')
     qty = models.IntegerField('Cantidad', default=1)
     notes = models.TextField('Observaciones', blank=True, null=True)
     time = models.DecimalField('Tiempo (h)', max_digits=5, decimal_places=2)
