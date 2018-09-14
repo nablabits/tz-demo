@@ -62,7 +62,7 @@ class TimeForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = Timing
-        fields = ('item', 'qty', 'time', 'notes')
+        fields = ('item', 'item_class', 'qty', 'time', 'notes')
 
 
 class OrderCloseForm(forms.ModelForm):
