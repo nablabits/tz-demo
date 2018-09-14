@@ -127,11 +127,20 @@ class Timing(models.Model):
         ('2', 'Medium'),
         ('3', 'Premium')
     )
+    ACTIVITIES = (
+        ('1', 'Confección'),
+        ('2', 'Corte'),
+        ('3', 'Planchado')
+    )
     item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
-    item_class = models.CharField('Item',
+    item_class = models.CharField('Tipo Item',
                                   max_length=1,
                                   choices=ITEM_CLASSES,
                                   default='1')
+    activity = models.CharField('Actividad',
+                                max_length=1,
+                                choices=ACTIVITIES,
+                                default='1')
     qty = models.IntegerField('Cantidad', default=1)
     notes = models.TextField('Observaciones', blank=True, null=True)
     time = models.DecimalField('Tiempo (h)', max_digits=5, decimal_places=2)
