@@ -2,7 +2,7 @@
 
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from orders.models import Customer, Order, OrderItem, Comment
+from orders.models import Customer, Order, OrderItem, Comment, Timing
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.http import JsonResponse
 from django.urls import reverse
@@ -1210,16 +1210,21 @@ class ActionsPostMethodCreate(TestCase):
         """Test the proper creation of times."""
         self.client.post(reverse('actions'), {'item': '1',
                                               'qty': 2,
+                                              'item_class': '2',
+                                              'activity': '2',
                                               'notes': 'Test note',
                                               'time': 0.5,
                                               'action': 'time-new',
                                               'pk': None,
                                               'test': True})
+        Timing.objects.get(notes='Test note')
 
     def test_time_new_redirects_to_main_page(self):
         """When adding a time, return to main page."""
         resp = self.client.post(reverse('actions'),
                                 {'item': '1',
+                                 'item_class': '2',
+                                 'activity': '2',
                                  'qty': 2,
                                  'notes': 'Test note',
                                  'time': 0.5,
