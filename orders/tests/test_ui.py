@@ -210,7 +210,33 @@ class CreationTest(LiveServerTestCase):
         # Fill up the form
         comment.send_keys('XL')
 
+    def test_create_time(self):
+        """Test create time from sidebar."""
+        # First of all load page
+        self.selenium.get(self.live_server_url + '/')
 
+        # Now, login
+        self.find(By.ID, 'id_username').send_keys('regular')
+        self.find(By.ID, 'id_password').send_keys('test')
+        self.find(By.ID, 'submit').click()
+
+        self.find(By.ID, 'sidebar-new-time').click()
+
+        # Wait for the modal to load
+        conditions = EC.visibility_of_element_located((By.NAME, 'item'))
+        item = self.wait.until(conditions)
+
+        # Try to select all items on the dropdown
+        for value in range(2, 9):
+            Select(item).select_by_value(str(value))
+
+        # Fill up the form
+        self.find(By.NAME, 'qty').send_keys(5)
+        self.find(By.NAME, 'time').send_keys('5.5')
+        self.find(By.NAME, 'notes').send_keys('Descripción')
+        self.find(By.ID, 'submit').click()
+
+        self.assertEqual(self.selenium.current_url, self.live_server_url + '/')
 #
 #
 #
