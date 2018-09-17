@@ -3,7 +3,7 @@
 Its intended use is for business related to tailor made clothes.
 """
 
-from django.db import models
+from django.db import models, IntegrityError
 from django.utils import timezone
 from datetime import date
 
@@ -144,6 +144,16 @@ class Timing(models.Model):
     qty = models.IntegerField('Cantidad', default=1)
     notes = models.TextField('Observaciones', blank=True, null=True)
     time = models.DecimalField('Tiempo (h)', max_digits=5, decimal_places=2)
+    reference = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True)
+
+    def save(self, *args, **kwargs):
+        """override the save method."""
+        order = Order.objects.latest('inbox_date')
+        try:
+            self.reference
+        except:
+            self.reference = order
+        super().save(*args, **kwargs)
 
     def __str__(self):
         """Object's representation."""
