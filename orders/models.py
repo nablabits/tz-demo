@@ -147,7 +147,9 @@ class Timing(models.Model):
     reference = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True)
 
     def save(self, *args, **kwargs):
-        """override the save method."""
+        """Override the save method.
+
+        If no order is given try to pick up the last one."""
         order = Order.objects.latest('inbox_date')
         try:
             self.reference
