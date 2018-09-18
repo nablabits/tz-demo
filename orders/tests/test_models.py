@@ -23,6 +23,7 @@ class ModelTest(TestCase):
                                 phone='666666666',
                                 email='customer@example.com',
                                 CIF='5555G',
+                                notes='Default note',
                                 cp='48100')
 
         # Create  an order
@@ -99,6 +100,7 @@ class ModelTest(TestCase):
         self.assertEqual(time.reference, order)
 
     def test_timimg_without_order_should_pick_up_the_last_one(self):
+        """Test when no order is provided."""
         Timing.objects.create(item=1,
                               item_class=2,
                               activity=2,
