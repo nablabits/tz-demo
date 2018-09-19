@@ -64,8 +64,6 @@ class Order(models.Model):
     # Pricing
     budget = models.DecimalField('Presupuesto', max_digits=7, decimal_places=2)
     prepaid = models.DecimalField('Pagado', max_digits=7, decimal_places=2)
-    workshop = models.DecimalField('Horas de taller',
-                                   max_digits=7, decimal_places=2, default=0)
 
     def __str__(self):
         """Object's representation."""
