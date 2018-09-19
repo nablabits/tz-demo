@@ -37,8 +37,7 @@ class ModelTest(TestCase):
                              lenght=40,
                              others='Custom notes',
                              budget=2000,
-                             prepaid=1000,
-                             workshop=120)
+                             prepaid=1000)
 
         # Create comment
         Comment.objects.create(user=User.objects.get(pk=1),
