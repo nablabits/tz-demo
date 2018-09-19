@@ -56,7 +56,10 @@ class CommentForm(forms.ModelForm):
 
 
 class TimeForm(forms.ModelForm):
-    """Add times to db."""
+    """Add times to db.
+
+    Time could be added to any order regardless its state.
+    """
 
     class Meta:
         """Meta options for a quick design."""
@@ -80,4 +83,4 @@ class OrderCloseForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = Order
-        fields = ('prepaid', 'workshop')
+        fields = ('prepaid',)
