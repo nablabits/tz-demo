@@ -51,10 +51,14 @@ class Order(models.Model):
     status = models.CharField(max_length=1, choices=STATUS, default='1')
 
     # Measures
-    waist = models.DecimalField('Cintura', max_digits=5, decimal_places=2)
-    chest = models.DecimalField('Pecho', max_digits=5, decimal_places=2)
-    hip = models.DecimalField('Cadera', max_digits=5, decimal_places=2)
-    lenght = models.DecimalField('Largo', max_digits=5, decimal_places=2)
+    waist = models.DecimalField('Cintura', max_digits=5, decimal_places=2,
+                                default=0)
+    chest = models.DecimalField('Pecho', max_digits=5, decimal_places=2,
+                                default=0)
+    hip = models.DecimalField('Cadera', max_digits=5, decimal_places=2,
+                              default=0)
+    lenght = models.DecimalField('Largo', max_digits=5, decimal_places=2,
+                                 default=0)
     others = models.TextField('Observaciones', blank=True, null=True)
 
     # Pricing
