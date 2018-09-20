@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.http import JsonResponse, Http404
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, OrderItem
+from .models import Comment, Customer, Order, OrderItem, Timing
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm
 from .forms import OrderCloseForm, OrderItemForm, TimeForm
@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError
-from django.db.models import Count
+from django.db.models import Count, Sum
 from datetime import datetime
 
 
@@ -138,6 +138,8 @@ def order_view(request, pk):
     order = get_object_or_404(Order, pk=pk)
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
+    times = Timing.objects.filter(reference=order)
+    total_time = times.aggregate(Sum('time'))
 
     if order.status == '7' and order.budget == order.prepaid:
         closed = True
@@ -149,6 +151,8 @@ def order_view(request, pk):
     settings = {'order': order,
                 'items': items,
                 'comments': comments,
+                'times': times,
+                'total_time': total_time['time__sum'],
                 'closed': closed,
                 'user': cur_user,
                 'now': now,
@@ -222,6 +226,13 @@ class Actions(View):
         # Add time (GET)
         elif action == 'time-add':
             form = TimeForm()
+            context = {'form': form}
+            template = 'includes/add/add_time.html'
+
+        # Add time from order (GET)
+        elif action == 'time-from-order':
+            order = get_object_or_404(Order, pk=pk)
+            form = TimeForm(initial={'reference': order})
             context = {'form': form}
             template = 'includes/add/add_time.html'
 
