@@ -1,0 +1,41 @@
+<div class="card mt-4">
+      <div class="card-header">
+        <div class="row px-2">
+          <h4 class="font-weight-bold mr-auto">
+            Tiempos Registrados:
+            {{total_time}} h
+          </h4>
+          <button class="ml-2 btn btn-outline-success js-time-add" data-action="time-from-order" data-pk="{{order.pk}}"><i class="fa fa-clock-o"></i> Añadir tiempo</button>
+        </div>
+      </div>
+      <div class="card-body order_details">
+        {% if times %}
+          {% for time in times %}
+            <div class="row">
+              <div class="col">
+                {{time.get_activity_diplay}}&nbsp;
+                {{time.qty}}&nbsp;
+                {{time.get_item_display}}&nbsp;
+                {{time.get_item_class_display}}
+              </div>
+              <div class="col text-right">
+                {{time.time}} horas.
+              </div>
+            </div>
+            {% if time.notes %}
+            <div class="d-flex">
+              <p class="pl-4">Cometarios: {{time.notes}}</p>
+            </div>
+            {% endif %}
+          {% endfor %}
+
+        {% else %}
+        <div class="d-flex">
+          <div class="alert alert-info" role="alert">
+            <i class="fa fa-info mr-2"></i>
+            No se ha añadido ningún tiempo aún.
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
