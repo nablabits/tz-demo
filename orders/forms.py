@@ -72,7 +72,7 @@ class TimeForm(forms.ModelForm):
         """Override the order in the reference dropdown."""
         super(TimeForm, self).__init__(*args, **kwargs)
         self.fields['reference'].label = 'Pedido'
-        queryset = Order.objects.order_by('inbox_date')[:25]
+        queryset = Order.objects.order_by('inbox_date')
         self.fields['reference'].queryset = queryset
 
 
