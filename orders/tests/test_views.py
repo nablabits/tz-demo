@@ -743,6 +743,21 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(template, 'includes/add/add_time.html')
         self.assertEqual(context[0], 'form')
 
+    def test_add_time_from_order(self):
+        """Test add time button click response."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk,
+                                'action': 'time-from-order',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/add/add_time.html')
+        self.assertEqual(context[0], 'form')
+
     def test_edit_order_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
