@@ -93,7 +93,10 @@ class OrderItem(models.Model):
         ('6', 'Corpiño'),
         ('7', 'Chaleco'),
         ('8', 'Gerriko'),
-        ('9', 'Bata')
+        ('9', 'Bata'),
+        ('10', 'Pololo'),
+        ('11', 'Azpikogona'),
+        ('12', 'Traje de niña'),
     )
     item = models.CharField('Item', max_length=1, choices=ITEMS, default='1')
     size = models.CharField('Talla', max_length=3, default='1')
