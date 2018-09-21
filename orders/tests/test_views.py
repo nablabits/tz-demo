@@ -254,16 +254,6 @@ class StandardViewsTest(TestCase):
         ctx = resp.context
         self.assertEqual(str(ctx['user']), 'regular')
 
-        # Customers are ordered by order number
-        self.assertGreaterEqual(ctx['customers'][0].num_orders,
-                                ctx['customers'][1].num_orders)
-        self.assertGreaterEqual(ctx['customers'][1].num_orders,
-                                ctx['customers'][2].num_orders)
-        self.assertGreaterEqual(ctx['customers'][2].num_orders,
-                                ctx['customers'][3].num_orders)
-        self.assertGreaterEqual(ctx['customers'][3].num_orders,
-                                ctx['customers'][4].num_orders)
-
     def test_customer_list_paginator(self):
         """Test paginator functionality on customer list."""
         resp = self.client.get('/customers')
