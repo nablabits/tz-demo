@@ -211,7 +211,7 @@ class CreationTest(LiveServerTestCase):
         comment.send_keys('XL')
 
     def test_create_time(self):
-        """Test create time from sidebar."""
+        """Test create time from sidebar & from order."""
         # First of all load page
         self.selenium.get(self.live_server_url + '/')
 
@@ -247,6 +247,41 @@ class CreationTest(LiveServerTestCase):
         self.find(By.ID, 'submit').click()
 
         self.assertEqual(self.selenium.current_url, self.live_server_url + '/')
+
+        # Now, try to create from order
+        pk = Order.objects.get(ref_name='example').pk
+        url = self.live_server_url + '/order/view/' + str(pk)
+        self.selenium.get(url)
+
+        # Add time
+        self.find(By.ID, 'time-add').click()
+
+        # Wait for the modal to load
+        conditions = EC.visibility_of_element_located((By.NAME, 'item'))
+        item = self.wait.until(conditions)
+
+        # Try to select all items on the dropdown
+        for value in range(2, 9):
+            Select(item).select_by_value(str(value))
+
+        # Try to select all item classes on the dropdown
+        item_class = self.find(By.NAME, 'item_class')
+        for value in range(2, 4):
+            Select(item_class).select_by_value(str(value))
+
+        # Try to select all activities on the dropdown
+        activity = self.find(By.NAME, 'activity')
+        for value in range(2, 4):
+            Select(activity).select_by_value(str(value))
+
+        # Fill up the form
+        self.find(By.NAME, 'qty').send_keys(5)
+        self.find(By.NAME, 'time').send_keys('5.5')
+        self.find(By.NAME, 'notes').send_keys('Descripción')
+        self.find(By.ID, 'submit').click()
+
+        self.assertEqual(self.selenium.current_url, self.live_server_url + '/')
+
 #
 #
 #
