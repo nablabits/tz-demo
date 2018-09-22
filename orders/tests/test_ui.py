@@ -282,6 +282,88 @@ class CreationTest(LiveServerTestCase):
 
         self.assertEqual(self.selenium.current_url, self.live_server_url + '/')
 
+
+class EditionTest(LiveServerTestCase):
+    """Test the correct editions."""
+
+    def setUp(self):
+        profile = FirefoxProfile()
+        self.selenium = WebDriver(firefox_profile=profile)
+        self.selenium.implicitly_wait(10)
+        self.find = self.selenium.find_element
+        self.wait = WebDriverWait(self.selenium, 10)
+
+        # Create an initial user
+        regular = User.objects.create_user(username='regular', password='test')
+        regular.save()
+
+        # Create a default customer
+        Customer.objects.create(name='Default customer',
+                                address='This computer',
+                                city='No city',
+                                phone='666666666',
+                                email='customer@example.com',
+                                CIF='5555G',
+                                cp='48100')
+
+        # Create an order
+        customer = Customer.objects.get(name='Default customer')
+        Order.objects.create(user=regular,
+                             customer=customer,
+                             ref_name='example',
+                             delivery=date.today(),
+                             waist=randint(10, 50),
+                             chest=randint(10, 50),
+                             hip=randint(10, 50),
+                             lenght=randint(10, 50),
+                             others='Custom notes',
+                             budget=2000,
+                             prepaid=0)
+
+        # Login
+        self.selenium.get(self.live_server_url + '/')
+        self.find(By.ID, 'id_username').send_keys('regular')
+        self.find(By.ID, 'id_password').send_keys('test')
+        self.find(By.ID, 'submit').click()
+
+    def tearDown(self):
+        """Deactivate test settings."""
+        self.selenium.quit()
+
+    def test_edit_customer(self):
+        """Test the correct edition of customers."""
+        pk = Customer.objects.get(name='Default customer').pk
+        url = self.live_server_url + '/customer_view/' + str(pk)
+        self.selenium.get(url)
+
+        # Now, Edit
+        self.find(By.ID, 'customer-edit').click()
+
+        # Wait for the modal to load
+        conditions = EC.visibility_of_element_located((By.NAME, 'name'))
+        name = self.wait.until(conditions)
+
+        # Clear out the form
+        name.clear()
+        self.find(By.NAME, 'address').clear()
+        self.find(By.NAME, 'city').clear()
+        self.find(By.NAME, 'phone').clear()
+        self.find(By.NAME, 'email').clear()
+        self.find(By.NAME, 'CIF').clear()
+        self.find(By.NAME, 'cp').clear()
+
+        # and fill up
+        name.send_keys('Edited Customer')
+        self.find(By.NAME, 'address').send_keys('Edited address')
+        self.find(By.NAME, 'city').send_keys('Edited city')
+        self.find(By.NAME, 'phone').send_keys(900900900)
+        self.find(By.NAME, 'email').send_keys('edited@mail.es')
+        self.find(By.NAME, 'CIF').send_keys('edited')
+        self.find(By.NAME, 'cp').send_keys(10300)
+
+        # submit
+        self.find(By.ID, 'submit').click()
+        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
 #
 #
 #
