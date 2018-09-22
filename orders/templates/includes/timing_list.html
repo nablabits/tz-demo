@@ -3,7 +3,9 @@
         <div class="row px-2">
           <h4 class="font-weight-bold mr-auto">
             Tiempos Registrados:
-            {{total_time}} h
+            {% if total_time %}
+              {{total_time}} h
+            {% endif %}
           </h4>
           <button class="ml-2 btn btn-outline-success js-time-add" data-action="time-from-order" data-pk="{{order.pk}}"><i class="fa fa-clock-o"></i> Añadir tiempo</button>
         </div>
