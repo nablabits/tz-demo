@@ -20,8 +20,9 @@
                 {{time.get_item_display}}&nbsp;
                 {{time.get_item_class_display}}
               </div>
-              <div class="col text-right">
+              <div class="col">
                 {{time.time}} horas.
+                <button class="ml-2 mr-3 btn btn-outline-danger js-time-delete" data-action="time-delete" data-pk="{{time.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
               </div>
             </div>
             {% if time.notes %}

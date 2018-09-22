@@ -291,6 +291,12 @@ class Actions(View):
             context = {'customer': customer}
             template = 'includes/delete/delete_customer.html'
 
+        # Delete Time
+        elif action == 'time-delete':
+            time = get_object_or_404(Timing, pk=pk)
+            context = {'time': time}
+            template = 'includes/delete/delete_time.html'
+
         # logout
         elif action == 'logout':
             context = dict()
@@ -520,7 +526,7 @@ class Actions(View):
                 template = 'includes/order_status.html'
                 context = {'order': order}
 
-        # Delete item (POST) define
+        # Delete item (POST)
         elif action == 'order-delete-item':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
@@ -531,6 +537,17 @@ class Actions(View):
             data['html_id'] = '#order-details'
             context = {'order': order, 'items': items}
             template = 'includes/order_details.html'
+
+        # delete item (POST)
+        elif action == 'time-delete':
+            get_object_or_404(Timing, pk=pk)
+            time = Timing.objects.select_related('reference').get(pk=pk)
+            times = Timing.objects.filter(reference=time.reference)
+            time.delete()
+            data['form_is_valid'] = True
+            data['html_id'] = '#timing-list'
+            context = {'times': times}
+            template = 'includes/timing_list.html'
 
         # Delete customer (POST)
         elif action == 'customer-delete':

@@ -958,6 +958,33 @@ class ActionsGetMethod(TestCase):
                                 'test': True})
         self.assertEqual(resp.status_code, 404)
 
+    def test_delete_time(self):
+        """Test context dictionaries and template."""
+        order = Order.objects.get(ref_name='example')
+        time = Timing.objects.create(time=5.5,
+                                     notes='example time',
+                                     reference=order)
+        resp = self.client.get(reverse('actions'),
+                               {'pk': time.pk,
+                                'action': 'time-delete',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/delete/delete_time.html')
+        self.assertIsInstance(context, list)
+        self.assertEqual(context[0], 'time')
+
+    def test_delete_time_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200,
+                                'action': 'time-delete',
+                                'test': True})
+        self.assertEqual(resp.status_code, 404)
+
     def test_delete_customer(self):
         """Test context dictionaries and template."""
         customer = Customer.objects.get(name='Customer')
@@ -1771,6 +1798,41 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/order_details.html')
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
+
+    def test_delete_time_deletes_time(self):
+        """Test the proper deletion of times."""
+        order = Order.objects.get(ref_name='example')
+        time = Timing.objects.create(time=5.5,
+                                     notes='example time',
+                                     reference=order)
+        self.client.post(reverse('actions'), {'pk': time.pk,
+                                              'action': 'time-delete',
+                                              'test': True
+                                              })
+        with self.assertRaises(ObjectDoesNotExist):
+            OrderItem.objects.get(pk=time.pk)
+
+    def test_delete_time_context_response(self):
+        """Test the response on deletion of times."""
+        order = Order.objects.get(ref_name='example')
+        time = Timing.objects.create(time=5.5,
+                                     notes='example time',
+                                     reference=order)
+        resp = self.client.post(reverse('actions'),
+                                {'pk': time.pk,
+                                 'action': 'time-delete',
+                                 'test': True
+                                 })
+
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        context = data['context']
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/timing_list.html')
+        self.assertEqual(data['html_id'], '#timing-list')
+        self.assertEqual(context[0], 'times')
 
     def test_delete_customer_deletes_customer(self):
         """Test the proper deletion of customers."""

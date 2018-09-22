@@ -53,7 +53,7 @@ $(function () {
     var pk = $(this).attr('data-pk')
     $.ajax({
       url: '/actions/',
-      data: {'pk': pk, 'action': action},
+      data: { 'pk': pk, 'action': action },
       dataType: 'json',
       beforeSend: function () {
         $('#action-modal').modal('show')
@@ -117,6 +117,7 @@ $(function () {
   $('.js-customer-add').click(loadActionForm)
   $('.js-customer-edit').click(loadActionForm)
   $('.js-customer-delete').click(loadActionForm)
+  $('.js-time-delete').click(loadActionForm)
   $('.js-time-add').click(loadActionForm)
   $('.js-logout').click(loadActionForm)
 
