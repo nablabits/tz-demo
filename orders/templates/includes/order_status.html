@@ -17,7 +17,7 @@
       <button type="button" class="btn btn-outline-success js-close-order {% if order.status == '7' %}active{% endif %}" data-action="order-close" data-pk="{{order.pk}}">Entregado</button>
     </div>
       <button type="button" class="btn btn-outline-success active {%if order.pending != 0 %}d-none{% endif %}">
-        <i class="fa fa-euro"></i> Cobrado
+        <i class="fa fa-euro"></i> Cobrado {{order.budget}}€
       </button>
       <button type="button" class="btn btn-outline-danger js-pay-now {%if order.pending == 0 %}d-none{% endif %}" data-action="order-pay-now" data-pk="{{order.pk}}">{{order.pending}}</button>
   </div>
