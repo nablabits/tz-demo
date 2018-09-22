@@ -9,7 +9,7 @@
         <h4 class="mr-auto">Entrega el {{order.delivery | date:"j/n/Y"}}</h4>
       </div>
       <div class="{% if order.status == '8' %}d-none{% else %}d-flex mb-auto{% endif %}">
-          <button class="btn btn-outline-success js-order-edit" data-action="order-edit"  data-pk="{{order.pk}}">
+          <button class="btn btn-outline-success js-order-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
             <i class="fa fa-edit"></i> Editar
           </button>
           <button class="ml-2 btn btn-outline-danger js-order-cancel" data-status="8" data-pk="{{order.pk}}"><i class="fa fa-close"></i> Anular pedido</button>

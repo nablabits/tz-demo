@@ -364,6 +364,46 @@ class EditionTest(LiveServerTestCase):
         # submit
         self.find(By.ID, 'submit').click()
         self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
+
+    def test_edit_order(self):
+        """Test the proper edition of orders."""
+        pk = Order.objects.get(ref_name='example').pk
+        url = self.live_server_url + '/order/view/' + str(pk)
+        self.selenium.get(url)
+
+        self.find(By.ID, 'order-edit').click()
+
+        # Wait for the modal to load
+        conditions = EC.visibility_of_element_located((By.NAME, 'ref_name'))
+        ref = self.wait.until(conditions)
+
+        # Clear out the form
+        ref.clear()
+        self.find(By.NAME, 'delivery').clear()
+        self.find(By.NAME, 'waist').clear()
+        self.find(By.NAME, 'chest').clear()
+        self.find(By.NAME, 'hip').clear()
+        self.find(By.NAME, 'lenght').clear()
+        self.find(By.NAME, 'others').clear()
+        self.find(By.NAME, 'budget').clear()
+        self.find(By.NAME, 'prepaid').clear()
+
+        # and fill up
+        ref.send_keys('Order from default customer')
+        self.find(By.NAME, 'delivery').send_keys('2020-01-01')
+        self.find(By.NAME, 'waist').send_keys(20)
+        self.find(By.NAME, 'chest').send_keys(30)
+        self.find(By.NAME, 'hip').send_keys(40)
+        self.find(By.NAME, 'lenght').send_keys(50)
+        self.find(By.NAME, 'others').send_keys('Edited notes')
+        self.find(By.NAME, 'budget').send_keys(5000)
+        self.find(By.NAME, 'prepaid').send_keys(2000)
+
+        # submit
+        self.find(By.ID, 'submit').click()
+        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver Pedido')
+        url = self.live_server_url + '/order/view/' + str(pk)
+        self.assertEqual(self.selenium.current_url, url)
 #
 #
 #
