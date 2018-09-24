@@ -72,7 +72,7 @@ class CreationTest(LiveServerTestCase):
         conditions = EC.visibility_of_element_located((By.NAME, 'name'))
         name = self.wait.until(conditions)
 
-        # Fill up the form
+        # Fill up the form & submit
         name.send_keys('Customer from customer list')
         self.find(By.NAME, 'address').send_keys('Address')
         self.find(By.NAME, 'city').send_keys('Mungia')
@@ -80,10 +80,12 @@ class CreationTest(LiveServerTestCase):
         self.find(By.NAME, 'email').send_keys('jon@jonDoe.es')
         self.find(By.NAME, 'CIF').send_keys('1123444G')
         self.find(By.NAME, 'cp').send_keys(48100)
-
-        # submit
         self.find(By.ID, 'submit').click()
-        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
+
+        # check return to customer view
+        customer = Customer.objects.get(name='Customer from customer list')
+        url = self.live_server_url + '/customer_view/' + str(customer.pk)
+        self.assertEqual(self.selenium.current_url, url)
 
         # Now, create customer from sidebar.
         self.find(By.ID, 'sidebar-new-customer').click()
@@ -92,7 +94,7 @@ class CreationTest(LiveServerTestCase):
         conditions = EC.visibility_of_element_located((By.NAME, 'name'))
         name = self.wait.until(conditions)
 
-        # Fill up the order_form_common
+        # Fill up the form & submit
         name.send_keys('Customer from sidebar')
         self.find(By.NAME, 'address').send_keys('Address2')
         self.find(By.NAME, 'city').send_keys('Mungia otra vez')
@@ -100,10 +102,12 @@ class CreationTest(LiveServerTestCase):
         self.find(By.NAME, 'email').send_keys('jon2@jonDoe.es')
         self.find(By.NAME, 'CIF').send_keys('12345677F')
         self.find(By.NAME, 'cp').send_keys(48200)
-
-        # submit
         self.find(By.ID, 'submit').click()
-        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver cliente')
+
+        # check return to customer view
+        customer = Customer.objects.get(name='Customer from sidebar')
+        url = self.live_server_url + '/customer_view/' + str(customer.pk)
+        self.assertEqual(self.selenium.current_url, url)
 
     def test_create_orders(self):
         """Try to create new orders from customer view & sidebar."""
@@ -123,7 +127,7 @@ class CreationTest(LiveServerTestCase):
         conditions = EC.visibility_of_element_located((By.NAME, 'ref_name'))
         ref = self.wait.until(conditions)
 
-        # Fill up the form
+        # Fill up the form & submit
         ref.send_keys('Order from default customer')
         self.find(By.NAME, 'delivery').send_keys('2020-10-12')
         self.find(By.NAME, 'waist').send_keys(10)
@@ -133,10 +137,12 @@ class CreationTest(LiveServerTestCase):
         self.find(By.NAME, 'others').send_keys('Notes')
         self.find(By.NAME, 'budget').send_keys(2000)
         self.find(By.NAME, 'prepaid').send_keys(100)
-
-        # submit
         self.find(By.ID, 'submit').click()
-        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver Pedido')
+
+        # check return to order view
+        order = Order.objects.get(ref_name='Order from default customer')
+        url = self.live_server_url + '/order/view/' + str(order.pk)
+        self.assertEqual(self.selenium.current_url, url)
 
         # Customer should be the default.
         src = self.selenium.page_source
@@ -150,6 +156,7 @@ class CreationTest(LiveServerTestCase):
         conditions = EC.visibility_of_element_located((By.NAME, 'ref_name'))
         ref = self.wait.until(conditions)
 
+        # Fill up the form & submit
         ref.send_keys('Order from sidebar')
         customer = Select(self.find(By.NAME, 'customer'))
         customer.select_by_value(str(pk))
@@ -161,10 +168,12 @@ class CreationTest(LiveServerTestCase):
         self.find(By.NAME, 'others').send_keys('Notes')
         self.find(By.NAME, 'budget').send_keys(2000)
         self.find(By.NAME, 'prepaid').send_keys(100)
-
-        # submit
         self.find(By.ID, 'submit').click()
-        self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver Pedido')
+
+        # check return to order view
+        order = Order.objects.get(ref_name='Order from sidebar')
+        url = self.live_server_url + '/order/view/' + str(order.pk)
+        self.assertEqual(self.selenium.current_url, url)
 
         # Customer should be the default.
         src = self.selenium.page_source
@@ -193,11 +202,13 @@ class CreationTest(LiveServerTestCase):
         for value in range(2, 9):
             Select(item).select_by_value(str(value))
 
-        # Fill up the form
+        # Fill up the form & submit
         self.find(By.NAME, 'size').send_keys('XL')
         self.find(By.NAME, 'qty').send_keys(5)
         self.find(By.NAME, 'description').send_keys('Descripción')
         self.find(By.ID, 'submit').click()
+
+        self.assertEqual(self.selenium.current_url, url)
 
         # Add comment
         self.selenium.get(url)  # reload page to avoid modal backdrop
@@ -209,6 +220,8 @@ class CreationTest(LiveServerTestCase):
 
         # Fill up the form
         comment.send_keys('XL')
+
+        self.assertEqual(self.selenium.current_url, url)
 
     def test_create_time(self):
         """Test create time from sidebar & from order."""
@@ -240,7 +253,7 @@ class CreationTest(LiveServerTestCase):
         for value in range(2, 4):
             Select(activity).select_by_value(str(value))
 
-        # Fill up the form
+        # Fill up the form & submit
         self.find(By.NAME, 'qty').send_keys(5)
         self.find(By.NAME, 'time').send_keys('5.5')
         self.find(By.NAME, 'notes').send_keys('Descripción')
