@@ -51,19 +51,18 @@ class CreationTest(LiveServerTestCase):
                              budget=2000,
                              prepaid=0)
 
+        # Finally login
+        self.selenium.get(self.live_server_url + '/')
+        self.find(By.ID, 'id_username').send_keys('regular')
+        self.find(By.ID, 'id_password').send_keys('test')
+        self.find(By.ID, 'submit').click()
+
     def tearDown(self):
         """Deactivate test settings."""
         self.selenium.quit()
 
     def test_create_customer(self):
         """Try to create new customers from sidebar and customer list."""
-        self.selenium.get(self.live_server_url + '/')
-
-        # First of all, login
-        self.find(By.ID, 'id_username').send_keys('regular')
-        self.find(By.ID, 'id_password').send_keys('test')
-        self.find(By.ID, 'submit').click()
-
         # Create customer from Customer List.
         self.find(By.LINK_TEXT, 'Clientes').click()  # Click link on sidebar
         self.find(By.LINK_TEXT, 'Nuevo cliente').click()  # Click add customer
@@ -114,11 +113,6 @@ class CreationTest(LiveServerTestCase):
         pk = Customer.objects.get(name='Default customer').pk
         url = self.live_server_url + '/customer_view/' + str(pk)
         self.selenium.get(url)
-
-        # First of all, login
-        self.find(By.ID, 'id_username').send_keys('regular')
-        self.find(By.ID, 'id_password').send_keys('test')
-        self.find(By.ID, 'submit').click()
 
         # Add an order
         self.find(By.ID, 'order-add').click()
@@ -186,11 +180,6 @@ class CreationTest(LiveServerTestCase):
         url = self.live_server_url + '/order/view/' + str(pk)
         self.selenium.get(url)
 
-        # First of all, login
-        self.find(By.ID, 'id_username').send_keys('regular')
-        self.find(By.ID, 'id_password').send_keys('test')
-        self.find(By.ID, 'submit').click()
-
         # add item
         self.find(By.CLASS_NAME, 'js-add-item').click()
 
@@ -225,14 +214,6 @@ class CreationTest(LiveServerTestCase):
 
     def test_create_time(self):
         """Test create time from sidebar & from order."""
-        # First of all load page
-        self.selenium.get(self.live_server_url + '/')
-
-        # Now, login
-        self.find(By.ID, 'id_username').send_keys('regular')
-        self.find(By.ID, 'id_password').send_keys('test')
-        self.find(By.ID, 'submit').click()
-
         self.find(By.ID, 'sidebar-new-time').click()
 
         # Wait for the modal to load
