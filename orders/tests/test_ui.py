@@ -398,6 +398,61 @@ class EditionTest(LiveServerTestCase):
         self.assertEquals(self.selenium.title, 'TrapuZarrak · Ver Pedido')
         url = self.live_server_url + '/order/view/' + str(pk)
         self.assertEqual(self.selenium.current_url, url)
+
+    def test_edit_status(self):
+        """Test the proper status edit of orders."""
+        pk = Order.objects.get(ref_name='example').pk
+        url = self.live_server_url + '/order/view/' + str(pk)
+        self.selenium.get(url)
+
+        self.find(By.ID, 'status-waiting').click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '2')
+
+        self.find(By.ID, 'status-preparing').click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '3')
+
+        self.find(By.ID, 'status-performing').click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '4')
+
+        self.find(By.ID, 'status-workshop').click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '5')
+
+        self.find(By.ID, 'status-outbox').click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '6')
+
+        # deliver order without paying it
+        self.find(By.ID, 'status-delivered').click()
+        conditions = EC.visibility_of_element_located((By.ID, 'id_prepaid'))
+        self.wait.until(conditions)
+        self.find(By.ID, 'submit').click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '7')
+
+        # Pay it afterwards
+        self.find(By.ID, 'status-close').click()
+        conditions = EC.visibility_of_element_located((By.ID, 'submit'))
+        self.wait.until(conditions).click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.budget, order.prepaid)
+
+        # reopen it (still paid)
+        order.prepaid = 0
+        order.save()  # Undo payment
+        self.selenium.get(url)  # reload page # DEBUG: get rid of
+        self.find(By.ID, 'status-reopen').click()
+
+        conditions = EC.visibility_of_element_located((By.ID, 'status-close'))
+        self.wait.until(conditions).click()
+        conditions = EC.visibility_of_element_located((By.ID, 'submit'))
+        submit = self.wait.until(conditions)
+        submit.click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.budget, order.prepaid)
 #
 #
 #
