@@ -34,8 +34,8 @@ class Order(models.Model):
         ('1', 'Inboxed'),
         # WorkShop
         ('2', 'Waiting'),
-        ('3', 'preparing'),
-        ('4', 'performing'),
+        ('3', 'Preparing'),
+        ('4', 'Performing'),
         ('5', 'WorkShop'),
         # Shop
         ('6', 'Outbox'),
