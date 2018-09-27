@@ -124,7 +124,6 @@ $(function () {
   // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
   $('#order-status').on('click', '.js-order-status', updateStatus)
-  $('.js-order-cancel').click(updateStatus)
-  $('.js-order-reactivate').click(updateStatus)
+  $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
 })
