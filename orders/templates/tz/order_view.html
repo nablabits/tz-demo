@@ -12,7 +12,7 @@
           <button class="btn btn-outline-success js-order-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
             <i class="fa fa-edit"></i> Editar
           </button>
-          <button class="ml-2 btn btn-outline-danger js-order-cancel" data-status="8" data-pk="{{order.pk}}"><i class="fa fa-close"></i> Anular pedido</button>
+          <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fa fa-close"></i> Anular pedido</button>
       </div>
     </div>
     {% if order.overdue and order.status not in '78' %}
@@ -36,27 +36,27 @@
       <h4><strong>Referencia:</strong> {{order.ref_name}}</h4>
     </div>
 
-    <!-- Status -->
+    <!-- Status element-->
     <div id="order-status">
     {% include 'includes/order_status.html' %}
     </div>
 
-    <!-- Order Details -->
+    <!-- Order Details element-->
     <div id="order-details">
     {% include 'includes/order_details.html' %}
     </div>
 
-    <!-- Attached files -->
+    <!-- Attached files element-->
     <div id="file-list">
-    {% include 'includes/file_list.html' %}
+    <!-- include 'includes/file_list.html' -->
     </div>
 
-    <!-- Order Comments -->
+    <!-- Order Comments element-->
     <div id="comment-list">
     {% include 'includes/comment_list.html' %}
     </div>
 
-    <!-- Order Timing -->
+    <!-- Order Timing element-->
     <div id="timing-list">
     {% include 'includes/timing_list.html' %}
     </div>

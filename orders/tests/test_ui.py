@@ -432,28 +432,50 @@ class EditionTest(LiveServerTestCase):
         self.find(By.ID, 'submit').click()
         order = Order.objects.get(pk=pk)
         self.assertEqual(order.status, '7')
+        self.assertNotEqual(order.prepaid, order.budget)
 
         # Pay it afterwards
-        self.find(By.ID, 'status-close').click()
+        self.selenium.get(url)
+        self.find(By.ID, 'status-pay-closed-order').click()
         conditions = EC.visibility_of_element_located((By.ID, 'submit'))
         self.wait.until(conditions).click()
         order = Order.objects.get(pk=pk)
         self.assertEqual(order.budget, order.prepaid)
+        self.assertEqual(order.status, '7')
 
         # reopen it (still paid)
-        order.prepaid = 0
-        order.save()  # Undo payment
-        self.selenium.get(url)  # reload page # DEBUG: get rid of
-        self.find(By.ID, 'status-reopen').click()
+        self.selenium.get(url)  # reload page to avoid modal obscuring it
+        conditions = EC.visibility_of_element_located((By.ID, 'status-reopen'))
+        self.wait.until(conditions).click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '1')
+        self.assertEqual(order.budget, order.prepaid)
 
+        # Undo payment and test pay now button
+        order = Order.objects.get(pk=pk)
+        order.prepaid = 0
+        order.save()
+        self.selenium.get(url)  # reload page to refresh the changes
         conditions = EC.visibility_of_element_located((By.ID, 'status-close'))
         self.wait.until(conditions).click()
         conditions = EC.visibility_of_element_located((By.ID, 'submit'))
-        submit = self.wait.until(conditions)
-        submit.click()
+        self.wait.until(conditions).click()
         order = Order.objects.get(pk=pk)
         self.assertEqual(order.budget, order.prepaid)
-#
+        self.assertEqual(order.status, '1')
+
+        # Cancel order
+        self.selenium.get(url)  # reload page to avoid modal obscuring it
+        self.find(By.ID, 'status-cancel').click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '8')
+
+        # And reactivate
+        conditions = EC.visibility_of_element_located((By.ID, 'status-reactivate'))
+        self.wait.until(conditions).click()
+        order = Order.objects.get(pk=pk)
+        self.assertEqual(order.status, '1')
+
 #
 #
 #
