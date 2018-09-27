@@ -98,7 +98,7 @@ class OrderItem(models.Model):
         ('11', 'Azpikogona'),
         ('12', 'Traje de niña'),
     )
-    item = models.CharField('Item', max_length=2, choices=ITEMS, default='1')
+    item = models.CharField('Prenda', max_length=2, choices=ITEMS, default='1')
     size = models.CharField('Talla', max_length=3, default='1')
     qty = models.IntegerField('Cantidad', default=1)
     description = models.CharField('descripcion', max_length=255, blank=True)
@@ -138,8 +138,8 @@ class Timing(models.Model):
         ('2', 'Corte'),
         ('3', 'Planchado')
     )
-    item = models.CharField('Item', max_length=2, choices=ITEMS, default='1')
-    item_class = models.CharField('Tipo Item',
+    item = models.CharField('Prenda', max_length=2, choices=ITEMS, default='1')
+    item_class = models.CharField('Tipo Prenda',
                                   max_length=1,
                                   choices=ITEM_CLASSES,
                                   default='1')
@@ -155,7 +155,8 @@ class Timing(models.Model):
     def save(self, *args, **kwargs):
         """Override the save method.
 
-        If no order is given try to pick up the last one."""
+        If no order is given try to pick up the last one.
+        """
         order = Order.objects.latest('inbox_date')
         try:
             self.reference

@@ -2,7 +2,7 @@
   <div class="card-header">
     <div class="row px-2">
       <h4 class="font-weight-bold mr-auto">Detalles:</h4>
-      <button type="button" class="ml-2 btn btn-outline-success js-add-item" data-action="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Item</button>
+      <button type="button" class="ml-2 btn btn-outline-success js-add-item" data-action="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Prenda</button>
     </div>
   </div>
   <div class="card-body order_details">
@@ -13,7 +13,7 @@
       <li>Largo: {{order.lenght}}</li>
       <li>Observaciones:<br>{{order.others | linebreaksbr}}</li>
     </ul>
-    <h3>Items:</h3>
+    <h3>Prendas:</h3>
     {% if items %}
     <table class="table">
     <thead>
@@ -46,7 +46,7 @@
   {% else %}
   <div class="d-flex">
     <div class="alert alert-info" role="alert">
-      <i class="fa fa-info mr-2"></i> No se ha añadido ningún item
+      <i class="fa fa-info mr-2"></i> No se ha añadido ninguna prenda
     </div>
   </div>
   {% endif %}
