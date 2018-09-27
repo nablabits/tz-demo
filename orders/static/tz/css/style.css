@@ -23,16 +23,14 @@ header{
   top: 7vh;
   height: auto;
   border-right: 1px solid lightgrey;
-  font-size: 1.5em;
+  font-size: 1.1em;
   z-index: 1;
   padding-top: 1em;
 }
 .aside-wide{
  margin: 10vh 1em 0em auto;
  border-right: 1px solid lightgrey;
- font-size: 1.2em;
  height: auto;
-
  min-height: 90vh;
 }
 .menu{
@@ -79,7 +77,7 @@ header{
   box-shadow: -3px 2px 5px #555;
 }
 .order_details{
-  font-size: 1.5em;
+  font-size: 1.2em;
 }
 .order_header{
   border-bottom: 1px solid lightgrey;
