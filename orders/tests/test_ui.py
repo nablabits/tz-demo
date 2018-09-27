@@ -471,8 +471,7 @@ class EditionTest(LiveServerTestCase):
         self.assertEqual(order.status, '8')
 
         # And reactivate
-        conditions = EC.visibility_of_element_located((By.ID, 'status-reactivate'))
-        self.wait.until(conditions).click()
+        self.find(By.ID, 'status-reactivate').click()
         order = Order.objects.get(pk=pk)
         self.assertEqual(order.status, '1')
 
