@@ -13,7 +13,7 @@ class CustomerForm(forms.ModelForm):
 
         model = Customer
         fields = ('name', 'address', 'city', 'phone', 'email',
-                  'CIF', 'cp')
+                  'CIF', 'cp', 'notes')
 
 
 class OrderForm(forms.ModelForm):
