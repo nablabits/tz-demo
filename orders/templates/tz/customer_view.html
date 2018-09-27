@@ -33,12 +33,15 @@
       <div class="card-body">
         <ul class="order_details">
           <li>Dirección:
-            {{customer.address}},
+            {{customer.address}};
             {% if customer.cp %}{{customer.cp}}{% else %}No definido{% endif %},
             {% if customer.city %}{{customer.city}}{% else %}No definido{% endif %},
           </li>
           <li>Telefono: <a href="tel:{{customer.phone}}">{{customer.phone}}</a></li>
           <li>Email: <a href="mailto:{{customer.email}}">{{customer.email}}</a></li>
+          {% if customer.notes %}
+          <li>Observaciones: {{customer.notes}}</li>
+          {% endif %}
         </ul>
       </div>
     </div>
