@@ -538,15 +538,16 @@ class Actions(View):
             context = {'order': order, 'items': items}
             template = 'includes/order_details.html'
 
-        # delete item (POST)
+        # delete time (POST)
         elif action == 'time-delete':
             get_object_or_404(Timing, pk=pk)
             time = Timing.objects.select_related('reference').get(pk=pk)
             times = Timing.objects.filter(reference=time.reference)
+            order = time.reference
             time.delete()
             data['form_is_valid'] = True
             data['html_id'] = '#timing-list'
-            context = {'times': times}
+            context = {'times': times, 'order': order}
             template = 'includes/timing_list.html'
 
         # Delete customer (POST)

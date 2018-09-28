@@ -117,8 +117,8 @@ $(function () {
   $('.js-customer-add').click(loadActionForm)
   $('.js-customer-edit').click(loadActionForm)
   $('.js-customer-delete').click(loadActionForm)
-  $('.js-time-delete').click(loadActionForm)
-  $('.js-time-add').click(loadActionForm)
+  $('#timing-list').on('click', '.js-time-add', loadActionForm)
+  $('#timing-list').on('click', '.js-time-delete', loadActionForm)
   $('.js-logout').click(loadActionForm)
 
   // actions (POST)
