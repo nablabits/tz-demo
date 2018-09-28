@@ -3,7 +3,7 @@
 Its intended use is for business related to tailor made clothes.
 """
 
-from django.db import models, IntegrityError
+from django.db import models
 from django.utils import timezone
 from datetime import date
 
