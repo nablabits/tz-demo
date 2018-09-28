@@ -13,9 +13,9 @@
       <div class="card-body order_details">
         {% if times %}
           {% for time in times %}
-            <div class="row">
+            <div class="row my-1">
               <div class="col">
-                {{time.get_activity_diplay}}&nbsp;
+                {{time.get_activity_display}}&nbsp;
                 {{time.qty}}&nbsp;
                 {{time.get_item_display}}&nbsp;
                 {{time.get_item_class_display}}
@@ -27,7 +27,7 @@
             </div>
             {% if time.notes %}
             <div class="d-flex">
-              <p class="pl-4">Cometarios: {{time.notes}}</p>
+              <p class="pl-3">Cometarios: {{time.notes}}</p>
             </div>
             {% endif %}
           {% endfor %}
