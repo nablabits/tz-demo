@@ -106,7 +106,13 @@ def orderlist(request):
     """Display all orders or search'em."""
     orders = Order.objects.all().order_by('delivery')
     active = orders.exclude(status__in=[7, 8]).order_by('delivery')
-    delivered = orders.filter(status=7).order_by('delivery')[:50]
+    try:
+        tz = Customer.objects.get(name='trapuzarrak')
+    except:
+        delivered = orders.filter(status=7).order_by('delivery')[:50]
+    else:
+        delivered = orders.filter(status=7).exclude(customer=tz)
+
     page = request.GET.get('page', 1)
     paginator = Paginator(delivered, 5)
     try:

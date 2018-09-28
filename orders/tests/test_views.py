@@ -177,6 +177,27 @@ class StandardViewsTest(TestCase):
         self.assertEqual(str(resp.context['active'][0].ref_name), 'example10')
         self.assertEqual(str(resp.context['user']), 'regular')
 
+    def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
+        """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
+        tz = Customer.objects.create(name='trapuzarrak',
+                                     address='Foruen',
+                                     city='Mungia',
+                                     phone='662',
+                                     cp=48100)
+        user = User.objects.get(username='regular')
+        Order.objects.create(user=user,
+                             customer=tz,
+                             status=7,
+                             delivery=date.today(),
+                             ref_name='tz order',
+                             budget=100,
+                             prepaid=0)
+        resp = self.client.get(reverse('orderlist'))
+        total_orders = len(Order.objects.all())
+        self.assertEqual(total_orders, 21)
+        for order in resp.context['delivered']:
+            self.assertNotEqual(order.ref_name, 'tz order')
+
     def test_order_list_paginator(self):
         """Test paginator functionality on order list."""
         resp = self.client.get(reverse('orderlist'))
@@ -194,9 +215,9 @@ class StandardViewsTest(TestCase):
 
         That is because the exception was catch.
         """
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
+        # login = self.client.login(username='regular', password='test')
+        # if not login:
+        #     raise RuntimeError('Couldn\'t login')
         resp = self.client.get(reverse('orderlist'), {'page': 'invalid'})
 
         delivered = resp.context['delivered']
@@ -210,9 +231,9 @@ class StandardViewsTest(TestCase):
 
         That is because the exception was catch.
         """
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
+        # login = self.client.login(username='regular', password='test')
+        # if not login:
+        #     raise RuntimeError('Couldn\'t login')
         resp = self.client.get(reverse('orderlist'), {'page': 20})
 
         delivered = resp.context['delivered']
