@@ -223,12 +223,6 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/add/add_comment.html'
 
-        # Add time (GET)
-        elif action == 'time-add':
-            form = TimeForm()
-            context = {'form': form}
-            template = 'includes/add/add_time.html'
-
         # Add time from order (GET)
         elif action == 'time-from-order':
             order = get_object_or_404(Order, pk=pk)

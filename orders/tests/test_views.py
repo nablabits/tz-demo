@@ -719,20 +719,6 @@ class ActionsGetMethod(TestCase):
         else:
             self.assertEqual(context[0], 'Not recognized')
 
-    def test_add_time(self):
-        """Test add time button click response."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': None,
-                                'action': 'time-add',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/add/add_time.html')
-        self.assertEqual(context[0], 'form')
-
     def test_add_time_from_order(self):
         """Test add time button click response."""
         order = Order.objects.get(ref_name='example')
@@ -1826,13 +1812,13 @@ class ActionsPostMethodEdit(TestCase):
 
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        context = data['context']
+        vars = ('order', 'times')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/timing_list.html')
         self.assertEqual(data['html_id'], '#timing-list')
-        self.assertEqual(context[0], 'times')
+        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_delete_customer_deletes_customer(self):
         """Test the proper deletion of customers."""
