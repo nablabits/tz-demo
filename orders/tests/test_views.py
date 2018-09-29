@@ -904,14 +904,10 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
+        vars = ('form', 'order')
         self.assertEqual(template, 'includes/edit/close_order.html')
         self.assertIsInstance(context, list)
-        if context[0] == 'order':
-            self.assertEqual(context[1], 'form')
-        elif context[0] == 'form':
-            self.assertEqual(context[1], 'order')
-        else:
-            self.assertEqual(context[0], 'Not recognized')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_item_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
@@ -939,12 +935,8 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/edit/edit_item.html')
         self.assertIsInstance(context, list)
-        if context[0] == 'form':
-            self.assertEqual(context[1], 'item')
-        elif context[0] == 'item':
-            self.assertEqual(context[1], 'form')
-        else:
-            self.assertEqual(context[0], 'Not recognized')
+        vars = ('item', 'form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_time(self):
         """Test context dictionaries and template."""

@@ -118,6 +118,7 @@ $(function () {
   $('.js-customer-edit').click(loadActionForm)
   $('.js-customer-delete').click(loadActionForm)
   $('#timing-list').on('click', '.js-time-add', loadActionForm)
+  $('#timing-list').on('click', '.js-time-edit', loadActionForm)
   $('#timing-list').on('click', '.js-time-delete', loadActionForm)
   $('.js-logout').click(loadActionForm)
 
