@@ -1,0 +1,32 @@
+{% load widget_tweaks %}
+
+<form method="post" action="{% url 'actions' %}" class="js-send-form">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+  {% for hidden_field in form.hidden_fields %}
+    {{ hidden_field }}
+  {% endfor %}
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+    <h4 class="modal-title">Editar Tiempo</h4>
+  </div>
+  <div class="modal-body">
+  {% for field in form.visible_fields %}
+    <div class="form-group">
+      {{ field.label_tag }}
+      {% render_field field class="form-control" %}
+      {% if field.help_text %}
+        <small class="form-text text-muted">{{ field.help_text }}</small>
+      {% endif %}
+    </div>
+  {% endfor %}
+  <input type="hidden" name="pk" value="{{ time.pk }}">
+  <input type="hidden" name="action" value="order-edit-time">
+  </div>
+  <div class="modal-footer">
+    <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>
+    <button type="submit" class="btn btn-outline-success">Guardar cambios</button>
+  </div>
+</form>

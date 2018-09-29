@@ -580,11 +580,12 @@ class ActionsGetMethod(TestCase):
                              budget=2000,
                              prepaid=0)
 
-        # Create Item & Document
+        # Create Item & time
         order = Order.objects.get(ref_name='example')
         OrderItem.objects.create(item=1, size='XL', qty=5,
                                  description='notes',
                                  reference=order)
+        Timing.objects.create(time=5, reference=order)
         cls.client = Client()
 
     def context_vars(self, context, vars):
@@ -944,6 +945,30 @@ class ActionsGetMethod(TestCase):
             self.assertEqual(context[1], 'form')
         else:
             self.assertEqual(context[0], 'Not recognized')
+
+    def test_edit_time(self):
+        """Test context dictionaries and template."""
+        time = Timing.objects.all()[0]
+        resp = self.client.get(reverse('actions'),
+                               {'pk': time.pk,
+                                'action': 'order-edit-time',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        vars = ('form', 'time')
+        self.assertEqual(template, 'includes/edit/edit_time.html')
+        self.assertTrue(self.context_vars(context, vars))
+
+    def test_edit_time_returns_404_with_pk_out_of_range(self):
+        """Out of range indexes should return a 404 error."""
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 200,
+                                'action': 'order-edit-time',
+                                'test': True})
+        self.assertEqual(resp.status_code, 404)
 
     def test_delete_item_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""

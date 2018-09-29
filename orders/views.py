@@ -278,6 +278,14 @@ class Actions(View):
             context = {'item': item, 'form': form}
             template = 'includes/edit/edit_item.html'
 
+        # Edit time (GET)
+        elif action == 'order-edit-time':
+            get_object_or_404(Timing, pk=pk)
+            time = Timing.objects.select_related('reference').get(pk=pk)
+            form = TimeForm(instance=time)
+            context = {'time': time, 'form': form}
+            template = 'includes/edit/edit_time.html'
+
         # Delete item (GET)
         elif action == 'order-delete-item':
             get_object_or_404(OrderItem, pk=pk)
