@@ -406,12 +406,17 @@ class Actions(View):
                 template = 'includes/add/add_item.html'
                 data['form_is_valid'] = False
 
-        # Add time
+        # Add time (POST)
         elif action == 'time-new':
+            order = get_object_or_404(Order, pk=pk)
             form = TimeForm(request.POST)
             if form.is_valid():
                 form.save()
-                return redirect('main')
+                times = Timing.objects.filter(reference=order)
+                template = 'includes/timing_list.html'
+                context = {'times': times, 'order': order}
+                data['form_is_valid'] = True
+                data['html_id'] = '#timing-list'
             else:
                 data['form_is_valid'] = False
                 context = {'form': form}

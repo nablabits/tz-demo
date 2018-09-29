@@ -1247,6 +1247,7 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_time_new_adds_new_time(self):
         """Test the proper creation of times."""
+        order = Order.objects.get(ref_name='example')
         self.client.post(reverse('actions'), {'item': '1',
                                               'qty': 2,
                                               'item_class': '2',
@@ -1254,12 +1255,13 @@ class ActionsPostMethodCreate(TestCase):
                                               'notes': 'Test note',
                                               'time': 0.5,
                                               'action': 'time-new',
-                                              'pk': None,
+                                              'pk': order.pk,
                                               'test': True})
         Timing.objects.get(notes='Test note')
 
-    def test_time_new_redirects_to_main_page(self):
+    def test_time_new_context_response(self):
         """When adding a time, return to main page."""
+        order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'item': '1',
                                  'item_class': '2',
@@ -1268,19 +1270,30 @@ class ActionsPostMethodCreate(TestCase):
                                  'notes': 'Test note',
                                  'time': 0.5,
                                  'action': 'time-new',
-                                 'pk': None,
+                                 'pk': order.pk,
                                  'test': True})
-        self.assertRedirects(resp, reverse('main'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        vars = ('times', 'order')
+        self.assertEqual(template, 'includes/timing_list.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['html_id'], '#timing-list')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_invalid_time_new_return_to_form_again(self):
         """When sending invalid data we shoud recover the form."""
+        order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'item': '1',
                                  'qty': 'this must be int',
                                  'notes': 'Test note',
                                  'time': 0.5,
                                  'action': 'time-new',
-                                 'pk': None,
+                                 'pk': order.pk,
                                  'test': True})
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
