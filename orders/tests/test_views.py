@@ -764,8 +764,9 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
+        vars = ('form', 'order')
         self.assertEqual(template, 'includes/add/add_time.html')
-        self.assertEqual(context[0], 'form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_order_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""

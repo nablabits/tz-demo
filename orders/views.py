@@ -233,7 +233,7 @@ class Actions(View):
         elif action == 'time-from-order':
             order = get_object_or_404(Order, pk=pk)
             form = TimeForm(initial={'reference': order})
-            context = {'form': form}
+            context = {'form': form, 'order': order}
             template = 'includes/add/add_time.html'
 
         # Edit the order (GET)
