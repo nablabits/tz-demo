@@ -246,7 +246,7 @@ class CreationTest(LiveServerTestCase):
         self.find(By.NAME, 'notes').send_keys('Descripción')
         self.find(By.ID, 'submit').click()
 
-        self.assertEqual(self.selenium.current_url, self.live_server_url + '/')
+        self.assertEqual(self.selenium.current_url, url)
 
 
 class EditionTest(LiveServerTestCase):
