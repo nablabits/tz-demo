@@ -12,24 +12,28 @@
       </div>
       <div class="card-body order_details">
         {% if times %}
+        <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Descripción</th>
+            <th scope="col">Tiempo</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
           {% for time in times %}
-            <div class="row my-1">
-              <div class="col">
-                {{time.get_activity_display}}&nbsp;
-                {{time.qty}}&nbsp;
-                {{time.get_item_display}}&nbsp;
-                {{time.get_item_class_display}}
-              </div>
-              <div class="col">
-                {{time.time}} horas.
-                <button class="ml-2 mr-3 btn btn-outline-danger js-time-delete" data-action="time-delete" data-pk="{{time.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
-              </div>
-            </div>
-            {% if time.notes %}
-            <div class="d-flex">
-              <p class="pl-3">Cometarios: {{time.notes}}</p>
-            </div>
-            {% endif %}
+          <tr>
+            <th scope="row">
+              {{time.qty}} {{time.get_activity_display}} {{time.get_item_display}} {{time.get_item_class_display}}
+              {% if time.notes %}
+              <i class="fa fa-edit px-1"></i>
+              {% endif %}
+            </th>
+            <th>{{time.time}}h</th>
+            <th>
+              <button class="ml-2 mr-3 btn btn-outline-success js-time-edit" data-action="order-edit-time" data-pk="{{time.pk}}"><i class="fa fa-edit"></i> Editar</button>
+              <button class="ml-2 mr-3 btn btn-outline-danger js-time-delete" data-action="time-delete" data-pk="{{time.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
+            </th>
+          </tr>
           {% endfor %}
 
         {% else %}
