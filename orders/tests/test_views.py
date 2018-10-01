@@ -1263,6 +1263,8 @@ class ActionsPostMethodCreate(TestCase):
                    'order-edit',
                    'order-edit-date',
                    'order-edit-item',
+                   'time-edit',
+                   'time-delete',
                    'order-pay-now',
                    'order-close',
                    'update-status',
@@ -1727,6 +1729,55 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/edit/edit_item.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
+    def test_edit_time_edits_time(self):
+        """Test the proper edition of times."""
+        order = Order.objects.get(ref_name='example')
+        time = Timing.objects.create(time=1, reference=order)
+        resp = self.client.post(reverse('actions'),
+                                {'item': '2',
+                                 'item_class': '2',
+                                 'activity': '2',
+                                 'time': 2,
+                                 'qty': 3,
+                                 'notes': 'Modified time',
+                                 'pk': time.pk,
+                                 'action': 'time-edit',
+                                 'test': True
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('order', 'times')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        # self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/timing_list.html')
+        self.assertEqual(data['html_id'], '#timing-list')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
+    def test_edit_time_invalid_returns_to_form(self):
+        """Test rejected forms."""
+        order = Order.objects.get(ref_name='example')
+        time = Timing.objects.create(time=1, reference=order)
+        resp = self.client.post(reverse('actions'),
+                                {'item': '2',
+                                 'item_class': '2',
+                                 'activity': '2',
+                                 'time': 'invalid time',
+                                 'qty': 3,
+                                 'notes': 'Modified time',
+                                 'pk': time.pk,
+                                 'action': 'time-edit',
+                                 'test': True
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('form', 'time')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/edit/edit_time.html')
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_collect_order_succesful(self):

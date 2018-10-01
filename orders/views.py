@@ -480,6 +480,7 @@ class Actions(View):
             form = OrderItemForm(request.POST, instance=item)
             items = OrderItem.objects.filter(reference=order)
             if form.is_valid():
+                # DEBUG: get rid of 'form'
                 context = {'form': form, 'order': order, 'items': items}
                 template = 'includes/order_details.html'
                 form.save()
@@ -488,6 +489,24 @@ class Actions(View):
             else:
                 context = {'item': item, 'form': form}
                 template = 'includes/edit/edit_item.html'
+                data['form_is_valid'] = False
+
+        # Edit time (POST)
+        elif action == 'time-edit':
+            time = get_object_or_404(Timing, pk=pk)
+            time = Timing.objects.select_related('reference').get(pk=pk)
+            order = time.reference
+            times = Timing.objects.filter(reference=order)
+            form = TimeForm(request.POST, instance=time)
+            if form.is_valid():
+                context = {'order': order, 'times': times}
+                template = 'includes/timing_list.html'
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#timing-list'
+            else:
+                context = {'time': time, 'form': form}
+                template = 'includes/edit/edit_time.html'
                 data['form_is_valid'] = False
 
         # Collect order (POST)
