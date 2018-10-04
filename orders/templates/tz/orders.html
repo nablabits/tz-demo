@@ -1,5 +1,6 @@
 {% extends "tz/base.html" %}
 {% block orders %}
+{% load humanize %}
 {% include 'includes/search_box.html' %}
 <div class="container" id="#order-list">
   <h3>Todos los pedidos:</h3>
@@ -24,7 +25,7 @@
           {{ order.ref_name}}
       </th>
       <th>
-        {{ order.delivery | date:"j/n/Y"}}
+        {{ order.delivery|naturalday}}
         {% if order.overdue %}
           <i class="fa fa-warning text-danger px-2"></i>
         {% endif %}
