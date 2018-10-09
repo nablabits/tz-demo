@@ -5,8 +5,9 @@
     <div class="row mb-4">
       <div class="d-flex-column mr-auto">
         <h3 class="font-weight-bold">Pedido no.{{ order.pk }}</h3>
-        <h4 class="mr-auto">Creado el {{order.inbox_date | date:"j/n/Y"}}</h4>
-        <h4 class="mr-auto">Entrega el {{order.delivery | date:"j/n/Y"}}</h4>
+        <h5 class="mr-auto">Creado el: {{order.inbox_date | date:"j/n/Y"}}</h5>
+        <h5 class="mr-auto">Entrega el: {{order.delivery | date:"j/n/Y"}}</h5>
+        <h5 class="mr-auto">Prioridad: {{order.get_priority_display}}</h5>
       </div>
       <div class="{% if order.status == '8' %}d-none{% else %}d-flex mb-auto{% endif %}">
           <button class="btn btn-outline-success js-order-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">

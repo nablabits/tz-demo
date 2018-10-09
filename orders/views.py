@@ -102,25 +102,34 @@ def search(request):
 
 # Order related views
 @login_required
-def orderlist(request):
+def orderlist(request, orderby):
     """Display all orders or search'em."""
-    orders = Order.objects.all().order_by('delivery')
-    active = orders.exclude(status__in=[7, 8]).order_by('delivery')
+    if orderby == 'date':
+        orders = Order.objects.all().order_by('delivery')
+        order_by = 'date'
+    elif orderby == 'status':
+        orders = Order.objects.all().order_by('status')
+        order_by = 'status'
+    elif orderby == 'priority':
+        orders = Order.objects.all().order_by('priority')
+        order_by = 'priority'
+    else:
+        raise ValueError('sorting method undefined')
+
+    # active orders queries
+    active = orders.exclude(status__in=[7, 8])
+    active = active.annotate(Count('orderitem', distinct=True),
+                             Count('comment', distinct=True),
+                             Count('timing', distinct=True))
+
+    # delivered orders' queries
     try:
         tz = Customer.objects.get(name='trapuzarrak')
     except:
-        delivered = orders.filter(status=7).order_by('delivery')[:50]
+        delivered = orders.filter(status=7).order_by('delivery')[:10]
+        tz = None
     else:
         delivered = orders.filter(status=7).exclude(customer=tz)
-
-    page = request.GET.get('page', 1)
-    paginator = Paginator(delivered, 5)
-    try:
-        delivered = paginator.page(page)
-    except PageNotAnInteger:
-        delivered = paginator.page(1)
-    except EmptyPage:
-        delivered = paginator.page(paginator.num_pages)
 
     cur_user = request.user
     now = datetime.now()

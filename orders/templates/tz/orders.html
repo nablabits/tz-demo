@@ -2,88 +2,86 @@
 {% block orders %}
 {% load humanize %}
 {% include 'includes/search_box.html' %}
-<div class="container" id="#order-list">
-  <h3>Todos los pedidos:</h3>
-  <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Cliente</th>
-      <th scope="col">Referencia</th>
-      <th scope="col">Entrega</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <th colspan="3" class="text-center p-0 m-0 table-info">Activos</th>
-    </tr>
-    {% for order in active %}
-    <tr class="js-view-list-item" data-href="{% url 'order_view' pk=order.pk %}">
-        <th>
-          {{ order.customer }}
-        </th>
-      <th>
-          {{ order.ref_name}}
-      </th>
-      <th>
-        {{ order.delivery|naturalday}}
-        {% if order.overdue %}
-          <i class="fa fa-warning text-danger px-2"></i>
+<div class="container mt-4" id="#order-list">
+    <ul class="nav nav-tabs" id="ordersTab" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" data-toggle="tab" href="#active-orders-content" role="tab" id="active-orders-tab">Pedidos Activos</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#delivered-orders-content" role="tab" id="delivered-orders-tab">Pedidos Entregados</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#stock-orders-content" role="tab" id="stock-orders-tab">Stock</a>
+      </li>
+    </ul>
+
+  <div class="tab-content" id="ordersTabContent">
+
+    <!-- Active orders tab -->
+    <div class="tab-pane show active" id="active-orders-content" role="tabpanel" aria-labelledby="active-orders-tab">
+      <div class="d-flex py-4 px-2">
+        <h3 class="mr-auto">Pedidos activos</h3>
+        <h4 class="px-2">Ordenados por:
+        </h4>
+        <div class="dropdown show">
+          <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">
+            {% if order_by == 'status' %}<i class="fa fa-cogs"></i> Status
+            {% elif order_by == 'priority' %}<i class="fa fa-flag"></i> Prioridad
+            {% else %}<i class="fa fa-calendar"></i> Fecha{% endif %}
+          </button>
+          <div class="dropdown-menu">
+            <a class="dropdown-item {% if order_by == 'date' %}d-none{%endif%}" href="{%url 'orderlist' orderby='date' %}"><i class="fa fa-calendar"></i> Fecha</a>
+            <a class="dropdown-item {% if order_by == 'status' %}d-none{%endif%}" href="{%url 'orderlist' orderby='status' %}"><i class="fa fa-cogs"></i> Status</a>
+            <a class="dropdown-item {% if order_by == 'priority' %}d-none{%endif%}" href="{%url 'orderlist' orderby='priority' %}"><i class="fa fa-flag"></i> Prioridad</a>
+          </div>
+        </div>
+      </div>
+      <div class="px-2">
+        {% for order in active %}
+        <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+          {% include 'includes/order_entry_element.html' %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- delievered orders tab -->
+    <div class="tab-pane" id="delivered-orders-content" role="tabpanel" aria-labelledby="delivered-orders-tab">
+      <div class="d-flex py-4 px-2">
+        <h3 class="mr-auto">Pedidos entregados</h3>
+        <p class="px-2">Mostrando últimos 10</p>
+      </div>
+      <div class="px-2">
+        {% for order in delivered %}
+        <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+          {% include 'includes/order_entry_element.html' %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Stock orders tab -->
+    <div class="tab-pane" id="stock-orders-content" role="tabpanel" aria-labelledby="stock-orders-tab">
+      <div class="d-flex py-4 px-2">
+        <h3 class="mr-auto">Pedidos de Stock de Trapuzarrak</h3>
+        <p class="px-2">Mostrando últimos 10</p>
+      </div>
+      <div class="px-2">
+        {% if not stock %}
+        <div class="d-flex">
+          <div class="alert alert-info" role="alert">
+            <i class="fa fa-info mr-2"></i> No hay ningún pedido en stock aún
+          </div>
+        </div>
         {% endif %}
-      </th>
-    </tr>
-    {% endfor %}
-    <tr>
-      <th colspan="3" class="text-center p-0 m-0 table-success">Entregados
-      </th>
-    </tr>
-    {% for order in delivered %}
-    <tr tr class="js-view-list-item" data-href="{% url 'order_view' pk=order.pk %}">
-      <th>
-          {{ order.customer }}
-      </th>
-      <th>
-          {{ order.ref_name}}
-      </th>
-      <th>
-        {{ order.delivery | date:"j/n/Y"}}
-      </th>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
-
-{% if delivered.has_other_pages %}
-  <nav aria-label="Order navigation">
-  <ul class="pagination justify-content-center">
-    {% if delivered.has_previous %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ delivered.previous_page_number }}">&laquo;</a>
-      </li>
-    {% else %}
-      <li class="page-item disabled">
-        <a class="page-link" href="#" tabindex="-1">&laquo;</a>
-      </li>
-    {% endif %}
-
-    {% for i in delivered.paginator.page_range %}
-      {% if delivered.number == i %}
-        <li class="page-item active"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
-      {% else %}
-          <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
-      {% endif %}
-    {% endfor %}
-
-    {% if delivered.has_next %}
-      <li class="page-item">
-      <a class="page-link" href="?page={{ delivered.next_page_number }}">&raquo;</a>
-    </li>
-    {% else %}
-      <li class="page-item disabled">
-      <a class="page-link" href="#" tabindex="-1">&raquo;</a>
-    </li>
-    {% endif %}
-  </ul>
-  </nav>
-{% endif %}
+        {% for order in stock %}
+        <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+          {% include 'includes/order_entry_element.html' %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
 </div>
+
 {% endblock %}

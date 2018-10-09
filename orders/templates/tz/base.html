@@ -34,20 +34,7 @@
 
     <!-- Mobile menu -->
     <div class="collapse bg-light aside-narrow" id="sidebar">
-      <ul>
-      <li>Clientes:</li>
-        <ul>
-          <li><a href="{% url 'customerlist' %}">Buscar cliente</a></li>
-          <li><a href="#" class="js-customer-add" data-action="customer-add" data-pk="0">Nuevo cliente</a></li>
-        </ul>
-      <li>Pedidos:</li>
-      <ul>
-        <li><a href="{% url 'orderlist' %}">Todos los pedidos</a></li>
-        <li><a href="#" class="js-order-add" data-action="order-add" data-pk="0">Nuevo pedido</a>
-        </li>
-      </ul>
-      <li><i class="fa fa-sign-out"></i> Cerrar sesión</li>
-      </ul>
+      <!-- define -->
     </div>
 
     <div class="container-fluid">
@@ -60,7 +47,7 @@
               <i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
             <a class="nav-item nav-link" href="{% url 'customerlist' %}" id="sidebar-customers">
               <i class="fa fa-fw fa-search pr-2"></i> Clientes</a>
-            <a class="nav-item nav-link" href="{% url 'orderlist' %}" id="sidebar-orders">
+            <a class="nav-item nav-link" href="{% url 'orderlist' orderby='date' %}" id="sidebar-orders">
               <i class="fa fa-fw fa-list pr-2"></i> Pedidos</a>
             <a class="nav-item nav-link js-customer-add" href="#" data-action="customer-add" data-pk="0" id="sidebar-new-customer">
               <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>

@@ -13,7 +13,8 @@ urlpatterns = [
     path('search', views.search, name='search'),
 
     # Order related urls
-    path('orders', views.orderlist, name='orderlist'),
+    re_path(r'^orders&orderby=(?P<orderby>\D+)/',
+            views.orderlist, name='orderlist'),
     re_path(r'^order/view/(?P<pk>[0-9]+)$',
             views.order_view, name='order_view'),
 
