@@ -31,16 +31,22 @@ class Order(models.Model):
 
     STATUS = (
         # Shop
-        ('1', 'Inboxed'),
+        ('1', 'Recibido'),
         # WorkShop
-        ('2', 'Waiting'),
-        ('3', 'Preparing'),
-        ('4', 'Performing'),
-        ('5', 'WorkShop'),
+        ('2', 'En cola'),
+        ('3', 'Preparando'),
+        ('4', 'En proceso'),
+        ('5', 'Acabado'),
         # Shop
-        ('6', 'Outbox'),
-        ('7', 'Delivered'),
-        ('8', 'Cancelled')
+        ('6', 'En espera'),
+        ('7', 'Entregado'),
+        ('8', 'Cancelado')
+    )
+
+    PRIORITY = (
+        ('1', 'Alta'),
+        ('2', 'Normal'),
+        ('3', 'Baja')
     )
 
     inbox_date = models.DateTimeField(default=timezone.now)
@@ -49,6 +55,8 @@ class Order(models.Model):
     ref_name = models.CharField('Referencia', max_length=32)
     delivery = models.DateField('Entrega prevista', blank=True)
     status = models.CharField(max_length=1, choices=STATUS, default='1')
+    priority = models.CharField('Prioridad', max_length=1, choices=PRIORITY,
+                                default='2')
 
     # Measures
     waist = models.DecimalField('Cintura', max_digits=5, decimal_places=2,
@@ -79,6 +87,16 @@ class Order(models.Model):
     def pending(self):
         """Set the pending amount per order."""
         return self.prepaid - self.budget
+
+    @property
+    def prev_status(self):
+        """determine the previous status."""
+        return str(int(self.status)-1)
+
+    @property
+    def next_status(self):
+        """determine the previous status."""
+        return str(int(self.status)+1)
 
 
 class OrderItem(models.Model):

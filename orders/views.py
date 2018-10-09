@@ -129,6 +129,8 @@ def orderlist(request):
                 'delivered': delivered,
                 'user': cur_user,
                 'now': now,
+                'stock': tz,
+                'order_by': order_by,
                 'placeholder': 'Buscar pedido (referencia)',
                 'search_on': 'orders',
                 'title': 'TrapuZarrak · Pedidos',
