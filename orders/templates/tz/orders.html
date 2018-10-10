@@ -19,8 +19,13 @@
 
     <!-- Active orders tab -->
     <div class="tab-pane show active" id="active-orders-content" role="tabpanel" aria-labelledby="active-orders-tab">
-      <div class="d-flex py-4 px-2">
-        <h3 class="mr-auto">Pedidos activos</h3>
+      <div class="d-flex pt-4 px-2">
+        <div class="mr-auto">
+          <div class="d-flex align-items-end">
+            <h3 class="">Pedidos activos</h3>
+            <small class="ml-2 pb-2" data-toggle="collapse" data-target="#legend" role="button" style="cursor: pointer;">Leyenda</small>
+          </div>
+        </div>
         <h4 class="px-2">Ordenados por:
         </h4>
         <div class="dropdown show">
@@ -34,6 +39,14 @@
             <a class="dropdown-item {% if order_by == 'status' %}d-none{%endif%}" href="{%url 'orderlist' orderby='status' %}"><i class="fa fa-cogs"></i> Status</a>
             <a class="dropdown-item {% if order_by == 'priority' %}d-none{%endif%}" href="{%url 'orderlist' orderby='priority' %}"><i class="fa fa-flag"></i> Prioridad</a>
           </div>
+        </div>
+      </div>
+      <div class="collapse" id="legend">
+        <div class="border rounded mx-4 p-2">
+            <span class="px-2"><i class="fa fa-flag"></i> Prioridad</span>
+            <span class="px-2"><i class="fa fa-cube"></i> Prendas añadidas</span>
+            <span class="px-2"><i class="fa fa-comment"></i> Comentarios</span>
+            <span class="px-2"><i class="fa fa-clock-o"></i> Horas añadidas</span>
         </div>
       </div>
       <div class="px-2">
@@ -54,7 +67,7 @@
       <div class="px-2">
         {% for order in delivered %}
         <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
-          {% include 'includes/order_entry_element.html' %}
+          {% include 'includes/order_entry_element_delivered.html' %}
         </div>
         {% endfor %}
       </div>
