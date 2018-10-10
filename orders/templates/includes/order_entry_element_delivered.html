@@ -1,0 +1,32 @@
+{% load humanize %}
+<div class="card my-2">
+  <div class="card-body">
+    <div class="d-flex">
+      <h5 class="px-1">
+        <strong>No.{{order.pk}}: {{order.ref_name}}, </strong>
+      </h5>
+      <span>de
+        <a href="{% url 'customer_view' pk=order.customer.pk %}"> {{order.customer}}</a>
+      </span>
+      <span class="ml-3 px-1">
+        <i class="fa fa-calendar"></i> Entregado: {{ order.delivery|naturalday}}
+      </span>
+      <span class="px-2">{{order.priority}} <i class="fa fa-flag"></i></span>
+      <span class="px-2">{{order.orderitem__count}} <i class="fa fa-cube"></i> </span>
+      <span class="px-2">{{order.comment__count}} <i class="fa fa-comment"></i> </span>
+      <span class="px-2">{{order.timing__count}} <i class="fa fa-clock-o"></i> </span>
+      <div class="d-block ml-auto">
+        <a type="button" class="btn btn-sm btn-outline-success" href="{% url 'order_view' pk=order.pk %}">
+          <i class="fa fa-eye"></i> Ver
+        </a>
+        {% if order.pending != 0 %}
+          <a type="button" class="btn btn-sm btn-outline-success">
+            <i class="fa fa-euro"></i> Cobrar
+          </a>
+        {% else %}
+          <button type="button" class="btn btn-sm btn-outline-success">Pagado</button>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
