@@ -32,13 +32,13 @@
     </div>
     <div class="d-flex">
         <div class="btn-group btn-group-sm px-2 mr-2" role="group">
-          <button type="button" class="btn btn-outline-success" data-status="{{order.prev_status}}" data-pk="{{order.pk}}">
+          <button type="button" class="btn btn-outline-success disabled" data-status="{{order.prev_status}}" data-pk="{{order.pk}}">
             <i class="fa fa-minus"></i>
           </button>
           <button type="button" class="btn btn-outline-success" id="order-{{order.pk}}-status">
             <i class="fa fa-cogs"></i> {{order.get_status_display}}
           </button>
-          <button type="button" class="btn btn-outline-success" data-status="{{order.next_status}}" data-pk="{{order.pk}}">
+          <button type="button" class="btn btn-outline-success disabled" data-status="{{order.next_status}}" data-pk="{{order.pk}}">
             <i class="fa fa-plus"></i>
           </button>
         </div>
