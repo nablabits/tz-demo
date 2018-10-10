@@ -11,7 +11,7 @@ from .forms import OrderCloseForm, OrderItemForm, TimeForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Count, Sum
 from datetime import datetime
 
@@ -125,7 +125,7 @@ def orderlist(request, orderby):
     # delivered orders' queries
     try:
         tz = Customer.objects.get(name='trapuzarrak')
-    except:
+    except ObjectDoesNotExist:
         delivered = orders.filter(status=7).order_by('delivery')[:10]
         tz = None
     else:
