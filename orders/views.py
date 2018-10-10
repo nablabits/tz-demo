@@ -130,6 +130,13 @@ def orderlist(request, orderby):
         tz = None
     else:
         delivered = orders.filter(status=7).exclude(customer=tz)
+        tz = tz.annotate(Count('orderitem', distinct=True),
+                         Count('comment', distinct=True),
+                         Count('timing', distinct=True))
+
+    delivered = delivered.annotate(Count('orderitem', distinct=True),
+                                   Count('comment', distinct=True),
+                                   Count('timing', distinct=True))
 
     cur_user = request.user
     now = datetime.now()
