@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponseBadRequest
 from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Timing
 from django.utils import timezone
@@ -103,7 +103,23 @@ def search(request):
 # Order related views
 @login_required
 def orderlist(request, orderby):
-    """Display all orders or search'em."""
+    """Display all orders.
+
+    On a GET requests displays the orders sorted by the orderby get parameter.
+    Otherwise, POST requests updates the status for the selected order and
+    displays by date (default).
+    """
+    if request.method == 'POST':
+        order_pk = request.POST.get('order')
+        order = get_object_or_404(Order, pk=order_pk)
+        order.status = request.POST.get('status')
+        try:
+            order.full_clean()
+        except ValidationError:
+            return HttpResponseBadRequest()
+        else:
+            order.save()
+
     if orderby == 'date':
         orders = Order.objects.all().order_by('delivery')
         order_by = 'date'
@@ -114,7 +130,7 @@ def orderlist(request, orderby):
         orders = Order.objects.all().order_by('priority')
         order_by = 'priority'
     else:
-        raise ValueError('sorting method undefined')
+        raise Http404('Required sorting method')
 
     # active orders queries
     active = orders.exclude(status__in=[7, 8])

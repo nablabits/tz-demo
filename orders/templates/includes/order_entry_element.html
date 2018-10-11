@@ -32,15 +32,29 @@
     </div>
     <div class="d-flex">
         <div class="btn-group btn-group-sm px-2 mr-2" role="group">
-          <button type="button" class="btn btn-outline-success disabled" data-status="{{order.prev_status}}" data-pk="{{order.pk}}">
-            <i class="fa fa-minus"></i>
-          </button>
+          {% if order.prev_status != '0' %}
+          <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="order" value="{{order.pk}}">
+            <input type="hidden" name="status" value="{{order.prev_status}}">
+            <button type="submit" class="btn btn-outline-success">
+              <i class="fa fa-minus"></i>
+            </button>
+          </form>
+          {% endif %}
           <button type="button" class="btn btn-outline-success" id="order-{{order.pk}}-status">
             <i class="fa fa-cogs"></i> {{order.get_status_display}}
           </button>
-          <button type="button" class="btn btn-outline-success disabled" data-status="{{order.next_status}}" data-pk="{{order.pk}}">
-            <i class="fa fa-plus"></i>
-          </button>
+          {% if order.next_status != '7' %}
+          <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="order" value="{{order.pk}}">
+            <input type="hidden" name="status" value="{{order.next_status}}">
+            <button type="submit" class="btn btn-outline-success">
+              <i class="fa fa-plus"></i>
+            </button>
+          </form>
+          {% endif %}
         </div>
       <span class="px-2">{{order.priority}} <i class="fa fa-flag"></i></span>
       <span class="px-2">{{order.orderitem__count}} <i class="fa fa-cube"></i> </span>
