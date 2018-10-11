@@ -179,6 +179,16 @@ class StandardViewsTest(TestCase):
         self.assertEqual(str(resp.context['active'][0].ref_name), 'example10')
         self.assertEqual(str(resp.context['user']), 'regular')
 
+    def test_order_list_post_method_update_status(self):
+        """Test the proper status update on post method."""
+        order = Order.objects.get(ref_name='example closed')
+        resp = self.client.post(reverse('orderlist',
+                                        kwargs={'orderby': 'date'}),
+                                {'status': '5',
+                                 'order': order.pk})
+        order = Order.objects.get(ref_name='example closed')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(order.status, '5')
     def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
         """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
         tz = Customer.objects.create(name='trapuzarrak',
