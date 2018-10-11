@@ -112,7 +112,10 @@ def orderlist(request, orderby):
     if request.method == 'POST':
         order_pk = request.POST.get('order')
         order = get_object_or_404(Order, pk=order_pk)
-        order.status = request.POST.get('status')
+        if request.POST.get('status'):
+            order.status = request.POST.get('status')
+        elif request.POST.get('collect'):
+            order.prepaid = order.budget
         try:
             order.full_clean()
         except ValidationError:
