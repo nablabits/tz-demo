@@ -30,8 +30,9 @@ class NotLoggedInTest(TestCase):
 
     def test_not_logged_in_on_orders_list_view(self):
         """Test not logged in users should be redirected to login."""
-        login_url = '/accounts/login/?next=/orders'
-        resp = self.client.get(reverse('orderlist'))
+        login_url = '/accounts/login/?next=/orders%26orderby%253Ddate/'
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
@@ -169,7 +170,8 @@ class StandardViewsTest(TestCase):
 
     def test_order_list(self):
         """Test the main features on order list."""
-        resp = self.client.get(reverse('orderlist'))
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/orders.html')
 
@@ -192,7 +194,8 @@ class StandardViewsTest(TestCase):
                              ref_name='tz order',
                              budget=100,
                              prepaid=0)
-        resp = self.client.get(reverse('orderlist'))
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
         total_orders = len(Order.objects.all())
         self.assertEqual(total_orders, 21)
         for order in resp.context['delivered']:
