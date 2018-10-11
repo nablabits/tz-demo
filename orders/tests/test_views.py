@@ -230,6 +230,8 @@ class StandardViewsTest(TestCase):
         self.assertEqual(total_orders, 21)
         for order in resp.context['delivered']:
             self.assertNotEqual(order.ref_name, 'tz order')
+        for order in resp.context['active']:
+            self.assertNotEqual(order.ref_name, 'tz order')
 
     def test_order_closed_view(self):
         """Test a particular order instance.
