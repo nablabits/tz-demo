@@ -201,6 +201,14 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(order.budget, order.prepaid)
 
+        """If something went wrong on saving return a 400."""
+        order = Order.objects.get(ref_name='example closed')
+        resp = self.client.post(reverse('orderlist',
+                                        kwargs={'orderby': 'date'}),
+                                {'status': 'invalid',
+                                 'order': order.pk})
+        self.assertEqual(resp.status_code, 400)
+
     def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
         """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
         tz = Customer.objects.create(name='trapuzarrak',
