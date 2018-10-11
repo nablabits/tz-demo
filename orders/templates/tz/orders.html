@@ -5,20 +5,26 @@
 <div class="container mt-4" id="#order-list">
     <ul class="nav nav-tabs" id="ordersTab" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" data-toggle="tab" href="#active-orders-content" role="tab" id="active-orders-tab">Pedidos Activos</a>
+        <a class="nav-link active" data-toggle="tab" href="#active-orders" role="tab" id="active-orders-tab">Pedidos Activos</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#delivered-orders-content" role="tab" id="delivered-orders-tab">Pedidos Entregados</a>
+        <a class="nav-link" data-toggle="tab" href="#delivered-orders" role="tab" id="delivered-orders-tab">Pedidos Entregados</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#stock-orders-content" role="tab" id="stock-orders-tab">Stock</a>
+        <a class="nav-link" data-toggle="tab" href="#active-stock-orders" role="tab" id="stock-orders-tab">Activos TZ</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#finished-stock-orders" role="tab" id="stock-orders-tab">Stock</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#cancelled-orders" role="tab" id="stock-orders-tab">Cancelados</a>
       </li>
     </ul>
 
   <div class="tab-content" id="ordersTabContent">
 
     <!-- Active orders tab -->
-    <div class="tab-pane show active" id="active-orders-content" role="tabpanel" aria-labelledby="active-orders-tab">
+    <div class="tab-pane show active" id="active-orders" role="tabpanel">
       <div class="d-flex pt-4 px-2">
         <div class="mr-auto">
           <div class="d-flex align-items-end">
@@ -59,7 +65,7 @@
     </div>
 
     <!-- delievered orders tab -->
-    <div class="tab-pane" id="delivered-orders-content" role="tabpanel" aria-labelledby="delivered-orders-tab">
+    <div class="tab-pane" id="delivered-orders" role="tabpanel">
       <div class="d-flex py-4 px-2">
         <h3 class="mr-auto">Pedidos entregados</h3>
         <p class="px-2">Mostrando últimos 10</p>
@@ -73,25 +79,74 @@
       </div>
     </div>
 
-    <!-- Stock orders tab -->
-    <div class="tab-pane" id="stock-orders-content" role="tabpanel" aria-labelledby="stock-orders-tab">
+    <!-- Active stock orders tab -->
+    <div class="tab-pane" id="active-stock-orders" role="tabpanel">
       <div class="d-flex py-4 px-2">
-        <h3 class="mr-auto">Pedidos de Stock de Trapuzarrak</h3>
-        <p class="px-2">Mostrando últimos 10</p>
+        <h3>Producción de Trapuzarrak</h3>
       </div>
       <div class="px-2">
-        {% if not stock %}
+        {% if not active_stock %}
         <div class="d-flex">
           <div class="alert alert-info" role="alert">
-            <i class="fa fa-info mr-2"></i> No hay ningún pedido en stock aún
+            <i class="fa fa-info mr-2"></i> No hay ningún pedido de trapuzarrak en estos momentos
           </div>
         </div>
         {% endif %}
-        {% for order in stock %}
+        {% for order in active_stock %}
         <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
           {% include 'includes/order_entry_element.html' %}
         </div>
         {% endfor %}
+      </div>
+    </div>
+
+    <!-- Finished stock orders tab -->
+    <div class="tab-pane" id="finished-stock-orders" role="tabpanel">
+      <div class="tab-pane" id="active-stock-orders" role="tabpanel">
+        <div class="d-flex py-4 px-2">
+          <h3 class="mr-auto">Stock de Trapuzarrak</h3>
+          <p class="px-2">Mostrando últimos 10</p>
+        </div>
+        <div class="px-2">
+          {% if not delivered_stock %}
+          <div class="d-flex">
+            <div class="alert alert-info" role="alert">
+              <i class="fa fa-info mr-2"></i> No hay ningún pedido de trapuzarrak en estos momentos
+            </div>
+          </div>
+          {% endif %}
+          {% for order in delivered_stock %}
+          <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+            {% include 'includes/order_entry_element_delivered.html' %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Cancelled orders -->
+    <div class="tab-pane" id="cancelled-orders" role="tabpanel">
+      <div class="tab-pane" id="finished-stock-orders" role="tabpanel">
+        <div class="tab-pane" id="active-stock-orders" role="tabpanel">
+          <div class="d-flex py-4 px-2">
+            <h3 class="mr-auto">Pedidos anulados</h3>
+            <p class="px-2">Mostrando últimos 10</p>
+          </div>
+          <div class="px-2">
+            {% if not cancelled %}
+            <div class="d-flex">
+              <div class="alert alert-info" role="alert">
+                <i class="fa fa-info mr-2"></i> No hay ningún pedido cancelado.
+              </div>
+            </div>
+            {% endif %}
+            {% for order in cancelled %}
+            <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+              {% include 'includes/order_entry_element_delivered.html' %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
       </div>
     </div>
   </div>

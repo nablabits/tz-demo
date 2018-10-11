@@ -135,27 +135,38 @@ def orderlist(request, orderby):
     else:
         raise Http404('Required sorting method')
 
-    # active orders queries
-    active = orders.exclude(status__in=[7, 8])
+    try:
+        tz = Customer.objects.get(name='trapuzarrak')
+    except ObjectDoesNotExist:
+        tz = None
+
+    if tz:
+        delivered = orders.filter(status=7).exclude(customer=tz)[:10]
+        active = orders.exclude(status__in=[7, 8]).exclude(customer=tz)
+        tz_orders = orders.filter(customer=tz)
+        tz_active = tz_orders.exclude(status__in=[7, 8])
+        tz_active = tz_active.annotate(Count('orderitem', distinct=True),
+                                       Count('comment', distinct=True),
+                                       Count('timing', distinct=True))
+        tz_delivered = tz_orders.filter(status=7)[:10]
+        tz_delivered = tz_delivered.annotate(Count('orderitem', distinct=True),
+                                             Count('comment', distinct=True),
+                                             Count('timing', distinct=True))
+    else:
+        delivered = orders.filter(status=7).order_by('delivery')[:10]
+        active = orders.filter(status=7).order_by('delivery')
+        tz_active = None
+        tz_delivered = None
+
     active = active.annotate(Count('orderitem', distinct=True),
                              Count('comment', distinct=True),
                              Count('timing', distinct=True))
 
-    # delivered orders' queries
-    try:
-        tz = Customer.objects.get(name='trapuzarrak')
-    except ObjectDoesNotExist:
-        delivered = orders.filter(status=7).order_by('delivery')[:10]
-        tz = None
-    else:
-        delivered = orders.filter(status=7).exclude(customer=tz)
-        tz = tz.annotate(Count('orderitem', distinct=True),
-                         Count('comment', distinct=True),
-                         Count('timing', distinct=True))
-
     delivered = delivered.annotate(Count('orderitem', distinct=True),
                                    Count('comment', distinct=True),
                                    Count('timing', distinct=True))
+
+    cancelled = orders.filter(status=8)
 
     cur_user = request.user
     now = datetime.now()
@@ -164,7 +175,9 @@ def orderlist(request, orderby):
                 'delivered': delivered,
                 'user': cur_user,
                 'now': now,
-                'stock': tz,
+                'active_stock': tz_active,
+                'delivered_stock': tz_delivered,
+                'cancelled': cancelled,
                 'order_by': order_by,
                 'placeholder': 'Buscar pedido (referencia)',
                 'search_on': 'orders',
