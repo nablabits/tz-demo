@@ -103,12 +103,19 @@ def search(request):
 # Order related views
 @login_required
 def orderlist(request, orderby):
-    """Display all orders.
+    """Display all orders in a view.
 
-    On a GET requests displays the orders sorted by the orderby get parameter.
-    Otherwise, POST requests updates the status for the selected order and
-    displays by date (default).
+    GET requests display the orders sorted by the 'orderby' get parameter.
+    POST requests are used to update the status or to set as paid the orders
+    (for now). They display the view by date (default).
+
+    On the view, orders are separated on different tabs: active, delivered, tz
+    active & delivered, and cancelled. The first two exclude tz orders, if such
+    customer exists, while the the next two are exclusive for it (production &
+    stock for the shop). Finally, all cancelled orders are displayed regardless
+    the customer.
     """
+    # POST method to update status & set paid an order.
     if request.method == 'POST':
         order_pk = request.POST.get('order')
         order = get_object_or_404(Order, pk=order_pk)
@@ -123,6 +130,7 @@ def orderlist(request, orderby):
         else:
             order.save()
 
+    # Set the sorting method on view
     if orderby == 'date':
         orders = Order.objects.all().order_by('delivery')
         order_by = 'date'
@@ -140,24 +148,30 @@ def orderlist(request, orderby):
     except ObjectDoesNotExist:
         tz = None
 
+    # Get the orders for each tab when tz customer exists
     if tz:
         delivered = orders.filter(status=7).exclude(customer=tz)[:10]
         active = orders.exclude(status__in=[7, 8]).exclude(customer=tz)
         tz_orders = orders.filter(customer=tz)
         tz_active = tz_orders.exclude(status__in=[7, 8])
+        tz_delivered = tz_orders.filter(status=7)[:10]
+
+        # And the attr collection
         tz_active = tz_active.annotate(Count('orderitem', distinct=True),
                                        Count('comment', distinct=True),
                                        Count('timing', distinct=True))
-        tz_delivered = tz_orders.filter(status=7)[:10]
         tz_delivered = tz_delivered.annotate(Count('orderitem', distinct=True),
                                              Count('comment', distinct=True),
                                              Count('timing', distinct=True))
+
+    # Get the orders for each tab when tz doesn't exist
     else:
         delivered = orders.filter(status=7).order_by('delivery')[:10]
         active = orders.exclude(status__in=[7, 8]).order_by('delivery')
         tz_active = None
         tz_delivered = None
 
+    # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
                              Count('comment', distinct=True),
                              Count('timing', distinct=True))
