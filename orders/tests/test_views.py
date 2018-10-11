@@ -189,6 +189,18 @@ class StandardViewsTest(TestCase):
         order = Order.objects.get(ref_name='example closed')
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(order.status, '5')
+
+    def test_order_list_post_method_set_order_paid(self):
+        """Test the proper set paid on orders."""
+        order = Order.objects.get(ref_name='example10')
+        resp = self.client.post(reverse('orderlist',
+                                        kwargs={'orderby': 'date'}),
+                                {'collect': True,
+                                 'order': order.pk})
+        order = Order.objects.get(ref_name='example10')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(order.budget, order.prepaid)
+
     def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
         """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
         tz = Customer.objects.create(name='trapuzarrak',
