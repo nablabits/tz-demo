@@ -201,51 +201,6 @@ class StandardViewsTest(TestCase):
         for order in resp.context['delivered']:
             self.assertNotEqual(order.ref_name, 'tz order')
 
-    def test_order_list_paginator(self):
-        """Test paginator functionality on order list."""
-        resp = self.client.get(reverse('orderlist'))
-
-        delivered = resp.context['delivered']
-        self.assertFalse(delivered.has_previous())
-        self.assertTrue(delivered.has_next())
-        self.assertTrue(delivered.has_other_pages())
-        self.assertEqual(delivered.number, 1)
-        self.assertEqual(len(delivered), 5)
-        self.assertEqual(str(delivered[0].ref_name), 'example delivered')
-
-    def test_order_list_paginator_not_an_int_exception(self):
-        """When page is not an int, paginator should go to the first one.
-
-        That is because the exception was catch.
-        """
-        # login = self.client.login(username='regular', password='test')
-        # if not login:
-        #     raise RuntimeError('Couldn\'t login')
-        resp = self.client.get(reverse('orderlist'), {'page': 'invalid'})
-
-        delivered = resp.context['delivered']
-        self.assertFalse(delivered.has_previous())
-        self.assertTrue(delivered.has_next())
-        self.assertTrue(delivered.has_other_pages())
-        self.assertEqual(delivered.number, 1)
-
-    def test_order_list_paginator_empty_exception(self):
-        """When page given is empty, paginator should go to the last one.
-
-        That is because the exception was catch.
-        """
-        # login = self.client.login(username='regular', password='test')
-        # if not login:
-        #     raise RuntimeError('Couldn\'t login')
-        resp = self.client.get(reverse('orderlist'), {'page': 20})
-
-        delivered = resp.context['delivered']
-        self.assertEqual(delivered.number, 2)
-        self.assertTrue(delivered.has_previous())
-        self.assertFalse(delivered.has_next())
-        self.assertTrue(delivered.has_other_pages())
-        self.assertEqual(len(delivered), 5)
-
     def test_order_closed_view(self):
         """Test a particular order instance.
 
