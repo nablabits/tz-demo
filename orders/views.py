@@ -154,7 +154,7 @@ def orderlist(request, orderby):
                                              Count('timing', distinct=True))
     else:
         delivered = orders.filter(status=7).order_by('delivery')[:10]
-        active = orders.filter(status=7).order_by('delivery')
+        active = orders.exclude(status__in=[7, 8]).order_by('delivery')
         tz_active = None
         tz_delivered = None
 
