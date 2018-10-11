@@ -1,31 +1,61 @@
 {% load humanize %}
 <div class="card my-2">
   <div class="card-body">
-    <div class="d-flex">
-      <h5 class="px-1">
-        <strong>No.{{order.pk}}: {{order.ref_name}}, </strong>
-      </h5>
-      <span>de
-        <a href="{% url 'customer_view' pk=order.customer.pk %}"> {{order.customer}}</a>
-      </span>
-      <span class="ml-3 px-1">
-        <i class="fa fa-calendar"></i> Entregado: {{ order.delivery|naturalday}}
-      </span>
-      <span class="px-2">{{order.priority}} <i class="fa fa-flag"></i></span>
-      <span class="px-2">{{order.orderitem__count}} <i class="fa fa-cube"></i> </span>
-      <span class="px-2">{{order.comment__count}} <i class="fa fa-comment"></i> </span>
-      <span class="px-2">{{order.timing__count}} <i class="fa fa-clock-o"></i> </span>
-      <div class="d-block ml-auto">
-        <a type="button" class="btn btn-sm btn-outline-success" href="{% url 'order_view' pk=order.pk %}">
-          <i class="fa fa-eye"></i> Ver
-        </a>
-        {% if order.pending != 0 %}
-          <a type="button" class="btn btn-sm btn-outline-success">
-            <i class="fa fa-euro"></i> Cobrar
+    <div class="row">
+      <div class="col-9">
+        <div class="d-flex">
+          <a href="{% url 'order_view' pk=order.pk %}">
+            <h5 class="px-1">
+              <strong>No.{{order.pk}}: {{order.ref_name}}. </strong>
+            </h5>
           </a>
-        {% else %}
-          <button type="button" class="btn btn-sm btn-outline-success">Pagado</button>
+          {% if order.customer.name != 'trapuzarrak' %}
+            <span>de
+              <a href="{% url 'customer_view' pk=order.customer.pk %}"> {{order.customer}}</a>
+            </span>
+          {% endif %}
+        </div>
+        {% if order.status != '8' %}
+        <div class="d-flex">
+          <span class="px-2">
+            <i class="fa fa-calendar"></i> Entregado: {{ order.delivery|naturalday}}
+          </span>
+          <span class="px-2">{{order.priority}} <i class="fa fa-flag"></i></span>
+          <span class="px-2">{{order.orderitem__count}} <i class="fa fa-cube"></i> </span>
+          <span class="px-2">{{order.comment__count}} <i class="fa fa-comment"></i> </span>
+          <span class="px-2">{{order.timing__count}} <i class="fa fa-clock-o"></i> </span>
+        </div>
         {% endif %}
+      </div>
+      <div class="col-3">
+        <div class="d-flex justify-content-end">
+          <a type="button" class="btn btn-sm btn-outline-success mr-2" href="{% url 'order_view' pk=order.pk %}">
+            <i class="fa fa-eye"></i> Ver
+          </a>
+          {% if order.status != '8' %}
+          {% if order.pending != 0 %}
+          <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
+            {% csrf_token %}
+            <input type="hidden" name="order" value="{{order.pk}}">
+            <input type="hidden" name="collect" value="True">
+            <button type="submit" class="btn btn-sm btn-outline-success">
+              <i class="fa fa-euro"></i> Cobrar
+            </button>
+          </form>
+          {% else %}
+              <button type="button" class="btn btn-sm btn-success">Pagado</button>
+            {% endif %}
+          {% else %}
+            <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="order" value="{{order.pk}}">
+              <input type="hidden" name="status" value="1">
+              <button type="submit" class="btn btn-sm btn-outline-success">
+                <i class="fa fa-history"></i> Reactivar
+              </button>
+            </form>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
