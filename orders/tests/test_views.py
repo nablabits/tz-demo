@@ -45,8 +45,8 @@ class NotLoggedInTest(TestCase):
 
     def test_not_logged_in_on_customers_list_view(self):
         """Test not logged in users should be redirected to login."""
-        login_url = '/accounts/login/?next=/orders'
-        resp = self.client.get(reverse('orderlist'))
+        login_url = '/accounts/login/?next=/customer_view/1'
+        resp = self.client.get(reverse('customer_view', kwargs={'pk': 1}))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
