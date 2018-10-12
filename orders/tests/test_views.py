@@ -201,6 +201,7 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(order.budget, order.prepaid)
 
+    def test_order_list_returns_400_on_invalid_post_method(self):
         """If something went wrong on saving return a 400."""
         order = Order.objects.get(ref_name='example closed')
         resp = self.client.post(reverse('orderlist',
@@ -208,6 +209,45 @@ class StandardViewsTest(TestCase):
                                 {'status': 'invalid',
                                  'order': order.pk})
         self.assertEqual(resp.status_code, 400)
+
+    def test_order_list_sorting_methods(self):
+        """Test the correct sorting of entries."""
+        # Order by date
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+
+        self.assertEqual(resp.context['order_by'], 'date')
+        for i in range(9):
+            first_order = resp.context['active'][i].delivery
+            next_order = resp.context['active'][i+1].delivery
+            self.assertTrue(first_order <= next_order)
+
+        # order by status
+        for order in Order.objects.exclude(status__in=[7, 8]):
+            order.status = randint(1, 6)
+            order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'status'}))
+        self.assertEqual(resp.context['order_by'], 'status')
+        for i in range(9):
+            first_order = resp.context['active'][i].status
+            next_order = resp.context['active'][i+1].status
+            self.assertTrue(first_order <= next_order)
+
+        # order by priority
+        order = Order.objects.get(ref_name='example13')
+        order.priority = '1'
+        order.save()
+        order = Order.objects.get(ref_name='example12')
+        order.priority = '3'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'priority'}))
+        self.assertEqual(resp.context['order_by'], 'priority')
+        for i in range(9):
+            first_order = resp.context['active'][i].priority
+            next_order = resp.context['active'][i+1].priority
+            self.assertTrue(first_order <= next_order)
 
     def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
         """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
