@@ -130,18 +130,7 @@ def orderlist(request, orderby):
         else:
             order.save()
 
-    # Set the sorting method on view
-    if orderby == 'date':
-        orders = Order.objects.all().order_by('delivery')
-        order_by = 'date'
-    elif orderby == 'status':
-        orders = Order.objects.all().order_by('status')
-        order_by = 'status'
-    elif orderby == 'priority':
-        orders = Order.objects.all().order_by('priority')
-        order_by = 'priority'
-    else:
-        raise Http404('Required sorting method')
+    orders = Order.objects.all()
 
     try:
         tz = Customer.objects.get(name='trapuzarrak')
@@ -171,6 +160,16 @@ def orderlist(request, orderby):
         tz_active = None
         tz_delivered = None
 
+    # Set the sorting method on view
+    if orderby == 'date':
+        active = active.order_by('delivery')
+    elif orderby == 'status':
+        active = active.order_by('status')
+    elif orderby == 'priority':
+        active = active.order_by('priority')
+    else:
+        raise Http404('Required sorting method')
+
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
                              Count('comment', distinct=True),
@@ -192,7 +191,7 @@ def orderlist(request, orderby):
                 'active_stock': tz_active,
                 'delivered_stock': tz_delivered,
                 'cancelled': cancelled,
-                'order_by': order_by,
+                'order_by': orderby,
                 'placeholder': 'Buscar pedido (referencia)',
                 'search_on': 'orders',
                 'title': 'TrapuZarrak · Pedidos',
