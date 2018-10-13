@@ -597,6 +597,20 @@ class SearchBoxTest(TestCase):
         self.assertEquals(data['query_result'], 1)
         self.assertEquals(data['query_result_name'], 'example11')
 
+    def test_search_on_orders_by_pk(self):
+        """Test search orders by pk."""
+        order = Order.objects.all()[0]
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'orders',
+                                 'search-obj': order.pk,
+                                 'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertEquals(data['query_result'], 1)
+        self.assertEquals(data['query_result_name'], order.ref_name)
+
     def test_search_box_on_customers_str(self):
         """Test search customers by name."""
         resp = self.client.post(reverse('search'),

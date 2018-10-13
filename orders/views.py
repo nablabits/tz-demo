@@ -60,7 +60,12 @@ def search(request):
             raise Http404
         if search_on == 'orders':
             table = Order.objects.all()
-            query_result = table.filter(ref_name__icontains=search_obj)
+            try:
+                int(search_obj)
+            except ValueError:
+                query_result = table.filter(ref_name__icontains=search_obj)
+            else:
+                query_result = table.filter(pk=search_obj)
             model = 'orders'
         elif search_on == 'customers':
             table = Customer.objects.all()
@@ -109,7 +114,7 @@ def orderlist(request, orderby):
     POST requests are used to update the status or to set as paid the orders
     (for now). They display the view by date (default).
 
-    On the view, orders are separated on different tabs: active, delivered, tz
+    In the view, orders are separated on different tabs: active, delivered, tz
     active & delivered, and cancelled. The first two exclude tz orders, if such
     customer exists, while the the next two are exclusive for it (production &
     stock for the shop). Finally, all cancelled orders are displayed regardless

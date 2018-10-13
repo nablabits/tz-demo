@@ -90,12 +90,12 @@ class Order(models.Model):
 
     @property
     def prev_status(self):
-        """determine the previous status."""
+        """Determine the previous status."""
         return str(int(self.status)-1)
 
     @property
     def next_status(self):
-        """determine the previous status."""
+        """Determine the previous status."""
         return str(int(self.status)+1)
 
 
