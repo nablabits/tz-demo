@@ -133,7 +133,7 @@ def orderlist(request, orderby):
     orders = Order.objects.all()
 
     try:
-        tz = Customer.objects.get(name='trapuzarrak')
+        tz = Customer.objects.get(name__iexact='trapuzarrak')
     except ObjectDoesNotExist:
         tz = None
 
@@ -141,6 +141,7 @@ def orderlist(request, orderby):
     if tz:
         delivered = orders.filter(status=7).exclude(customer=tz)[:10]
         active = orders.exclude(status__in=[7, 8]).exclude(customer=tz)
+        cancelled = orders.filter(status=8).exclude(customer=tz)
         tz_orders = orders.filter(customer=tz)
         tz_active = tz_orders.exclude(status__in=[7, 8])
         tz_delivered = tz_orders.filter(status=7)[:10]
@@ -157,6 +158,7 @@ def orderlist(request, orderby):
     else:
         delivered = orders.filter(status=7).order_by('delivery')[:10]
         active = orders.exclude(status__in=[7, 8]).order_by('delivery')
+        cancelled = orders.filter(status=8)
         tz_active = None
         tz_delivered = None
 
@@ -178,8 +180,6 @@ def orderlist(request, orderby):
     delivered = delivered.annotate(Count('orderitem', distinct=True),
                                    Count('comment', distinct=True),
                                    Count('timing', distinct=True))
-
-    cancelled = orders.filter(status=8)
 
     cur_user = request.user
     now = datetime.now()

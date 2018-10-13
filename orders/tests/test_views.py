@@ -290,7 +290,10 @@ class StandardViewsTest(TestCase):
         self.assertFalse(resp.context['delivered_stock'])
 
     def test_tz_should_exist_case_insensitive(self):
-        """Tz customer must be recognized regardless the case."""
+        """Tz customer must be recognized regardless the case.
+
+        They should return 1 active order and an empty queryset delivered.
+        """
         user = User.objects.get(username='regular')
         tz = Customer.objects.create(name='Trapuzarrak',
                                      city='Mungia',
@@ -306,10 +309,38 @@ class StandardViewsTest(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/orders.html')
-
-        # Test context vars
         self.assertTrue(resp.context['active_stock'])
-        # self.assertTrue(resp.context['delivered_stock'])
+        self.assertEquals(len(resp.context['delivered_stock']), 0)
+        for name in ('trapuzarrak', 'TraPuZarrak'):
+            tz.name = name
+            tz.save()
+            resp = self.client.get(reverse('orderlist',
+                                           kwargs={'orderby': 'date'}))
+            self.assertTrue(resp.context['active_stock'])
+            self.assertEquals(len(resp.context['delivered_stock']), 0)
+
+    def test_tz_cancelled_orders(self):
+        """Test the proper return of cancelled orders.
+
+        Trapuzarrak ones should not appear.
+        """
+        order = Order.objects.get(ref_name='example10')
+        order.status = 8
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['cancelled']), 1)
+
+        # Now change the customer
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        order.customer = tz
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['cancelled']), 0)
 
     def test_order_closed_view(self):
         """Test a particular order instance.
