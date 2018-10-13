@@ -176,8 +176,10 @@ class StandardViewsTest(TestCase):
         self.assertTemplateUsed(resp, 'tz/orders.html')
 
         # Test context vars
-        self.assertEqual(str(resp.context['active'][0].ref_name), 'example10')
+        self.assertEqual(resp.context['active'][0].ref_name, 'example10')
         self.assertEqual(str(resp.context['user']), 'regular')
+        self.assertEqual(resp.context['placeholder'],
+                         'Buscar pedido (referencia)')
 
     def test_order_list_post_method_update_status(self):
         """Test the proper status update on post method."""
