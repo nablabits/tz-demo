@@ -4,7 +4,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, OrderItem, Comment, Timing
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
@@ -249,6 +249,11 @@ class StandardViewsTest(TestCase):
             next_order = resp.context['active'][i+1].priority
             self.assertTrue(first_order <= next_order)
 
+        # inavlid sorting method
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'invalid'}))
+        self.assertEqual(resp.status_code, 404)
+
     def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
         """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
         tz = Customer.objects.create(name='trapuzarrak',
@@ -272,6 +277,39 @@ class StandardViewsTest(TestCase):
             self.assertNotEqual(order.ref_name, 'tz order')
         for order in resp.context['active']:
             self.assertNotEqual(order.ref_name, 'tz order')
+
+    def test_tz_should_be_none(self):
+        """If tz customer is not present, tz vars should be none."""
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/orders.html')
+
+        # Test context vars
+        self.assertFalse(resp.context['active_stock'])
+        self.assertFalse(resp.context['delivered_stock'])
+
+    def test_tz_should_exist_case_insensitive(self):
+        """Tz customer must be recognized regardless the case."""
+        user = User.objects.get(username='regular')
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        Order.objects.create(user=user,
+                             customer=tz,
+                             ref_name='tzOrder',
+                             delivery=date.today(),
+                             budget=100,
+                             prepaid=20)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/orders.html')
+
+        # Test context vars
+        self.assertTrue(resp.context['active_stock'])
+        # self.assertTrue(resp.context['delivered_stock'])
 
     def test_order_closed_view(self):
         """Test a particular order instance.
