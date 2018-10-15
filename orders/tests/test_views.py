@@ -333,7 +333,7 @@ class StandardViewsTest(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEquals(len(resp.context['cancelled']), 1)
 
-        # Now change the customer
+        # Now change the customer, tz should not appear.
         tz = Customer.objects.create(name='Trapuzarrak',
                                      city='Mungia',
                                      phone=0,
@@ -343,6 +343,13 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
         self.assertEquals(len(resp.context['cancelled']), 0)
+
+    def test_pending_orders(self):
+        """Test the correct show of pending invoices."""
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['pending']), 19)
+        self.assertEquals(resp.context['pending_total'], 38000)
 
     def test_order_closed_view(self):
         """Test a particular order instance.

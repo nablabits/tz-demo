@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, F
 from datetime import datetime
 
 
@@ -144,12 +144,18 @@ def orderlist(request, orderby):
 
     # Get the orders for each tab when tz customer exists
     if tz:
-        delivered = orders.filter(status=7).exclude(customer=tz)[:10]
-        active = orders.exclude(status__in=[7, 8]).exclude(customer=tz)
-        cancelled = orders.filter(status=8).exclude(customer=tz)
+        # DEBUG: active & delivered could be removed from exception
+        # First query the stock
         tz_orders = orders.filter(customer=tz)
         tz_active = tz_orders.exclude(status__in=[7, 8])
         tz_delivered = tz_orders.filter(status=7)[:10]
+
+        # Now, the excluding tz customer queries
+        orders = orders.exclude(customer=tz)
+        delivered = orders.filter(status=7)
+        active = orders.exclude(status__in=[7, 8])
+        cancelled = orders.filter(status=8)
+        pending = orders.filter(budget__gt=F('prepaid'))
 
         # And the attr collection
         tz_active = tz_active.annotate(Count('orderitem', distinct=True),
@@ -162,8 +168,9 @@ def orderlist(request, orderby):
     # Get the orders for each tab when tz doesn't exist
     else:
         delivered = orders.filter(status=7).order_by('delivery')[:10]
-        active = orders.exclude(status__in=[7, 8]).order_by('delivery')
+        active = orders.exclude(status__in=[7, 8])
         cancelled = orders.filter(status=8)
+        pending = orders.filter(budget__gt=F('prepaid'))
         tz_active = None
         tz_delivered = None
 
@@ -185,6 +192,10 @@ def orderlist(request, orderby):
     delivered = delivered.annotate(Count('orderitem', distinct=True),
                                    Count('comment', distinct=True),
                                    Count('timing', distinct=True))
+    # total pending amount
+    budgets = pending.aggregate(Sum('budget'))
+    prepaid = pending.aggregate(Sum('prepaid'))
+    pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
 
     cur_user = request.user
     now = datetime.now()
@@ -196,6 +207,8 @@ def orderlist(request, orderby):
                 'active_stock': tz_active,
                 'delivered_stock': tz_delivered,
                 'cancelled': cancelled,
+                'pending': pending,
+                'pending_total': pending_total,
                 'order_by': orderby,
                 'placeholder': 'Buscar pedido (referencia)',
                 'search_on': 'orders',
