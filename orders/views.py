@@ -168,7 +168,8 @@ def orderlist(request, orderby):
     delivered = orders.filter(status=7)
     active = orders.exclude(status__in=[7, 8])
     cancelled = orders.filter(status=8)
-    pending = orders.filter(budget__gt=F('prepaid'))
+    pending = orders.exclude(status=8).filter(budget__gt=F('prepaid'))
+    pending = pending.order_by('status')
 
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
@@ -181,7 +182,10 @@ def orderlist(request, orderby):
     # Total pending amount
     budgets = pending.aggregate(Sum('budget'))
     prepaid = pending.aggregate(Sum('prepaid'))
-    pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
+    try:
+        pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
+    except TypeError:
+        pending_total = 0
 
     # Finally, set the sorting method on view
     if orderby == 'date':

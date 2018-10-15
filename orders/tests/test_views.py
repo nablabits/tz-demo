@@ -351,6 +351,16 @@ class StandardViewsTest(TestCase):
         self.assertEquals(len(resp.context['pending']), 19)
         self.assertEquals(resp.context['pending_total'], 38000)
 
+    def test_pending_orders_should_dismiss_cancelled(self):
+        """Pending orders don't include cancelled orders."""
+        order = Order.objects.all()[0]
+        order.status = 8
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['pending']), 18)
+        self.assertEquals(resp.context['pending_total'], 36000)
+
     def test_order_closed_view(self):
         """Test a particular order instance.
 
