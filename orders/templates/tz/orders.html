@@ -11,6 +11,9 @@
         <a class="nav-link" data-toggle="tab" href="#delivered-orders" role="tab" id="delivered-orders-tab">Pedidos Entregados</a>
       </li>
       <li class="nav-item">
+        <a class="nav-link" data-toggle="tab" href="#pending-orders" role="tab" id="delivered-orders-tab">Pendiente cobro</a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#active-stock-orders" role="tab" id="stock-orders-tab">Activos TZ</a>
       </li>
       <li class="nav-item">
@@ -74,6 +77,32 @@
         {% for order in delivered %}
         <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
           {% include 'includes/order_entry_element_delivered.html' %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Pending orders tab -->
+    <div class="tab-pane" id="pending-orders" role="tabpanel">
+      <div class="d-flex py-4 px-2">
+        <h3 class="mr-auto">Pedidos Pendientes de cobro</h3>
+        <h3 class="px-2">Total pendiente: {{pending_total}}€</h3>
+      </div>
+      <div class="px-2">
+        {% if pending_total == 0 %}
+        <div class="d-flex">
+          <div class="alert alert-success" role="alert">
+            <i class="fa fa-thumbs-up mr-2"></i> <strong>Genial,</strong> tienes todos los pedidos cobrados
+          </div>
+        </div>
+        {% endif %}
+        {% for order in pending %}
+        <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+          {% if order.status == '7' %}
+            {% include 'includes/order_entry_element_delivered.html' %}
+          {% else %}
+            {% include 'includes/order_entry_element.html' %}
+          {% endif %}
         </div>
         {% endfor %}
       </div>

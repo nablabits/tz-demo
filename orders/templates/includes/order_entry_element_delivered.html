@@ -38,8 +38,8 @@
             {% csrf_token %}
             <input type="hidden" name="order" value="{{order.pk}}">
             <input type="hidden" name="collect" value="True">
-            <button type="submit" class="btn btn-sm btn-outline-success">
-              <i class="fa fa-euro"></i> Cobrar
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+              {{order.pending}}€
             </button>
           </form>
           {% else %}
