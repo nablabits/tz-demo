@@ -144,20 +144,12 @@ def orderlist(request, orderby):
 
     # Get the orders for each tab when tz customer exists
     if tz:
-        # DEBUG: active & delivered could be removed from exception
-        # First query the stock
+        # First query the stock, tz related queries
         tz_orders = orders.filter(customer=tz)
         tz_active = tz_orders.exclude(status__in=[7, 8])
         tz_delivered = tz_orders.filter(status=7)[:10]
 
-        # Now, the excluding tz customer queries
-        orders = orders.exclude(customer=tz)
-        delivered = orders.filter(status=7)
-        active = orders.exclude(status__in=[7, 8])
-        cancelled = orders.filter(status=8)
-        pending = orders.filter(budget__gt=F('prepaid'))
-
-        # And the attr collection
+        # And the attr collection for them
         tz_active = tz_active.annotate(Count('orderitem', distinct=True),
                                        Count('comment', distinct=True),
                                        Count('timing', distinct=True))
@@ -165,24 +157,18 @@ def orderlist(request, orderby):
                                              Count('comment', distinct=True),
                                              Count('timing', distinct=True))
 
-    # Get the orders for each tab when tz doesn't exist
+        # Finally, exclude tz customer for further queries
+        orders = orders.exclude(customer=tz)
+
+    # If tz customer doesn't exist, these vars should be none
     else:
-        delivered = orders.filter(status=7).order_by('delivery')[:10]
-        active = orders.exclude(status__in=[7, 8])
-        cancelled = orders.filter(status=8)
-        pending = orders.filter(budget__gt=F('prepaid'))
         tz_active = None
         tz_delivered = None
 
-    # Set the sorting method on view
-    if orderby == 'date':
-        active = active.order_by('delivery')
-    elif orderby == 'status':
-        active = active.order_by('status')
-    elif orderby == 'priority':
-        active = active.order_by('priority')
-    else:
-        raise Http404('Required sorting method')
+    delivered = orders.filter(status=7)
+    active = orders.exclude(status__in=[7, 8])
+    cancelled = orders.filter(status=8)
+    pending = orders.filter(budget__gt=F('prepaid'))
 
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
@@ -192,10 +178,20 @@ def orderlist(request, orderby):
     delivered = delivered.annotate(Count('orderitem', distinct=True),
                                    Count('comment', distinct=True),
                                    Count('timing', distinct=True))
-    # total pending amount
+    # Total pending amount
     budgets = pending.aggregate(Sum('budget'))
     prepaid = pending.aggregate(Sum('prepaid'))
     pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
+
+    # Finally, set the sorting method on view
+    if orderby == 'date':
+        active = active.order_by('delivery')
+    elif orderby == 'status':
+        active = active.order_by('status')
+    elif orderby == 'priority':
+        active = active.order_by('priority')
+    else:
+        raise Http404('Required sorting method')
 
     cur_user = request.user
     now = datetime.now()
