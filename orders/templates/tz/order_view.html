@@ -32,7 +32,8 @@
     <!-- Header -->
     <div class="d-flex mt-4 order_header">
       <h4 class="mr-auto">
-          <strong>Cliente: </strong>{{order.customer}}
+          <strong>Cliente: </strong>
+          <a href="{% url 'customer_view' pk=order.customer.pk %}">{{order.customer}}</a>
       </h4>
       <h4><strong>Referencia:</strong> {{order.ref_name}}</h4>
     </div>
