@@ -30,7 +30,7 @@ def main(request):
     except ObjectDoesNotExist:
         tz = None
     else:
-        pending = Order.objects.exclude(status=8).exclude(customer=tz)
+        pending = pending.exclude(customer=tz)
 
     # Total pending amount
     budgets = pending.aggregate(Sum('budget'))
