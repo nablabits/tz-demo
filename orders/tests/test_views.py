@@ -174,6 +174,19 @@ class StandardViewsTest(TestCase):
         self.assertEquals(len(resp.context['pending']), 19)
         self.assertEquals(resp.context['pending_total'], 38000)
 
+    def test_main_view_pending_orders_exclude_tz_ones(self):
+        """Pending query results should exclude tz orders."""
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        order = Order.objects.exclude(status=8)[1]
+        order.customer = tz
+        order.save()
+        resp = self.client.get(reverse('main'))
+        for order in resp.context['pending']:
+            self.assertNotEqual(order.customer.name, 'Trapuzarrak')
+
     def test_order_list(self):
         """Test the main features on order list."""
         resp = self.client.get(reverse('orderlist',
