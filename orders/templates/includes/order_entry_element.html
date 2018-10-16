@@ -14,12 +14,6 @@
             <a href="{% url 'customer_view' pk=order.customer.pk %}"> {{order.customer}}</a>
           </span>
           {% endif %}
-          <span class="ml-3 px-1">
-            <i class="fa fa-calendar"></i> Entrega: {{ order.delivery|naturalday}}
-            {% if order.overdue %}
-              <i class="fa fa-warning text-danger px-2"></i>
-            {% endif %}
-          </span>
         </div>
         <div class="d-flex">
           {% if order.prev_status != '0' %}
@@ -49,6 +43,12 @@
         <span class="px-2">{{order.orderitem__count}} <i class="fa fa-cube"></i> </span>
         <span class="px-2">{{order.comment__count}} <i class="fa fa-comment"></i> </span>
         <span class="px-2 {% if order.timing__count == 0 %}text-danger font-weight-bold{% endif %}">{{order.timing__count}} <i class="fa fa-clock-o"></i> </span>
+        <span class="px-2">
+          <i class="fa fa-calendar"></i> Entrega: {{ order.delivery|naturalday}}
+          {% if order.overdue %}
+            <i class="fa fa-warning text-danger px-1"></i>
+          {% endif %}
+        </span>
         </div>
       </div>
       <div class="col-3">
