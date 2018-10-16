@@ -22,7 +22,6 @@ def main(request):
     """Create the root view."""
     # Query all active orders
     orders = Order.objects.exclude(status__in=[7, 8]).order_by('delivery')
-    orders_count = len(orders)
     pending = Order.objects.exclude(status=8).filter(budget__gt=F('prepaid'))
 
     # Pending orders should avoid tz orders
@@ -47,16 +46,16 @@ def main(request):
     comments = Comment.objects.exclude(user=cur_user)
     comments = comments.exclude(read=True)
     comments = comments.order_by('-creation')
-    comments_count = len(comments)
 
     now = datetime.now()
 
     settings = {'orders': orders,
-                'orders_count': orders_count,
+                'orders_count': len(orders),
                 'comments': comments,
-                'comments_count': comments_count,
+                'comments_count': len(comments),
                 'pending': pending,
                 'pending_total': pending_total,
+                'pending_count': len(pending),
                 'user': cur_user,
                 'now': now,
                 'search_on': 'orders',

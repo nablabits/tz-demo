@@ -20,7 +20,7 @@
                 </thead>
                 <tbody>
                   {% for order in orders %}
-                  <tr>
+                  <tr class="js-view-list-item" data-href="/order/view/{{order.pk}}">
                     <th>
                         {{ order.customer }}
                     </th>
@@ -30,9 +30,6 @@
                     <th>
                       {{ order.delivery}}
                       {% if order.overdue %}<i class="fa fa-warning text-danger"></i> {% endif %}
-                      <a href="{% url 'order_view' pk=order.pk %}">
-                        <i class="fa fa-eye pull-right"></i>
-                      </a>
                     </th>
                   </tr>
                   {% endfor %}
@@ -43,6 +40,50 @@
         </div>
       </div>
     </section>
+
+    <section id="pending_orders">
+      <div class="container my-4">
+        <div class="d-flex justify-content-center">
+          <div class="w-75">
+            <div class="pending_ordersbox p-4 mt-2" data-toggle="collapse" data-target="#pending-list">
+              <h3>
+                <i class="fa fa-euro fa-pull-left"></i>
+                {{pending_count}} Pedidos pendientes de cobro
+                ({{pending_total}}€)
+              </h3>
+              <p>Pulsa para mostralos</p>
+            </div>
+            <div class="collapse order-list" id="pending-list">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Cliente</th>
+                    <th scope="col">Referencia</th>
+                    <th scope="col">Pendiente</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for order in pending %}
+                  <tr class="js-view-list-item" data-href="/order/view/{{order.pk}}">
+                    <th>
+                        {{ order.customer }}
+                    </th>
+                    <th>
+                        {{ order.ref_name}}
+                    </th>
+                    <th>
+                      {{ order.pending}}€
+                    </th>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section id="last_comments">
       <div class="container mt-4">
         <div class="d-flex justify-content-center">
