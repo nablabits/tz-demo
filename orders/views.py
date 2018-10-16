@@ -21,9 +21,25 @@ from datetime import datetime
 def main(request):
     """Create the root view."""
     # Query all active orders
-    orders = Order.objects.exclude(status=7).order_by('delivery')
-    orders = orders.exclude(status=8)
+    orders = Order.objects.exclude(status__in=[7, 8]).order_by('delivery')
     orders_count = len(orders)
+    pending = Order.objects.exclude(status=8).filter(budget__gt=F('prepaid'))
+
+    # Pending orders should avoid tz orders
+    try:
+        tz = Customer.objects.get(name__iexact='trapuzarrak')
+    except ObjectDoesNotExist:
+        tz = None
+    else:
+        pending = Order.objects.exclude(status=8).exclude(customer=tz)
+
+    # Total pending amount
+    budgets = pending.aggregate(Sum('budget'))
+    prepaid = pending.aggregate(Sum('prepaid'))
+    try:
+        pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
+    except TypeError:
+        pending_total = 0
 
     cur_user = request.user
 
@@ -39,6 +55,8 @@ def main(request):
                 'orders_count': orders_count,
                 'comments': comments,
                 'comments_count': comments_count,
+                'pending': pending,
+                'pending_total': pending_total,
                 'user': cur_user,
                 'now': now,
                 'search_on': 'orders',

@@ -168,6 +168,12 @@ class StandardViewsTest(TestCase):
         self.assertEqual(str(resp.context['comments'][0].comment), 'Comment8')
         self.assertEqual(str(resp.context['user']), 'regular')
 
+    def test_main_view_pending_orders(self):
+        """Test the proper display of pending orders on main view."""
+        resp = self.client.get(reverse('main'))
+        self.assertEquals(len(resp.context['pending']), 19)
+        self.assertEquals(resp.context['pending_total'], 38000)
+
     def test_order_list(self):
         """Test the main features on order list."""
         resp = self.client.get(reverse('orderlist',
