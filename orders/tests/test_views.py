@@ -4,7 +4,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, OrderItem, Comment, Timing
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
