@@ -1,7 +1,7 @@
 """Test the app models."""
 from django.test import TestCase
 from orders.models import Customer, Order, Comment, Timing
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib.auth.models import User
 from datetime import date
 
@@ -109,6 +109,11 @@ class ModelTest(TestCase):
         time = Timing.objects.get(notes='time test')
         order = Order.objects.latest('inbox_date')
         self.assertEqual(time.reference, order)
+
+    def test_timing_only_accepts_floats(self):
+        """Ensure that duration strings are not allowed."""
+        with self.assertRaises(ValidationError):
+            Timing.objects.create(time='0:35')
 
 
 class TimingSpecial(TestCase):
