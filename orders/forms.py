@@ -66,7 +66,7 @@ class TimeForm(forms.ModelForm):
 
         model = Timing
         fields = ('reference',
-                  'item', 'item_class', 'activity', 'qty', 'time', 'notes')
+                  'item', 'item_class', 'activity', 'qty', 'notes')
 
     def __init__(self, *args, **kwargs):
         """Override the order in the reference dropdown."""
