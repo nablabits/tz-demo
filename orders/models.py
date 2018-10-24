@@ -5,6 +5,7 @@ Its intended use is for business related to tailor made clothes.
 
 from django.db import models
 from django.utils import timezone
+from .utils import TimeLenght
 from datetime import date
 
 
@@ -185,3 +186,7 @@ class Timing(models.Model):
     def __str__(self):
         """Object's representation."""
         return '{}x{}'.format(self.get_item_display(), self.qty)
+
+    def output(self):
+        """Represent times by its str converted form H:MM."""
+        return TimeLenght(float(self.time)).convert()
