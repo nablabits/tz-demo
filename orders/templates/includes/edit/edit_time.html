@@ -13,15 +13,46 @@
     <h4 class="modal-title">Editar Tiempo</h4>
   </div>
   <div class="modal-body">
-  {% for field in form.visible_fields %}
-    <div class="form-group">
-      {{ field.label_tag }}
-      {% render_field field class="form-control" %}
-      {% if field.help_text %}
-        <small class="form-text text-muted">{{ field.help_text }}</small>
-      {% endif %}
+    <input type="hidden" name="{{form.reference.name}}" value="{{form.reference.value}}">
+
+    <div class="row">
+      <div class="col">
+        <div class="form-group">
+          {{form.item.label_tag}}
+          {% render_field form.item class="form-control" %}
+        </div>
+      </div>
+      <div class="col">
+        <div class="form-group">
+          {{form.item_class.label_tag}}
+          {% render_field form.item_class class="form-control" %}
+        </div>
+      </div>
+      <div class="col">
+        <div class="form-group">
+          {{form.activity.label_tag}}
+          {% render_field form.activity class="form-control" %}
+        </div>
+      </div>
     </div>
-  {% endfor %}
+    <div class="row">
+      <div class="col">
+        <div class="form-group">
+          {{form.qty.label_tag}}
+          <input type="number" class="form-control" name="{{form.qty.name}}" value="{{form.qty.value}}">
+        </div>
+      </div>
+      <div class="col">
+        <div class="form-group">
+          <label for="id_time">Tiempo (H:MM)</label>
+          <input type="text" class="form-control" name="time" value="{{order.time_str}}" step="0.25" placeholder="2:30">
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      {{form.notes.label_tag}}
+      <textarea class="form-control" name="{{form.notes.name}}" value="{{form.notes.value}}"></textarea>
+    </div>
   <input type="hidden" name="pk" value="{{ time.pk }}">
   <input type="hidden" name="action" value="time-edit">
   </div>
