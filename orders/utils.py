@@ -3,7 +3,7 @@ import re
 
 
 class TimeLenght(object):
-    """Convert floats into HH:MM and viceversa."""
+    """Convert floats into H:MM and viceversa."""
 
     def __init__(self, time):
         """Start out the object."""
