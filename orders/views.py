@@ -5,6 +5,7 @@ from django.views import View
 from django.http import JsonResponse, Http404, HttpResponseBadRequest
 from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Timing
+from .utils import TimeLenght
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm
 from .forms import OrderCloseForm, OrderItemForm, TimeForm
@@ -517,7 +518,10 @@ class Actions(View):
             order = get_object_or_404(Order, pk=pk)
             form = TimeForm(request.POST)
             if form.is_valid():
-                form.save()
+                new_time = form.save(commit=False)
+                duration_str = request.POST.get('time')
+                new_time.time = TimeLenght(duration_str).convert()
+                new_time.save()
                 times = Timing.objects.filter(reference=order)
                 template = 'includes/timing_list.html'
                 context = {'times': times, 'order': order}
@@ -599,7 +603,10 @@ class Actions(View):
             if form.is_valid():
                 context = {'order': order, 'times': times}
                 template = 'includes/timing_list.html'
-                form.save()
+                new_time = form.save(commit=False)
+                duration_str = request.POST.get('time')
+                new_time.time = TimeLenght(duration_str).convert()
+                new_time.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#timing-list'
             else:
