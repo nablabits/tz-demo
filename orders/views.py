@@ -245,6 +245,12 @@ def order_view(request, pk):
     items = OrderItem.objects.filter(reference=order)
     times = Timing.objects.filter(reference=order)
     total_time = times.aggregate(Sum('time'))
+    try:
+        float_time = float(total_time['time__sum'])
+    except TypeError:
+        total_time = '0:00'
+    else:
+        total_time = TimeLenght(float_time).convert()
 
     if order.status == '7' and order.budget == order.prepaid:
         closed = True
