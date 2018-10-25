@@ -46,6 +46,11 @@ class TimeLenghtTest(TestCase):
         time = TimeLenght(5.5)
         self.assertEqual(time.convert(), '5:30')
 
+    def test_time_rounds_to_5_min(self):
+        """Time outputs should increase by 5 min step."""
+        time = TimeLenght(1.33)
+        self.assertEqual(time.convert(), '1:20')
+
     def test_time_converts_duration_to_float(self):
         """Test the proper conversion of form entries into floats."""
         time = TimeLenght('5:30')
