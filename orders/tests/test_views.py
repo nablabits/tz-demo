@@ -1438,7 +1438,7 @@ class ActionsPostMethodCreate(TestCase):
                                               'item_class': '2',
                                               'activity': '2',
                                               'notes': 'Test note',
-                                              'time': 0.5,
+                                              'time': '0:30',
                                               'action': 'time-new',
                                               'pk': order.pk,
                                               'test': True})
@@ -1453,7 +1453,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'activity': '2',
                                  'qty': 2,
                                  'notes': 'Test note',
-                                 'time': 0.5,
+                                 'time': '0:30',
                                  'action': 'time-new',
                                  'pk': order.pk,
                                  'test': True})
@@ -1893,7 +1893,7 @@ class ActionsPostMethodEdit(TestCase):
                                 {'item': '2',
                                  'item_class': '2',
                                  'activity': '2',
-                                 'time': 2,
+                                 'time': '2:00',
                                  'qty': 3,
                                  'notes': 'Modified time',
                                  'pk': time.pk,
