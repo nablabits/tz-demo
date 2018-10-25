@@ -263,7 +263,7 @@ def order_view(request, pk):
                 'items': items,
                 'comments': comments,
                 'times': times,
-                'total_time': total_time['time__sum'],
+                'total_time': total_time,
                 'closed': closed,
                 'user': cur_user,
                 'now': now,
@@ -605,13 +605,16 @@ class Actions(View):
             time = Timing.objects.select_related('reference').get(pk=pk)
             order = time.reference
             times = Timing.objects.filter(reference=order)
+            try:
+                form_time = TimeLenght(request.POST.get('time')).convert()
+            except ValueError:
+                form_time = False
             form = TimeForm(request.POST, instance=time)
-            if form.is_valid():
+            if form.is_valid() and form_time:
                 context = {'order': order, 'times': times}
                 template = 'includes/timing_list.html'
                 new_time = form.save(commit=False)
-                duration_str = request.POST.get('time')
-                new_time.time = TimeLenght(duration_str).convert()
+                new_time.time = form_time
                 new_time.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#timing-list'
