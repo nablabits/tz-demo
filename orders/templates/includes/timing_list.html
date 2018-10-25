@@ -4,7 +4,7 @@
           <h4 class="font-weight-bold mr-auto">
             Tiempos Registrados:
             {% if total_time %}
-              {{total_time}} h
+              {{total_time}}
             {% endif %}
           </h4>
           <button class="ml-2 btn btn-outline-success js-time-add" data-action="time-from-order" data-pk="{{order.pk}}" id="time-add"><i class="fa fa-clock-o"></i> Añadir tiempo</button>
@@ -29,7 +29,7 @@
               <i class="fa fa-edit px-1"></i>
               {% endif %}
             </th>
-            <th>{{time.output}}h</th>
+            <th>{{time.output}}</th>
             <th>
               <button class="ml-2 mr-3 btn btn-outline-success js-time-edit" data-action="order-edit-time" data-pk="{{time.pk}}"><i class="fa fa-edit"></i> Editar</button>
               <button class="ml-2 mr-3 btn btn-outline-danger js-time-delete" data-action="time-delete" data-pk="{{time.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
