@@ -1,4 +1,4 @@
-""" Some utilities to use in the app."""
+"""Some utilities to use in the app."""
 import re
 
 
@@ -29,16 +29,22 @@ class TimeLenght(object):
         return way
 
     def convert(self):
-        """Convert the given time into float or duration."""
+        """Convert the given time into float or duration.
+
+        Durations increase by 5' step.
+        """
         direction = self.direction()
         if direction == 'FL':
             hours = int(self.time)
             minutes = int((self.time - hours) * 60)
+            minutes = round(minutes / 10) * 10
             conversion = ('%s:%s' % (hours, minutes))
         elif direction == 'LF':
             duration = self.time.split(':')
             hours = float(duration[0])
             minutes = float(duration[1]) / 60
             conversion = round(hours + minutes, 2)
+        else:
+            raise ValueError('No valid direction was given')
 
         return conversion
