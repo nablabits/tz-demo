@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
 from .utils import TimeLenght
+from . import settings
 from datetime import date
 
 
@@ -191,3 +192,25 @@ class Timing(models.Model):
     def output(self):
         """Represent times by its str converted form H:MM."""
         return TimeLenght(float(self.time)).convert()
+
+
+class Item(models.Model):
+    """Hold the different types of items (clothes) and the fabrics needed."""
+
+    name = models.CharField('Nombre', max_length=64)
+    item_type = models.CharField('Tipo de prenda',
+                                 max_length=2,
+                                 choices=settings.ITEM_TYPE,
+                                 default=0)
+    item_class = models.CharField('Acabado',
+                                  max_length=1,
+                                  choices=settings.ITEM_CLASSES,
+                                  default='1')
+    size = models.CharField('Talla', max_length=3, default='1')
+    notes = models.TextField('Observaciones', blank=True, null=True)
+    fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
+
+    def __str__(self):
+        """Object's representation."""
+        return '{} {} {}-{}'.format(self.get_item_type_display(), self.name,
+                                    self.item_class, self.size)
