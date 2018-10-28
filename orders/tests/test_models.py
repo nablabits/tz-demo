@@ -1,6 +1,6 @@
 """Test the app models."""
 from django.test import TestCase
-from orders.models import Customer, Order, Comment, Timing
+from orders.models import Customer, Order, Comment, Timing, Item
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib.auth.models import User
 from datetime import date
@@ -114,6 +114,18 @@ class ModelTest(TestCase):
         """Ensure that duration strings are not allowed."""
         with self.assertRaises(ValidationError):
             Timing.objects.create(time='0:35')
+
+    def test_item_creation(self):
+        """Test the proper creation of items."""
+        new_item = Item.objects.create(name='Test item',
+                                       item_type='2',
+                                       item_class='S',
+                                       size='10',
+                                       notes='Default notes',
+                                       fabrics=5.2)
+        first_item = Item.objects.all()[0]
+        self.assertEqual(first_item, new_item)
+        self.assertEqual(first_item.__str__(), 'Pantalón Test item S-10')
 
 
 class TimingSpecial(TestCase):
