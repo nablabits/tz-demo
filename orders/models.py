@@ -5,6 +5,7 @@ Its intended use is for business related to tailor made clothes.
 
 from django.db import models
 from django.utils import timezone
+from django.core.exceptions import ObjectDoesNotExist
 from .utils import TimeLenght
 from datetime import date
 
@@ -179,7 +180,7 @@ class Timing(models.Model):
         order = Order.objects.latest('inbox_date')
         try:
             self.reference
-        except:
+        except ObjectDoesNotExist:
             self.reference = order
         super().save(*args, **kwargs)
 
