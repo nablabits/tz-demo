@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from .utils import TimeLenght
 from . import settings
-from datetime import date
+from datetime import date, timedelta
 
 
 class Customer(models.Model):
@@ -160,11 +160,22 @@ class OrderItem(models.Model):
         ('11', 'Azpikogona'),
         ('12', 'Traje de niña'),
     )
+    # Item & size will be deprecated, keep them until backup
     item = models.CharField('Prenda', max_length=2, choices=ITEMS, default='1')
     size = models.CharField('Talla', max_length=3, default='1')
+
+    # Element field should be renamed after backup all the previous fields.
+    default = Item.objects.get(name='Predeterminado')
+    element = models.ManyToManyField(Item, default=default.pk)
+
     qty = models.IntegerField('Cantidad', default=1)
     description = models.CharField('descripcion', max_length=255, blank=True)
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
+
+    # Timing stuff now goes here
+    crop = models.DurationField('Corte', default=timedelta(0))
+    sewing = models.DurationField('Confeccion', default=timedelta(0))
+    iron = models.DurationField('Planchado', default=timedelta(0))
 
 
 class Comment(models.Model):
