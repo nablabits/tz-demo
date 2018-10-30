@@ -5,7 +5,7 @@ Its intended use is for business related to tailor made clothes.
 
 from django.db import models
 from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from .utils import TimeLenght
 from . import settings
 from datetime import date
@@ -214,3 +214,22 @@ class Item(models.Model):
         """Object's representation."""
         return '{} {} {}-{}'.format(self.get_item_type_display(), self.name,
                                     self.item_class, self.size)
+
+    def save(self, *args, **kwargs):
+        """Override save method.
+
+        Item named Predeterminado is reserved, so raise an exception.
+        """
+        if self.name == 'Predeterminado':
+            try:
+                Item.objects.get(name='Predeterminado')
+            except ObjectDoesNotExist:
+                super().save(*args, **kwargs)
+            else:
+                raise ValidationError('\'Predeterminado\' name is reserved')
+        else:
+            super().save(*args, **kwargs)
+#
+#
+#
+#
