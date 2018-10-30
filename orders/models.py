@@ -145,7 +145,8 @@ class Comment(models.Model):
 class Timing(models.Model):
     """Timing let us track production times.
 
-    Time should be given in hours.
+    Time should be given in hours. This model is deprecated since timesnow are
+    stored per OrderItem.
     """
 
     ITEMS = OrderItem.ITEMS
