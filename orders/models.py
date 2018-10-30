@@ -102,9 +102,47 @@ class Order(models.Model):
         return str(int(self.status)+1)
 
 
+class Item(models.Model):
+    """Hold the different types of items (clothes) and the fabrics needed."""
+
+    name = models.CharField('Nombre', max_length=64)
+    item_type = models.CharField('Tipo de prenda',
+                                 max_length=2,
+                                 choices=settings.ITEM_TYPE,
+                                 default=0)
+    item_class = models.CharField('Acabado',
+                                  max_length=1,
+                                  choices=settings.ITEM_CLASSES,
+                                  default='1')
+    size = models.CharField('Talla', max_length=3, default='1')
+    notes = models.TextField('Observaciones', blank=True, null=True)
+    fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
+
+    def __str__(self):
+        """Object's representation."""
+        return '{} {} {}-{}'.format(self.get_item_type_display(), self.name,
+                                    self.item_class, self.size)
+
+    def save(self, *args, **kwargs):
+        """Override save method.
+
+        Item named Predeterminado is reserved, so raise an exception.
+        """
+        if self.name == 'Predeterminado':
+            try:
+                Item.objects.get(name='Predeterminado')
+            except ObjectDoesNotExist:
+                super().save(*args, **kwargs)
+            else:
+                raise ValidationError('\'Predeterminado\' name is reserved')
+        else:
+            super().save(*args, **kwargs)
+
+
 class OrderItem(models.Model):
     """Each order can have one or several clothes."""
 
+    # Items are now stored in settings, but keep'em until backup.
     ITEMS = (
         ('1', 'Falda'),
         ('2', 'Pantalón'),
@@ -195,41 +233,6 @@ class Timing(models.Model):
         return TimeLenght(float(self.time)).convert()
 
 
-class Item(models.Model):
-    """Hold the different types of items (clothes) and the fabrics needed."""
-
-    name = models.CharField('Nombre', max_length=64)
-    item_type = models.CharField('Tipo de prenda',
-                                 max_length=2,
-                                 choices=settings.ITEM_TYPE,
-                                 default=0)
-    item_class = models.CharField('Acabado',
-                                  max_length=1,
-                                  choices=settings.ITEM_CLASSES,
-                                  default='1')
-    size = models.CharField('Talla', max_length=3, default='1')
-    notes = models.TextField('Observaciones', blank=True, null=True)
-    fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
-
-    def __str__(self):
-        """Object's representation."""
-        return '{} {} {}-{}'.format(self.get_item_type_display(), self.name,
-                                    self.item_class, self.size)
-
-    def save(self, *args, **kwargs):
-        """Override save method.
-
-        Item named Predeterminado is reserved, so raise an exception.
-        """
-        if self.name == 'Predeterminado':
-            try:
-                Item.objects.get(name='Predeterminado')
-            except ObjectDoesNotExist:
-                super().save(*args, **kwargs)
-            else:
-                raise ValidationError('\'Predeterminado\' name is reserved')
-        else:
-            super().save(*args, **kwargs)
 #
 #
 #
