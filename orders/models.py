@@ -138,6 +138,9 @@ class Item(models.Model):
         else:
             super().save(*args, **kwargs)
 
+    class Meta:
+        ordering = ('name',)
+
 
 class OrderItem(models.Model):
     """Each order can have one or several clothes."""
