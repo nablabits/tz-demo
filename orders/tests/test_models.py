@@ -117,15 +117,27 @@ class ModelTest(TestCase):
 
     def test_item_creation(self):
         """Test the proper creation of items."""
-        new_item = Item.objects.create(name='Test item',
-                                       item_type='2',
-                                       item_class='S',
-                                       size='10',
-                                       notes='Default notes',
-                                       fabrics=5.2)
-        first_item = Item.objects.all()[0]
-        self.assertEqual(first_item, new_item)
-        self.assertEqual(first_item.__str__(), 'Pantalón Test item S-10')
+        Item.objects.create(name='Test item',
+                            item_type='2',
+                            item_class='S',
+                            size='10',
+                            notes='Default notes',
+                            fabrics=5.2)
+        self.assertTrue(Item.objects.get(name='Test item'))
+
+    def test_default_item_should_be_automatically_created(self):
+        """The default item is created by a migration."""
+        default = Item.objects.get(name='Predeterminado')
+        self.assertTrue(default)
+
+    def test_the_item_named_default_is_reserved(self):
+        """The item named default is reserved and raises ValidationError."""
+        with self.assertRaises(ValidationError):
+            Item.objects.create(name='Predeterminado',
+                                item_type='0',
+                                item_class='0',
+                                size='0',
+                                fabrics=2.2)
 
 
 class TimingSpecial(TestCase):
