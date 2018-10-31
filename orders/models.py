@@ -165,6 +165,7 @@ class OrderItem(models.Model):
     size = models.CharField('Talla', max_length=3, default='1')
 
     # Element field should be renamed after backup all the previous fields.
+    # on deploying disable default value and add blank=True
     default = Item.objects.get(name='Predeterminado')
     element = models.ManyToManyField(Item, default=default.pk)
 
