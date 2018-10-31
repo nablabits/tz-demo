@@ -12,19 +12,20 @@ urlpatterns = [
     path('', views.main, name='main'),
     path('search', views.search, name='search'),
 
-    # Order related urls
+    # List related urls
     re_path(r'^orders&orderby=(?P<orderby>\D+)/',
             views.orderlist, name='orderlist'),
+    path('customers', views.customerlist, name='customerlist'),
+    path('items', views.itemslist, name='itemslist'),
+
+    # Object related urls
     re_path(r'^order/view/(?P<pk>[0-9]+)$',
             views.order_view, name='order_view'),
-
-    # Order related urls (AJAX implementation)
-    path('actions/', views.Actions.as_view(), name='actions'),
-
-    # Customer related urls
-    path('customers', views.customerlist, name='customerlist'),
     re_path(r'^customer_view/(?P<pk>[0-9]+)$',
             views.customer_view, name='customer_view'),
+
+    # AJAX related urls
+    path('actions/', views.Actions.as_view(), name='actions'),
 
     # Loging related urls
     path('accounts/login/', auth_views.login, name='login'),
