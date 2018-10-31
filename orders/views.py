@@ -123,7 +123,7 @@ def search(request):
         raise TypeError('Invalid request method')
 
 
-# Order related views
+# List views
 @login_required
 def orderlist(request, orderby):
     """Display all orders in a view.
@@ -238,6 +238,36 @@ def orderlist(request, orderby):
 
 
 @login_required
+def customerlist(request):
+    """Display all customers or search'em."""
+    # customers = Customer.objects.annotate(num_orders=Count('order'))
+    customers = Customer.objects.all().order_by('name')
+    page = request.GET.get('page', 1)
+    paginator = Paginator(customers, 5)
+    try:
+        customers = paginator.page(page)
+    except PageNotAnInteger:
+        customers = paginator.page(1)
+    except EmptyPage:
+        customers = paginator.page(paginator.num_pages)
+
+    cur_user = request.user
+    now = datetime.now()
+
+    settings = {'customers': customers,
+                'user': cur_user,
+                'now': now,
+                'search_on': 'customers',
+                'placeholder': 'Buscar cliente',
+                'title': 'TrapuZarrak · Clientes',
+                'footer': True,
+                }
+
+    return render(request, 'tz/customers.html', settings)
+
+
+# Object views
+@login_required
 def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
@@ -274,6 +304,38 @@ def order_view(request, pk):
     return render(request, 'tz/order_view.html', settings)
 
 
+@login_required
+def customer_view(request, pk):
+    """Display details for an especific customer."""
+    customer = get_object_or_404(Customer, pk=pk)
+    orders = Order.objects.filter(customer=customer)
+    active = orders.exclude(status__in=[7, 8]).order_by('delivery')
+    delivered = orders.filter(status=7).order_by('delivery')
+    cancelled = orders.filter(status=8).order_by('delivery')
+
+    # Evaluate pending orders
+    pending = []
+    for order in orders:
+        if order.pending < 0:
+            pending.append(order)
+
+    cur_user = request.user
+    now = datetime.now()
+    settings = {'customer': customer,
+                'orders_active': active,
+                'orders_delivered': delivered,
+                'orders_cancelled': cancelled,
+                'pending': pending,
+                'orders_made': len(orders),
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Ver cliente',
+                'footer': True,
+                }
+    return render(request, 'tz/customer_view.html', settings)
+
+
+# Ajax powered views
 class Actions(View):
     """Unify all the AJAX actions in a single view.
 
@@ -725,64 +787,3 @@ class Actions(View):
         # Now render_to_string the html for JSON response
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
-
-
-# Customer related views
-@login_required
-def customerlist(request):
-    """Display all customers or search'em."""
-    # customers = Customer.objects.annotate(num_orders=Count('order'))
-    customers = Customer.objects.all().order_by('name')
-    page = request.GET.get('page', 1)
-    paginator = Paginator(customers, 5)
-    try:
-        customers = paginator.page(page)
-    except PageNotAnInteger:
-        customers = paginator.page(1)
-    except EmptyPage:
-        customers = paginator.page(paginator.num_pages)
-
-    cur_user = request.user
-    now = datetime.now()
-
-    settings = {'customers': customers,
-                'user': cur_user,
-                'now': now,
-                'search_on': 'customers',
-                'placeholder': 'Buscar cliente',
-                'title': 'TrapuZarrak · Clientes',
-                'footer': True,
-                }
-
-    return render(request, 'tz/customers.html', settings)
-
-
-@login_required
-def customer_view(request, pk):
-    """Display details for an especific customer."""
-    customer = get_object_or_404(Customer, pk=pk)
-    orders = Order.objects.filter(customer=customer)
-    active = orders.exclude(status__in=[7, 8]).order_by('delivery')
-    delivered = orders.filter(status=7).order_by('delivery')
-    cancelled = orders.filter(status=8).order_by('delivery')
-
-    # Evaluate pending orders
-    pending = []
-    for order in orders:
-        if order.pending < 0:
-            pending.append(order)
-
-    cur_user = request.user
-    now = datetime.now()
-    settings = {'customer': customer,
-                'orders_active': active,
-                'orders_delivered': delivered,
-                'orders_cancelled': cancelled,
-                'pending': pending,
-                'orders_made': len(orders),
-                'user': cur_user,
-                'now': now,
-                'title': 'TrapuZarrak · Ver cliente',
-                'footer': True,
-                }
-    return render(request, 'tz/customer_view.html', settings)
