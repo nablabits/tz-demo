@@ -489,6 +489,13 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['orders_made'], 10)
         self.assertEqual(len(resp.context['pending']), 9)
 
+    def test_items_view_default_item(self):
+        """In the begining just one item should be on db."""
+        resp = self.client.get(reverse('itemslist'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/items.html')
+        self.assertEqual(len(resp.context['items']), 1)
+
 
 class SearchBoxTest(TestCase):
     """Test the standard views."""
