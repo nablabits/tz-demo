@@ -1,0 +1,12 @@
+{% extends "tz/base.html" %}
+{% block items %}
+<div class="container">
+  <div class="d-flex-column my-4">
+    <h3>Todos los clientes:</h3>
+      <button type="button" class="btn btn-outline-success js-item-add" data-action="item-add"  data-pk="0">
+        <i class="fa fa-plus"></i> Nuevo Item
+      </button>
+  </div>
+  {% include 'includes/items_list.html' %}
+</div>
+{% endblock %}

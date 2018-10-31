@@ -1,0 +1,20 @@
+<table class="table">
+<thead>
+  <tr>
+    <th scope="col">Identificador</th>
+    <th scope="col">Tela</th>
+    <th scope="col">Notas</th>
+  </tr>
+</thead>
+<tbody>
+  {% for item in items %}
+  <tr class="js-view-list-item" data-href="{% url 'customer_view' pk=item.pk %}">
+    <th>{{item.item_type}} {{item.name}} {{item.item_class}}-{{item.size}}</th>
+    <th>{{ item.fabrics}}</th>
+    <th>
+      {{ item.notes }}
+    </th>
+  </tr>
+  {% endfor %}
+</tbody>
+</table>
