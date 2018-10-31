@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.http import JsonResponse, Http404, HttpResponseBadRequest
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, OrderItem, Timing
+from .models import Comment, Customer, Order, OrderItem, Timing, Item
 from .utils import TimeLenght
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm
@@ -264,6 +264,23 @@ def customerlist(request):
                 }
 
     return render(request, 'tz/customers.html', settings)
+
+
+@login_required
+def itemslist(request):
+    """Show the different item objects."""
+    items = Item.objects.all()
+    cur_user = request.user
+    now = datetime.now()
+
+    settings = {'items': items,
+                'user': cur_user,
+                'now': now,
+                'title': 'TrapuZarrak · Items',
+                'footer': True,
+                }
+
+    return render(request, 'tz/items.html', settings)
 
 
 # Object views
