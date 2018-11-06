@@ -1,8 +1,9 @@
 {% extends "tz/base.html" %}
 {% block items %}
-<div class="container">
+{% include 'includes/search_box.html' %}
+<div class="container mt-4">
   <div class="d-flex-column my-4">
-    <h3>Todos los clientes:</h3>
+    <h3>Todos los Items:</h3>
       <button type="button" class="btn btn-outline-success js-item-add" data-action="item-add"  data-pk="0">
         <i class="fa fa-plus"></i> Nuevo Item
       </button>
