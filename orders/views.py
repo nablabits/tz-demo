@@ -276,6 +276,8 @@ def itemslist(request):
     settings = {'items': items,
                 'user': cur_user,
                 'now': now,
+                'placeholder': 'Buscar item',
+                'search_on': 'items',
                 'title': 'TrapuZarrak · Items',
                 'footer': True,
                 }
