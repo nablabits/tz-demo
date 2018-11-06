@@ -407,17 +407,29 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('customerlist'))
 
         self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/customers.html')
+        self.assertTemplateUsed(resp, 'tz/list_view.html')
 
         ctx = resp.context
         self.assertEqual(str(ctx['user']), 'regular')
+
+    def test_customer_list_context_vars(self):
+        """Test the correct context vars."""
+        resp = self.client.get(reverse('customerlist'))
+        self.assertEqual(resp.context['placeholder'], 'Buscar cliente')
+        self.assertEqual(resp.context['search_on'], 'customers')
+        self.assertEqual(resp.context['h3'], 'Todos los clientes')
+        self.assertEqual(resp.context['js_class'], 'js-customer-add')
+        self.assertEqual(resp.context['js_action'], 'customer-add')
+        self.assertEqual(resp.context['js_data_pk'], '0')
+        self.assertEqual(resp.context['btn_title'], 'Nuevo cliente')
+        self.assertEqual(resp.context['include_template'],
+                         'includes/customer_list.html')
 
     def test_customer_list_paginator(self):
         """Test paginator functionality on customer list."""
         resp = self.client.get('/customers')
 
         self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/customers.html')
 
         customers = resp.context['customers']
         self.assertFalse(customers.has_previous())
