@@ -1,0 +1,13 @@
+{% extends "tz/base.html" %}
+{% block items %}
+{% include 'includes/search_box.html' %}
+<div class="container mt-4">
+  <div class="d-flex-column my-4">
+    <h3>{{h3}}</h3>
+      <button type="button" class="btn btn-outline-success {{js_class}}" data-action="{{js_action}}"  data-pk="{{js_data_pk}}">
+        <i class="fa fa-plus"></i> {{btn_title}}
+      </button>
+  </div>
+  {% include include_template %}
+</div>
+{% endblock %}

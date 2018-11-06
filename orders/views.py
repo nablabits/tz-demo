@@ -260,10 +260,16 @@ def customerlist(request):
                 'search_on': 'customers',
                 'placeholder': 'Buscar cliente',
                 'title': 'TrapuZarrak · Clientes',
+                'h3': 'Todos los clientes',
+                'js_class': 'js-customer-add',
+                'js_action': 'customer-add',
+                'js_data_pk': '0',
+                'btn_title': 'Nuevo cliente',
+                'include_template': 'includes/customer_list.html',
                 'footer': True,
                 }
 
-    return render(request, 'tz/customers.html', settings)
+    return render(request, 'tz/list_view.html', settings)
 
 
 @login_required
@@ -279,10 +285,16 @@ def itemslist(request):
                 'placeholder': 'Buscar item',
                 'search_on': 'items',
                 'title': 'TrapuZarrak · Items',
+                'h3': 'Todos los items',
+                'js_class': 'js-item-add',
+                'js_action': 'item-add',
+                'js_data_pk': '0',
+                'btn_title': 'Añadir prenda',
+                'include_template': 'includes/items_list.html',
                 'footer': True,
                 }
 
-    return render(request, 'tz/items.html', settings)
+    return render(request, 'tz/list_view.html', settings)
 
 
 # Object views
