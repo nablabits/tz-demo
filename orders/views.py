@@ -336,6 +336,13 @@ def order_view(request, pk):
                 'user': cur_user,
                 'now': now,
                 'title': 'TrapuZarrak · Ver Pedido',
+
+                # CRUD Actions
+                'btn_title_add': 'Añadir prenda',
+                'js_action_add': 'order-item-add',
+                'js_action_edit': 'order-item-edit',
+                'js_action_delete': 'order-item-delete',
+                'js_data_pk': order.pk,
                 'footer': True,
                 }
 
@@ -431,12 +438,19 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Add item (GET)
-        elif action == 'order-add-item':
+        # Add order item (GET)
+        elif action == 'order-item-add':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm()
-            context = {'order': order, 'form': form}
-            template = 'includes/add/add_item_to_order.html'
+            context = {'form': form,
+                       'order': order,
+                       'modal_title': 'Añadir prenda',
+                       'pk': order.pk,
+                       'action': 'order-item-add',
+                       'submit_btn': 'Añadir',
+                       'custom_form': 'includes/custom_forms/order_item.html',
+                       }
+            template = 'includes/regular_form.html'
 
         # Add a comment (GET)
         elif action == 'order-add-comment':
@@ -497,14 +511,21 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Edit item (GET)
-        elif action == 'order-edit-item':
+        # Edit order item (GET)
+        elif action == 'order-item-edit':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
-            order = item.reference
             form = OrderItemForm(instance=item)
             context = {'item': item, 'form': form}
-            template = 'includes/edit/edit_item.html'
+            context = {'form': form,
+                       'item': item,
+                       'modal_title': 'Editar prenda',
+                       'pk': item.reference.pk,
+                       'action': 'order-item-edit',
+                       'submit_btn': 'Guardar',
+                       'custom_form': 'includes/custom_forms/order_item.html',
+                       }
+            template = 'includes/regular_form.html'
 
         # Edit time (GET)
         elif action == 'order-edit-time':
@@ -523,12 +544,17 @@ class Actions(View):
                        'action': 'object-item-delete'}
             template = 'includes/delete_confirmation.html'
 
-        # Delete item (GET)
-        elif action == 'order-delete-item':
+        # Delete order item (GET)
+        elif action == 'order-item-delete':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
-            context = {'item': item}
-            template = 'includes/delete/delete_item.html'
+            context = {'modal_title': 'Eliminar prenda',
+                       'msg': 'Realmente borrar la prenda?',
+                       'pk': item.pk,
+                       'action': 'order-item-delete'}
+            template = 'includes/delete_confirmation.html'
+            # context = {'item': item}
+            # template = 'includes/delete/delete_item.html'
 
         # Delete Customer (GET)
         elif action == 'customer-delete':
@@ -649,7 +675,7 @@ class Actions(View):
                 template = 'includes/items_list.html'
 
         # Attach item to order (POST)
-        elif action == 'order-add-item':
+        elif action == 'order-item-add':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm(request.POST)
             if form.is_valid():
@@ -658,7 +684,16 @@ class Actions(View):
                 add_item.save()
                 items = OrderItem.objects.filter(reference=order)
                 template = 'includes/order_details.html'
-                context = {'form': form, 'order': order, 'items': items}
+                # context = {'form': form, 'order': order, 'items': items}
+                context = {'items': items,
+                           'order': order,
+                           'btn_title_add': 'Añadir prenda',
+                           'js_action_add': 'order-item-add',
+                           'js_action_edit': 'order-item-edit',
+                           'js_action_delete': 'order-item-delete',
+                           'js_data_pk': order.pk,
+                           }
+
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-details'
             else:
@@ -743,16 +778,22 @@ class Actions(View):
                            }
                 template = 'includes/items_list.html'
 
-        # Edit item (POST)
-        elif action == 'order-edit-item':
+        # Edit order item (POST)
+        elif action == 'order-item-edit':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             order = item.reference
             form = OrderItemForm(request.POST, instance=item)
             items = OrderItem.objects.filter(reference=order)
             if form.is_valid():
-                # DEBUG: get rid of 'form'
-                context = {'form': form, 'order': order, 'items': items}
+                context = {'items': items,
+                           'order': order,
+                           'btn_title_add': 'Añadir prenda',
+                           'js_action_add': 'order-item-add',
+                           'js_action_edit': 'order-item-edit',
+                           'js_action_delete': 'order-item-delete',
+                           'js_data_pk': order.pk,
+                           }
                 template = 'includes/order_details.html'
                 form.save()
                 data['form_is_valid'] = True
@@ -849,7 +890,7 @@ class Actions(View):
             template = 'includes/items_list.html'
 
         # Delete item (POST)
-        elif action == 'order-delete-item':
+        elif action == 'order-item-delete':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             order = item.reference
@@ -857,7 +898,14 @@ class Actions(View):
             item.delete()
             data['form_is_valid'] = True
             data['html_id'] = '#order-details'
-            context = {'order': order, 'items': items}
+            context = {'items': items,
+                       'order': order,
+                       'btn_title_add': 'Añadir prenda',
+                       'js_action_add': 'order-item-add',
+                       'js_action_edit': 'order-item-edit',
+                       'js_action_delete': 'order-item-delete',
+                       'js_data_pk': order.pk,
+                       }
             template = 'includes/order_details.html'
 
         # delete time (POST)
