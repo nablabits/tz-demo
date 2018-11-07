@@ -7,7 +7,7 @@ from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Timing, Item
 from .utils import TimeLenght
 from django.utils import timezone
-from .forms import CustomerForm, OrderForm, CommentForm
+from .forms import CustomerForm, OrderForm, CommentForm, ItemForm
 from .forms import OrderCloseForm, OrderItemForm, TimeForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
@@ -289,6 +289,7 @@ def itemslist(request):
                 'search_on': 'items',
                 'title': 'TrapuZarrak · Prendas',
                 'h3': 'Todos los items',
+                'table_id': 'item_objects_list',
 
                 # CRUD Actions
                 'btn_title_add': 'Añadir prenda',
@@ -421,12 +422,22 @@ class Actions(View):
             context = {'form': form}
             template = 'includes/add/add_customer.html'
 
+        # Add item object (GET)
+        elif action == 'item-add':
+            form = ItemForm()
+            context = {'form': form,
+                       'modal_title': 'Añadir prenda',
+                       'pk': '0',
+                       'action': 'item-object-add',
+                       }
+            template = 'includes/regular_form.html'
+
         # Add item (GET)
         elif action == 'order-add-item':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm()
             context = {'order': order, 'form': form}
-            template = 'includes/add/add_item.html'
+            template = 'includes/add/add_item_to_order.html'
 
         # Add a comment (GET)
         elif action == 'order-add-comment':
@@ -602,7 +613,22 @@ class Actions(View):
             comment.save()
             return redirect('main')
 
-        # Add item (POST)
+        # Add new item Objects
+        elif action == 'item-object-add':
+            form = ItemForm(request.POST)
+            if form.is_valid():
+                add_item = form.save()
+                items = Item.objects.all()
+                data['html_id'] = '#item_objects_list'
+                data['form_is_valid'] = True
+                context = {'form': form,
+                           'items': items,
+                           'js_action_edit': 'item-edit-item',
+                           'js_action_delete': 'item-edit-delete',
+                           }
+                template = 'includes/items_list.html'
+
+        # Attach item to order (POST)
         elif action == 'order-add-item':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm(request.POST)
@@ -617,7 +643,7 @@ class Actions(View):
                 data['html_id'] = '#order-details'
             else:
                 context = {'order': order, 'form': form}
-                template = 'includes/add/add_item.html'
+                template = 'includes/add/add_item_to_order.html'
                 data['form_is_valid'] = False
 
         # Add time (POST)
