@@ -179,6 +179,18 @@ class OrderItem(models.Model):
     sewing = models.DurationField('Confeccion', default=timedelta(0))
     iron = models.DurationField('Planchado', default=timedelta(0))
 
+    @property
+    def time_quality(self):
+        """Display a message depending on how much time has been tracked."""
+        rate = 0
+        if self.crop:
+            rate += 1
+        if self.sewing:
+            rate += 1
+        if self.iron:
+            rate += 1
+
+        return rate
 
 class Comment(models.Model):
     """Store the comments related to the orders."""
