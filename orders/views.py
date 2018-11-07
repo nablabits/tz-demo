@@ -261,10 +261,13 @@ def customerlist(request):
                 'placeholder': 'Buscar cliente',
                 'title': 'TrapuZarrak · Clientes',
                 'h3': 'Todos los clientes',
-                'js_class': 'js-customer-add',
-                'js_action': 'customer-add',
+
+                # CRUD actions
+                'btn_title_add': 'Nuevo cliente',
+                'js_class_add': 'js-customer-add',
+                'js_action_add': 'customer-add',
                 'js_data_pk': '0',
-                'btn_title': 'Nuevo cliente',
+
                 'include_template': 'includes/customer_list.html',
                 'footer': True,
                 }
@@ -286,10 +289,15 @@ def itemslist(request):
                 'search_on': 'items',
                 'title': 'TrapuZarrak · Items',
                 'h3': 'Todos los items',
+
+                # CRUD Actions
+                'btn_title_add': 'Añadir prenda',
                 'js_class': 'js-item-add',
-                'js_action': 'item-add',
+                'js_action_add': 'item-add',
+                'js_action_edit': 'item-edit-item',
+                'js_action_delete': 'item-edit-delete',
                 'js_data_pk': '0',
-                'btn_title': 'Añadir prenda',
+
                 'include_template': 'includes/items_list.html',
                 'footer': True,
                 }

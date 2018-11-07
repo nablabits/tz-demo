@@ -4,16 +4,16 @@
     <th scope="col">Identificador</th>
     <th scope="col">Tela</th>
     <th scope="col">Notas</th>
+    <th scope="col">Acciones</th>
   </tr>
 </thead>
 <tbody>
   {% for item in items %}
   <tr>
-    <th>{{item.item_type}} {{item.name}} {{item.item_class}}-{{item.size}}</th>
+    <th>{{item.get_item_type_display}} {{item.name}} {{item.item_class}}-{{item.size}}</th>
     <th>{{ item.fabrics}}</th>
-    <th>
-      {{ item.notes }}
-    </th>
+    <th>{{ item.notes }}</th>
+    <th>{% include 'includes/action_buttons.html' %}</th>
   </tr>
   {% endfor %}
 </tbody>
