@@ -1,9 +1,9 @@
 """Test the app models."""
 from django.test import TestCase
-from orders.models import Customer, Order, Comment, Timing, Item
+from orders.models import Customer, Order, Comment, Timing, Item, OrderItem
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.contrib.auth.models import User
-from datetime import date
+from datetime import date, timedelta
 
 
 class ModelTest(TestCase):
@@ -115,8 +115,8 @@ class ModelTest(TestCase):
         with self.assertRaises(ValidationError):
             Timing.objects.create(time='0:35')
 
-    def test_item_creation(self):
-        """Test the proper creation of items."""
+    def test_item_object_creation(self):
+        """Test the proper creation of item objects."""
         Item.objects.create(name='Test item',
                             item_type='2',
                             item_class='S',
@@ -125,19 +125,47 @@ class ModelTest(TestCase):
                             fabrics=5.2)
         self.assertTrue(Item.objects.get(name='Test item'))
 
-    def test_default_item_should_be_automatically_created(self):
-        """The default item is created by a migration."""
+    def test_default_item_object_should_be_automatically_created(self):
+        """The default item object is created by a migration."""
         default = Item.objects.get(name='Predeterminado')
         self.assertTrue(default)
 
-    def test_the_item_named_default_is_reserved(self):
-        """The item named default is reserved and raises ValidationError."""
+    def test_the_item_object_named_default_is_reserved(self):
+        """The item obj named default is reserved & raises ValidationError."""
         with self.assertRaises(ValidationError):
             Item.objects.create(name='Predeterminado',
                                 item_type='0',
                                 item_class='0',
                                 size='0',
                                 fabrics=2.2)
+
+    def test_add_items_to_orders(self):
+        """Test the proper item attachs to orders."""
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=5.2)
+        OrderItem.objects.create(description='Test item',
+                                 reference=order,
+                                 element=item)
+
+        created_item = OrderItem.objects.get(description='Test item')
+        self.assertEqual(created_item.item, '1')
+        self.assertEqual(created_item.size, '1')
+        self.assertEqual(created_item.reference, order)
+        self.assertEqual(created_item.element, item)
+        self.assertEqual(created_item.qty, 1)
+        self.assertEqual(created_item.crop, timedelta(0))
+        self.assertEqual(created_item.sewing, timedelta(0))
+        self.assertEqual(created_item.iron, timedelta(0))
+
+    def test_add_items_to_orders_default_item(self):
+        """If no element is selected, Predetermiando is default."""
+        order = Order.objects.all()[0]
+        item = Item.objects.get(name='Predeterminado')
+        OrderItem.objects.create(description='Test item',
+                                 reference=order, )
+
+        created_item = OrderItem.objects.get(description='Test item')
+        self.assertEqual(created_item.element, item)
 
 
 class TimingSpecial(TestCase):
