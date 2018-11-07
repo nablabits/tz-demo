@@ -1535,7 +1535,7 @@ class ActionsPostMethodCreate(TestCase):
 
 
 class ActionsPostMethodEdit(TestCase):
-    """Test the post method on Actions view to add new elements."""
+    """Test the post method on Actions view to edit elements."""
 
     def setUp(self):
         """Set up some data for the tests.
@@ -1753,12 +1753,14 @@ class ActionsPostMethodEdit(TestCase):
         """Test the correct item edition."""
         item = OrderItem.objects.get(description='example item')
         resp = self.client.post(reverse('actions'),
-                                {'item': '2',
-                                 'size': 'L',
+                                {'element': item.element.pk,
                                  'qty': 2,
+                                 'crop': timedelta(0),
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
                                  'description': 'Modified item',
                                  'pk': item.pk,
-                                 'action': 'order-edit-item',
+                                 'action': 'order-item-edit',
                                  'test': True
                                  })
         # Test the response object
@@ -1784,26 +1786,16 @@ class ActionsPostMethodEdit(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'qty': 'invalid qty',
                                  'pk': item.pk,
-                                 'action': 'order-edit-item',
+                                 'action': 'order-item-edit',
                                  'test': True
                                  })
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('form', 'item')
+        vars = ('form', 'item', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/edit/edit_item.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-                                 'test': True
-                                 })
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('form', 'time')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/edit/edit_time.html')
+        self.assertEqual(data['template'], 'includes/regular_form.html')
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_collect_order_succesful(self):

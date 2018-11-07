@@ -459,13 +459,6 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/add/add_comment.html'
 
-        # Add time from order (GET)
-        elif action == 'time-from-order':
-            order = get_object_or_404(Order, pk=pk)
-            form = TimeForm(initial={'reference': order})
-            context = {'form': form, 'order': order}
-            template = 'includes/add/add_time.html'
-
         # Edit the order (GET)
         elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
@@ -516,7 +509,6 @@ class Actions(View):
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             form = OrderItemForm(instance=item)
-            context = {'item': item, 'form': form}
             context = {'form': form,
                        'item': item,
                        'modal_title': 'Editar prenda',
@@ -526,14 +518,6 @@ class Actions(View):
                        'custom_form': 'includes/custom_forms/order_item.html',
                        }
             template = 'includes/regular_form.html'
-
-        # Edit time (GET)
-        elif action == 'order-edit-time':
-            get_object_or_404(Timing, pk=pk)
-            time = Timing.objects.select_related('reference').get(pk=pk)
-            form = TimeForm(instance=time)
-            context = {'time': time, 'form': form}
-            template = 'includes/edit/edit_time.html'
 
         # Delete item objects (GET)
         elif action == 'object-item-delete':
@@ -561,12 +545,6 @@ class Actions(View):
             customer = get_object_or_404(Customer, pk=pk)
             context = {'customer': customer}
             template = 'includes/delete/delete_customer.html'
-
-        # Delete Time (GET)
-        elif action == 'time-delete':
-            time = get_object_or_404(Timing, pk=pk)
-            context = {'time': time}
-            template = 'includes/delete/delete_time.html'
 
         # logout
         elif action == 'logout':
@@ -701,25 +679,6 @@ class Actions(View):
                 template = 'includes/add/add_item_to_order.html'
                 data['form_is_valid'] = False
 
-        # Add time (POST)
-        elif action == 'time-new':
-            order = get_object_or_404(Order, pk=pk)
-            form = TimeForm(request.POST)
-            if form.is_valid():
-                new_time = form.save(commit=False)
-                duration_str = request.POST.get('time')
-                new_time.time = TimeLenght(duration_str).convert()
-                new_time.save()
-                times = Timing.objects.filter(reference=order)
-                template = 'includes/timing_list.html'
-                context = {'times': times, 'order': order}
-                data['form_is_valid'] = True
-                data['html_id'] = '#timing-list'
-            else:
-                data['form_is_valid'] = False
-                context = {'form': form}
-                template = 'includes/add/add_time.html'
-
         # Edit order (POST)
         elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
@@ -799,32 +758,15 @@ class Actions(View):
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-details'
             else:
-                context = {'item': item, 'form': form}
-                template = 'includes/edit/edit_item.html'
-                data['form_is_valid'] = False
-
-        # Edit time (POST)
-        elif action == 'time-edit':
-            time = get_object_or_404(Timing, pk=pk)
-            time = Timing.objects.select_related('reference').get(pk=pk)
-            order = time.reference
-            times = Timing.objects.filter(reference=order)
-            try:
-                form_time = TimeLenght(request.POST.get('time')).convert()
-            except ValueError:
-                form_time = False
-            form = TimeForm(request.POST, instance=time)
-            if form.is_valid() and form_time:
-                context = {'order': order, 'times': times}
-                template = 'includes/timing_list.html'
-                new_time = form.save(commit=False)
-                new_time.time = form_time
-                new_time.save()
-                data['form_is_valid'] = True
-                data['html_id'] = '#timing-list'
-            else:
-                context = {'time': time, 'form': form}
-                template = 'includes/edit/edit_time.html'
+                context = {'form': form,
+                           'item': item,
+                           'modal_title': 'Editar prenda',
+                           'pk': item.reference.pk,
+                           'action': 'order-item-edit',
+                           'submit_btn': 'Guardar',
+                           'custom_form': 'includes/custom_forms/order_item.html',
+                           }
+                template = 'includes/regular_form.html'
                 data['form_is_valid'] = False
 
         # Collect order (POST)
@@ -907,18 +849,6 @@ class Actions(View):
                        'js_data_pk': order.pk,
                        }
             template = 'includes/order_details.html'
-
-        # delete time (POST)
-        elif action == 'time-delete':
-            get_object_or_404(Timing, pk=pk)
-            time = Timing.objects.select_related('reference').get(pk=pk)
-            times = Timing.objects.filter(reference=time.reference)
-            order = time.reference
-            time.delete()
-            data['form_is_valid'] = True
-            data['html_id'] = '#timing-list'
-            context = {'times': times, 'order': order}
-            template = 'includes/timing_list.html'
 
         # Delete customer (POST)
         elif action == 'customer-delete':
