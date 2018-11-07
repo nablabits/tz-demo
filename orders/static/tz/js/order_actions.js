@@ -122,6 +122,8 @@ $(function () {
   $('#timing-list').on('click', '.js-time-delete', loadActionForm)
   $('.js-logout').click(loadActionForm)
 
+  $('.js-item-add').click(loadActionForm)
+
   // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
   $('#order-status').on('click', '.js-order-status', updateStatus)
