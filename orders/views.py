@@ -264,7 +264,6 @@ def customerlist(request):
 
                 # CRUD actions
                 'btn_title_add': 'Nuevo cliente',
-                'js_class_add': 'js-customer-add',
                 'js_action_add': 'customer-add',
                 'js_data_pk': '0',
 
@@ -293,10 +292,9 @@ def itemslist(request):
 
                 # CRUD Actions
                 'btn_title_add': 'Añadir prenda',
-                'js_class_add': 'js-item-add',
-                'js_action_add': 'item-add',
-                'js_action_edit': 'item-edit-item',
-                'js_action_delete': 'item-edit-delete',
+                'js_action_add': 'object-item-add',
+                'js_action_edit': 'object-item-edit',
+                'js_action_delete': 'object-item-delete',
                 'js_data_pk': '0',
 
                 'include_template': 'includes/items_list.html',
@@ -423,12 +421,12 @@ class Actions(View):
             template = 'includes/add/add_customer.html'
 
         # Add item object (GET)
-        elif action == 'item-add':
+        elif action == 'object-item-add':
             form = ItemForm()
             context = {'form': form,
                        'modal_title': 'Añadir prenda',
                        'pk': '0',
-                       'action': 'item-object-add',
+                       'action': 'object-item-add',
                        'submit_btn': 'Añadir',
                        }
             template = 'includes/regular_form.html'
@@ -498,6 +496,7 @@ class Actions(View):
                        'submit_btn': 'Guardar',
                        }
             template = 'includes/regular_form.html'
+
         # Edit item (GET)
         elif action == 'order-edit-item':
             get_object_or_404(OrderItem, pk=pk)
@@ -537,7 +536,7 @@ class Actions(View):
             context = {'customer': customer}
             template = 'includes/delete/delete_customer.html'
 
-        # Delete Time
+        # Delete Time (GET)
         elif action == 'time-delete':
             time = get_object_or_404(Timing, pk=pk)
             context = {'time': time}
@@ -549,7 +548,7 @@ class Actions(View):
             template = 'registration/logout.html'
 
         else:
-            raise NameError('Action was not recogniced')
+            raise NameError('Action was not recogniced', action)
 
         data['html'] = render_to_string(template, context, request=request)
 
@@ -627,15 +626,15 @@ class Actions(View):
                 context = {'order': order, 'form': form}
                 template = 'includes/add/add_comment.html'
 
-        # Mark comment as read
+        # Mark comment as read (POST)
         elif action == 'comment-read':
             comment = get_object_or_404(Comment, pk=pk)
             comment.read = True
             comment.save()
             return redirect('main')
 
-        # Add new item Objects
-        elif action == 'item-object-add':
+        # Add new item Objects (POST)
+        elif action == 'object-item-add':
             form = ItemForm(request.POST)
             if form.is_valid():
                 add_item = form.save()
@@ -644,8 +643,8 @@ class Actions(View):
                 data['form_is_valid'] = True
                 context = {'form': form,
                            'items': items,
-                           'js_action_edit': 'item-edit-item',
-                           'js_action_delete': 'item-edit-delete',
+                           'js_action_edit': 'object-item-edit',
+                           'js_action_delete': 'object-item-delete',
                            }
                 template = 'includes/items_list.html'
 
