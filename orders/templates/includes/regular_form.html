@@ -13,15 +13,19 @@
     <h4 class="modal-title">{{modal_title}}</h4>
   </div>
   <div class="modal-body">
-  {% for field in form.visible_fields %}
-    <div class="form-group">
-      {{ field.label_tag }}
-      {% render_field field class="form-control" %}
-      {% if field.help_text %}
-        <small class="form-text text-muted">{{ field.help_text }}</small>
-      {% endif %}
-    </div>
-  {% endfor %}
+  {% if custom_form %}
+    {% include custom_form %}
+  {% else %}
+    {% for field in form.visible_fields %}
+      <div class="form-group">
+        {{ field.label_tag }}
+        {% render_field field class="form-control" %}
+        {% if field.help_text %}
+          <small class="form-text text-muted">{{ field.help_text }}</small>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
   <input type="hidden" name="pk" value="{{ pk }}">
   <input type="hidden" name="action" value="{{action}}">
   </div>

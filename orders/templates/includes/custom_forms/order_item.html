@@ -1,0 +1,39 @@
+{% load widget_tweaks %}
+<div class="row">
+  <div class="col-9">
+    <div class="form-group">
+      <label for="id_element">Prenda:</label>
+      {% render_field form.element class="form-control" %}
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="form-group">
+      {{form.qty.label_tag}}
+      {% render_field form.qty class="form-control" %}
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col">
+    <div class="form-group">
+      {{form.crop.label_tag}}
+      {% render_field form.crop class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
+      {{form.sewing.label_tag}}
+      {% render_field form.sewing class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
+      {{form.iron.label_tag}}
+      {% render_field form.iron class="form-control" %}
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  {{form.description.label_tag}}
+  <textarea class="form-control" name="{{form.description.name}}" value="{{form.description.value}}"></textarea>
+</div>
