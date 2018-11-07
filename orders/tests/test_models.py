@@ -167,6 +167,22 @@ class ModelTest(TestCase):
         created_item = OrderItem.objects.get(description='Test item')
         self.assertEqual(created_item.element, item)
 
+    def test_items_time_quality_property(self):
+        """Test the proper value for timing."""
+        order = Order.objects.all()[0]
+        order_item = OrderItem.objects.create(description='Test item',
+                                              reference=order,
+                                              crop=timedelta(2),
+                                              sewing=timedelta(2),
+                                              iron=timedelta(2),)
+        self.assertEqual(order_item.time_quality, 3)
+        order_item.sewing = timedelta(0)
+        self.assertEqual(order_item.time_quality, 2)
+        order_item.iron = timedelta(0)
+        self.assertEqual(order_item.time_quality, 1)
+        order_item.crop = timedelta(0)
+        self.assertEqual(order_item.time_quality, 0)
+
 
 class TimingSpecial(TestCase):
     """Try creating times without order entries in the db."""
