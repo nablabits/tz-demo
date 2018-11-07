@@ -287,12 +287,12 @@ def itemslist(request):
                 'now': now,
                 'placeholder': 'Buscar item',
                 'search_on': 'items',
-                'title': 'TrapuZarrak · Items',
+                'title': 'TrapuZarrak · Prendas',
                 'h3': 'Todos los items',
 
                 # CRUD Actions
                 'btn_title_add': 'Añadir prenda',
-                'js_class': 'js-item-add',
+                'js_class_add': 'js-item-add',
                 'js_action_add': 'item-add',
                 'js_action_edit': 'item-edit-item',
                 'js_action_delete': 'item-edit-delete',

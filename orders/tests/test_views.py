@@ -415,15 +415,17 @@ class StandardViewsTest(TestCase):
     def test_customer_list_context_vars(self):
         """Test the correct context vars."""
         resp = self.client.get(reverse('customerlist'))
-        self.assertEqual(resp.context['placeholder'], 'Buscar cliente')
         self.assertEqual(resp.context['search_on'], 'customers')
+        self.assertEqual(resp.context['placeholder'], 'Buscar cliente')
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Clientes')
         self.assertEqual(resp.context['h3'], 'Todos los clientes')
-        self.assertEqual(resp.context['js_class'], 'js-customer-add')
-        self.assertEqual(resp.context['js_action'], 'customer-add')
+        self.assertEqual(resp.context['btn_title_add'], 'Nuevo cliente')
+        self.assertEqual(resp.context['js_class_add'], 'js-customer-add')
+        self.assertEqual(resp.context['js_action_add'], 'customer-add')
         self.assertEqual(resp.context['js_data_pk'], '0')
-        self.assertEqual(resp.context['btn_title'], 'Nuevo cliente')
         self.assertEqual(resp.context['include_template'],
                          'includes/customer_list.html')
+        self.assertTrue(resp.context['footer'])
 
     def test_customer_list_paginator(self):
         """Test paginator functionality on customer list."""
@@ -513,13 +515,17 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('itemslist'))
         self.assertEqual(resp.context['placeholder'], 'Buscar item')
         self.assertEqual(resp.context['search_on'], 'items')
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Prendas')
         self.assertEqual(resp.context['h3'], 'Todos los items')
-        self.assertEqual(resp.context['js_class'], 'js-item-add')
-        self.assertEqual(resp.context['js_action'], 'item-add')
+        self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
+        self.assertEqual(resp.context['js_class_add'], 'js-item-add')
+        self.assertEqual(resp.context['js_action_add'], 'item-add')
+        self.assertEqual(resp.context['js_action_edit'], 'item-edit-item')
+        self.assertEqual(resp.context['js_action_delete'], 'item-edit-delete')
         self.assertEqual(resp.context['js_data_pk'], '0')
-        self.assertEqual(resp.context['btn_title'], 'Añadir prenda')
         self.assertEqual(resp.context['include_template'],
                          'includes/items_list.html')
+        self.assertTrue(resp.context['footer'])
 
 
 class SearchBoxTest(TestCase):
