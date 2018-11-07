@@ -1,7 +1,7 @@
 """Form models used in the app."""
 
 from django import forms
-from .models import Customer, Order, OrderItem, Comment, Timing
+from .models import Customer, Order, Item, OrderItem, Comment, Timing
 from django.db.models import Count
 
 
@@ -35,8 +35,16 @@ class OrderForm(forms.ModelForm):
         self.fields['customer'].queryset = queryset
 
 
+class ItemForm(forms.ModelForm):
+    """Add new item objects."""
+
+    class Meta:
+        model = Item
+        fields = ('name', 'item_type', 'item_class', 'size', 'fabrics', 'notes')
+
+
 class OrderItemForm(forms.ModelForm):
-    """Add items using a form."""
+    """Add items to the order using a form."""
 
     class Meta:
         """Meta options for a quick design."""
