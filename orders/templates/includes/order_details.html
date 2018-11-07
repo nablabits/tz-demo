@@ -2,7 +2,9 @@
   <div class="card-header">
     <div class="row px-2">
       <h4 class="font-weight-bold mr-auto">Detalles:</h4>
-      <button type="button" class="ml-2 btn btn-outline-success js-add-item" data-action="order-add-item" data-pk="{{order.pk}}"><i class="fa fa-plus"></i> Añadir Prenda</button>
+      <button type="button" class="btn btn-sm btn-outline-success js-crud-add" data-action="{{js_action_add}}"  data-pk="{{js_data_pk}}">
+        <i class="fa fa-plus"></i> {{btn_title_add}}
+      </button>
     </div>
   </div>
   <div class="card-body order_details">
@@ -13,14 +15,14 @@
       <li>Largo: {{order.lenght}}</li>
       <li>Observaciones:<br>{{order.others | linebreaksbr}}</li>
     </ul>
-    <h3>Prendas:</h3>
+    <h4>Prendas:</h4>
     {% if items %}
     <table class="table">
     <thead>
       <tr>
-        <th scope="col">Elemento</th>
-        <th scope="col">Talla</th>
+        <th scope="col">Prenda</th>
         <th scope="col">Cantidad</th>
+        <th scope="col">Tiempos</th>
         <th scope="col">Acciones</th>
       </tr>
     </thead>
@@ -28,17 +30,21 @@
       {% for item in items %}
       <tr>
         <th scope="row">
-          <a class="js-popover" tabindex="0" data-trigger="focus" role="button" data-toggle="popover" title="Descripción" data-content="{% if item.description %} {{item.description}} {% else %}No se ha dado descripción.{% endif %}">
-            <i class="fa fa-info-circle fa-fw text-info" ></i>
-          </a>
-          {{item.get_item_display}}
+          {{item.element}}
         </th>
-        <th>{{item.size}}</th>
         <th>{{item.qty}}</th>
         <th>
-          <button class="ml-2 mr-3 btn btn-outline-success js-edit-item" data-action="order-edit-item" data-pk="{{item.pk}}"><i class="fa fa-paperclip"></i> Editar</button>
-          <button class="ml-2 mr-3 btn btn-outline-danger js-delete-item" data-action="order-delete-item" data-pk="{{item.pk}}"><i class="fa fa-trash"></i> Eliminar</button>
+          {% if item.time_quality == 0 %}
+            <i class="far fa-frown" ></i> Sin tiempos aún (0/3)
+          {% elif item.time_quality == 1 %}
+            <i class="far fa-smile-wink fa-fw" ></i> Ánimo (1/3)
+          {% elif item.time_quality == 2 %}
+            <i class="far fa-thumbs-up fa-fw" ></i> Bien (2/3)
+          {% else %}
+            <i class="far fa-star fa-fw" ></i> Genial (3/3)
+          {% endif %}
         </th>
+        <th>{% include 'includes/action_buttons.html' %}</th>
       </tr>
       {% endfor %}
     </tbody>
