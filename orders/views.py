@@ -515,6 +515,15 @@ class Actions(View):
             context = {'time': time, 'form': form}
             template = 'includes/edit/edit_time.html'
 
+        # Delete item objects (GET)
+        elif action == 'object-item-delete':
+            item = get_object_or_404(Item, pk=pk)
+            context = {'modal_title': 'Eliminar prenda',
+                       'msg': 'Realmente borrar la prenda?',
+                       'pk': item.pk,
+                       'action': 'object-item-delete'}
+            template = 'includes/delete_confirmation.html'
+
         # Delete item (GET)
         elif action == 'order-delete-item':
             get_object_or_404(OrderItem, pk=pk)
@@ -734,6 +743,7 @@ class Actions(View):
                            'js_action_delete': 'object-item-delete',
                            }
                 template = 'includes/items_list.html'
+
         # Edit item (POST)
         elif action == 'order-edit-item':
             get_object_or_404(OrderItem, pk=pk)
@@ -825,6 +835,19 @@ class Actions(View):
                 data['html_id'] = '#order-status'
                 template = 'includes/order_status.html'
                 context = {'order': order}
+
+        # Delete object Item
+        elif action == 'object-item-delete':
+            item = get_object_or_404(Item, pk=pk)
+            item.delete()
+            items = Item.objects.all()
+            data['html_id'] = '#item_objects_list'
+            data['form_is_valid'] = True
+            context = {'items': items,
+                       'js_action_edit': 'object-item-edit',
+                       'js_action_delete': 'object-item-delete',
+                       }
+            template = 'includes/items_list.html'
 
         # Delete item (POST)
         elif action == 'order-delete-item':
