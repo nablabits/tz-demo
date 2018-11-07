@@ -53,7 +53,7 @@ class OrderItemForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = OrderItem
-        fields = ('item', 'size', 'qty', 'description')
+        fields = ('element', 'qty', 'crop', 'sewing', 'iron', 'description')
 
 
 class CommentForm(forms.ModelForm):
