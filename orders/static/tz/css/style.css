@@ -17,6 +17,9 @@ header{
   border-bottom: 1px solid #ccc;
   padding-top: 1.5em;
 }
+tbody{
+  font-size: .9em;
+}
 .aside-narrow{
   width: 80%;
   position: absolute;
@@ -83,9 +86,6 @@ header{
   background-color: #E040FB;
   color: #fff;
   box-shadow: -3px 2px 5px #555;
-}
-.order_details{
-  font-size: 1.2em;
 }
 .order_header{
   border-bottom: 1px solid lightgrey;
