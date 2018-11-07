@@ -39,8 +39,11 @@ class ItemForm(forms.ModelForm):
     """Add new item objects."""
 
     class Meta:
+        """Meta options for a quick design."""
+
         model = Item
-        fields = ('name', 'item_type', 'item_class', 'size', 'fabrics', 'notes')
+        fields = ('name', 'item_type', 'item_class', 'size', 'fabrics',
+                  'notes', )
 
 
 class OrderItemForm(forms.ModelForm):

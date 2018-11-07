@@ -519,7 +519,8 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
         self.assertEqual(resp.context['js_action_add'], 'object-item-add')
         self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
-        self.assertEqual(resp.context['js_action_delete'], 'object-item-delete')
+        self.assertEqual(resp.context['js_action_delete'],
+                         'object-item-delete')
         self.assertEqual(resp.context['js_data_pk'], '0')
         self.assertEqual(resp.context['include_template'],
                          'includes/items_list.html')
