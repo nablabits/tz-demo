@@ -941,22 +941,6 @@ class ActionsGetMethod(TestCase):
         else:
             self.assertEqual(context[0], 'Not recognized')
 
-    def test_add_time_from_order(self):
-        """Test add time button click response."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk,
-                                'action': 'time-from-order',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        vars = ('form', 'order')
-        self.assertEqual(template, 'includes/add/add_time.html')
-        self.assertTrue(self.context_vars(context, vars))
-
     def test_edit_order_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
@@ -1126,30 +1110,6 @@ class ActionsGetMethod(TestCase):
         vars = ('item', 'form')
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_edit_time(self):
-        """Test context dictionaries and template."""
-        time = Timing.objects.all()[0]
-        resp = self.client.get(reverse('actions'),
-                               {'pk': time.pk,
-                                'action': 'order-edit-time',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        vars = ('form', 'time')
-        self.assertEqual(template, 'includes/edit/edit_time.html')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_edit_time_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-edit-time',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
     def test_delete_item_returns_404_with_pk_out_of_range(self):
         """Out of range indexes should return a 404 error."""
         resp = self.client.get(reverse('actions'),
@@ -1180,33 +1140,6 @@ class ActionsGetMethod(TestCase):
         resp = self.client.get(reverse('actions'),
                                {'pk': 200,
                                 'action': 'customer-delete',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_delete_time(self):
-        """Test context dictionaries and template."""
-        order = Order.objects.get(ref_name='example')
-        time = Timing.objects.create(time=5.5,
-                                     notes='example time',
-                                     reference=order)
-        resp = self.client.get(reverse('actions'),
-                               {'pk': time.pk,
-                                'action': 'time-delete',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/delete/delete_time.html')
-        self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'time')
-
-    def test_delete_time_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'time-delete',
                                 'test': True})
         self.assertEqual(resp.status_code, 404)
 
@@ -1466,66 +1399,6 @@ class ActionsPostMethodCreate(TestCase):
             resp = self.client.post(reverse('actions'),
                                     {'pk': 2000, 'action': action})
             self.assertEqual(resp.status_code, 404)
-
-    def test_time_new_adds_new_time(self):
-        """Test the proper creation of times."""
-        order = Order.objects.get(ref_name='example')
-        self.client.post(reverse('actions'), {'item': '1',
-                                              'qty': 2,
-                                              'item_class': '2',
-                                              'activity': '2',
-                                              'notes': 'Test note',
-                                              'time': '0:30',
-                                              'action': 'time-new',
-                                              'pk': order.pk,
-                                              'test': True})
-        Timing.objects.get(notes='Test note')
-
-    def test_time_new_context_response(self):
-        """When adding a time, return to main page."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.post(reverse('actions'),
-                                {'item': '1',
-                                 'item_class': '2',
-                                 'activity': '2',
-                                 'qty': 2,
-                                 'notes': 'Test note',
-                                 'time': '0:30',
-                                 'action': 'time-new',
-                                 'pk': order.pk,
-                                 'test': True})
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        vars = ('times', 'order')
-        self.assertEqual(template, 'includes/timing_list.html')
-        self.assertIsInstance(context, list)
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#timing-list')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_invalid_time_new_return_to_form_again(self):
-        """When sending invalid data we shoud recover the form."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.post(reverse('actions'),
-                                {'item': '1',
-                                 'qty': 'this must be int',
-                                 'notes': 'Test note',
-                                 'time': 0.5,
-                                 'action': 'time-new',
-                                 'pk': order.pk,
-                                 'test': True})
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/add/add_time.html')
-        self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'form')
 
     def test_comment_adds_comment(self):
         """Test the proper insertion of comments."""
@@ -1922,44 +1795,6 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/edit/edit_item.html')
         self.assertTrue(self.context_vars(data['context'], vars))
 
-    def test_edit_time_edits_time(self):
-        """Test the proper edition of times."""
-        order = Order.objects.get(ref_name='example')
-        time = Timing.objects.create(time=1, reference=order)
-        resp = self.client.post(reverse('actions'),
-                                {'item': '2',
-                                 'item_class': '2',
-                                 'activity': '2',
-                                 'time': '2:00',
-                                 'qty': 3,
-                                 'notes': 'Modified time',
-                                 'pk': time.pk,
-                                 'action': 'time-edit',
-                                 'test': True
-                                 })
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'times')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        # self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/timing_list.html')
-        self.assertEqual(data['html_id'], '#timing-list')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-    def test_edit_time_invalid_returns_to_form(self):
-        """Test rejected forms."""
-        order = Order.objects.get(ref_name='example')
-        time = Timing.objects.create(time=1, reference=order)
-        resp = self.client.post(reverse('actions'),
-                                {'item': '2',
-                                 'item_class': '2',
-                                 'activity': '2',
-                                 'time': 'invalid time',
-                                 'qty': 3,
-                                 'notes': 'Modified time',
-                                 'pk': time.pk,
-                                 'action': 'time-edit',
                                  'test': True
                                  })
         # Test the response object
@@ -2089,41 +1924,6 @@ class ActionsPostMethodEdit(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/order_details.html')
         self.assertEqual(data['html_id'], '#order-details')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-    def test_delete_time_deletes_time(self):
-        """Test the proper deletion of times."""
-        order = Order.objects.get(ref_name='example')
-        time = Timing.objects.create(time=5.5,
-                                     notes='example time',
-                                     reference=order)
-        self.client.post(reverse('actions'), {'pk': time.pk,
-                                              'action': 'time-delete',
-                                              'test': True
-                                              })
-        with self.assertRaises(ObjectDoesNotExist):
-            OrderItem.objects.get(pk=time.pk)
-
-    def test_delete_time_context_response(self):
-        """Test the response on deletion of times."""
-        order = Order.objects.get(ref_name='example')
-        time = Timing.objects.create(time=5.5,
-                                     notes='example time',
-                                     reference=order)
-        resp = self.client.post(reverse('actions'),
-                                {'pk': time.pk,
-                                 'action': 'time-delete',
-                                 'test': True
-                                 })
-
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'times')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/timing_list.html')
-        self.assertEqual(data['html_id'], '#timing-list')
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_delete_customer_deletes_customer(self):
