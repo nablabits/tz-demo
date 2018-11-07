@@ -122,7 +122,9 @@ $(function () {
   $('#timing-list').on('click', '.js-time-delete', loadActionForm)
   $('.js-logout').click(loadActionForm)
 
-  $('.js-item-add').click(loadActionForm)
+  $('#root').on('click', '.js-crud-add', loadActionForm)
+  $('#root').on('click', '.js-crud-edit', loadActionForm)
+  $('#root').on('click', '.js-crud-delete', loadActionForm)
 
   // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
