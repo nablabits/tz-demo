@@ -429,6 +429,7 @@ class Actions(View):
                        'modal_title': 'Añadir prenda',
                        'pk': '0',
                        'action': 'item-object-add',
+                       'submit_btn': 'Añadir',
                        }
             template = 'includes/regular_form.html'
 
@@ -486,6 +487,7 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/edit/close_order.html'
 
+                       'submit_btn': 'Guardar',
         # Edit item (GET)
         elif action == 'order-edit-item':
             get_object_or_404(OrderItem, pk=pk)
