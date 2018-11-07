@@ -420,7 +420,6 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Clientes')
         self.assertEqual(resp.context['h3'], 'Todos los clientes')
         self.assertEqual(resp.context['btn_title_add'], 'Nuevo cliente')
-        self.assertEqual(resp.context['js_class_add'], 'js-customer-add')
         self.assertEqual(resp.context['js_action_add'], 'customer-add')
         self.assertEqual(resp.context['js_data_pk'], '0')
         self.assertEqual(resp.context['include_template'],
@@ -518,10 +517,9 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Prendas')
         self.assertEqual(resp.context['h3'], 'Todos los items')
         self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
-        self.assertEqual(resp.context['js_class_add'], 'js-item-add')
-        self.assertEqual(resp.context['js_action_add'], 'item-add')
-        self.assertEqual(resp.context['js_action_edit'], 'item-edit-item')
-        self.assertEqual(resp.context['js_action_delete'], 'item-edit-delete')
+        self.assertEqual(resp.context['js_action_add'], 'object-item-add')
+        self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
+        self.assertEqual(resp.context['js_action_delete'], 'object-item-delete')
         self.assertEqual(resp.context['js_data_pk'], '0')
         self.assertEqual(resp.context['include_template'],
                          'includes/items_list.html')
@@ -901,7 +899,7 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/add/add_item.html')
+        self.assertEqual(template, 'includes/add/add_item_to_order.html')
         self.assertIsInstance(context, list)
         if context[0] == 'order':
             self.assertEqual(context[1], 'form')
@@ -1655,7 +1653,7 @@ class ActionsPostMethodCreate(TestCase):
         template = data['template']
         context = data['context']
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/add/add_item.html')
+        self.assertEqual(template, 'includes/add/add_item_to_order.html')
         self.assertIsInstance(context, list)
         vars = ('form', 'order')
         context_is_valid = self.context_vars(context, vars)
