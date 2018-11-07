@@ -487,7 +487,17 @@ class Actions(View):
             context = {'order': order, 'form': form}
             template = 'includes/edit/close_order.html'
 
+        # Edit Item Object (GET)
+        elif action == 'object-item-edit':
+            item = get_object_or_404(Item, pk=pk)
+            form = ItemForm(instance=item)
+            context = {'form': form,
+                       'modal_title': 'Editar prenda',
+                       'pk': item.pk,
+                       'action': 'object-item-edit',
                        'submit_btn': 'Guardar',
+                       }
+            template = 'includes/regular_form.html'
         # Edit item (GET)
         elif action == 'order-edit-item':
             get_object_or_404(OrderItem, pk=pk)
@@ -709,6 +719,21 @@ class Actions(View):
                 context = {'customer': customer, 'form': form}
                 template = 'includes/edit/edit_customer.html'
 
+        # Edit item objects (POST)
+        elif action == 'object-item-edit':
+            item = get_object_or_404(Item, pk=pk)
+            form = ItemForm(request.POST, instance=item)
+            if form.is_valid():
+                form.save()
+                items = Item.objects.all()
+                data['html_id'] = '#item_objects_list'
+                data['form_is_valid'] = True
+                context = {'form': form,
+                           'items': items,
+                           'js_action_edit': 'object-item-edit',
+                           'js_action_delete': 'object-item-delete',
+                           }
+                template = 'includes/items_list.html'
         # Edit item (POST)
         elif action == 'order-edit-item':
             get_object_or_404(OrderItem, pk=pk)
