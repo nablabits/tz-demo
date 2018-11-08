@@ -537,8 +537,6 @@ class Actions(View):
                        'pk': item.pk,
                        'action': 'order-item-delete'}
             template = 'includes/delete_confirmation.html'
-            # context = {'item': item}
-            # template = 'includes/delete/delete_item.html'
 
         # Delete Customer (GET)
         elif action == 'customer-delete':
@@ -662,7 +660,6 @@ class Actions(View):
                 add_item.save()
                 items = OrderItem.objects.filter(reference=order)
                 template = 'includes/order_details.html'
-                # context = {'form': form, 'order': order, 'items': items}
                 context = {'items': items,
                            'order': order,
                            'btn_title_add': 'Añadir prenda',
@@ -676,7 +673,7 @@ class Actions(View):
                 data['html_id'] = '#order-details'
             else:
                 context = {'order': order, 'form': form}
-                template = 'includes/add/add_item_to_order.html'
+                template = 'includes/order_details.html'
                 data['form_is_valid'] = False
 
         # Edit order (POST)
@@ -862,7 +859,7 @@ class Actions(View):
             return redirect('login')
 
         else:
-            raise NameError('Action was not recogniced')
+            raise NameError('Action was not recogniced', action)
 
         """
         Test stuff. Since it's not very straightforward extract this data

@@ -2,7 +2,7 @@
 
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from orders.models import Customer, Order, OrderItem, Comment, Timing
+from orders.models import Customer, Order, OrderItem, Comment, Timing, Item
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.http import JsonResponse
 from django.urls import reverse
@@ -788,6 +788,27 @@ class ActionsGetMethod(TestCase):
         else:
             return False
 
+    def test_pk_out_of_range_raises_404(self):
+        """High pk should raise a 404."""
+        actions = ('order-from-customer',
+                   'order-item-add',
+                   'order-add-comment',
+                   'order-edit',
+                   'order-edit-date',
+                   'customer-edit',
+                   'order-pay-now',
+                   'order-close',
+                   'object-item-edit',
+                   'order-item-edit',
+                   'object-item-delete',
+                   'order-item-delete',
+                   'customer-delete',
+                   )
+        for action in actions:
+            resp = self.client.get(reverse('actions'), {'pk': 2000,
+                                                        'action': action})
+            self.assertEqual(resp.status_code, 404)
+
     def test_no_pk_raises_error(self):
         """Raise an error when no pk is given.
 
@@ -849,18 +870,6 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'form')
 
-    def test_add_order_from_customer_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error.
-
-        Hi numbers are given to avoid db previous entries (though they should
-        be deleted).
-        """
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 290,
-                                'action': 'order-from-customer',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
     def test_add_order_from_customer(self):
         """Test context dictionaries and template."""
         customer = Customer.objects.get(name='Customer')
@@ -877,15 +886,7 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'form')
 
-    def test_add_item_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 290,
-                                'action': 'order-add-item',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_add_item(self):
+    def test_add_order_item(self):
         """Test context dictionaries and template.
 
         The index for the context items seems to be a bit random (why?).
@@ -893,29 +894,21 @@ class ActionsGetMethod(TestCase):
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk,
-                                'action': 'order-add-item',
+                                'action': 'order-item-add',
                                 'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/add/add_item_to_order.html')
-        self.assertIsInstance(context, list)
-        if context[0] == 'order':
-            self.assertEqual(context[1], 'form')
-        elif context[0] == 'form':
-            self.assertEqual(context[1], 'order')
-        else:
-            self.assertEqual(context[0], 'Not recognized')
+        self.assertEqual(template, 'includes/regular_form.html')
+        vars = ('order', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
 
-    def test_add_comments_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 290,
-                                'action': 'order-add-comment',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
+    def test_add_obj_item(self):
+        """Should define."""
+        self.assertTrue(None)
 
     def test_add_comment(self):
         """Test context dictionaries and template.
@@ -941,14 +934,6 @@ class ActionsGetMethod(TestCase):
         else:
             self.assertEqual(context[0], 'Not recognized')
 
-    def test_edit_order_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-edit',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
     def test_edit_order(self):
         """Test context dictionaries and template.
 
@@ -973,14 +958,6 @@ class ActionsGetMethod(TestCase):
         else:
             self.assertEqual(context[0], 'Not recognized')
 
-    def test_edit_order_date_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-edit-date',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
     def test_edit_order_date(self):
         """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
@@ -996,14 +973,6 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(template, 'includes/edit/edit_date.html')
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'order')
-
-    def test_edit_customer_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'customer-edit',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
 
     def test_edit_customer(self):
         """Test context dictionaries and template.
@@ -1029,14 +998,6 @@ class ActionsGetMethod(TestCase):
         else:
             self.assertEqual(context[0], 'Not recognized')
 
-    def test_collect_order_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-pay-now',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
     def test_collect_order(self):
         """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
@@ -1052,14 +1013,6 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(template, 'includes/edit/pay_order.html')
         self.assertIsInstance(context, list)
         self.assertEqual(context[0], 'order')
-
-    def test_close_order_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-close',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
 
     def test_close_order(self):
         """Test context dictionaries and template.
@@ -1081,15 +1034,7 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_edit_item_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-edit-item',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_edit_item(self):
+    def test_edit_order_item(self):
         """Test context dictionaries and template.
 
         The index for the context items seems to be a bit random (why?).
@@ -1098,50 +1043,44 @@ class ActionsGetMethod(TestCase):
         item = OrderItem.objects.get(reference=order)
         resp = self.client.get(reverse('actions'),
                                {'pk': item.pk,
-                                'action': 'order-edit-item',
+                                'action': 'order-item-edit',
                                 'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/edit/edit_item.html')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        vars = ('item', 'form')
+        vars = ('item', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_delete_item_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'order-delete-item',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_delete_item(self):
+    def test_delete_order_item(self):
         """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         item = OrderItem.objects.get(reference=order)
         resp = self.client.get(reverse('actions'),
                                {'pk': item.pk,
-                                'action': 'order-delete-item',
+                                'action': 'order-item-delete',
                                 'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/delete/delete_item.html')
+        self.assertEqual(template, 'includes/delete_confirmation.html')
         self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'item')
+        vars = ('modal_title', 'pk', 'action', 'msg', )
+        self.assertTrue(self.context_vars(context, vars))
 
-    def test_delete_customer_returns_404_with_pk_out_of_range(self):
-        """Out of range indexes should return a 404 error."""
-        resp = self.client.get(reverse('actions'),
-                               {'pk': 200,
-                                'action': 'customer-delete',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
+    def test_edit_obj_item(self):
+        """Should define."""
+        self.assertTrue(None)
+
+    def test_delete_obj_item(self):
+        """Should define."""
+        self.assertTrue(None)
 
     def test_delete_customer(self):
         """Test context dictionaries and template."""
@@ -1379,20 +1318,23 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(context[0], 'form')
 
     def test_pk_out_of_range_raises_404(self):
-        """Raises a 404 when pk is out of index."""
+        """Raises a 404 when pk is out of index.
+
+        All the cases but new order, customer or Object item
+        """
         actions = ('order-comment',
                    'comment-read',
-                   'order-add-item',
+                   'order-item-add',
                    'order-edit',
                    'order-edit-date',
-                   'order-edit-item',
-                   'time-edit',
-                   'time-delete',
+                   'customer-edit',
+                   'object-item-edit',
+                   'order-item-edit',
                    'order-pay-now',
                    'order-close',
                    'update-status',
-                   'customer-edit',
-                   'order-delete-item',
+                   'object-item-delete',
+                   'order-item-delete',
                    'customer-delete',
                    )
         for action in actions:
@@ -1470,15 +1412,18 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, url)
 
-    def test_item_add_adds_item(self):
+    def test_order_item_add_adds_item(self):
         """Test the proper insertion of items."""
         order = Order.objects.get(ref_name='example')
+        item_obj = Item.objects.all()[0]
         self.client.post(reverse('actions'),
-                         {'action': 'order-add-item',
+                         {'action': 'order-item-add',
                           'pk': order.pk,
-                          'item': '1',
-                          'size': 'xs',
+                          'element': item_obj.pk,
                           'qty': 2,
+                          'crop': 0,
+                          'sewing': 0,
+                          'iron': 0,
                           'description': 'added item',
                           'test': True
                           })
@@ -1486,15 +1431,18 @@ class ActionsPostMethodCreate(TestCase):
         self.assertTrue(item)
         self.assertEqual(item.reference, order)
 
-    def test_item_add_context_response(self):
+    def test_order_item_add_context_response(self):
         """Test the response given by add item."""
         order = Order.objects.get(ref_name='example')
+        item_obj = Item.objects.all()[0]
         resp = self.client.post(reverse('actions'),
-                                {'action': 'order-add-item',
+                                {'action': 'order-item-add',
                                  'pk': order.pk,
-                                 'item': '1',
-                                 'size': 'xs',
+                                 'element': item_obj.pk,
                                  'qty': 2,
+                                 'crop': 0,
+                                 'sewing': 0,
+                                 'iron': 0,
                                  'description': 'added item',
                                  'test': True
                                  })
@@ -1507,31 +1455,44 @@ class ActionsPostMethodCreate(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#order-details')
-        vars = ('form', 'order', 'items')
-        context_is_valid = self.context_vars(context, vars)
-        self.assertTrue(context_is_valid)
+        vars = ('order', 'items', 'btn_title_add', 'js_action_add',
+                'js_action_edit', 'js_action_delete', 'js_data_pk')
+        self.assertTrue(self.context_vars(context, vars))
 
-    def test_item_add_invalid_form_returns_to_form_again(self):
+    def test_order_item_add_invalid_form_returns_to_form_again(self):
         """Test item add invalid form behaviour."""
         order = Order.objects.get(ref_name='example')
+        item_obj = Item.objects.all()[0]
         resp = self.client.post(reverse('actions'),
-                                {'action': 'order-add-item',
+                                {'action': 'order-item-add',
                                  'pk': order.pk,
-                                 'item': '1',
-                                 'size': 'xs',
-                                 'qty': 2.5,
-                                 'description': 'invalid item',
+                                 'element': item_obj.pk,
+                                 'qty': 'invalid quantity',
+                                 'crop': 0,
+                                 'sewing': 0,
+                                 'iron': 0,
+                                 'description': 'added item',
                                  'test': True
                                  })
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/add/add_item_to_order.html')
-        self.assertIsInstance(context, list)
+        self.assertEqual(template, 'includes/order_details.html')
         vars = ('form', 'order')
-        context_is_valid = self.context_vars(context, vars)
-        self.assertTrue(context_is_valid)
+        self.assertTrue(self.context_vars(context, vars))
+
+    def test_obj_item_adds_item(self):
+        """Should define."""
+        self.assertTrue(None)
+
+    def test_obj_item_add_context_response(self):
+        """Should define."""
+        self.assertTrue(None)
+
+    def test_obj_item_add_invalid_form_returns_to_form_again(self):
+        """Should define."""
+        self.assertTrue(None)
 
 
 class ActionsPostMethodEdit(TestCase):
@@ -1749,15 +1710,28 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/edit/edit_customer.html')
         self.assertTrue(self.context_vars(data['context'], vars))
 
+    def test_obj_item_edit(self):
+        """Should define."""
+        self.assertTrue(None)
+
+    def test_obj_item_edit_context_response(self):
+        """Should define."""
+        self.assertTrue(None)
+
+    def test_obj_item_edit_invalid_form_returns_to_form_again(self):
+        """Should define."""
+        self.assertTrue(None)
+
     def test_edit_item_edits_item(self):
         """Test the correct item edition."""
-        item = OrderItem.objects.get(description='example item')
+        item = OrderItem.objects.select_related('element')
+        item = item.get(description='example item')
         resp = self.client.post(reverse('actions'),
                                 {'element': item.element.pk,
-                                 'qty': 2,
-                                 'crop': timedelta(0),
-                                 'sewing': timedelta(0),
-                                 'iron': timedelta(0),
+                                 'qty': '2',
+                                 'crop': '2',
+                                 'sewing': '2',
+                                 'iron': '2',
                                  'description': 'Modified item',
                                  'pk': item.pk,
                                  'action': 'order-item-edit',
@@ -1765,7 +1739,8 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'form', 'items')
+        vars = ('order', 'items', 'btn_title_add', 'js_action_add',
+                'js_action_edit', 'js_action_delete', 'js_data_pk')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
@@ -1775,8 +1750,6 @@ class ActionsPostMethodEdit(TestCase):
 
         # Test if the fields were modified
         mod_item = OrderItem.objects.get(pk=item.pk)
-        self.assertEqual(mod_item.item, '2')
-        self.assertEqual(mod_item.size, 'L')
         self.assertEqual(mod_item.qty, 2)
         self.assertEqual(mod_item.description, 'Modified item')
 
@@ -1889,34 +1862,43 @@ class ActionsPostMethodEdit(TestCase):
                 self.assertEqual(data['html_id'], '#order-status')
                 self.assertTrue(data['context'][0], 'order')
 
-    def test_delete_item_deletes_the_item(self):
+    def test_delete_order_item_deletes_the_item(self):
         """Test the proper deletion of items."""
         item = OrderItem.objects.get(description='example item')
         self.client.post(reverse('actions'), {'pk': item.pk,
-                                              'action': 'order-delete-item',
+                                              'action': 'order-item-delete',
                                               'test': True
                                               })
         with self.assertRaises(ObjectDoesNotExist):
             OrderItem.objects.get(pk=item.pk)
 
-    def test_delete_item_context_response(self):
+    def test_delete_order_item_context_response(self):
         """Test the response on deletion of items."""
         item = OrderItem.objects.get(description='example item')
         resp = self.client.post(reverse('actions'),
                                 {'pk': item.pk,
-                                 'action': 'order-delete-item',
+                                 'action': 'order-item-delete',
                                  'test': True
                                  })
 
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'items')
+        vars = ('order', 'items', 'btn_title_add', 'js_action_add',
+                'js_action_edit', 'js_action_delete', 'js_data_pk')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/order_details.html')
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
+
+    def test_delete_obj_item_deletes_the_item(self):
+        """Should define."""
+        self.assertTrue(None)
+
+    def test_delete_obj_item_context_response(self):
+        """Should define."""
+        self.assertTrue(None)
 
     def test_delete_customer_deletes_customer(self):
         """Test the proper deletion of customers."""
