@@ -643,12 +643,20 @@ class Actions(View):
                 items = Item.objects.all()
                 data['html_id'] = '#item_objects_list'
                 data['form_is_valid'] = True
-                context = {'form': form,
-                           'items': items,
+                context = {'items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
                            }
                 template = 'includes/items_list.html'
+            else:
+                data['form_is_valid'] = False
+                context = {'form': form,
+                           'modal_title': 'Añadir prenda',
+                           'pk': '0',
+                           'action': 'object-item-add',
+                           'submit_btn': 'Añadir',
+                           }
+                template = 'includes/regular_form.html'
 
         # Attach item to order (POST)
         elif action == 'order-item-add':

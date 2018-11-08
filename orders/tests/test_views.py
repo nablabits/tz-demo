@@ -1483,16 +1483,65 @@ class ActionsPostMethodCreate(TestCase):
         self.assertTrue(self.context_vars(context, vars))
 
     def test_obj_item_adds_item(self):
-        """Should define."""
-        self.assertTrue(None)
+        """Test the proepr creation of item objects."""
+        self.client.post(reverse('actions'), {'action': 'object-item-add',
+                                              'pk': 'None',
+                                              'name': 'Example Item',
+                                              'item_type': '2',
+                                              'item_class': 'S',
+                                              'size': '4',
+                                              'fabrics': 4,
+                                              'notes': 'Custom Notes',
+                                              })
+        self.assertTrue(Item.objects.get(name='Example Item'))
 
     def test_obj_item_add_context_response(self):
-        """Should define."""
-        self.assertTrue(None)
+        """Test the context returned by obj item creation."""
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'object-item-add',
+                                 'pk': 'None',
+                                 'name': 'Example Item',
+                                 'item_type': '2',
+                                 'item_class': 'S',
+                                 'size': '4',
+                                 'fabrics': 4,
+                                 'notes': 'Custom Notes',
+                                 'test': True,
+                                 })
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/items_list.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['html_id'], '#item_objects_list')
+        vars = ('items', 'js_action_edit', 'js_action_delete', )
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_obj_item_add_invalid_form_returns_to_form_again(self):
         """Should define."""
-        self.assertTrue(None)
+        resp = self.client.post(reverse('actions'),
+                                {'action': 'object-item-add',
+                                 'pk': 'None',
+                                 'name': 'Example Item',
+                                 'item_type': '2',
+                                 'item_class': 'S',
+                                 'size': '4',
+                                 'fabrics': 'invalid quantity',
+                                 'notes': 'Custom Notes',
+                                 'test': True,
+                                 })
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertFalse(data['form_is_valid'])
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',)
+        self.assertTrue(self.context_vars(context, vars))
 
 
 class ActionsPostMethodEdit(TestCase):
