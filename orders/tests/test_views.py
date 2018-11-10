@@ -144,8 +144,8 @@ class StandardViewsTest(TestCase):
 
         # Have a read comment
         order = Order.objects.get(ref_name='example closed')
-        comment = Comment.objects.filter(reference=order)
-        comment = comment.get(comment='Comment0')
+        comment = Comment.objects.filter(reference=order)[0]
+        # comment = comment.get(comment='Comment0')
         comment.read = True
         comment.comment = 'read comment'
         comment.save()
@@ -164,7 +164,7 @@ class StandardViewsTest(TestCase):
         # Test context variables
         self.assertEqual(str(resp.context['orders'][0].ref_name), 'example10')
         self.assertEqual(resp.context['orders_count'], 10)
-        self.assertEqual(resp.context['comments_count'], 4)
+        self.assertEqual(resp.context['comments_count'], 5)
         self.assertEqual(str(resp.context['comments'][0].comment), 'Comment8')
         self.assertEqual(str(resp.context['user']), 'regular')
 
@@ -400,7 +400,7 @@ class StandardViewsTest(TestCase):
         self.assertEqual(len(comments), 10)
         self.assertEqual(len(items), 5)
         self.assertTrue(resp.context['closed'])
-        self.assertTrue(comments[9].read)
+        self.assertTrue(comments[0].read)
 
     def test_customer_list(self):
         """Test the main features on customer list."""
@@ -2017,12 +2017,26 @@ class ActionsPostMethodEdit(TestCase):
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_delete_obj_item_deletes_the_item(self):
-        """Should define."""
-        self.assertTrue(None)
+        """Test the correct item deletion."""
+        item = Item.objects.all()[0]
+        resp = self.client.post(reverse('actions'),
+                                {'pk': item.pk,
+                                 'action': 'object-item-delete',
+                                 'test': True
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('items', 'js_action_edit', 'js_action_delete', )
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/items_list.html')
+        self.assertEqual(data['html_id'], '#item_objects_list')
+        self.assertTrue(self.context_vars(data['context'], vars))
 
-    def test_delete_obj_item_context_response(self):
-        """Should define."""
-        self.assertTrue(None)
+        # test if the object was actually deleted
+        with self.assertRaises(ObjectDoesNotExist):
+            Item.objects.get(name=item.name)
 
     def test_delete_customer_deletes_customer(self):
         """Test the proper deletion of customers."""
