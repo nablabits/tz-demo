@@ -887,10 +887,7 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(context[0], 'form')
 
     def test_add_order_item(self):
-        """Test context dictionaries and template.
-
-        The index for the context items seems to be a bit random (why?).
-        """
+        """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         resp = self.client.get(reverse('actions'),
                                {'pk': order.pk,
@@ -907,8 +904,20 @@ class ActionsGetMethod(TestCase):
         self.assertTrue(self.context_vars(context, vars))
 
     def test_add_obj_item(self):
-        """Should define."""
-        self.assertTrue(None)
+        """Test context dictionaries and template."""
+        resp = self.client.get(reverse('actions'),
+                               {'pk': 'None',
+                                'action': 'object-item-add',
+                                'test': True,
+                                })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/regular_form.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',)
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_add_comment(self):
         """Test context dictionaries and template.
@@ -1034,11 +1043,25 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_edit_order_item(self):
-        """Test context dictionaries and template.
+    def test_edit_obj_item(self):
+        """Test context dictionaries and template."""
+        item = Item.objects.all()[0]
+        resp = self.client.get(reverse('actions'),
+                               {'pk': item.pk,
+                                'action': 'object-item-edit',
+                                'test': True,
+                                })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/regular_form.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',)
+        self.assertTrue(self.context_vars(context, vars))
 
-        The index for the context items seems to be a bit random (why?).
-        """
+    def test_edit_order_item(self):
+        """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
         item = OrderItem.objects.get(reference=order)
         resp = self.client.get(reverse('actions'),
@@ -1074,13 +1097,22 @@ class ActionsGetMethod(TestCase):
         vars = ('modal_title', 'pk', 'action', 'msg', )
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_edit_obj_item(self):
-        """Should define."""
-        self.assertTrue(None)
-
     def test_delete_obj_item(self):
-        """Should define."""
-        self.assertTrue(None)
+        """Test context dictionaries and template."""
+        item = Item.objects.all()[0]
+        resp = self.client.get(reverse('actions'),
+                               {'pk': item.pk,
+                                'action': 'object-item-delete',
+                                'test': True,
+                                })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/delete_confirmation.html')
+        vars = ('modal_title', 'pk', 'action', 'msg', )
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_delete_customer(self):
         """Test context dictionaries and template."""
@@ -1760,16 +1792,59 @@ class ActionsPostMethodEdit(TestCase):
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_obj_item_edit(self):
-        """Should define."""
-        self.assertTrue(None)
+        """Test the correct item edition."""
+        item = Item.objects.all()[0]
+        resp = self.client.post(reverse('actions'),
+                                {'name': 'Changed name',
+                                 'item_type': '2',
+                                 'item_class': 'M',
+                                 'size': 'X',
+                                 'fabrics': 5,
+                                 'notes': 'Changed notes',
+                                 'pk': item.pk,
+                                 'action': 'object-item-edit',
+                                 'test': True
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('form', 'items', 'js_action_edit', 'js_action_delete', )
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/items_list.html')
+        self.assertEqual(data['html_id'], '#item_objects_list')
+        self.assertTrue(self.context_vars(data['context'], vars))
 
-    def test_obj_item_edit_context_response(self):
-        """Should define."""
-        self.assertTrue(None)
+        # Test if the fields were Modified
+        edited = Item.objects.get(name='Changed name')
+        self.assertNotEqual(item.name, edited.name)
+        self.assertNotEqual(item.item_type, edited.item_type)
+        self.assertNotEqual(item.item_class, edited.item_class)
+        self.assertNotEqual(item.size, edited.size)
+        self.assertNotEqual(item.fabrics, edited.fabrics)
 
     def test_obj_item_edit_invalid_form_returns_to_form_again(self):
-        """Should define."""
-        self.assertTrue(None)
+        """Test the proper rejection of forms."""
+        item = Item.objects.all()[0]
+        resp = self.client.post(reverse('actions'),
+                                {'name': 'Changed name',
+                                 'item_type': '2',
+                                 'item_class': 'M',
+                                 'size': 'X',
+                                 'fabrics': 'invalid field',
+                                 'notes': 'Changed notes',
+                                 'pk': item.pk,
+                                 'action': 'object-item-edit',
+                                 'test': True
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn', )
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/regular_form.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_edit_item_edits_item(self):
         """Test the correct item edition."""

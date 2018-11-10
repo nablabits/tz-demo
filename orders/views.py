@@ -741,6 +741,15 @@ class Actions(View):
                            'js_action_delete': 'object-item-delete',
                            }
                 template = 'includes/items_list.html'
+            else:
+                data['form_is_valid'] = False
+                context = {'form': form,
+                           'modal_title': 'Editar prenda',
+                           'pk': item.pk,
+                           'action': 'object-item-edit',
+                           'submit_btn': 'Guardar',
+                           }
+                template = 'includes/regular_form.html'
 
         # Edit order item (POST)
         elif action == 'order-item-edit':
@@ -763,13 +772,14 @@ class Actions(View):
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-details'
             else:
+                custom_form = 'includes/custom_forms/order_item.html'
                 context = {'form': form,
                            'item': item,
                            'modal_title': 'Editar prenda',
                            'pk': item.reference.pk,
                            'action': 'order-item-edit',
                            'submit_btn': 'Guardar',
-                           'custom_form': 'includes/custom_forms/order_item.html',
+                           'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
                 data['form_is_valid'] = False
