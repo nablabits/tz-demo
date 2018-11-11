@@ -170,7 +170,7 @@ class OrderItem(models.Model):
     # DEBUG: Uncomment after deploy
     default = Item.objects.get(name='Predeterminado')
     element = models.ForeignKey(Item, default=default.pk,
-    #                             on_delete=models.CASCADE)
+                                on_delete=models.CASCADE)
 
     # DEBUG: get rid of this line after deploy
     # element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
