@@ -168,12 +168,12 @@ class OrderItem(models.Model):
     # on deploying disable default value and add blank=True
 
     # DEBUG: Uncomment after deploy
-    # default = Item.objects.get(name='Predeterminado')
-    # element = models.ForeignKey(Item, default=default.pk,
+    default = Item.objects.get(name='Predeterminado')
+    element = models.ForeignKey(Item, default=default.pk,
     #                             on_delete=models.CASCADE)
 
     # DEBUG: get rid of this line after deploy
-    element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
+    # element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
 
     qty = models.IntegerField('Cantidad', default=1)
     description = models.CharField('descripcion', max_length=255, blank=True)
