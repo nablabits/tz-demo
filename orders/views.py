@@ -8,13 +8,14 @@ from .models import Comment, Customer, Order, OrderItem, Timing, Item
 from .utils import TimeLenght
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm, ItemForm
-from .forms import OrderCloseForm, OrderItemForm, TimeForm
+from .forms import OrderCloseForm, OrderItemForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Count, Sum, F
 from datetime import datetime
+import markdown2
 
 
 # Root View
@@ -894,3 +895,14 @@ class Actions(View):
         # Now render_to_string the html for JSON response
         data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
+
+
+def changelog(request):
+    """Display the changelog."""
+    data = dict()
+    with open('orders/changelog.md') as md:
+        md_file = md.read()
+        changelog = markdown2.markdown(md_file)
+
+    data['html'] = changelog
+    return JsonResponse(data)

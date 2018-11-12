@@ -26,6 +26,7 @@ urlpatterns = [
 
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),
+    path('changelog/', views.changelog, name='changelog'),
 
     # Loging related urls
     path('accounts/login/', auth_views.login, name='login'),

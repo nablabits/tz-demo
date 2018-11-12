@@ -12,6 +12,7 @@ gunicorn==19.9.0
 idna==2.6
 itypes==1.1.0
 Jinja2==2.10
+markdown2==2.3.6
 MarkupSafe==1.0
 psycopg2==2.7.5
 python-decouple==3.1

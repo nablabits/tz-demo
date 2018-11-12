@@ -9,6 +9,16 @@ $(document).ready(function () {
     })
   })
 
+  var loadChangelog = function () {
+    $.ajax({
+      url: '/changelog/',
+      dataType: 'json',
+      success: function (data) {
+        $('#changelog-modal .modal-body').html(data.html)
+      }
+    })
+  }
+
   // opens a list item on orders/customers view
   var openItem = function () {
     var href = $(this).attr('data-href')
@@ -16,4 +26,5 @@ $(document).ready(function () {
   }
 
   $('.js-view-list-item').click(openItem)
+  loadChangelog()
 })
