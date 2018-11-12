@@ -105,3 +105,8 @@ tbody{
 .js-view-list-item:hover{
   background-color: #daf9bc;
 }
+
+#md-content{
+  height: 500px;
+  overflow: auto;
+}
