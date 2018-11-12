@@ -165,15 +165,9 @@ class OrderItem(models.Model):
     size = models.CharField('Talla', max_length=3, default='1')
 
     # Element field should be renamed after backup all the previous fields.
-    # on deploying disable default value and add blank=True
-
-    # DEBUG: Uncomment after deploy
     default = Item.objects.get(name='Predeterminado')
     element = models.ForeignKey(Item, default=default.pk,
                                 on_delete=models.CASCADE)
-
-    # DEBUG: get rid of this line after deploy
-    # element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
 
     qty = models.IntegerField('Cantidad', default=1)
     description = models.CharField('descripcion', max_length=255, blank=True)
@@ -196,6 +190,7 @@ class OrderItem(models.Model):
             rate += 1
 
         return rate
+
 
 class Comment(models.Model):
     """Store the comments related to the orders."""
