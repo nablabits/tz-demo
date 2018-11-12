@@ -526,6 +526,12 @@ class StandardViewsTest(TestCase):
                          'includes/items_list.html')
         self.assertTrue(resp.context['footer'])
 
+    def test_mark_down_view(self):
+        """Test the proper work of view."""
+        resp = self.client.get(reverse('changelog'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+
 
 class SearchBoxTest(TestCase):
     """Test the standard views."""
