@@ -57,9 +57,10 @@
             <a class="nav-item nav-link" href="{% url 'itemslist' %}" id="sidebar-items">
               <i class="fa fa-fw fa-cube pr-2"></i> Prendas</a>
             <a class="nav-item nav-link js-logout" data-action="logout" data-pk="0" id="sidebar-logout">
-              <i class="fa fa-fw fa-sign-out pr-2"></i> Cerrar sesión</a>
+              <i class="fas fa-fw fa-sign-out-alt pr-2"></i> Cerrar sesión</a>
           </nav>
         </div>
+
         <div class="col-md-8 col-sm-12 mb-5" id="root">
           {% block homeview %}{% endblock %}
           {% block orderview %}{% endblock %}
