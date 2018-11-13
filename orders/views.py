@@ -13,8 +13,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Count, Sum, F
+from django.db.models import Count, Sum, F, Q
 from datetime import datetime
+from . import settings
 import markdown2
 
 
@@ -288,7 +289,7 @@ def itemslist(request):
                 'placeholder': 'Buscar item',
                 'search_on': 'items',
                 'title': 'TrapuZarrak · Prendas',
-                'h3': 'Todos los items',
+                'h3': 'Todas las prendas',
                 'table_id': 'item_objects_list',
 
                 # CRUD Actions
@@ -513,7 +514,7 @@ class Actions(View):
             context = {'form': form,
                        'item': item,
                        'modal_title': 'Editar prenda',
-                       'pk': item.reference.pk,
+                       'pk': item.pk,
                        'action': 'order-item-edit',
                        'submit_btn': 'Guardar',
                        'custom_form': 'includes/custom_forms/order_item.html',
@@ -905,4 +906,18 @@ def changelog(request):
         changelog = markdown2.markdown(md_file)
 
     data['html'] = changelog
+    return JsonResponse(data)
+
+
+def filter_items(request):
+    """Filter the item objects list."""
+    data = dict()
+    query_obj = request.POST.get('search-obj')
+    items = Item.objects.filter(name__istartswith=query_obj) 
+    context = {'items': items,
+               'js_action_edit': 'object-item-edit',
+               'js_action_delete': 'object-item-delete',
+               }
+    template = 'includes/items_list.html'
+    data['html'] = render_to_string(template, context, request=request)
     return JsonResponse(data)

@@ -19,6 +19,20 @@ $(document).ready(function () {
     })
   }
 
+  var filterItems = function () {
+    var form = $(this)
+    $.ajax({
+      url: '/filter-items/',
+      data: form.serialize(),
+      type: 'post',
+      dataType: 'json',
+      success: function (data) {
+        $('#item_objects_list').html(data.html)
+      }
+    })
+    return false
+  }
+
   // opens a list item on orders/customers view
   var openItem = function () {
     var href = $(this).attr('data-href')
@@ -27,4 +41,5 @@ $(document).ready(function () {
 
   $('.js-view-list-item').click(openItem)
   loadChangelog()
+  $('#item_objects_list').on('submit', '.js-filter-view', filterItems)
 })
