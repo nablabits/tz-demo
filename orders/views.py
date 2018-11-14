@@ -232,7 +232,7 @@ def orderlist(request, orderby):
                      'pending': pending,
                      'pending_total': pending_total,
                      'order_by': orderby,
-                     'placeholder': 'Buscar pedido (referencia)',
+                     'placeholder': 'Buscar pedido (referencia on nº)',
                      'search_on': 'orders',
                      'title': 'TrapuZarrak · Pedidos',
                      'footer': True,
