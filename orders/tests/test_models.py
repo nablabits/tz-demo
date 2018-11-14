@@ -125,6 +125,16 @@ class ModelTest(TestCase):
                             fabrics=5.2)
         self.assertTrue(Item.objects.get(name='Test item'))
 
+    def test_object_item_allows_6_chars_on_size(self):
+        """Items's size should allow up to 6 chars."""
+        Item.objects.create(name='Test 6 char item',
+                            item_type='2',
+                            item_class='S',
+                            size='6chars',
+                            notes='Default notes',
+                            fabrics=5.2)
+        self.assertTrue(Item.objects.get(name='Test 6 char item'))
+
     def test_default_item_object_should_be_automatically_created(self):
         """The default item object is created by a migration."""
         default = Item.objects.get(name='Predeterminado')

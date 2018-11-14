@@ -114,7 +114,7 @@ class Item(models.Model):
                                   max_length=1,
                                   choices=settings.ITEM_CLASSES,
                                   default='1')
-    size = models.CharField('Talla', max_length=3, default='1')
+    size = models.CharField('Talla', max_length=6, default='1')
     notes = models.TextField('Observaciones', blank=True, null=True)
     fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
 
