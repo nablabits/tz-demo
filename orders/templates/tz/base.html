@@ -17,13 +17,13 @@
             <a href="{% url 'main' %}"><h1 class="intro_text">Trapu Zarrak App</h1></a>
           </div>
         </div>
-        <div class="d-flex justify-content-end pb-1">
+        <div class="d-flex justify-content-end align-items-center pb-1">
           <span class="pr-3">
             <i class="far fa-user"></i>
             <strong>Usuaria:</strong> {{user}}
           </span>
           <span class="pr-3"><i class="far fa-clock"></i> {{ now|date:"d/m" }}; {{ now|time:"H:i" }}</span>
-            <button class="btn btn-sm btn-success" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-tasks"></i> Registro de cambios</button>
+            <button class="btn btn-sm btn-success" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-cogs"></i> tz app {{version}}</button>
         </div>
       </div>
       <div class="d-md-none menu">

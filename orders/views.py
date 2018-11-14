@@ -61,6 +61,7 @@ def main(request):
                      'pending_count': len(pending),
                      'user': cur_user,
                      'now': now,
+                     'version': settings.VERSION,
                      'search_on': 'orders',
                      'placeholder': 'Buscar pedido (referencia)',
                      'title': 'TrapuZarrak · Inicio',
@@ -224,6 +225,7 @@ def orderlist(request, orderby):
                      'delivered': delivered,
                      'user': cur_user,
                      'now': now,
+                     'version': settings.VERSION,
                      'active_stock': tz_active,
                      'delivered_stock': tz_delivered,
                      'cancelled': cancelled,
@@ -259,6 +261,7 @@ def customerlist(request):
     view_settings = {'customers': customers,
                      'user': cur_user,
                      'now': now,
+                     'version': settings.VERSION,
                      'search_on': 'customers',
                      'placeholder': 'Buscar cliente',
                      'title': 'TrapuZarrak · Clientes',
@@ -286,6 +289,7 @@ def itemslist(request):
     view_settings = {'items': items,
                      'user': cur_user,
                      'now': now,
+                     'version': settings.VERSION,
                      'search_on': 'items',
                      'title': 'TrapuZarrak · Prendas',
                      'h3': 'Todas las prendas',
@@ -336,6 +340,7 @@ def order_view(request, pk):
                      'closed': closed,
                      'user': cur_user,
                      'now': now,
+                     'version': settings.VERSION,
                      'title': 'TrapuZarrak · Ver Pedido',
 
                      # CRUD Actions
@@ -375,6 +380,7 @@ def customer_view(request, pk):
                      'orders_made': len(orders),
                      'user': cur_user,
                      'now': now,
+                     'version': settings.VERSION,
                      'title': 'TrapuZarrak · Ver cliente',
                      'footer': True,
                      }
