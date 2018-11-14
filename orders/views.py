@@ -52,22 +52,22 @@ def main(request):
 
     now = datetime.now()
 
-    settings = {'orders': orders,
-                'orders_count': len(orders),
-                'comments': comments,
-                'comments_count': len(comments),
-                'pending': pending,
-                'pending_total': pending_total,
-                'pending_count': len(pending),
-                'user': cur_user,
-                'now': now,
-                'search_on': 'orders',
-                'placeholder': 'Buscar pedido (referencia)',
-                'title': 'TrapuZarrak · Inicio',
-                'footer': True,
-                }
+    view_settings = {'orders': orders,
+                     'orders_count': len(orders),
+                     'comments': comments,
+                     'comments_count': len(comments),
+                     'pending': pending,
+                     'pending_total': pending_total,
+                     'pending_count': len(pending),
+                     'user': cur_user,
+                     'now': now,
+                     'search_on': 'orders',
+                     'placeholder': 'Buscar pedido (referencia)',
+                     'title': 'TrapuZarrak · Inicio',
+                     'footer': True,
+                     }
 
-    return render(request, 'tz/main.html', settings)
+    return render(request, 'tz/main.html', view_settings)
 
 
 def search(request):
@@ -220,23 +220,23 @@ def orderlist(request, orderby):
     cur_user = request.user
     now = datetime.now()
 
-    settings = {'active': active,
-                'delivered': delivered,
-                'user': cur_user,
-                'now': now,
-                'active_stock': tz_active,
-                'delivered_stock': tz_delivered,
-                'cancelled': cancelled,
-                'pending': pending,
-                'pending_total': pending_total,
-                'order_by': orderby,
-                'placeholder': 'Buscar pedido (referencia)',
-                'search_on': 'orders',
-                'title': 'TrapuZarrak · Pedidos',
-                'footer': True,
-                }
+    view_settings = {'active': active,
+                     'delivered': delivered,
+                     'user': cur_user,
+                     'now': now,
+                     'active_stock': tz_active,
+                     'delivered_stock': tz_delivered,
+                     'cancelled': cancelled,
+                     'pending': pending,
+                     'pending_total': pending_total,
+                     'order_by': orderby,
+                     'placeholder': 'Buscar pedido (referencia)',
+                     'search_on': 'orders',
+                     'title': 'TrapuZarrak · Pedidos',
+                     'footer': True,
+                     }
 
-    return render(request, 'tz/orders.html', settings)
+    return render(request, 'tz/orders.html', view_settings)
 
 
 @login_required
@@ -256,24 +256,24 @@ def customerlist(request):
     cur_user = request.user
     now = datetime.now()
 
-    settings = {'customers': customers,
-                'user': cur_user,
-                'now': now,
-                'search_on': 'customers',
-                'placeholder': 'Buscar cliente',
-                'title': 'TrapuZarrak · Clientes',
-                'h3': 'Todos los clientes',
+    view_settings = {'customers': customers,
+                     'user': cur_user,
+                     'now': now,
+                     'search_on': 'customers',
+                     'placeholder': 'Buscar cliente',
+                     'title': 'TrapuZarrak · Clientes',
+                     'h3': 'Todos los clientes',
 
-                # CRUD actions
-                'btn_title_add': 'Nuevo cliente',
-                'js_action_add': 'customer-add',
-                'js_data_pk': '0',
+                     # CRUD actions
+                     'btn_title_add': 'Nuevo cliente',
+                     'js_action_add': 'customer-add',
+                     'js_data_pk': '0',
 
-                'include_template': 'includes/customer_list.html',
-                'footer': True,
-                }
+                     'include_template': 'includes/customer_list.html',
+                     'footer': True,
+                     }
 
-    return render(request, 'tz/list_view.html', settings)
+    return render(request, 'tz/list_view.html', view_settings)
 
 
 @login_required
@@ -283,27 +283,26 @@ def itemslist(request):
     cur_user = request.user
     now = datetime.now()
 
-    settings = {'items': items,
-                'user': cur_user,
-                'now': now,
-                'placeholder': 'Buscar item',
-                'search_on': 'items',
-                'title': 'TrapuZarrak · Prendas',
-                'h3': 'Todas las prendas',
-                'table_id': 'item_objects_list',
+    view_settings = {'items': items,
+                     'user': cur_user,
+                     'now': now,
+                     'search_on': 'items',
+                     'title': 'TrapuZarrak · Prendas',
+                     'h3': 'Todas las prendas',
+                     'table_id': 'item_objects_list',
 
-                # CRUD Actions
-                'btn_title_add': 'Añadir prenda',
-                'js_action_add': 'object-item-add',
-                'js_action_edit': 'object-item-edit',
-                'js_action_delete': 'object-item-delete',
-                'js_data_pk': '0',
+                     # CRUD Actions
+                     'btn_title_add': 'Añadir prenda',
+                     'js_action_add': 'object-item-add',
+                     'js_action_edit': 'object-item-edit',
+                     'js_action_delete': 'object-item-delete',
+                     'js_data_pk': '0',
 
-                'include_template': 'includes/items_list.html',
-                'footer': True,
-                }
+                     'include_template': 'includes/items_list.html',
+                     'footer': True,
+                     }
 
-    return render(request, 'tz/list_view.html', settings)
+    return render(request, 'tz/list_view.html', view_settings)
 
 
 # Object views
@@ -329,26 +328,26 @@ def order_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
-    settings = {'order': order,
-                'items': items,
-                'comments': comments,
-                'times': times,
-                'total_time': total_time,
-                'closed': closed,
-                'user': cur_user,
-                'now': now,
-                'title': 'TrapuZarrak · Ver Pedido',
+    view_settings = {'order': order,
+                     'items': items,
+                     'comments': comments,
+                     'times': times,
+                     'total_time': total_time,
+                     'closed': closed,
+                     'user': cur_user,
+                     'now': now,
+                     'title': 'TrapuZarrak · Ver Pedido',
 
-                # CRUD Actions
-                'btn_title_add': 'Añadir prenda',
-                'js_action_add': 'order-item-add',
-                'js_action_edit': 'order-item-edit',
-                'js_action_delete': 'order-item-delete',
-                'js_data_pk': order.pk,
-                'footer': True,
-                }
+                     # CRUD Actions
+                     'btn_title_add': 'Añadir prenda',
+                     'js_action_add': 'order-item-add',
+                     'js_action_edit': 'order-item-edit',
+                     'js_action_delete': 'order-item-delete',
+                     'js_data_pk': order.pk,
+                     'footer': True,
+                     }
 
-    return render(request, 'tz/order_view.html', settings)
+    return render(request, 'tz/order_view.html', view_settings)
 
 
 @login_required
@@ -368,18 +367,18 @@ def customer_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
-    settings = {'customer': customer,
-                'orders_active': active,
-                'orders_delivered': delivered,
-                'orders_cancelled': cancelled,
-                'pending': pending,
-                'orders_made': len(orders),
-                'user': cur_user,
-                'now': now,
-                'title': 'TrapuZarrak · Ver cliente',
-                'footer': True,
-                }
-    return render(request, 'tz/customer_view.html', settings)
+    view_settings = {'customer': customer,
+                     'orders_active': active,
+                     'orders_delivered': delivered,
+                     'orders_cancelled': cancelled,
+                     'pending': pending,
+                     'orders_made': len(orders),
+                     'user': cur_user,
+                     'now': now,
+                     'title': 'TrapuZarrak · Ver cliente',
+                     'footer': True,
+                     }
+    return render(request, 'tz/customer_view.html', view_settings)
 
 
 # Ajax powered views
@@ -913,7 +912,7 @@ def filter_items(request):
     """Filter the item objects list."""
     data = dict()
     query_obj = request.POST.get('search-obj')
-    items = Item.objects.filter(name__istartswith=query_obj) 
+    items = Item.objects.filter(name__istartswith=query_obj)
     context = {'items': items,
                'js_action_edit': 'object-item-edit',
                'js_action_delete': 'object-item-delete',
