@@ -4,6 +4,7 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, OrderItem, Comment, Timing, Item
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.db.models import F
 from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
@@ -198,7 +199,18 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['active'][0].ref_name, 'example10')
         self.assertEqual(str(resp.context['user']), 'regular')
         self.assertEqual(resp.context['placeholder'],
-                         'Buscar pedido (referencia)')
+                         'Buscar pedido (referencia o nº)')
+
+    def test_order_list_delivered_more_recent_first(self):
+        """Test the correct order on delivered orders."""
+        delivered_order = Order.objects.filter(status=7)[0]
+        delivered_order.delivery = date(2020, 12, 1)
+        delivered_order.ref_name = 'latest delivered'
+        delivered_order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['delivered'][0], delivered_order)
 
     def test_order_list_post_method_update_status(self):
         """Test the proper status update on post method."""
@@ -369,6 +381,16 @@ class StandardViewsTest(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEquals(len(resp.context['pending']), 19)
         self.assertEquals(resp.context['pending_total'], 38000)
+
+    def test_pending_orders_more_ancient_first(self):
+        """The order should be from more ancient up."""
+        pending_first = Order.objects.exclude(status=8)
+        pending_first = pending_first.filter(budget__gt=F('prepaid'))[0]
+        pending_first.inbox_date = pending_first.inbox_date - timedelta(days=2)
+        pending_first.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(resp.context['pending'][0], pending_first)
 
     def test_pending_orders_should_dismiss_cancelled(self):
         """Pending orders don't include cancelled orders."""

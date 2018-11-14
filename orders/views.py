@@ -186,11 +186,11 @@ def orderlist(request, orderby):
         tz_active = None
         tz_delivered = None
 
-    delivered = orders.filter(status=7)
+    delivered = orders.filter(status=7).order_by('-delivery')
     active = orders.exclude(status__in=[7, 8])
     cancelled = orders.filter(status=8)
     pending = orders.exclude(status=8).filter(budget__gt=F('prepaid'))
-    pending = pending.order_by('status')
+    pending = pending.order_by('inbox_date')
 
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
