@@ -512,10 +512,9 @@ class StandardViewsTest(TestCase):
     def test_items_view_context_vars(self):
         """Test the correct context vars."""
         resp = self.client.get(reverse('itemslist'))
-        self.assertEqual(resp.context['placeholder'], 'Buscar item')
         self.assertEqual(resp.context['search_on'], 'items')
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Prendas')
-        self.assertEqual(resp.context['h3'], 'Todos los items')
+        self.assertEqual(resp.context['h3'], 'Todas las prendas')
         self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
         self.assertEqual(resp.context['js_action_add'], 'object-item-add')
         self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
