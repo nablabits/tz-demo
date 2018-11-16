@@ -29,11 +29,11 @@
     <tbody>
       {% for item in items %}
       <tr>
-        <th scope="row">
+        <td scope="row">
           {{item.element}}
-        </th>
-        <th>{{item.qty}}</th>
-        <th>
+        </td>
+        <td>{{item.qty}}</td>
+        <td data-toggle="collapse" data-target="#time-detail-{{item.pk}}" style="cursor:pointer;">
           {% if item.time_quality == 0 %}
             <i class="far fa-frown" ></i> Sin tiempos aún (0/3)
           {% elif item.time_quality == 1 %}
@@ -43,8 +43,25 @@
           {% else %}
             <i class="far fa-star fa-fw" ></i> Genial (3/3)
           {% endif %}
-        </th>
-        <th>{% include 'includes/action_buttons.html' %}</th>
+        </td>
+        <td>{% include 'includes/action_buttons.html' %}</td>
+      </tr>
+      <tr class="collapse" id="time-detail-{{item.pk}}">
+        <td class="pl-3" colspan="2">
+          <strong>Descripción:</strong><br>
+          {%if item.description%}
+            {{item.description}}
+          {%else%}
+            No se ha dado descripción para esta prenda.
+          {%endif%}
+        </td>
+        <td colspan="2">
+          <strong>Tiempos:</strong><br>
+          <strong>Corte: </strong>{{item.crop}};<br>
+          <strong>Confección: </strong>{{item.sewing}};<br>
+          <strong>Planchado:</strong>{{item.iron}}
+        </td>
+        <td></td>
       </tr>
       {% endfor %}
     </tbody>
