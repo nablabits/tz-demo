@@ -117,6 +117,7 @@ class Item(models.Model):
     size = models.CharField('Talla', max_length=6, default='1')
     notes = models.TextField('Observaciones', blank=True, null=True)
     fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
+    foreing = models.BooleanField('Externo', default=False)
 
     def __str__(self):
         """Object's representation."""
@@ -165,9 +166,7 @@ class OrderItem(models.Model):
     size = models.CharField('Talla', max_length=3, default='1')
 
     # Element field should be renamed after backup all the previous fields.
-    default = Item.objects.get(name='Predeterminado')
-    element = models.ForeignKey(Item, default=default.pk,
-                                on_delete=models.CASCADE)
+    element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
 
     qty = models.IntegerField('Cantidad', default=1)
     description = models.CharField('descripcion', max_length=255, blank=True)
@@ -177,6 +176,24 @@ class OrderItem(models.Model):
     crop = models.DurationField('Corte', default=timedelta(0))
     sewing = models.DurationField('Confeccion', default=timedelta(0))
     iron = models.DurationField('Planchado', default=timedelta(0))
+
+    def save(self, *args, **kwargs):
+        """Override the save method."""
+        try:
+            default = Item.objects.get(name='Predeterminado')
+        except ObjectDoesNotExist:
+            default = Item.objects.create(name='Predeterminado',
+                                          item_type='0',
+                                          item_class='0',
+                                          size=0,
+                                          fabrics=0)
+
+        try:
+            self.element
+        except ObjectDoesNotExist:
+            self.element = default
+
+        super().save(*args, **kwargs)
 
     @property
     def time_quality(self):

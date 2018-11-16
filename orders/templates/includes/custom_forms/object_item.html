@@ -1,0 +1,43 @@
+{% load widget_tweaks %}
+<div class="form-group">
+  {{form.name.label_tag}}
+  {% render_field form.name class="form-control" %}
+</div>
+<div class="row">
+  <div class="col-6">
+    <div class="form-group">
+      {{form.item_type.label_tag}}
+      {% render_field form.item_type class="form-control" %}
+    </div>
+  </div>
+  <div class="col-6">
+    <div class="form-group">
+      {{form.item_class.label_tag}}
+      {% render_field form.item_class class="form-control" %}
+    </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col">
+    <div class="form-group">
+      {{form.size.label_tag}}
+      {% render_field form.size class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
+      {{form.fabrics.label_tag}}
+      {% render_field form.fabrics class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
+      {{form.foreing.label_tag}}
+      {% render_field form.foreing class="form-control" %}
+    </div>
+  </div>
+</div>
+<div class="form-group">
+  {{form.notes.label_tag}}
+  <textarea class="form-control" name="{{form.notes.name}}" value="{{form.notes.value}}"></textarea>
+</div>

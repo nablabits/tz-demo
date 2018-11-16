@@ -943,7 +943,8 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',)
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_add_comment(self):
@@ -1084,7 +1085,8 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',)
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_order_item(self):

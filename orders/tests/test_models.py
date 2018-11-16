@@ -135,10 +135,21 @@ class ModelTest(TestCase):
                             fabrics=5.2)
         self.assertTrue(Item.objects.get(name='Test 6 char item'))
 
+    def test_item_object_foreing_is_default_false(self):
+        """Item's default origin should be false (ie homemade)."""
+        Item.objects.create(name='Test 6 char item',
+                            item_type='2',
+                            item_class='S',
+                            size='6chars',
+                            notes='Default notes',
+                            fabrics=5.2)
+
+        item = Item.objects.get(name='Test 6 char item')
+        self.assertFalse(item.foreing)
+
     def test_default_item_object_should_be_automatically_created(self):
         """The default item object is created by a migration."""
-        default = Item.objects.get(name='Predeterminado')
-        self.assertTrue(default)
+        self.assertTrue(Item.objects.get(name='Predeterminado'))
 
     def test_the_item_object_named_default_is_reserved(self):
         """The item obj named default is reserved & raises ValidationError."""

@@ -442,6 +442,7 @@ class Actions(View):
                        'pk': '0',
                        'action': 'object-item-add',
                        'submit_btn': 'Añadir',
+                       'custom_form': 'includes/custom_forms/object_item.html',
                        }
             template = 'includes/regular_form.html'
 
@@ -508,6 +509,7 @@ class Actions(View):
                        'pk': item.pk,
                        'action': 'object-item-edit',
                        'submit_btn': 'Guardar',
+                       'custom_form': 'includes/custom_forms/object_item.html'
                        }
             template = 'includes/regular_form.html'
 

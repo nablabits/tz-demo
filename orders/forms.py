@@ -43,7 +43,7 @@ class ItemForm(forms.ModelForm):
 
         model = Item
         fields = ('name', 'item_type', 'item_class', 'size', 'fabrics',
-                  'notes', )
+                  'notes', 'foreing', )
 
 
 class OrderItemForm(forms.ModelForm):
