@@ -887,9 +887,11 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/add/add_order.html')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'form')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_add_customer(self):
         """Return code 200 on customer-add action."""
@@ -923,9 +925,11 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/add/add_order.html')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'form')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_add_order_item(self):
         """Test context dictionaries and template."""
@@ -1000,14 +1004,11 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/edit/edit_order.html')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        if context[0] == 'order':
-            self.assertEqual(context[1], 'form')
-        elif context[0] == 'form':
-            self.assertEqual(context[1], 'order')
-        else:
-            self.assertEqual(context[0], 'Not recognized')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_order_date(self):
         """Test context dictionaries and template."""
@@ -1331,9 +1332,10 @@ class ActionsPostMethodCreate(TestCase):
         template = data['template']
         context = data['context']
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/add/add_order.html')
-        self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'form')
+        self.assertEqual(template, 'includes/regular_form.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_customer_new_adds_customer(self):
         """Test new customer creation."""
@@ -1735,12 +1737,15 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'form')
+        template = data['template']
+        context = data['context']
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/add/add_order.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEqual(template, 'includes/regular_form.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_date_successful(self):
         """Test the correct quick-edit date."""

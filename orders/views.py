@@ -418,15 +418,27 @@ class Actions(View):
         # Add order (GET)
         if action == 'order-add':
             form = OrderForm()
-            context = {'form': form}
-            template = 'includes/add/add_order.html'
+            context = {'form': form,
+                       'modal_title': 'Añadir Pedido',
+                       'pk': '0',
+                       'action': 'order-new',
+                       'submit_btn': 'Añadir',
+                       'custom_form': 'includes/custom_forms/order.html',
+                       }
+            template = 'includes/regular_form.html'
 
         # Add order from customer (GET)
         elif action == 'order-from-customer':
             customer = get_object_or_404(Customer, pk=pk)
             form = OrderForm(initial={'customer': customer})
-            context = {'form': form}
-            template = 'includes/add/add_order.html'
+            context = {'form': form,
+                       'modal_title': 'Añadir Pedido',
+                       'pk': '0',
+                       'action': 'order-new',
+                       'submit_btn': 'Añadir',
+                       'custom_form': 'includes/custom_forms/order.html',
+                       }
+            template = 'includes/regular_form.html'
 
         # Add customer (GET)
         elif action == 'customer-add':
@@ -471,8 +483,14 @@ class Actions(View):
         elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
             form = OrderForm(instance=order)
-            context = {'order': order, 'form': form}
-            template = 'includes/edit/edit_order.html'
+            context = {'form': form,
+                       'modal_title': 'Editar Pedido',
+                       'pk': order.pk,
+                       'action': 'order-edit',
+                       'submit_btn': 'Guardar',
+                       'custom_form': 'includes/custom_forms/order.html',
+                       }
+            template = 'includes/regular_form.html'
 
         # Edit the date (GET)
         elif action == 'order-edit-date':
@@ -600,8 +618,14 @@ class Actions(View):
                 return redirect('order_view', pk=order.pk)
             else:
                 data['form_is_valid'] = False
-                context = {'form': form}
-                template = 'includes/add/add_order.html'
+                context = {'form': form,
+                           'modal_title': 'Añadir Pedido',
+                           'pk': '0',
+                           'action': 'order-new',
+                           'submit_btn': 'Añadir',
+                           'custom_form': 'includes/custom_forms/order.html',
+                           }
+                template = 'includes/regular_form.html'
 
         # Add Customer (POST)
         elif action == 'customer-new':
@@ -704,8 +728,14 @@ class Actions(View):
                 return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
-                context = {'order': order, 'form': form}
-                template = 'includes/add/add_order.html'
+                context = {'form': form,
+                           'modal_title': 'Editar Pedido',
+                           'pk': order.pk,
+                           'action': 'order-edit',
+                           'submit_btn': 'Guardar',
+                           'custom_form': 'includes/custom_forms/order.html',
+                           }
+                template = 'includes/regular_form.html'
 
         # Edit date (POST)
         elif action == 'order-edit-date':

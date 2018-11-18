@@ -1,9 +1,13 @@
 ## Trapuzarrak app registro de cambios
 ***
 
+#### v46,
+  * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
+    ya no.
+
 #### v45, Nov 16
   * **Nuevo:** El editor de prendas tiene un nuevo atributo, *externo*, que
-    marca las excluye de la producción de trapuzarrak.
+    las excluye de la producción de trapuzarrak.
   * **Nuevo:** Desplegable con los detalles de cada prenda en cada pedido
     (tiempos y descripción).
   * **Nuevo:** El editor de prendas tiene un nuevo cuadro de ayuda.
