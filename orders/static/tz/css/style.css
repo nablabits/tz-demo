@@ -109,6 +109,14 @@ th{
   background-color: #daf9bc;
 }
 
+.item-list {
+  cursor: pointer;
+}
+
+.item-list:hover{
+  background-color: #daf9bc;
+}
+
 #md-content{
   height: 500px;
   overflow: auto;

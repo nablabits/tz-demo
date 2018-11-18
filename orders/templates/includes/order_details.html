@@ -28,12 +28,12 @@
     </thead>
     <tbody>
       {% for item in items %}
-      <tr>
+      <tr class="item-list" data-toggle="collapse" data-target="#time-detail-{{item.pk}}">
         <td scope="row">
           {{item.element}}
         </td>
         <td>{{item.qty}}</td>
-        <td data-toggle="collapse" data-target="#time-detail-{{item.pk}}" style="cursor:pointer;">
+        <td>
           {% if item.time_quality == 0 %}
             <i class="far fa-frown" ></i> Sin tiempos aún (0/3)
           {% elif item.time_quality == 1 %}
