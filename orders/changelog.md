@@ -4,6 +4,8 @@
 #### v46,
   * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
     ya no.
+  * **Mejora:** ahora haciendo click en una prenda en la vista de pedido se ven
+    las notas y los tiempos en un desplegable.
 
 #### v45, Nov 16
   * **Nuevo:** El editor de prendas tiene un nuevo atributo, *externo*, que
