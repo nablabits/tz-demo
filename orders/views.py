@@ -186,9 +186,9 @@ def orderlist(request, orderby):
         tz_active = None
         tz_delivered = None
 
-    delivered = orders.filter(status=7).order_by('-delivery')
+    delivered = orders.filter(status=7).order_by('-delivery')[:10]
     active = orders.exclude(status__in=[7, 8])
-    cancelled = orders.filter(status=8)
+    cancelled = orders.filter(status=8).order_by('-inbox_date')[:10]
     pending = orders.exclude(status=8).filter(budget__gt=F('prepaid'))
     pending = pending.order_by('inbox_date')
 

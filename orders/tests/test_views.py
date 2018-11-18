@@ -204,13 +204,27 @@ class StandardViewsTest(TestCase):
     def test_order_list_delivered_more_recent_first(self):
         """Test the correct order on delivered orders."""
         delivered_order = Order.objects.filter(status=7)[0]
-        delivered_order.delivery = date(2020, 12, 1)
+        delivered_order.delivery = date(2030, 12, 1)
         delivered_order.ref_name = 'latest delivered'
         delivered_order.save()
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['delivered'][0], delivered_order)
+
+    def test_order_list_delivered_show_last_ten(self):
+        """Delivered orders should be a list of last ten elements."""
+        Order.objects.all().update(status=7)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['delivered']), 10)
+
+    def test_order_list_cancelled_show_last_ten(self):
+        """Delivered orders should be a list of last ten elements."""
+        Order.objects.all().update(status=8)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['cancelled']), 10)
 
     def test_order_list_post_method_update_status(self):
         """Test the proper status update on post method."""
