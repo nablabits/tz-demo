@@ -530,8 +530,15 @@ class Actions(View):
         elif action == 'order-close':
             order = get_object_or_404(Order, pk=pk)
             form = OrderCloseForm(instance=order)
-            context = {'order': order, 'form': form}
-            template = 'includes/edit/close_order.html'
+            context = {'form': form,
+                       'order': order,
+                       'modal_title': 'Cerrar pedido',
+                       'pk': order.pk,
+                       'action': 'order-close',
+                       'submit_btn': 'Cerrar pedido',
+                       'custom_form': 'includes/custom_forms/close_order.html'
+                       }
+            template = 'includes/regular_form.html'
 
         # Edit Item Object (GET)
         elif action == 'object-item-edit':
@@ -897,8 +904,16 @@ class Actions(View):
                 return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
-                context = {'order': order, 'form': form}
-                template = 'includes/edit/close_order.html'
+                custom_form = 'includes/custom_forms/close_order.html'
+                context = {'form': form,
+                           'order': order,
+                           'modal_title': 'Cerrar pedido',
+                           'pk': order.pk,
+                           'action': 'order-close',
+                           'submit_btn': 'Cerrar pedido',
+                           'custom_form': custom_form,
+                           }
+                template = 'includes/regular_form.html'
 
         # Update status (POST)
         elif action == 'update-status':

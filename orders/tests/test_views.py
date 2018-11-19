@@ -1073,8 +1073,9 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        vars = ('form', 'order')
-        self.assertEqual(template, 'includes/edit/close_order.html')
+        vars = ('order', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
@@ -1109,10 +1110,10 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/regular_form.html')
-        self.assertIsInstance(context, list)
         vars = ('item', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
     def test_delete_order_item(self):
@@ -1972,12 +1973,16 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'form')
+        template = data['template']
+        context = data['context']
+        vars = ('order', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/edit/close_order.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_update_status_returns_false_on_raising_error(self):
         """Invalid statuses should raise an exception."""

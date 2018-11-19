@@ -57,7 +57,7 @@ class OrderItemForm(forms.ModelForm):
 
 
 class CommentForm(forms.ModelForm):
-    """Add commnets using a form."""
+    """Add comments using a form."""
 
     class Meta:
         """Meta options for a quick design."""
