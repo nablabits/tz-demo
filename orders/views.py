@@ -481,8 +481,13 @@ class Actions(View):
         elif action == 'order-add-comment':
             order = get_object_or_404(Order, pk=pk)
             form = CommentForm()
-            context = {'order': order, 'form': form}
-            template = 'includes/add/add_comment.html'
+            context = {'form': form,
+                       'modal_title': 'Añadir Comentario',
+                       'pk': '0',
+                       'action': 'order-comment',
+                       'submit_btn': 'Añadir',
+                       }
+            template = 'includes/regular_form.html'
 
         # Edit the order (GET)
         elif action == 'order-edit':
@@ -675,8 +680,13 @@ class Actions(View):
                 template = 'includes/comment_list.html'
             else:
                 data['form_is_valid'] = False
-                context = {'order': order, 'form': form}
-                template = 'includes/add/add_comment.html'
+                context = {'form': form,
+                           'modal_title': 'Añadir Comentario',
+                           'pk': '0',
+                           'action': 'order-comment',
+                           'submit_btn': 'Añadir',
+                           }
+                template = 'includes/regular_form.html'
 
         # Mark comment as read (POST)
         elif action == 'comment-read':

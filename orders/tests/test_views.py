@@ -981,14 +981,9 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/add/add_comment.html')
-        self.assertIsInstance(context, list)
-        if context[0] == 'order':
-            self.assertEqual(context[1], 'form')
-        elif context[0] == 'form':
-            self.assertEqual(context[1], 'order')
-        else:
-            self.assertEqual(context[0], 'Not recognized')
+        self.assertEqual(template, 'includes/regular_form.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn', )
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_order(self):
         """Test context dictionaries and template.
@@ -1449,13 +1444,10 @@ class ActionsPostMethodCreate(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn', )
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/add/add_comment.html')
-        self.assertIsInstance(context, list)
-        if context[0] == 'order':
-            self.assertEqual(context[1], 'form')
-        if context[0] == 'form':
-            self.assertEqual(context[1], 'order')
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_mark_comment_as_read_returns_to_main(self):
         """Mark comments as read should redirect to main view."""
