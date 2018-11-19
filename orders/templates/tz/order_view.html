@@ -13,7 +13,7 @@
           <button class="btn btn-outline-success js-order-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
             <i class="fa fa-edit"></i> Editar
           </button>
-          <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fa fa-close"></i> Anular pedido</button>
+          <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fas fa-times"></i> Anular pedido</button>
       </div>
     </div>
     {% if order.overdue and order.status not in '78' %}

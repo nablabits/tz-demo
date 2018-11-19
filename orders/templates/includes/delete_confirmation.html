@@ -8,12 +8,12 @@
     <h4 class="modal-title">{{modal_title}}</h4>
   </div>
   <div class="modal-body">
-    <p>{{msg}}</p>
+    <p>{{msg|safe}}</p>
   </div>
   <input type="hidden" name="pk" value="{{pk}}">
   <input type="hidden" name="action" value="{{action}}">
   <div class="modal-footer">
     <button type="button" class="btn btn-outline-success" data-dismiss="modal">Cerrar</button>
-    <button type="submit" class="btn btn-danger">Eliminar</button>
+    <button type="submit" class="btn btn-danger">{{submit_btn}}</button>
   </div>
 </form>

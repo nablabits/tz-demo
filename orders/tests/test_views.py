@@ -1130,7 +1130,7 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/delete_confirmation.html')
         self.assertIsInstance(context, list)
-        vars = ('modal_title', 'pk', 'action', 'msg', )
+        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
         self.assertTrue(self.context_vars(context, vars))
 
     def test_delete_obj_item(self):
@@ -1147,7 +1147,7 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         self.assertEqual(template, 'includes/delete_confirmation.html')
-        vars = ('modal_title', 'pk', 'action', 'msg', )
+        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_delete_customer(self):
@@ -1160,11 +1160,12 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
+        data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/delete/delete_customer.html')
-        self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'customer')
+        self.assertEqual(template, 'includes/delete_confirmation.html')
+        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_logout(self):
         """Test context dictionaries and template."""

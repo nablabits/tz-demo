@@ -567,7 +567,8 @@ class Actions(View):
             context = {'modal_title': 'Eliminar prenda',
                        'msg': 'Realmente borrar la prenda?',
                        'pk': item.pk,
-                       'action': 'object-item-delete'}
+                       'action': 'object-item-delete',
+                       'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
         # Delete order item (GET)
@@ -577,14 +578,27 @@ class Actions(View):
             context = {'modal_title': 'Eliminar prenda',
                        'msg': 'Realmente borrar la prenda?',
                        'pk': item.pk,
-                       'action': 'order-item-delete'}
+                       'action': 'order-item-delete',
+                       'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
         # Delete Customer (GET)
         elif action == 'customer-delete':
             customer = get_object_or_404(Customer, pk=pk)
-            context = {'customer': customer}
-            template = 'includes/delete/delete_customer.html'
+            msg = """
+            <div class="d-flex"><div class="alert alert-warning" role="alert">
+            <i class="fas fa-exclamation-triangle text-danger"></i>
+            <strong>Atención!</strong><br>
+            Realmente quieres eliminar el cliente?<br>
+            Esto eliminará también todos sus pedidos en la base de datos.
+            Esta acción no se puede deshacer.</div></div>
+            """
+            context = {'modal_title': 'Eliminar cliente',
+                       'msg': msg,
+                       'pk': customer.pk,
+                       'action': 'order-item-delete',
+                       'submit_btn': 'Sí, quiero eliminarlo'}
+            template = 'includes/delete_confirmation.html'
 
         # logout
         elif action == 'logout':
