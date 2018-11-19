@@ -443,8 +443,13 @@ class Actions(View):
         # Add customer (GET)
         elif action == 'customer-add':
             form = CustomerForm()
-            context = {'form': form}
-            template = 'includes/add/add_customer.html'
+            context = {'form': form,
+                       'modal_title': 'Añadir Cliente',
+                       'pk': '0',
+                       'action': 'customer-new',
+                       'submit_btn': 'Añadir',
+                       }
+            template = 'includes/regular_form.html'
 
         # Add item object (GET)
         elif action == 'object-item-add':
@@ -502,8 +507,13 @@ class Actions(View):
         elif action == 'customer-edit':
             customer = get_object_or_404(Customer, pk=pk)
             form = CustomerForm(instance=customer)
-            context = {'customer': customer, 'form': form}
-            template = 'includes/edit/edit_customer.html'
+            context = {'form': form,
+                       'modal_title': 'Editar Cliente',
+                       'pk': customer.pk,
+                       'action': 'customer-edit',
+                       'submit_btn': 'Guardar',
+                       }
+            template = 'includes/regular_form.html'
 
         # Collect order (GET)
         elif action == 'order-pay-now':
@@ -634,11 +644,18 @@ class Actions(View):
                 customer = form.save(commit=False)
                 customer.creation = timezone.now()
                 customer.save()
-                return redirect('customer_view', pk=customer.pk)
+                data['form_is_valid'] = True
+                data['reload'] = True
+                return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
-                context = {'form': form}
-                template = 'includes/add/add_customer.html'
+                context = {'form': form,
+                           'modal_title': 'Añadir Cliente',
+                           'pk': '0',
+                           'action': 'customer-new',
+                           'submit_btn': 'Añadir',
+                           }
+                template = 'includes/regular_form.html'
 
         # Add comment (POST)
         elif action == 'order-comment':
@@ -762,8 +779,13 @@ class Actions(View):
                 return JsonResponse(data)
             else:
                 data['form_is_valid'] = False
-                context = {'customer': customer, 'form': form}
-                template = 'includes/edit/edit_customer.html'
+                context = {'form': form,
+                           'modal_title': 'Editar Cliente',
+                           'pk': customer.pk,
+                           'action': 'customer-edit',
+                           'submit_btn': 'Guardar',
+                           }
+                template = 'includes/regular_form.html'
 
         # Edit item objects (POST)
         elif action == 'object-item-edit':

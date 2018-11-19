@@ -909,9 +909,10 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/add/add_customer.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_add_order_from_customer(self):
         """Test context dictionaries and template."""
@@ -1041,14 +1042,10 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/edit/edit_customer.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        if context[0] == 'customer':
-            self.assertEqual(context[1], 'form')
-        elif context[0] == 'form':
-            self.assertEqual(context[1], 'customer')
-        else:
-            self.assertEqual(context[0], 'Not recognized')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_collect_order(self):
         """Test context dictionaries and template."""
@@ -1339,21 +1336,6 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_customer_new_adds_customer(self):
         """Test new customer creation."""
-        self.client.post(reverse('actions'), {'name': 'New Customer',
-                                              'address': 'example address',
-                                              'city': 'Mungia',
-                                              'phone': '123456789',
-                                              'email': 'johndoe@example.com',
-                                              'CIF': '123456789F',
-                                              'cp': '12345',
-                                              'pk': None,
-                                              'action': 'customer-new',
-                                              'test': True
-                                              })
-        self.assertTrue(Customer.objects.get(name='New Customer'))
-
-    def test_customer_new_redirects_to_customer_page(self):
-        """Test redirection to recently created customer."""
         resp = self.client.post(reverse('actions'),
                                 {'name': 'New Customer',
                                  'address': 'example address',
@@ -1366,9 +1348,11 @@ class ActionsPostMethodCreate(TestCase):
                                  'action': 'customer-new',
                                  'test': True
                                  })
-        customer_created = Customer.objects.get(name='New Customer')
-        url = '/customer_view/%s' % customer_created.pk
-        self.assertRedirects(resp, url)
+        # test context response
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['reload'])
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(Customer.objects.get(name='New Customer'))
 
     def test_invalid_customer_new_returns_to_form_again(self):
         """When form is not valid JsonResponse should be sent again."""
@@ -1384,15 +1368,16 @@ class ActionsPostMethodCreate(TestCase):
                                  'action': 'customer-new',
                                  'test': True
                                  })
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/add/add_customer.html')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'form')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_pk_out_of_range_raises_404(self):
         """Raises a 404 when pk is out of index.
@@ -1832,12 +1817,15 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('customer', 'form')
+        template = data['template']
+        context = data['context']
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/edit/edit_customer.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_obj_item_edit(self):
         """Test the correct item edition."""
