@@ -8,7 +8,7 @@ from .models import Comment, Customer, Order, OrderItem, Timing, Item
 from .utils import TimeLenght
 from django.utils import timezone
 from .forms import CustomerForm, OrderForm, CommentForm, ItemForm
-from .forms import OrderCloseForm, OrderItemForm
+from .forms import OrderCloseForm, OrderItemForm, EditDateForm
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -505,8 +505,16 @@ class Actions(View):
         # Edit the date (GET)
         elif action == 'order-edit-date':
             order = get_object_or_404(Order, pk=pk)
-            context = {'order': order}
-            template = 'includes/edit/edit_date.html'
+            form = EditDateForm(instance=order)
+            custom_form = 'includes/custom_forms/edit_date.html'
+            context = {'form': form,
+                       'modal_title': 'Actualizar fecha de entrega',
+                       'pk': order.pk,
+                       'action': 'order-edit-date',
+                       'submit_btn': 'Guardar',
+                       'custom_form': custom_form,
+                       }
+            template = 'includes/regular_form.html'
 
         # Edit customer (GET)
         elif action == 'customer-edit':
@@ -788,16 +796,23 @@ class Actions(View):
         # Edit date (POST)
         elif action == 'order-edit-date':
             order = get_object_or_404(Order, pk=pk)
-            new_date = self.request.POST.get('delivery', None)
-            order.delivery = new_date
-            try:
-                order.save()
-            except ValidationError:
-                data['form_is_valid'] = False
-            else:
+            form = EditDateForm(request.POST, instance=order)
+            if form.is_valid():
+                form.save()
                 data['form_is_valid'] = True
                 data['reload'] = True
-            return JsonResponse(data)
+                return JsonResponse(data)
+            else:
+                data['form_is_valid'] = False
+                custom_form = 'includes/custom_forms/edit_date.html'
+                context = {'form': form,
+                           'modal_title': 'Actualizar fecha de entrega',
+                           'pk': order.pk,
+                           'action': 'order-edit-date',
+                           'submit_btn': 'Guardar',
+                           'custom_form': custom_form,
+                           }
+                template = 'includes/regular_form.html'
 
         # Edit Customer (POST)
         elif action == 'customer-edit':

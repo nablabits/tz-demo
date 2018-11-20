@@ -1000,10 +1000,10 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/regular_form.html')
-        self.assertIsInstance(context, list)
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_order_date(self):
@@ -1018,9 +1018,11 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/edit/edit_date.html')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'order')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_customer(self):
         """Test context dictionaries and template.
@@ -1742,7 +1744,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertTrue(data['reload'])
 
-    def test_edit_date_returns_false_with_invalid_dates_objs(self):
+    def test_edit_date_returns_to_form_again(self):
         """No datetime objects should return false to form_is_valid."""
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
@@ -1756,6 +1758,13 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
+        template = data['template']
+        context = data['context']
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(self.context_vars(context, vars))
 
     def text_edit_date_raises_error(self):
         """Invalid dates should raise an exception."""

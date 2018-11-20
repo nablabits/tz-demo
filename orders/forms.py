@@ -87,6 +87,17 @@ class TimeForm(forms.ModelForm):
         self.fields['reference'].queryset = queryset
 
 
+class EditDateForm(forms.ModelForm):
+    """Quick edit order date."""
+
+    class Meta:
+        """Meta options for a quick design."""
+
+        model = Order
+        fields = ('delivery', )
+
+
+
 class OrderCloseForm(forms.ModelForm):
     """Close orders using a form."""
 
