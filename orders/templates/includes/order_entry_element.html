@@ -53,18 +53,13 @@
       </div>
       <div class="col-3">
         <div class="d-flex justify-content-end">
-          <button type="button" class="btn btn-sm btn-outline-success js-order-edit mr-1" data-action="order-edit"  data-pk="{{order.pk}}">
+          <button type="button" class="btn btn-sm btn-outline-success js-crud-edit mr-1" data-action="order-edit"  data-pk="{{order.pk}}">
             <i class="fa fa-edit"></i> Editar
           </button>
           {% if order.pending != 0 %}
-          <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="order" value="{{order.pk}}">
-            <input type="hidden" name="collect" value="True">
-            <button type="submit" class="btn btn-sm btn-outline-danger">
+            <button class="btn btn-sm btn-outline-danger js-crud-edit" data-action="order-pay-now" data-pk="{{order.pk}}">
               {{order.pending}}€
             </button>
-          </form>
           {% else %}
             <button type="button" class="btn btn-sm btn-success">Pagado</button>
           {% endif %}

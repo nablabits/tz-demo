@@ -34,14 +34,9 @@
           </a>
           {% if order.status != '8' %}
           {% if order.pending != 0 %}
-          <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
-            {% csrf_token %}
-            <input type="hidden" name="order" value="{{order.pk}}">
-            <input type="hidden" name="collect" value="True">
-            <button type="submit" class="btn btn-sm btn-outline-danger">
-              {{order.pending}}€
-            </button>
-          </form>
+          <button class="btn btn-sm btn-outline-danger js-crud-edit" data-action="order-pay-now" data-pk="{{order.pk}}">
+            {{order.pending}}€
+          </button>
           {% else %}
               <button type="button" class="btn btn-sm btn-success">Pagado</button>
             {% endif %}

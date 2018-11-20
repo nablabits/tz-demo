@@ -531,8 +531,13 @@ class Actions(View):
         # Collect order (GET)
         elif action == 'order-pay-now':
             order = get_object_or_404(Order, pk=pk)
-            context = {'order': order}
-            template = 'includes/edit/pay_order.html'
+            context = {'modal_title': 'Cobrar Pedido',
+                       'msg': ('Marcar el pedido como cobrado (%s€)?'
+                               % order.budget),
+                       'pk': order.pk,
+                       'action': 'order-pay-now',
+                       'submit_btn': 'Sí, cobrar'}
+            template = 'includes/confirmation.html'
 
         # Close order (GET)
         elif action == 'order-close':
@@ -899,11 +904,16 @@ class Actions(View):
                 order.save()
             except ValidationError:  # pragma: no cover
                 data['form_is_valid'] = False
+                context = {'modal_title': 'Cobrar Pedido',
+                           'msg': 'Algo ha ido mal, reintentar?',
+                           'pk': order.pk,
+                           'action': 'order-pay-now',
+                           'submit_btn': 'Sí, reintentar'}
+                template = 'includes/confirmation.html'
             else:
                 data['form_is_valid'] = True
-                data['html_id'] = '#order-status'
-                template = 'includes/order_status.html'
-                context = {'order': order}
+                data['reload'] = True
+                return JsonResponse(data)
 
         # Close order (POST)
         elif action == 'order-close':

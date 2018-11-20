@@ -1056,9 +1056,10 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/edit/pay_order.html')
+        vars = ('modal_title', 'msg', 'pk', 'action', 'submit_btn')
+        self.assertEqual(template, 'includes/confirmation.html')
         self.assertIsInstance(context, list)
-        self.assertEqual(context[0], 'order')
+        self.assertTrue(self.context_vars(context, vars))
 
     def test_close_order(self):
         """Test context dictionaries and template.
@@ -1947,9 +1948,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#order-status')
-        self.assertEqual(data['template'], 'includes/order_status.html')
-        self.assertEqual(data['context'][0], 'order')
+        self.assertTrue(data['reload'])
 
     def test_close_order_succesful(self):
         """Test the proper close of orders."""
