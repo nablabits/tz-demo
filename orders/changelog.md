@@ -1,11 +1,12 @@
 ## Trapuzarrak app registro de cambios
 ***
 
-#### v46,
+#### v46, Nov 20
   * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
     ya no.
-  * **Mejora:** ahora haciendo click en una prenda en la vista de pedido se ven
-    las notas y los tiempos en un desplegable.
+  * **Mejora:** El desplegable de la v45, ahora se abre al hacer click en
+    cualquier punto de la vista.
+  * **Mejora:** pequeñas mejoras en la unificcación de vistas.
 
 #### v45, Nov 16
   * **Nuevo:** El editor de prendas tiene un nuevo atributo, *externo*, que
