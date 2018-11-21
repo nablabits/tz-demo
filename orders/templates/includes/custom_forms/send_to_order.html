@@ -1,0 +1,10 @@
+<div class="d-flex">
+  <h3>
+   Pedidos activos
+  </h3>
+  <select class="form-control ml-auto" name="order">
+    {% for order in orders %}
+      <option value="{{order.pk}}">{{order}}</option>
+    {%endfor%}
+  </select>
+</div>

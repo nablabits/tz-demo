@@ -5,13 +5,15 @@
   * **Mejora:** el filtro añadido en la v43 ahora se puede aplicar a más campos
     (tipo de prenda y acabado).
   * **Mejora:** font awesome pro.
+  * **Nuevo:** ahora se pueden enviar prendas directamente a pedidos (solo
+    activos)
 
 #### v46, Nov 20
   * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
     ya no.
   * **Mejora:** El desplegable de la v45, ahora se abre al hacer click en
     cualquier punto de la vista.
-  * **Mejora:** pequeñas mejoras en la unificcación de vistas.
+  * **Mejora:** pequeñas mejoras en la unificación de vistas.
 
 #### v45, Nov 16
   * **Nuevo:** El editor de prendas tiene un nuevo atributo, *externo*, que

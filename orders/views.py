@@ -296,12 +296,14 @@ def itemslist(request):
                      'table_id': 'item_objects_list',
                      'item_types': settings.ITEM_TYPE[1:],
                      'item_classes': settings.ITEM_CLASSES,
+                     'add_to_order': True,
 
                      # CRUD Actions
                      'btn_title_add': 'Añadir prenda',
                      'js_action_add': 'object-item-add',
                      'js_action_edit': 'object-item-edit',
                      'js_action_delete': 'object-item-delete',
+                     'js_action_send_to': 'send-to-order',
                      'js_data_pk': '0',
 
                      'include_template': 'includes/items_list.html',
@@ -462,6 +464,18 @@ class Actions(View):
                        'action': 'object-item-add',
                        'submit_btn': 'Añadir',
                        'custom_form': 'includes/custom_forms/object_item.html',
+                       }
+            template = 'includes/regular_form.html'
+
+        # Send item to order (GET)
+        elif action == 'send-to-order':
+            custom_form = 'includes/custom_forms/send_to_order.html'
+            context = {'orders': Order.objects.exclude(status__in=[7, 8]),
+                       'modal_title': 'Añadir prenda a pedido',
+                       'pk': pk,
+                       'action': 'send-to-order',
+                       'submit_btn': 'Añadir a pedido',
+                       'custom_form': custom_form,
                        }
             template = 'includes/regular_form.html'
 
@@ -753,6 +767,15 @@ class Actions(View):
                            'submit_btn': 'Añadir',
                            }
                 template = 'includes/regular_form.html'
+
+        # Send item to order (POST)
+        elif action == 'send-to-order':
+            item = get_object_or_404(Item,
+                                     pk=self.request.POST.get('pk', None))
+            order = get_object_or_404(Order,
+                                      pk=self.request.POST.get('order', None))
+            OrderItem.objects.create(element=item, reference=order)
+            return redirect('order_view', pk=order.pk)
 
         # Attach item to order (POST)
         elif action == 'order-item-add':
@@ -1050,6 +1073,8 @@ def filter_items(request):
     context = {'items': items,
                'item_types': settings.ITEM_TYPE[1:],
                'item_classes': settings.ITEM_CLASSES,
+               'add_to_order': True,
+               'js_action_send_to': 'send-to-order',
                'js_action_edit': 'object-item-edit',
                'js_action_delete': 'object-item-delete',
                }

@@ -65,7 +65,7 @@ $(function () {
   }
 
   var saveActionForm = function () {
-    var action = $(this).attr('data-action')
+    // var action = $(this).attr('data-action')
     var form = $(this)
     $.ajax({
       url: form.attr('action'),
@@ -84,9 +84,6 @@ $(function () {
         }
       }
     })
-    if (action !== 'order-add-file') {
-      return false
-    }
   }
 
   var searchAction = function () {
