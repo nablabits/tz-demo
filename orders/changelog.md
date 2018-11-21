@@ -4,6 +4,7 @@
 #### v47,
   * **Mejora:** el filtro añadido en la v43 ahora se puede aplicar a más campos
     (tipo de prenda y acabado).
+  * **Mejora:** font awesome pro.
 
 #### v46, Nov 20
   * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
