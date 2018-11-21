@@ -23,12 +23,14 @@
 <table class="table">
 <thead>
   <tr>
-    <th scope="col" style="cursor:pointer;" data-toggle="collapse" data-target="#identificator-help">
-      Identificador <i class="far fa-question-circle"></i>
+    <th scope="col">
+      Identificador <i class="far fa-question-circle" style="cursor:pointer;" data-toggle="collapse" data-target="#identificator-help"></i>
     </th>
     <th scope="col">Tela</th>
-    <th scope="col">Notas</th>
-    <th scope="col">Acciones</th>
+    <th scope="col">
+      Acciones
+      <i class="far fa-question-circle px-1" style="cursor:pointer;" data-toggle="collapse" data-target="#actions-help"></i>
+    </th>
   </tr>
   <tr class="collapse" id="identificator-help">
     <td class="pl-5" colspan="3">
@@ -36,18 +38,40 @@
       <em>Camisa:</em> tipo de elemento <br>
       <em>Atondu:</em> nombre <br>
       <em>S:</em> acabado (<strong>S</strong>tandard, <strong>M</strong>edium o <strong>P</strong>remium) <br>
-      <em>12:</em> Talla
+      <em>12:</em> Talla <br>
+      <i class="far fa-sticky-note px-1"></i> Observaciones
     </td>
+  </tr>
+  <tr class="collapse" id="actions-help">
+    <td class="pl-5" colspan="3">
+      <i class="far fa-share px-1"></i>Enviar a pedido
+      <i class="far fa-edit px-1 ml-4"></i>Editar item
+      <i class="far fa-trash px-1 ml-4"></i>Eliminar item
+    </td>
+  </tr>
 </thead>
 <tbody>
   {% for item in items %}
     {% if item.name != 'Predeterminado' %}
-      <tr>
-        <th>{{item.get_item_type_display}} {{item.name}} {{item.item_class}}-{{item.size}}</th>
+      <tr class="item-list" data-toggle="collapse" data-target="#item-detail-{{item.pk}}">
+        <th>
+          {{item.get_item_type_display}} {{item.name}} {{item.item_class}}-{{item.size}}
+          {%if item.notes%}
+          <i class="far fa-sticky-note px-1"></i>
+          {%endif%}
+        </th>
         <th>{{ item.fabrics}}</th>
-        <th>{{ item.notes }}</th>
         <th>{% include 'includes/action_buttons.html' %}</th>
       </tr>
+      <tr class="collapse" id="item-detail-{{item.pk}}">
+        <td class="pl-3" colspan="2">
+          <strong>Observaciones:</strong><br>
+          {%if item.notes%}
+            {{item.notes}}
+          {%else%}
+            No hay observaciones.
+          {%endif%}
+        </td>
     {% endif %}
   {% endfor %}
 </tbody>

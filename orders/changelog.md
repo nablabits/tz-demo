@@ -2,11 +2,13 @@
 ***
 
 #### v47,
+  * **Nuevo:** ahora se pueden enviar prendas directamente a pedidos (solo
+    activos).
   * **Mejora:** el filtro añadido en la v43 ahora se puede aplicar a más campos
     (tipo de prenda y acabado).
-  * **Mejora:** font awesome pro.
-  * **Nuevo:** ahora se pueden enviar prendas directamente a pedidos (solo
-    activos)
+  * **Mejora:** font awesome pro y varias mejoras visuales.
+  * **Mejora:** los detalles de las prendas en el editor de prendas ahora
+    aparecen en un desplegable.
   * **Bug:** La lista de clientes no mostraba el número de pedidos hechos por
     cada cliente.
 
