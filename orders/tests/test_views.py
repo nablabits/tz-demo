@@ -9,6 +9,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 from datetime import date, timedelta
 from random import randint
+from orders import settings
 import json
 
 
@@ -560,6 +561,9 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['include_template'],
                          'includes/items_list.html')
         self.assertTrue(resp.context['footer'])
+        self.assertEquals(resp.context['version'], settings.VERSION)
+        self.assertEquals(resp.context['item_types'], settings.ITEM_TYPE[1:])
+        self.assertEquals(resp.context['item_classes'], settings.ITEM_CLASSES)
 
     def test_mark_down_view(self):
         """Test the proper work of view."""

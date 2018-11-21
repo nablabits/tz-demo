@@ -294,6 +294,8 @@ def itemslist(request):
                      'title': 'TrapuZarrak · Prendas',
                      'h3': 'Todas las prendas',
                      'table_id': 'item_objects_list',
+                     'item_types': settings.ITEM_TYPE[1:],
+                     'item_classes': settings.ITEM_CLASSES,
 
                      # CRUD Actions
                      'btn_title_add': 'Añadir prenda',
@@ -1035,9 +1037,19 @@ def changelog(request):
 def filter_items(request):
     """Filter the item objects list."""
     data = dict()
-    query_obj = request.POST.get('search-obj')
-    items = Item.objects.filter(name__istartswith=query_obj)
+    items = Item.objects.all()
+    by_name = request.POST.get('search-obj')
+    by_type = request.POST.get('item-type')
+    by_class = request.POST.get('item-class')
+    if by_name:
+        items = items.filter(name__istartswith=by_name)
+    if by_type and by_type != 'all':
+        items = items.filter(item_type=by_type)
+    if by_class and by_class != 'all':
+        items = items.filter(item_class=by_class)
     context = {'items': items,
+               'item_types': settings.ITEM_TYPE[1:],
+               'item_classes': settings.ITEM_CLASSES,
                'js_action_edit': 'object-item-edit',
                'js_action_delete': 'object-item-delete',
                }

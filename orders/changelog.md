@@ -1,6 +1,10 @@
 ## Trapuzarrak app registro de cambios
 ***
 
+#### v47,
+  * **Mejora:** el filtro añadido en la v43 ahora se puede aplicar a más campos
+    (tipo de prenda y acabado).
+
 #### v46, Nov 20
   * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
     ya no.

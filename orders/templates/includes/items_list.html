@@ -1,8 +1,23 @@
 <div class="d-flex mb-1">
   <form class="form-inline js-filter-view" method="post" action="{% url 'filter-items' %}">
     {% csrf_token %}
-    <input class="form-control" type="search" placeholder="Filtra un nombre" name="search-obj">
-    <button class="btn btn-outline-success my-2 my-sm-0 mx-sm-2" type="submit">Filtrar</button>
+    <input class="form-control mb-2 mr-sm-2" type="search" id="filter-name" placeholder="Escribe un nombre" name="search-obj">
+
+    <select class="form-control mb-2 mr-sm-2" id="item-type" name="item-type">
+      <option value="all">Todas las prendas</option>
+      {% for item in item_types %}
+        <option value="{{item.0}}">{{item.1}}</option>
+      {%endfor%}
+    </select>
+
+    <select class="form-control mb-2 mr-sm-2" id="item-type" name="item-class">
+      <option value="all">Todos los acabados</option>
+      {% for item in item_classes %}
+        <option value="{{item.0}}">{{item.1}}</option>
+      {%endfor%}
+    </select>
+
+    <button class="btn btn-outline-success mb-2 mr-sm-2" type="submit">Filtrar vista</button>
   </form>
 </div>
 <table class="table">
