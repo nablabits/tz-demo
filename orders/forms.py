@@ -97,7 +97,6 @@ class EditDateForm(forms.ModelForm):
         fields = ('delivery', )
 
 
-
 class OrderCloseForm(forms.ModelForm):
     """Close orders using a form."""
 
