@@ -7,6 +7,8 @@
   * **Mejora:** font awesome pro.
   * **Nuevo:** ahora se pueden enviar prendas directamente a pedidos (solo
     activos)
+  * **Bug:** La lista de clientes no mostraba el número de pedidos hechos por
+    cada cliente.
 
 #### v46, Nov 20
   * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
