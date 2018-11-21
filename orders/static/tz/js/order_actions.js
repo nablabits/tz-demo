@@ -84,6 +84,7 @@ $(function () {
         }
       }
     })
+    return false
   }
 
   var searchAction = function () {
