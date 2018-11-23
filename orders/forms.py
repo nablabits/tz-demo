@@ -55,6 +55,12 @@ class OrderItemForm(forms.ModelForm):
         model = OrderItem
         fields = ('element', 'qty', 'crop', 'sewing', 'iron', 'description')
 
+    def __init__(self, *args, **kwargs):
+        """Override the order in the reference dropdown."""
+        super(OrderItemForm, self).__init__(*args, **kwargs)
+        queryset = Item.objects.exclude(name='Predeterminado').order_by('name')
+        self.fields['element'].queryset = queryset
+
 
 class CommentForm(forms.ModelForm):
     """Add comments using a form."""

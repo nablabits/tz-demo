@@ -12,6 +12,8 @@
   * **Mejora:** ahora se muestra un mensaje de éxito al crear o editar
     elementos (clientes, pedidos, prendas...) por si falla el cierre de la
     ventana.
+  * **Mejora:** el desplegable de añadir prendas dentro de un pedido ahora
+    ordena las prendas por nombre.
   * **Bug:** La lista de clientes no mostraba el número de pedidos hechos por
     cada cliente.
   * **Bug:** los clientes no se eliminaban de forma correcta.
