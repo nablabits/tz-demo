@@ -10,11 +10,13 @@
   * **Mejora:** los detalles de las prendas en el editor de prendas ahora
     aparecen en un desplegable.
   * **Mejora:** ahora se muestra un mensaje de éxito al crear o editar
-    elementos (clientes, pedidos, prendas...).
+    elementos (clientes, pedidos, prendas...) por si falla el cierre de la
+    ventana.
   * **Bug:** La lista de clientes no mostraba el número de pedidos hechos por
     cada cliente.
   * **Bug:** los clientes no se eliminaban de forma correcta.
   * **Bug:** Solucionado el problema al añadir comentarios.
+  * **Bug:** los nuevos pedidos no redirigían correctamente al nuevo pedido.
 
 #### v46, Nov 20
   * **Bug:** la lista de pedidos entregados mostraba más de 10 elementos, ahora
