@@ -499,7 +499,7 @@ class Actions(View):
             form = CommentForm()
             context = {'form': form,
                        'modal_title': 'Añadir Comentario',
-                       'pk': '0',
+                       'pk': order.pk,
                        'action': 'order-comment',
                        'submit_btn': 'Añadir',
                        }
@@ -632,7 +632,7 @@ class Actions(View):
             context = {'modal_title': 'Eliminar cliente',
                        'msg': msg,
                        'pk': customer.pk,
-                       'action': 'order-item-delete',
+                       'action': 'customer-delete',
                        'submit_btn': 'Sí, quiero eliminarlo'}
             template = 'includes/delete_confirmation.html'
 
