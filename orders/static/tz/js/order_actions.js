@@ -74,12 +74,12 @@ $(function () {
       dataType: 'json',
       success: function (data) {
         if (data.form_is_valid) {
+          $('#action-modal #check-success').removeClass('d-none')
+          // $('#action-modal').modal('hide')
           if (data.reload) {
-            $('#action-modal').modal('hide')
             location.reload()
           } else {
             $(data.html_id).html(data.html)
-            $('#action-modal').modal('hide')
           }
         }
       }
