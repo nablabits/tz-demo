@@ -65,7 +65,6 @@ $(function () {
   }
 
   var saveActionForm = function () {
-    // var action = $(this).attr('data-action')
     var form = $(this)
     $.ajax({
       url: form.attr('action'),
@@ -75,7 +74,6 @@ $(function () {
       success: function (data) {
         if (data.form_is_valid) {
           $('#action-modal #check-success').removeClass('d-none')
-          // $('#action-modal').modal('hide')
           if (data.reload) {
             location.reload()
           } else {
@@ -84,7 +82,15 @@ $(function () {
         }
       }
     })
-    return false
+    var action = $(this).find('#js-action').attr('value')
+    console.log(action);
+    if (action !== 'order-new' &&
+        action !== 'send-to-order' &&
+        action !== 'customer-delete' &&
+        action !== 'comment-read') {
+      console.log('return false triggered');
+      return false
+    }
   }
 
   var searchAction = function () {
