@@ -14,6 +14,7 @@
     ventana.
   * **Mejora:** el desplegable de añadir prendas dentro de un pedido ahora
     ordena las prendas por nombre.
+  * **Mejora:** la página de prendas ahora se llama editor de prendas.
   * **Bug:** La lista de clientes no mostraba el número de pedidos hechos por
     cada cliente.
   * **Bug:** los clientes no se eliminaban de forma correcta.
