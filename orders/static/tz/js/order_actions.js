@@ -83,12 +83,10 @@ $(function () {
       }
     })
     var action = $(this).find('#js-action').attr('value')
-    console.log(action);
     if (action !== 'order-new' &&
         action !== 'send-to-order' &&
         action !== 'customer-delete' &&
         action !== 'comment-read') {
-      console.log('return false triggered');
       return false
     }
   }
