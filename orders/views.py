@@ -38,10 +38,7 @@ def main(request):
     # Total pending amount
     budgets = pending.aggregate(Sum('budget'))
     prepaid = pending.aggregate(Sum('prepaid'))
-    try:
-        pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
-    except TypeError:
-        pending_total = 0
+    pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
 
     cur_user = request.user
 
