@@ -19,6 +19,7 @@ ITEM_TYPE = (
     ('10', 'Pololo'),
     ('11', 'Azpikogona'),
     ('12', 'Traje de niña'),
+    ('13', 'Toquilla'),
 )
 
 ITEM_CLASSES = (
