@@ -177,6 +177,7 @@ class ModelTest(TestCase):
         self.assertEqual(created_item.crop, timedelta(0))
         self.assertEqual(created_item.sewing, timedelta(0))
         self.assertEqual(created_item.iron, timedelta(0))
+        self.assertFalse(created_item.fit)
 
     def test_add_items_to_orders_default_item(self):
         """If no element is selected, Predetermiando is default."""

@@ -177,6 +177,9 @@ class OrderItem(models.Model):
     sewing = models.DurationField('Confeccion', default=timedelta(0))
     iron = models.DurationField('Planchado', default=timedelta(0))
 
+    # store if the item is an element that must be fitted
+    fit = models.BooleanField('Arreglo', default=False)
+
     def save(self, *args, **kwargs):
         """Override the save method."""
         try:

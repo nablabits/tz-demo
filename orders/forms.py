@@ -53,7 +53,8 @@ class OrderItemForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = OrderItem
-        fields = ('element', 'qty', 'crop', 'sewing', 'iron', 'description')
+        fields = ('element', 'qty', 'crop', 'sewing', 'iron', 'description',
+                  'fit')
 
     def __init__(self, *args, **kwargs):
         """Override the order in the reference dropdown."""

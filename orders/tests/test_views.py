@@ -1487,11 +1487,13 @@ class ActionsPostMethodCreate(TestCase):
                           'crop': 0,
                           'sewing': 0,
                           'iron': 0,
+                          'fit': True,
                           'description': 'added item',
                           'test': True
                           })
         item = OrderItem.objects.get(description='added item')
         self.assertTrue(item)
+        self.assertTrue(item.fit)
         self.assertEqual(item.reference, order)
 
     def test_order_item_add_context_response(self):
