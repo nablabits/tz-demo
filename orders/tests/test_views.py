@@ -583,6 +583,10 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
 
+    def test_mark_down_view_only_accept_get(self):
+        """Method should be get."""
+        resp = self.client.post(reverse('changelog'))
+        self.assertEqual(resp.status_code, 404)
 
 class SearchBoxTest(TestCase):
     """Test the standard views."""

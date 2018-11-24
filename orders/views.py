@@ -1054,6 +1054,8 @@ class Actions(View):
 
 def changelog(request):
     """Display the changelog."""
+    if request.method != 'GET':
+        raise Http404('The filter should go in a get request')
     data = dict()
     with open('orders/changelog.md') as md:
         md_file = md.read()
