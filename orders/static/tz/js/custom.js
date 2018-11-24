@@ -24,7 +24,7 @@ $(document).ready(function () {
     $.ajax({
       url: '/filter-items/',
       data: form.serialize(),
-      type: 'post',
+      type: form.attr('method'),
       dataType: 'json',
       success: function (data) {
         $('#item_objects_list').html(data.html)
