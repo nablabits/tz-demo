@@ -324,7 +324,7 @@ def order_view(request, pk):
     except TypeError:
         total_time = '0:00'
     else:
-        total_time = TimeLenght(float_time).convert()
+        total_time = TimeLenght(float_time).convert()  # pragma: no cover
 
     if order.status == '7' and order.budget == order.prepaid:
         closed = True
