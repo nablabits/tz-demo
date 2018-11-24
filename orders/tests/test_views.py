@@ -1547,6 +1547,73 @@ class ActionsPostMethodCreate(TestCase):
         vars = ('form', 'order')
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_send_to_order_raises_error_invalid_item(self):
+        """If no item is given raise a 404."""
+        order = Order.objects.all()[0]
+        no_item = self.client.post(reverse('actions'),
+                                   {'action': 'send-to-order',
+                                    'pk': 5000,
+                                    'order': order.pk,
+                                    'isfit': '0',
+                                    'test': True,
+                                    })
+        self.assertEqual(no_item.status_code, 404)
+
+    def test_send_to_order_raises_error_invalid_order(self):
+        """If no order is given raise a 404."""
+        item = Item.objects.all()[0]
+        no_order = self.client.post(reverse('actions'),
+                                    {'action': 'send-to-order',
+                                     'pk': item.pk,
+                                     'order': 50000,
+                                     'isfit': '0',
+                                     'test': True,
+                                     })
+        self.assertEqual(no_order.status_code, 404)
+
+    def test_send_to_order_raises_error_invalid_isfit(self):
+        """If no isfit is given raise a 404."""
+        item = Item.objects.all()[0]
+        order = Order.objects.all()[0]
+        no_order = self.client.post(reverse('actions'),
+                                    {'action': 'send-to-order',
+                                     'pk': item.pk,
+                                     'order': order.pk,
+                                     'isfit': 'invalid',
+                                     'test': True,
+                                     })
+        self.assertEqual(no_order.status_code, 404)
+
+    def test_send_to_order_isfit_true(self):
+        """Test the correct store of fit."""
+        item = Item.objects.all()[0]
+        order = Order.objects.all()[0]
+        self.client.post(reverse('actions'), {'action': 'send-to-order',
+                                              'pk': item.pk,
+                                              'order': order.pk,
+                                              'isfit': '1',
+                                              'test': True,
+                                              })
+        order_item = OrderItem.objects.filter(element=item)
+        order_item = order_item.filter(reference=order)
+        self.assertEqual(len(order_item), 1)
+        self.assertTrue(order_item[0].fit)
+
+    def test_send_to_order_isfit_false(self):
+        """Test the correct store of fit."""
+        item = Item.objects.all()[0]
+        order = Order.objects.all()[0]
+        self.client.post(reverse('actions'), {'action': 'send-to-order',
+                                              'pk': item.pk,
+                                              'order': order.pk,
+                                              'isfit': '0',
+                                              'test': True,
+                                              })
+        order_item = OrderItem.objects.filter(element=item)
+        order_item = order_item.filter(reference=order)
+        self.assertEqual(len(order_item), 1)
+        self.assertFalse(order_item[0].fit)
+
     def test_obj_item_adds_item(self):
         """Test the proepr creation of item objects."""
         self.client.post(reverse('actions'), {'action': 'object-item-add',
