@@ -642,6 +642,14 @@ class StandardViewsTest(TestCase):
                          'Filtrando elementos en Camisas con acabado Standard')
         self.assertEqual(data['len_items'], 1)
 
+    def test_filter_no_filter_returns_false_filter_on(self):
+        Item.objects.create(name='Object', item_type='3', item_class='S',
+                            fabrics=0)
+        resp = self.client.get(reverse('filter-items'), {'test': True})
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['filter_on'])
+
 
 class SearchBoxTest(TestCase):
     """Test the standard views."""
