@@ -952,6 +952,24 @@ class ActionsGetMethod(TestCase):
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_send_item_to_order(self):
+        """Test context dictionaries and template."""
+        item = Item.objects.all()[0]
+        resp = self.client.get(reverse('actions'),
+                               {'pk': item.pk,
+                                'action': 'send-to-order',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        vars = ('orders', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
+
     def test_add_order_item(self):
         """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
