@@ -22,7 +22,7 @@ $(document).ready(function () {
   var filterItems = function () {
     var form = $(this)
     $.ajax({
-      url: '/filter-items/',
+      url: form.attr('action'),
       data: form.serialize(),
       type: form.attr('method'),
       dataType: 'json',
