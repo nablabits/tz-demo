@@ -157,6 +157,18 @@ class StandardViewsTest(TestCase):
         if not login:
             raise RuntimeError('Couldn\'t login')
 
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        context_is_valid = 0
+        for item in context:
+            for var in vars:
+                if item == var:
+                    context_is_valid += 1
+        if context_is_valid == len(vars):
+            return True
+        else:
+            return False
+
     def test_main_view(self):
         """Test the main view."""
         resp = self.client.get(reverse('main'))
