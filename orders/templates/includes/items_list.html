@@ -35,7 +35,7 @@
 <thead>
   <tr>
     <th scope="col">
-      Identificador <i class="far fa-question-circle" style="cursor:pointer;" data-toggle="collapse" data-target="#identificator-help"></i>
+      Identificador <i class="far fa-question-circle" style="cursor:pointer;" data-toggle="collapse" data-target="#item-help"></i>
     </th>
     <th scope="col">Tela</th>
     <th scope="col">
@@ -43,17 +43,7 @@
       <i class="far fa-question-circle px-1" style="cursor:pointer;" data-toggle="collapse" data-target="#actions-help"></i>
     </th>
   </tr>
-  <tr class="collapse" id="identificator-help">
-    <td class="pl-5" colspan="3">
-      <strong>Ejemplo:</strong> <em>Camisa Atodu S-12</em><br>
-      <em>Camisa:</em> tipo de prenda <br>
-      <em>Atondu:</em> nombre <br>
-      <em>S:</em> acabado (<strong>S</strong>tandard, <strong>M</strong>edium o <strong>P</strong>remium) <br>
-      <em>12:</em> Talla <br>
-      <i class="far fa-sticky-note px-1"></i>Observaciones
-      <i class="far fa-sign-in-alt px-1 ml-3"></i>Externo
-    </td>
-  </tr>
+  {% include 'includes/info_items.html' %}
   <tr class="collapse" id="actions-help">
     <td class="pl-5" colspan="3">
       <i class="far fa-share px-1"></i>Enviar a pedido
