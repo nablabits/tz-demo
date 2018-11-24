@@ -20,6 +20,17 @@
     <button class="btn btn-outline-success mb-2 mr-sm-2" type="submit">Filtrar vista</button>
   </form>
 </div>
+
+{%if filter_on%}
+<form class="js-filter-view" method="post" action="{% url 'filter-items' %}">
+  {% csrf_token %}
+  <div class="d-inline-flex ml-3 mb-2 badge badge-info">
+    <i class="far fa-filter px-1"></i>{{filter_on}}
+    <a href="{% url 'itemslist' %}" class="text-white" type="submit"><i class="far fa-times-circle px-1"></i></a>
+  </div>
+</form>
+{%endif%}
+
 <table class="table">
 <thead>
   <tr>

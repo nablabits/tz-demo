@@ -6,6 +6,7 @@
     ordena las prendas por tipo de prenda.
   * **Mejora:** ahora el editor de prendas muestra un icono en cada prenda
     externa.
+  * **Mejora:** el editor de prendas indica si hay un filtro activo en la vista.
   * **Bug:** arreglos menores en fallos.
 
 #### v47, Nov 23
