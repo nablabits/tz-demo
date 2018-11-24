@@ -3,6 +3,7 @@ omit =
   venv/*
   media/*
   orders/tests/*
+  orders/migrations/*
   manage.py
   tz/__init__.py
   orders/__init__.py
