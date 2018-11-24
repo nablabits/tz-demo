@@ -2,6 +2,8 @@
 ***
 
 #### v48,
+  * **Nuevo:** Las prendas que se añaden a un pedido ahora tienen un atributo
+    *arreglo* para diferenciarlas de las nuevas.
   * **Mejora:** cada prenda en la lista de prendas añadidas a un pedido ahora
     tiene un icono con detalles relativos a esa prenda.
   * **Mejora:** el desplegable de añadir prendas dentro de un pedido ahora
