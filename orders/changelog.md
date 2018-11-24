@@ -4,7 +4,8 @@
 #### v48,
   * **Mejora:** el desplegable de añadir prendas dentro de un pedido ahora
     ordena las prendas por tipo de prenda.
-
+  * **Mejora:** ahora el editor de prendas muestra un icono en cada prenda
+    externa.
   * **Bug:** arreglos menores en fallos.
 
 #### v47, Nov 23

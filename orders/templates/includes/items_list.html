@@ -35,11 +35,12 @@
   <tr class="collapse" id="identificator-help">
     <td class="pl-5" colspan="3">
       <strong>Ejemplo:</strong> <em>Camisa Atodu S-12</em><br>
-      <em>Camisa:</em> tipo de elemento <br>
+      <em>Camisa:</em> tipo de prenda <br>
       <em>Atondu:</em> nombre <br>
       <em>S:</em> acabado (<strong>S</strong>tandard, <strong>M</strong>edium o <strong>P</strong>remium) <br>
       <em>12:</em> Talla <br>
-      <i class="far fa-sticky-note px-1"></i> Observaciones
+      <i class="far fa-sticky-note px-1"></i>Observaciones
+      <i class="far fa-sign-in-alt px-1 ml-3"></i>Externo
     </td>
   </tr>
   <tr class="collapse" id="actions-help">
@@ -57,7 +58,10 @@
         <th>
           {{item.get_item_type_display}} {{item.name}} {{item.item_class}}-{{item.size}}
           {%if item.notes%}
-          <i class="far fa-sticky-note px-1"></i>
+          <i class="far fa-sticky-note ml-2"></i>
+          {%endif%}
+          {%if item.foreing%}
+          <i class="far fa-sign-in-alt"></i>
           {%endif%}
         </th>
         <th>{{ item.fabrics}}</th>
