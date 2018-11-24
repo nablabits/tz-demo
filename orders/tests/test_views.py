@@ -146,9 +146,9 @@ class StandardViewsTest(TestCase):
 
         # Have a read comment
         order = Order.objects.get(ref_name='example closed')
-        comment = Comment.objects.filter(reference=order)[0]
-        # comment = comment.get(comment='Comment0')
+        comment = Comment.objects.all()[0]
         comment.read = True
+        comment.reference = order
         comment.comment = 'read comment'
         comment.save()
 
@@ -178,7 +178,7 @@ class StandardViewsTest(TestCase):
         # Test context variables
         self.assertEqual(str(resp.context['orders'][0].ref_name), 'example10')
         self.assertEqual(resp.context['orders_count'], 10)
-        self.assertEqual(resp.context['comments_count'], 5)
+        self.assertEqual(resp.context['comments_count'], 4)
         self.assertEqual(str(resp.context['comments'][0].comment), 'Comment8')
         self.assertEqual(str(resp.context['user']), 'regular')
 
@@ -449,7 +449,7 @@ class StandardViewsTest(TestCase):
         self.assertEqual(len(comments), 10)
         self.assertEqual(len(items), 5)
         self.assertTrue(resp.context['closed'])
-        self.assertTrue(comments[0].read)
+        self.assertTrue(comments[9].read)
 
     def test_customer_list(self):
         """Test the main features on customer list."""
