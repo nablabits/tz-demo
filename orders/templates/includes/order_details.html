@@ -20,17 +20,31 @@
     <table class="table">
     <thead>
       <tr>
-        <th scope="col">Prenda</th>
+        <th scope="col">
+          Prenda<i class="far fa-question-circle px-1" style="cursor:pointer;" data-toggle="collapse" data-target="#item-help"></i>
+        </th>
         <th scope="col">Cantidad</th>
         <th scope="col">Tiempos</th>
         <th scope="col">Acciones</th>
       </tr>
+      {% include 'includes/info_items.html' %}
     </thead>
     <tbody>
       {% for item in items %}
       <tr class="item-list" data-toggle="collapse" data-target="#time-detail-{{item.pk}}">
         <td scope="row">
           {{item.element}}
+          <span class="ml-2">
+            {%if item.description%}
+            <i class="far fa-sticky-note"></i>
+            {%endif%}
+            {%if item.element.foreing%}
+            <i class="far fa-sign-in-alt"></i>
+            {%endif%}
+            {%if item.fit%}
+            <i class="far fa-cut"></i>
+            {%endif%}
+          </span>
         </td>
         <td>{{item.qty}}</td>
         <td>

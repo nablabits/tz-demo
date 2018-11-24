@@ -2,6 +2,8 @@
 ***
 
 #### v48,
+  * **Mejora:** cada prenda en la lista de prendas añadidas a un pedido ahora
+    tiene un icono con detalles relativos a esa prenda.
   * **Mejora:** el desplegable de añadir prendas dentro de un pedido ahora
     ordena las prendas por tipo de prenda.
   * **Mejora:** ahora el editor de prendas muestra un icono en cada prenda
