@@ -10,7 +10,7 @@
       {%endfor%}
     </select>
 
-    <select class="form-control mb-2 mr-sm-2" id="item-type" name="item-class">
+    <select class="form-control mb-2 mr-sm-2" id="item-class" name="item-class">
       <option value="all">Todos los acabados</option>
       {% for item in item_classes %}
         <option value="{{item.0}}">{{item.1}}</option>
