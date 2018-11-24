@@ -1,7 +1,13 @@
 ## Trapuzarrak app registro de cambios
 ***
 
-#### v47,
+#### v48,
+  * **Mejora:** el desplegable de añadir prendas dentro de un pedido ahora
+    ordena las prendas por tipo de prenda.
+
+  * **Bug:** arreglos menores en fallos.
+
+#### v47, Nov 23
   * **Nuevo:** ahora se pueden enviar prendas directamente a pedidos (solo
     activos).
   * **Mejora:** el filtro añadido en la v43 ahora se puede aplicar a más campos
