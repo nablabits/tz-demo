@@ -774,7 +774,13 @@ class Actions(View):
                                      pk=self.request.POST.get('pk', None))
             order = get_object_or_404(Order,
                                       pk=self.request.POST.get('order', None))
-            OrderItem.objects.create(element=item, reference=order)
+            if self.request.POST.get('isfit', None) == '1':
+                is_fit = True
+            elif self.request.POST.get('isfit', None) == '0':
+                is_fit = False
+            else:
+                raise Http404('No info given abot fit')
+            OrderItem.objects.create(element=item, reference=order, fit=is_fit)
             return redirect('order_view', pk=order.pk)
 
         # Attach item to order (POST)
