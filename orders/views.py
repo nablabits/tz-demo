@@ -1064,11 +1064,13 @@ def changelog(request):
 
 def filter_items(request):
     """Filter the item objects list."""
+    if request.method != 'GET':
+        raise Http404('The filter should go in a get request')
     data = dict()
     items = Item.objects.all()
-    by_name = request.POST.get('search-obj')
-    by_type = request.POST.get('item-type')
-    by_class = request.POST.get('item-class')
+    by_name = request.GET.get('search-obj')
+    by_type = request.GET.get('item-type')
+    by_class = request.GET.get('item-class')
     filter_on = 'Filtrando'
     if by_name:
         items = items.filter(name__istartswith=by_name)
@@ -1094,4 +1096,19 @@ def filter_items(request):
                }
     template = 'includes/items_list.html'
     data['html'] = render_to_string(template, context, request=request)
+
+    """
+    Test stuff. Since it's not very straightforward extract this data
+    from render_to_string() method, we'll pass them as keys in JSON but
+    just for testing purposes.
+    """
+    if request.GET.get('test'):
+        data['template'] = template
+        add_to_context = []
+        for k in context:
+            add_to_context.append(k)
+        data['context'] = add_to_context
+        data['filter_on'] = filter_on
+        data['len_items'] = len(items)
+
     return JsonResponse(data)

@@ -588,6 +588,61 @@ class StandardViewsTest(TestCase):
         resp = self.client.post(reverse('changelog'))
         self.assertEqual(resp.status_code, 404)
 
+    def test_filter_items_view_only_accept_get(self):
+        """Method should be get."""
+        resp = self.client.post(reverse('filter-items'))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_filter_items_view_3_filters(self):
+        """Test the proper function of the filters."""
+        Item.objects.create(name='Object', item_type='3', item_class='S',
+                            fabrics=0)
+        resp = self.client.get(reverse('filter-items'),
+                               {'search-obj': 'obj',
+                                'item-type': '3',
+                                'item-class': 'S',
+                                'test': True,
+                                })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/items_list.html')
+        self.assertIsInstance(context, list)
+        vars = ('items', 'item_types', 'item_classes', 'add_to_order',
+                'filter_on', 'js_action_send_to', 'js_action_edit',
+                'js_action_delete')
+        self.assertTrue(self.context_vars(context, vars))
+        self.assertEqual(data['filter_on'],
+                         'Filtrando obj en Camisas con acabado Standard')
+        self.assertEqual(data['len_items'], 1)
+
+    def test_filter_items_view_no_obj(self):
+        """Test the proper function of the filters."""
+        Item.objects.create(name='Object', item_type='3', item_class='S',
+                            fabrics=0)
+        resp = self.client.get(reverse('filter-items'),
+                               {'item-type': '3',
+                                'item-class': 'S',
+                                'test': True,
+                                })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/items_list.html')
+        self.assertIsInstance(context, list)
+        vars = ('items', 'item_types', 'item_classes', 'add_to_order',
+                'filter_on', 'js_action_send_to', 'js_action_edit',
+                'js_action_delete')
+        self.assertTrue(self.context_vars(context, vars))
+        self.assertEqual(data['filter_on'],
+                         'Filtrando elementos en Camisas con acabado Standard')
+        self.assertEqual(data['len_items'], 1)
+
+
 class SearchBoxTest(TestCase):
     """Test the standard views."""
 
