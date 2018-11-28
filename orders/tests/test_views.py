@@ -643,12 +643,34 @@ class StandardViewsTest(TestCase):
         self.assertEqual(data['len_items'], 1)
 
     def test_filter_no_filter_returns_false_filter_on(self):
+        """When no filter is applied, filter_on var should be false."""
         Item.objects.create(name='Object', item_type='3', item_class='S',
                             fabrics=0)
         resp = self.client.get(reverse('filter-items'), {'test': True})
         self.assertEqual(resp.status_code, 200)
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertFalse(data['filter_on'])
+
+    def test_filter_no_obj_returns_empty_queryset(self):
+        """When there are no matches on obj, empty list should be returned."""
+        resp = self.client.get(reverse('filter-items'),
+                               {'search-obj': 'element-null',
+                                'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['len_items'], 0)
+
+    def test_filter_no_matches_show_a_warning(self):
+        """When there are no matches, we should show a message."""
+        resp1 = self.client.get(reverse('filter-items'),
+                                {'search-obj': 'Null element', 'test': True})
+        resp2 = self.client.get(reverse('filter-items'),
+                                {'item-type': '5', 'test': True})
+        resp3 = self.client.get(reverse('filter-items'),
+                                {'item-class': 'S', 'test': True})
+        for resp in (resp1, resp2, resp3):
+            data = json.loads(str(resp.content, 'utf-8'))
+            self.assertEqual(data['filter_on'],
+                             'El filtro no devolvió ningún resultado')
 
 
 class SearchBoxTest(TestCase):

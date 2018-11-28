@@ -1078,17 +1078,24 @@ def filter_items(request):
         filter_on = 'Filtrando'
         if by_name:
             items = items.filter(name__istartswith=by_name)
-            filter_on = '%s %s' % (filter_on, by_name)
+            if items:
+                filter_on = '%s %s' % (filter_on, by_name)
         else:
             filter_on = '%s elementos' % filter_on
         if by_type and by_type != 'all':
             items = items.filter(item_type=by_type)
-            display = items[0].get_item_type_display()
-            filter_on = '%s en %ss' % (filter_on, display)
+            if items:
+                display = items[0].get_item_type_display()
+                filter_on = '%s en %ss' % (filter_on, display)
         if by_class and by_class != 'all':
             items = items.filter(item_class=by_class)
-            display = items[0].get_item_class_display()
-            filter_on = '%s con acabado %s' % (filter_on, display)
+            if items:
+                display = items[0].get_item_class_display()
+                filter_on = '%s con acabado %s' % (filter_on, display)
+
+        if not items:
+            filter_on = 'El filtro no devolvió ningún resultado'
+
     context = {'items': items,
                'item_types': settings.ITEM_TYPE[1:],
                'item_classes': settings.ITEM_CLASSES,
