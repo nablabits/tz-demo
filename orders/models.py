@@ -6,7 +6,7 @@ Its intended use is for business related to tailor made clothes.
 from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from .utils import TimeLenght
+from .utils import TimeLenght, WeekColor
 from . import settings
 from datetime import date, timedelta
 
@@ -100,6 +100,11 @@ class Order(models.Model):
     def next_status(self):
         """Determine the previous status."""
         return str(int(self.status)+1)
+
+    @property
+    def color(self):
+        """Add a color dependign the delivery date."""
+        return WeekColor(self.delivery).get()
 
 
 class Item(models.Model):
