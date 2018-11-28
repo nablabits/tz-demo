@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import F
 from django.http import JsonResponse
 from django.urls import reverse
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from random import randint
 from orders import settings
 import json
@@ -211,8 +211,14 @@ class StandardViewsTest(TestCase):
         # Test context vars
         self.assertEqual(resp.context['active'][0].ref_name, 'example10')
         self.assertEqual(str(resp.context['user']), 'regular')
+        self.assertEqual(str(resp.context['version']), settings.VERSION)
+        self.assertEqual(str(resp.context['order_by']), 'date')
         self.assertEqual(resp.context['placeholder'],
                          'Buscar pedido (referencia o nº)')
+        self.assertEqual(str(resp.context['search_on']), 'orders')
+        self.assertEqual(str(resp.context['title']), 'TrapuZarrak · Pedidos')
+        self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
+        self.assertTrue(resp.context['footer'])
 
     def test_order_list_delivered_more_recent_first(self):
         """Test the correct order on delivered orders."""
