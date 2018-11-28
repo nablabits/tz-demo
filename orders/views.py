@@ -232,6 +232,7 @@ def orderlist(request, orderby):
                      'placeholder': 'Buscar pedido (referencia o nº)',
                      'search_on': 'orders',
                      'title': 'TrapuZarrak · Pedidos',
+                     'colors': settings.WEEK_COLORS,
                      'footer': True,
                      }
 
