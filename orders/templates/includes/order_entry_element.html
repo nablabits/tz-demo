@@ -1,6 +1,6 @@
 {% load humanize %}
 <div class="card my-2">
-  <div class="card-body">
+  <div class="card-body" {%if order.color%}style="border-left: 5px solid {{order.color}}"{%endif%}>
     <div class="row">
       <div class="col-9">
         <div class="d-flex">
