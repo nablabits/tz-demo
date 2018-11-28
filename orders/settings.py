@@ -2,7 +2,7 @@
 
 # The name for the app
 APP_NAME = "Trapu Zarrak app"
-VERSION = 'v48'  # next version to be delivered
+VERSION = 'v49'  # next version to be delivered
 
 # Available types of clothes
 ITEM_TYPE = (
