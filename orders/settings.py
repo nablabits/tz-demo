@@ -27,3 +27,5 @@ ITEM_CLASSES = (
     ('M', 'Medium'),
     ('P', 'Premium')
 )
+
+WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
