@@ -106,6 +106,17 @@ class Order(models.Model):
         """Add a color depending the delivery date."""
         return WeekColor(self.delivery).get()
 
+    @property
+    def progress(self):
+        """Return the status in percentage."""
+        if self.status in ('6', '7', '8'):
+            return 100
+        elif self.status == '1':
+            return 0
+        else:
+            return round((int(self.status)-2) * 100 / 4, 0)
+
+
 
 class Item(models.Model):
     """Hold the different types of items (clothes) and the fabrics needed."""
