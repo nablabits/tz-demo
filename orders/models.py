@@ -98,7 +98,7 @@ class Order(models.Model):
 
     @property
     def next_status(self):
-        """Determine the previous status."""
+        """Determine the next status."""
         return str(int(self.status)+1)
 
     @property
@@ -115,7 +115,6 @@ class Order(models.Model):
             return 0
         else:
             return round((int(self.status)-2) * 100 / 4, 0)
-
 
 
 class Item(models.Model):
