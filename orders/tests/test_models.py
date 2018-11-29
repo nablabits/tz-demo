@@ -114,6 +114,28 @@ class ModelTest(TestCase):
         order = Order.objects.get(ref_name='status changed')
         self.assertEqual(order.progress, 100)
 
+    def test_duplicate_orders(self):
+        """Test avoid duplicate orders."""
+        u = User.objects.all()[0]
+        c = Customer.objects.all()[0]
+        Order.objects.create(user=u,
+                             customer=c,
+                             ref_name='duplicate',
+                             delivery=date.today(),
+                             others='duplicate order',
+                             budget=100,
+                             prepaid=20,
+                             )
+        Order.objects.create(user=u,
+                             customer=c,
+                             ref_name='duplicate',
+                             delivery=date.today(),
+                             others='duplicate order',
+                             budget=100,
+                             prepaid=20,
+                             )
+        self.assertTrue(Order.objects.get(ref_name='duplicate'))
+
     def test_comment_creation(self):
         """Test the comment creation."""
         comment = Comment.objects.get(pk=1)

@@ -5,7 +5,8 @@ Its intended use is for business related to tailor made clothes.
 
 from django.db import models
 from django.utils import timezone
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.exceptions import (ObjectDoesNotExist, ValidationError,
+                                    MultipleObjectsReturned)
 from .utils import TimeLenght, WeekColor
 from . import settings
 from datetime import date, timedelta
@@ -80,6 +81,31 @@ class Order(models.Model):
         """Object's representation."""
         return '%s %s %s' % (self.inbox_date.date(),
                              self.customer, self.ref_name)
+
+    def save(self, *args, **kwargs):
+        """Avoid duplicate orders."""
+        try:
+            original = Order.objects.get(ref_name=self.ref_name)
+        except (MultipleObjectsReturned, ObjectDoesNotExist):
+            super().save(*args, **kwargs)
+        else:
+            diff = self.inbox_date - original.inbox_date
+            duplicated = (diff.seconds < 120 and
+                          self.user == original.user and
+                          self.customer == original.customer and
+                          self.delivery == original.delivery and
+                          self.status == original.status and
+                          self.priority == original.priority and
+                          self.waist == original.waist and
+                          self.chest == original.chest and
+                          self.hip == original.hip and
+                          self.lenght == original.lenght and
+                          self.others == original.others and
+                          self.budget == original.budget and
+                          self.prepaid == original.prepaid
+                          )
+            if not duplicated:
+                super().save(*args, **kwargs)
 
     @property
     def overdue(self):

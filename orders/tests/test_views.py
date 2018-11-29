@@ -7,7 +7,7 @@ from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import F
 from django.http import JsonResponse
 from django.urls import reverse
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
 from random import randint
 from orders import settings
 import json
@@ -134,7 +134,7 @@ class StandardViewsTest(TestCase):
         # deliver the first 10 orders
         order_bulk_edit = Order.objects.all().order_by('inbox_date')[:10]
         for order in order_bulk_edit:
-            order.ref_name = 'example delivered'
+            order.ref_name = 'example delivered' + str(order.pk)
             order.status = 7
             order.save()
 
@@ -417,13 +417,15 @@ class StandardViewsTest(TestCase):
 
     def test_pending_orders_more_ancient_first(self):
         """The order should be from more ancient up."""
-        pending_first = Order.objects.exclude(status=8)
-        pending_first = pending_first.filter(budget__gt=F('prepaid'))[0]
-        pending_first.inbox_date = pending_first.inbox_date - timedelta(days=2)
-        pending_first.save()
+        order = Order.objects.exclude(status=8)
+        order = order.filter(budget__gt=F('prepaid'))[0]
+        order.inbox_date = order.inbox_date - timedelta(weeks=52)
+        order.ref_name = 'Should be first'
+        order.save()
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
-        self.assertEquals(resp.context['pending'][0], pending_first)
+        self.assertEquals(resp.context['pending'][0],
+                          Order.objects.get(ref_name='Should be first'))
 
     def test_pending_orders_should_dismiss_cancelled(self):
         """Pending orders don't include cancelled orders."""
@@ -754,7 +756,7 @@ class SearchBoxTest(TestCase):
         # deliver the first 10 orders
         order_bulk_edit = Order.objects.all().order_by('inbox_date')[:10]
         for order in order_bulk_edit:
-            order.ref_name = 'example delivered'
+            order.ref_name = 'example delivered' + str(order.pk)
             order.status = 7
             order.save()
 
@@ -2153,7 +2155,6 @@ class ActionsPostMethodEdit(TestCase):
         order = Order.objects.get(ref_name='example')
         resp = self.client.post(reverse('actions'),
                                 {'prepaid': 2000,
-                                 'workshop': 200,
                                  'pk': order.pk,
                                  'action': 'order-close',
                                  'test': True
