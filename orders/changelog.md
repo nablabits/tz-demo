@@ -1,7 +1,23 @@
 ## Trapuzarrak app registro de cambios
 ***
 
-#### v48,
+#### v49, Nov 29
+  * **Nuevo:** Nueva vista por semanas para prever la carga de trabajo.
+  * **Nuevo:** ahora hay una barra de progreso que muestra gráficamente el
+    estado
+  * **Nuevo:** la lista de pedidos ahora muestra un color en función de la
+    fecha de entrega.
+  * **Mejora:** se han renombrado los estados posibles (entre paréntesis el progreso):
+    * Preparando -> Corte (25%).
+    * En proceso-> Confección (50%).
+    * Acabado -> Remate (75%).
+  * **Mejora:** Se ha añadido el número de pedido activos.
+  * **Mejora:** He reducido el tamaño de la cabecera y el menu lateral para que
+    haya más sitio para la información importante.
+  * **Mejora:** Cuando el filtro no devuelve resultados, ahora se muestra un
+    mensaje.
+
+#### v48, Nov 24
   * **Nuevo:** Las prendas que se añaden a un pedido ahora tienen un atributo
     *arreglo* para diferenciarlas de las nuevas.
   * **Mejora:** cada prenda en la lista de prendas añadidas a un pedido ahora
