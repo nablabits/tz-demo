@@ -37,9 +37,9 @@ class Order(models.Model):
         ('1', 'Recibido'),
         # WorkShop
         ('2', 'En cola'),
-        ('3', 'Preparando'),
-        ('4', 'En proceso'),
-        ('5', 'Acabado'),
+        ('3', 'Corte'),
+        ('4', 'Confección'),
+        ('5', 'Remate'),
         # Shop
         ('6', 'En espera'),
         ('7', 'Entregado'),
