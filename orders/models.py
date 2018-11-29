@@ -103,7 +103,7 @@ class Order(models.Model):
 
     @property
     def color(self):
-        """Add a color dependign the delivery date."""
+        """Add a color depending the delivery date."""
         return WeekColor(self.delivery).get()
 
 
