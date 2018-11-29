@@ -30,17 +30,17 @@
   </div>
   <div class="d-flex flex-column flex-md-row mt-2 pl-2">
     <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '1' %}active{% endif %}" data-pk="{{order.pk}}" data-status="1" id="status-inbox">Recibido</button>
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '1' %}active{% endif %}" data-pk="{{order.pk}}" data-status="1" id="status-inbox">{{order.STATUS.0.1}}</button>
     </div>
     <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '2' %}active{% endif %}" data-pk="{{order.pk}}" data-status="2" id="status-waiting">En cola</button>
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '3' %}active{% endif %}" data-pk="{{order.pk}}" data-status="3" id="status-preparing">Preparando</button>
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '4' %}active{% endif %}" data-pk="{{order.pk}}" data-status="4" id="status-performing">En Proceso</button>
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '5' %}active{% endif %}" data-pk="{{order.pk}}" data-status="5" id="status-workshop">Acabado</button>
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '2' %}active{% endif %}" data-pk="{{order.pk}}" data-status="2" id="status-waiting">{{order.STATUS.1.1}}</button>
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '3' %}active{% endif %}" data-pk="{{order.pk}}" data-status="3" id="status-preparing">{{order.STATUS.2.1}}</button>
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '4' %}active{% endif %}" data-pk="{{order.pk}}" data-status="4" id="status-performing">{{order.STATUS.3.1}}</button>
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '5' %}active{% endif %}" data-pk="{{order.pk}}" data-status="5" id="status-workshop">{{order.STATUS.4.1}}</button>
     </div>
     <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '6' %}active{% endif %}" data-pk="{{order.pk}}" data-status="6" id="status-outbox">En espera</button>
-      <button type="button" class="btn btn-outline-success js-close-order {% if order.status == '7' %}active{% endif %}" data-action="order-close" data-pk="{{order.pk}}" id="status-delivered">Entregado</button>
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '6' %}active{% endif %}" data-pk="{{order.pk}}" data-status="6" id="status-outbox">{{order.STATUS.5.1}}</button>
+      <button type="button" class="btn btn-outline-success js-close-order {% if order.status == '7' %}active{% endif %}" data-action="order-close" data-pk="{{order.pk}}" id="status-delivered">{{order.STATUS.6.1}}</button>
     </div>
       <button type="button" class="btn btn-outline-success active {%if order.pending != 0 %}d-none{% endif %}">
         <i class="fa fa-euro"></i> Cobrado {{order.budget}}€
