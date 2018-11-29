@@ -21,19 +21,17 @@ tbody{
 th{
   font-weight: 400;
 }
-.aside-narrow{
-  width: 80%;
-  position: absolute;
-  top: 7vh;
-  height: auto;
+.week-view-table{
   border-right: 1px solid lightgrey;
-  font-size: 1.1em;
-  z-index: 1;
-  padding-top: 1em;
+  border-bottom: 1px solid lightgrey;
+}
+.js-flip{
+  cursor: pointer;
 }
 .aside-wide{
  border-right: 1px solid lightgrey;
  padding-top: 4em;
+ height: 100vh;
 }
 
 .intro_text{
@@ -90,7 +88,7 @@ th{
   border-left: 1px solid #ddd;
 }
 
-.js-view-list-item > th{
+.js-view-list-item{
   cursor: pointer;
 }
 
