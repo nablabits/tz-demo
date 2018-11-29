@@ -29,24 +29,28 @@
     <!-- Active orders tab -->
     <div class="tab-pane show active" id="active-orders" role="tabpanel">
       <div class="d-flex pt-4 px-2">
-        <div class="mr-auto">
-          <div class="d-flex align-items-end">
+        <div class="mr-auto d-flex align-items-end">
             <h3 class="">Pedidos activos ({{active|length}})</h3>
             <small class="ml-2 pb-2" data-toggle="collapse" data-target="#legend" role="button" style="cursor: pointer;">Leyenda</small>
-          </div>
         </div>
-        <h4 class="px-2">Ordenados por:
-        </h4>
-        <div class="dropdown show">
-          <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">
-            {% if order_by == 'status' %}<i class="fa fa-cogs"></i> Status
-            {% elif order_by == 'priority' %}<i class="fa fa-flag"></i> Prioridad
-            {% else %}<i class="fa fa-calendar"></i> Fecha{% endif %}
-          </button>
-          <div class="dropdown-menu">
-            <a class="dropdown-item {% if order_by == 'date' %}d-none{%endif%}" href="{%url 'orderlist' orderby='date' %}"><i class="fa fa-calendar"></i> Fecha</a>
-            <a class="dropdown-item {% if order_by == 'status' %}d-none{%endif%}" href="{%url 'orderlist' orderby='status' %}"><i class="fa fa-cogs"></i> Status</a>
-            <a class="dropdown-item {% if order_by == 'priority' %}d-none{%endif%}" href="{%url 'orderlist' orderby='priority' %}"><i class="fa fa-flag"></i> Prioridad</a>
+        <div class="d-flex mr-1 align-items-center js-flip">
+          <h5 class="mr-2 my-0">Previsión</h5>
+          <h5 class="mr-2 my-0"><i class="fal fa-toggle-off"></i></h5>
+          <h5 class="mr-2 my-0">Lista</h5>
+        </div>
+        <div class="d-flex align-items-center">
+          <h5 class="px-2 my-0">Ordenados por:</h5>
+          <div class="dropdown show">
+            <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">
+              {% if order_by == 'status' %}<i class="fa fa-cogs"></i> Status
+              {% elif order_by == 'priority' %}<i class="fa fa-flag"></i> Prioridad
+              {% else %}<i class="fa fa-calendar"></i> Fecha{% endif %}
+            </button>
+            <div class="dropdown-menu">
+              <a class="dropdown-item {% if order_by == 'date' %}d-none{%endif%}" href="{%url 'orderlist' orderby='date' %}"><i class="fa fa-calendar"></i> Fecha</a>
+              <a class="dropdown-item {% if order_by == 'status' %}d-none{%endif%}" href="{%url 'orderlist' orderby='status' %}"><i class="fa fa-cogs"></i> Status</a>
+              <a class="dropdown-item {% if order_by == 'priority' %}d-none{%endif%}" href="{%url 'orderlist' orderby='priority' %}"><i class="fa fa-flag"></i> Prioridad</a>
+            </div>
           </div>
         </div>
       </div>
@@ -67,12 +71,105 @@
           </div>
         </div>
       </div>
-      <div class="px-2">
-        {% for order in active %}
-        <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
-          {% include 'includes/order_entry_element.html' %}
+
+      <div id="view-mode">
+
+        <!-- week view -->
+        <div class="px-2" id="week-view">
+          <div class="row">
+            <div class="col rounded week-view-table pt-2 pb-5" style="border-top: 5px solid {{colors.this}};">
+              <h4 class="text-center mb-3 font-weight-bold">Esta Semana</h4>
+              {% for order in active %}
+                {%if order.color == colors.this %}
+                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                  <div class="d-flex align-items-center">
+                    <div class="d-flex flex-column">
+                      <h5 class="my-0">{{order.ref_name}}</h5>
+                      <small>de {{order.customer}}</small>
+                    </div>
+                    {%if order.overdue%}
+                    <div class="d-flex ml-auto">
+                      <i class="fas fa-exclamation-triangle text-danger"></i>
+                    </div>
+                    {%endif%}
+                  </div>
+                  <div class="progress" style="height: 5px;">
+                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                  </div>
+                </div>
+                {%endif%}
+              {% endfor %}
+            </div>
+            <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid {{colors.next}};">
+              <h4 class="text-center mb-3 font-weight-bold">Semana que viene</h4>
+              {% for order in active %}
+                {%if order.color == colors.next %}
+                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                  <div class="d-flex align-items-center">
+                    <div class="d-flex flex-column">
+                      <h5 class="my-0">{{order.ref_name}}</h5>
+                      <small>de {{order.customer}}</small>
+                    </div>
+                  </div>
+                  <div class="progress" style="height: 5px;">
+                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                  </div>
+                </div>
+                {%endif%}
+              {% endfor %}
+            </div>
+            <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid {{colors.in_two}};">
+              <h4 class="text-center mb-3 font-weight-bold">En dos semanas</h4>
+              {% for order in active %}
+                {%if order.color == colors.in_two %}
+                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                  <div class="d-flex align-items-center">
+                    <div class="d-flex flex-column">
+                      <h5 class="my-0">{{order.ref_name}}</h5>
+                      <small>de {{order.customer}}</small>
+                    </div>
+                  </div>
+                  <div class="progress" style="height: 5px;">
+                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                  </div>
+                </div>
+                {%endif%}
+              {% endfor %}
+            </div>
+            <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid lightgrey;">
+              <h4 class="text-center mb-3 font-weight-bold">Futuro</h4>
+              {% for order in active %}
+                {%if not order.color %}
+                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                  <div class="d-flex align-items-center">
+                    <div class="d-flex flex-column">
+                      <h5 class="my-0">{{order.ref_name}}</h5>
+                      <small>de {{order.customer}}</small>
+                      <small>Entrega en {{order.delivery|date:'M, y'}}</small>
+                    </div>
+                  </div>
+                  <div class="progress" style="height: 5px;">
+                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                  </div>
+                </div>
+                {%endif%}
+              {% endfor %}
+            </div>
+          </div>
+          <div class="d-flex">
+          </div>
         </div>
-        {% endfor %}
+
+
+        <!-- List view -->
+        <div class="px-2" id="list-view">
+          {% for order in active %}
+          <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+            {% include 'includes/order_entry_element.html' %}
+          </div>
+          {% endfor %}
+        </div>
+
       </div>
     </div>
 
