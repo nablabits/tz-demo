@@ -60,6 +60,60 @@ class ModelTest(TestCase):
         self.assertTrue(order.overdue)
         self.assertEqual(order.pending, -1000)
 
+    def test_order_progress_status_1(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '1'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 0)
+
+    def test_order_progress_status_2(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '2'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 0)
+
+    def test_order_progress_status_3(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '3'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 25)
+
+    def test_order_progress_status_4(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '4'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 50)
+
+    def test_order_progress_status_5(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '5'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 75)
+
+    def test_order_progress_status_6(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '6'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 100)
+
     def test_comment_creation(self):
         """Test the comment creation."""
         comment = Comment.objects.get(pk=1)
