@@ -1,7 +1,7 @@
 ## Trapuzarrak app registro de cambios
 ***
 
-#### v49, Nov 29
+#### v50, Nov 29
   * **Nuevo:** Nueva vista por semanas para prever la carga de trabajo.
   * **Nuevo:** ahora hay una barra de progreso que muestra gráficamente el
     estado
