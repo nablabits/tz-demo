@@ -1,6 +1,12 @@
 ## Trapuzarrak app registro de cambios
 ***
 
+#### v51, Nov 29
+  * **Nuevo:** añadida barra de progreso a la lista de pedidos.
+  * **Bug:** ya no se pueden crear pedidos duplicados.
+  * **Bug:** Corregido el error en los estados dentro de cada pedido.
+  * **Bug:** Los pedidos de stock no se ordenaban correctamente, ahora sí.
+
 #### v50, Nov 29
   * **Nuevo:** Nueva vista por semanas para prever la carga de trabajo.
   * **Nuevo:** ahora hay una barra de progreso que muestra gráficamente el
