@@ -164,8 +164,8 @@ def orderlist(request, orderby):
     if tz:
         # First query the stock, tz related queries
         tz_orders = orders.filter(customer=tz)
-        tz_active = tz_orders.exclude(status__in=[7, 8])
-        tz_delivered = tz_orders.filter(status=7)[:10]
+        tz_active = tz_orders.exclude(status__in=[7, 8]).order_by('delivery')
+        tz_delivered = tz_orders.filter(status=7).order_by('-delivery')[:10]
 
         # And the attr collection for them
         tz_active = tz_active.annotate(Count('orderitem', distinct=True),
@@ -175,7 +175,7 @@ def orderlist(request, orderby):
                                              Count('comment', distinct=True),
                                              Count('timing', distinct=True))
 
-        # Finally, exclude tz customer for further queries
+        # Finally, exclude tz customer for further queries and sort
         orders = orders.exclude(customer=tz)
 
     # If tz customer doesn't exist, these vars should be none

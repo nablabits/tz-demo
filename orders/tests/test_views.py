@@ -408,6 +408,46 @@ class StandardViewsTest(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEquals(len(resp.context['cancelled']), 0)
 
+    def test_tz_active_list_ordering(self):
+        """The items should be ordered close delivery forth."""
+        make_tz1, make_tz2 = Order.objects.all()[0:2]
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        make_tz1.customer = tz
+        make_tz1.status = '1'
+        make_tz1.ref_name = 'Outdated'
+        make_tz1.delivery = make_tz2.delivery - timedelta(days=1)
+        make_tz1.save()
+        make_tz2.customer = tz
+        make_tz2.status = '1'
+        make_tz2.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['active_stock']), 2)
+        self.assertEquals(resp.context['active_stock'][0].ref_name, 'Outdated')
+
+    def test_tz_delivered_list_ordering(self):
+        """The items should be ordered more recent delivered back."""
+        make_tz1, make_tz2 = Order.objects.all()[0:2]
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        make_tz1.customer = tz
+        make_tz1.status = '7'
+        make_tz1.ref_name = 'Older'
+        make_tz1.delivery = make_tz2.delivery - timedelta(days=1)
+        make_tz1.save()
+        make_tz2.customer = tz
+        make_tz2.status = '7'
+        make_tz2.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['delivered_stock']), 2)
+        self.assertEquals(resp.context['delivered_stock'][1].ref_name, 'Older')
+
     def test_pending_orders(self):
         """Test the correct show of pending invoices."""
         resp = self.client.get(reverse('orderlist',
