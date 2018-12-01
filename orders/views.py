@@ -7,8 +7,8 @@ from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Timing, Item
 from .utils import TimeLenght
 from django.utils import timezone
-from .forms import CustomerForm, OrderForm, CommentForm, ItemForm
-from .forms import OrderCloseForm, OrderItemForm, EditDateForm
+from .forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
+                    OrderCloseForm, OrderItemForm, EditDateForm)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
