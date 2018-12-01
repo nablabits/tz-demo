@@ -5,6 +5,7 @@ Its intended use is for business related to tailor made clothes.
 
 from django.db import models
 from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import (ObjectDoesNotExist, ValidationError,
                                     MultipleObjectsReturned)
 from .utils import TimeLenght, WeekColor
@@ -150,7 +151,7 @@ class Item(models.Model):
     item_type = models.CharField('Tipo de prenda',
                                  max_length=2,
                                  choices=settings.ITEM_TYPE,
-                                 default=0)
+                                 default='0')
     item_class = models.CharField('Acabado',
                                   max_length=1,
                                   choices=settings.ITEM_CLASSES,
@@ -165,10 +166,27 @@ class Item(models.Model):
         return '{} {} {}-{}'.format(self.get_item_type_display(), self.name,
                                     self.item_class, self.size)
 
+    def clean(self):
+        """Clean up the model to avoid duplicate items."""
+        exists = Item.objects.filter(name=self.name)
+        if exists:
+            for item in exists:
+                duplicated = (self.item_class == item.item_class and
+                              self.item_class == item.item_class and
+                              self.size == item.size and
+                              self.fabrics == item.fabrics
+                              )
+                if duplicated:
+                    raise ValidationError(_('Items cannot have the same name' +
+                                            ', the same size and the same ' +
+                                            'class'))
+                    break
+
     def save(self, *args, **kwargs):
         """Override save method.
 
-        Item named Predeterminado is reserved, so raise an exception.
+        Item named Predeterminado is reserved, so raise an exception. Avoid,
+        also, duplicate items
         """
         if self.name == 'Predeterminado':
             try:

@@ -201,6 +201,17 @@ class ModelTest(TestCase):
                             fabrics=5.2)
         self.assertTrue(Item.objects.get(name='Test item'))
 
+    def test_item_duplicate_raises_error(self):
+        """Clean method should raise ValidationError."""
+        original = Item.objects.create(name='duplicate', fabrics=0, size='2')
+        duplicated = Item(name='duplicate', fabrics=0, size='2')
+        self.assertEqual(original.name, duplicated.name)
+        self.assertEqual(original.item_type, duplicated.item_type)
+        self.assertEqual(original.item_class, duplicated.item_class)
+        self.assertEqual(original.size, duplicated.size)
+        with self.assertRaises(ValidationError):
+            duplicated.clean()
+
     def test_object_item_allows_6_chars_on_size(self):
         """Items's size should allow up to 6 chars."""
         Item.objects.create(name='Test 6 char item',
