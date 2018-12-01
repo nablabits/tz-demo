@@ -294,7 +294,6 @@ def itemslist(request):
                      'table_id': 'item_objects_list',
                      'item_types': settings.ITEM_TYPE[1:],
                      'item_classes': settings.ITEM_CLASSES,
-                     'add_to_order': True,
 
                      # CRUD Actions
                      'btn_title_add': 'Añadir prenda',
@@ -724,7 +723,7 @@ class Actions(View):
                 data['html_id'] = '#comment-list'
                 comments = Comment.objects.filter(reference=order)
                 comments = comments.order_by('-creation')
-                context = {'form': form, 'comments': comments}
+                context = {'comments': comments}
                 template = 'includes/comment_list.html'
             else:
                 data['form_is_valid'] = False
@@ -778,7 +777,7 @@ class Actions(View):
             elif self.request.POST.get('isfit', None) == '0':
                 is_fit = False
             else:
-                raise Http404('No info given abot fit')
+                raise Http404('No info given about fit')
             OrderItem.objects.create(element=item, reference=order, fit=is_fit)
             return redirect('order_view', pk=order.pk)
 

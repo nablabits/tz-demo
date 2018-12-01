@@ -1606,7 +1606,7 @@ class ActionsPostMethodCreate(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#comment-list')
-        vars = ('comments', 'form')
+        vars = ('comments', )
         context_is_valid = self.context_vars(context, vars)
         self.assertTrue(context_is_valid)
 
@@ -2087,7 +2087,8 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('form', 'items', 'js_action_edit', 'js_action_delete', )
+        vars = ('items', 'js_action_edit', 'js_action_delete',
+                'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
@@ -2307,7 +2308,8 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('items', 'js_action_edit', 'js_action_delete', )
+        vars = ('items', 'js_action_edit', 'js_action_delete',
+                'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
