@@ -1,6 +1,11 @@
 ## Trapuzarrak app registro de cambios
 ***
 
+#### v52, Dic 1
+  * **Bug:** Ya no se pueden duplicar prendas.
+  * **Bug:** El icono de enviar prenda a pedido solía desaparecer, ahora se
+    queda en su sitio.
+
 #### v51, Nov 29
   * **Nuevo:** añadida barra de progreso a la lista de pedidos.
   * **Bug:** ya no se pueden crear pedidos duplicados.
