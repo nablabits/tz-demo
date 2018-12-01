@@ -1,5 +1,5 @@
 <div class="d-flex flex-row">
-  {%if add_to_order%}
+  {%if js_action_send_to %}
     <button class="mr-1 btn btn-sm btn-outline-success js-crud-edit" data-action="{{js_action_send_to}}" data-pk="{{item.pk}}"><i class="far fa-share"></i></button>
   {%endif%}
   <button class="mr-1 btn btn-sm btn-outline-success js-crud-edit" data-action="{{js_action_edit}}" data-pk="{{item.pk}}"><i class="far fa-edit"></i></button>

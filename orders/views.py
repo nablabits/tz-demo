@@ -754,6 +754,7 @@ class Actions(View):
                 context = {'items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
+                           'js_action_send_to': 'send-to-order',
                            }
                 template = 'includes/items_list.html'
             else:
@@ -876,10 +877,10 @@ class Actions(View):
                 items = Item.objects.all()
                 data['html_id'] = '#item_objects_list'
                 data['form_is_valid'] = True
-                context = {'form': form,
-                           'items': items,
+                context = {'items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
+                           'js_action_send_to': 'send-to-order',
                            }
                 template = 'includes/items_list.html'
             else:
@@ -997,6 +998,7 @@ class Actions(View):
             context = {'items': items,
                        'js_action_edit': 'object-item-edit',
                        'js_action_delete': 'object-item-delete',
+                       'js_action_send_to': 'send-to-order',
                        }
             template = 'includes/items_list.html'
 
