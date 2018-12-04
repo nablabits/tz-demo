@@ -29,3 +29,6 @@ ITEM_CLASSES = (
 )
 
 WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
+
+RELAX_ICONS = ('curling', 'shuttlecock', 'table_tennis', 'coffee-togo',
+               'umbrella-beach', 'clipboard-check', )

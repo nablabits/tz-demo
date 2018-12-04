@@ -14,7 +14,8 @@ from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Count, Sum, F
-from datetime import datetime
+from datetime import datetime, date
+from random import randint
 from . import settings
 import markdown2
 
@@ -205,6 +206,12 @@ def orderlist(request, orderby):
     except TypeError:
         pending_total = 0
 
+    # This week active entries
+    this_week = date.today().isocalendar()[1]
+    this_week_active = Order.objects.filter(delivery__week=this_week)
+    this_week_active = this_week_active.exclude(status=8)
+    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS))]
+
     # Finally, set the sorting method on view
     if orderby == 'date':
         active = active.order_by('delivery')
@@ -224,6 +231,8 @@ def orderlist(request, orderby):
                      'now': now,
                      'version': settings.VERSION,
                      'active_stock': tz_active,
+                     'this_week_active': this_week_active,
+                     'i_relax': i_relax,
                      'delivered_stock': tz_delivered,
                      'cancelled': cancelled,
                      'pending': pending,

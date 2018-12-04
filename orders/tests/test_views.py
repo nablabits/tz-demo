@@ -320,6 +320,16 @@ class StandardViewsTest(TestCase):
                                        kwargs={'orderby': 'invalid'}))
         self.assertEqual(resp.status_code, 404)
 
+    def test_order_list_active_week_entries(self):
+        """Test whether there are active entries this week."""
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        this_week = date.today().isocalendar()[1]
+        this_week_entries = Order.objects.filter(delivery__week=this_week)
+        this_week_entries = this_week_entries.exclude(status=8)
+        self.assertEqual(len(resp.context['this_week_active']),
+                         len(this_week_entries))
+
     def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
         """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
         tz = Customer.objects.create(name='trapuzarrak',

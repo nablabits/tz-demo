@@ -79,26 +79,35 @@
           <div class="row">
             <div class="col rounded week-view-table pt-2 pb-5" style="border-top: 5px solid {{colors.this}};">
               <h4 class="text-center mb-3 font-weight-bold">Esta Semana</h4>
-              {% for order in active %}
-                {%if order.color == colors.this %}
-                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
-                  <div class="d-flex align-items-center">
-                    <div class="d-flex flex-column">
-                      <h5 class="my-0">{{order.ref_name}}</h5>
-                      <small>de {{order.customer}}</small>
+              {%if this_week_active%}
+                {% for order in active %}
+                  {%if order.color == colors.this %}
+                  <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                    <div class="d-flex align-items-center">
+                      <div class="d-flex flex-column">
+                        <h5 class="my-0">{{order.ref_name}}</h5>
+                        <small>de {{order.customer}}</small>
+                      </div>
+                      {%if order.overdue%}
+                      <div class="d-flex ml-auto">
+                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                      </div>
+                      {%endif%}
                     </div>
-                    {%if order.overdue%}
-                    <div class="d-flex ml-auto">
-                      <i class="fas fa-exclamation-triangle text-danger"></i>
+                    <div class="progress" style="height: 5px;">
+                      <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
                     </div>
-                    {%endif%}
                   </div>
-                  <div class="progress" style="height: 5px;">
-                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
-                  </div>
+                  {%endif%}
+                {% endfor %}
+              {%else%}
+                <div class="d-flex mt-5 mb-3 justify-content-center">
+                  <i class="fal fa-{{i_relax}} fa-5x"></i>
                 </div>
-                {%endif%}
-              {% endfor %}
+                <div class="d-flex justify-content-center">
+                  <h3 class="text-center">Genial! habéis acabado por esta semana</h3>
+                </div>
+              {%endif%}
             </div>
             <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid {{colors.next}};">
               <h4 class="text-center mb-3 font-weight-bold">Semana que viene</h4>
