@@ -8,7 +8,28 @@ from orders.forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
 
 
 class CustomerFormTest(TestCase):
-    pass
+    """Test the customer form."""
+
+    def test_avoid_duplicates(self):
+        Customer.objects.create(name='Test duplicate',
+                                city='mungia',
+                                address='Foruen enparantza',
+                                phone='666555444',
+                                email='jondoe@jondoe.com',
+                                CIF='0000T',
+                                cp='00000',
+                                notes='No notes',
+                                )
+        duplicated_customer = CustomerForm({'name': 'Test duplicate',
+                                            'city': 'mungia',
+                                            'address': 'Foruen enparantza',
+                                            'phone': '666555444',
+                                            'email': 'jondoe@jondoe.com',
+                                            'CIF': '0000T',
+                                            'cp': '00000',
+                                            'notes': 'No notes',
+                                            })
+        self.assertFalse(duplicated_customer.is_valid())
 
 
 class OrderFormTest(TestCase):

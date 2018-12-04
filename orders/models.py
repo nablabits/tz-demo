@@ -30,6 +30,22 @@ class Customer(models.Model):
         """Get the name of the entry."""
         return self.name
 
+    def clean(self):
+        """Avoid duplicate items."""
+        exists = Customer.objects.filter(name=self.name)
+        if exists:
+            for customer in exists:
+                duplicated = (customer.address == self.address and
+                              customer.city == self.city and
+                              customer.phone == self.phone and
+                              customer.email == self.email and
+                              customer.CIF == self.CIF and
+                              customer.cp == self.cp and
+                              customer.notes == self.notes)
+                if duplicated:
+                    raise ValidationError({'name': _('The customer already ' +
+                                                     'exits in the db')})
+
 
 class Order(models.Model):
     """The main object, store the order info."""
