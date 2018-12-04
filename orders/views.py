@@ -758,11 +758,13 @@ class Actions(View):
                 template = 'includes/items_list.html'
             else:
                 data['form_is_valid'] = False
+                custom_form = 'includes/custom_forms/object_item.html'
                 context = {'form': form,
                            'modal_title': 'Añadir prenda',
                            'pk': '0',
                            'action': 'object-item-add',
                            'submit_btn': 'Añadir',
+                           'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
 
@@ -884,11 +886,13 @@ class Actions(View):
                 template = 'includes/items_list.html'
             else:
                 data['form_is_valid'] = False
+                custom_form = 'includes/custom_forms/object_item.html'
                 context = {'form': form,
                            'modal_title': 'Editar prenda',
                            'pk': item.pk,
                            'action': 'object-item-edit',
                            'submit_btn': 'Guardar',
+                           'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
 

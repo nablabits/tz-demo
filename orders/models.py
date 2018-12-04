@@ -193,9 +193,10 @@ class Item(models.Model):
                               self.fabrics == item.fabrics
                               )
                 if duplicated:
-                    raise ValidationError(_('Items cannot have the same name' +
-                                            ', the same size and the same ' +
-                                            'class'))
+                    raise ValidationError({'name': _('Items cannot have the ' +
+                                                     'same name the same ' +
+                                                     'size and the same class'
+                                                     )})
                     break
 
     def save(self, *args, **kwargs):
