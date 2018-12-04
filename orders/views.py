@@ -210,7 +210,7 @@ def orderlist(request, orderby):
     this_week = date.today().isocalendar()[1]
     this_week_active = Order.objects.filter(delivery__week=this_week)
     this_week_active = this_week_active.exclude(status=8)
-    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS))]
+    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
 
     # Finally, set the sorting method on view
     if orderby == 'date':

@@ -47,7 +47,7 @@ class ModelTest(TestCase):
 
     def test_customer_creation(self):
         """Test the customer creation."""
-        customer = Customer.objects.get(pk=1)
+        customer = Customer.objects.get(name='Customer Test')
         self.assertTrue(isinstance(customer, Customer))
         self.assertEqual(customer.__str__(), 'Customer Test')
 
