@@ -27,8 +27,9 @@ class ModelTest(TestCase):
                                 cp='48100')
 
         # Create  an order
+        customer = Customer.objects.get(name='Customer Test')
         Order.objects.create(user=User.objects.get(pk=1),
-                             customer=Customer.objects.get(pk=1),
+                             customer=customer,
                              ref_name='example',
                              delivery=date(2018, 2, 1),
                              waist=10,
