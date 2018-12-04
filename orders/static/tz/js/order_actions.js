@@ -79,6 +79,8 @@ $(function () {
           } else {
             $(data.html_id).html(data.html)
           }
+        } else {
+          $('#action-modal .modal-content').html(data.html)
         }
       }
     })
