@@ -2,10 +2,6 @@
 
 <form method="post" action="{% url 'actions' %}" class="js-send-form">
   {% csrf_token %}
-  {{ form.non_field_errors }}
-  {% for hidden_field in form.hidden_fields %}
-    {{ hidden_field }}
-  {% endfor %}
   <div class="modal-header">
     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
       <span aria-hidden="true">&times;</span>
@@ -32,6 +28,13 @@
   <div class="modal-footer">
     <div class="mr-auto d-none" id="check-success">
       <i class="far fa-check text-success"></i> Guardado, puedes cerrar esta ventana.
+    </div>
+    <div class="mr-auto">
+      {{ form.non_field_errors }}
+      {{form.errors.name}}
+      {% for hidden_field in form.hidden_fields %}
+        {{ hidden_field }}
+      {% endfor %}
     </div>
     <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>
     <button type="submit" class="btn btn-outline-success" id="submit">{{submit_btn}}</button>
