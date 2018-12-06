@@ -99,30 +99,28 @@ class Order(models.Model):
         return '%s %s %s' % (self.inbox_date.date(),
                              self.customer, self.ref_name)
 
-    def save(self, *args, **kwargs):
+    def clean(self):
         """Avoid duplicate orders."""
-        try:
-            original = Order.objects.get(ref_name=self.ref_name)
-        except (MultipleObjectsReturned, ObjectDoesNotExist):
-            super().save(*args, **kwargs)
-        else:
-            diff = self.inbox_date - original.inbox_date
-            duplicated = (diff.seconds < 120 and
-                          self.user == original.user and
-                          self.customer == original.customer and
-                          self.delivery == original.delivery and
-                          self.status == original.status and
-                          self.priority == original.priority and
-                          self.waist == original.waist and
-                          self.chest == original.chest and
-                          self.hip == original.hip and
-                          self.lenght == original.lenght and
-                          self.others == original.others and
-                          self.budget == original.budget and
-                          self.prepaid == original.prepaid
-                          )
-            if not duplicated:
-                super().save(*args, **kwargs)
+        exists = Order.objects.filter(ref_name=self.ref_name)
+        if exists:
+            for order in exists:
+                diff = self.inbox_date - order.inbox_date
+                duplicated = (diff.seconds < 120 and
+                              self.customer == order.customer and
+                              self.delivery == order.delivery and
+                              self.status == order.status and
+                              self.priority == order.priority and
+                              self.waist == order.waist and
+                              self.chest == order.chest and
+                              self.hip == order.hip and
+                              self.lenght == order.lenght and
+                              self.others == order.others and
+                              self.budget == order.budget and
+                              self.prepaid == order.prepaid
+                              )
+                if duplicated:
+                    raise ValidationError(_('The order already ' +
+                                            'exists in the db'))
 
     @property
     def overdue(self):

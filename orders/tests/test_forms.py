@@ -5,12 +5,14 @@ from django.contrib.auth.models import User
 from orders.models import Customer, Order, OrderItem, Comment, Item
 from orders.forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
                           OrderCloseForm, OrderItemForm, EditDateForm)
+from datetime import date
 
 
 class CustomerFormTest(TestCase):
     """Test the customer form."""
 
     def test_avoid_duplicates(self):
+        """Test to prevent duplicates."""
         Customer.objects.create(name='Test duplicate',
                                 city='mungia',
                                 address='Foruen enparantza',
@@ -35,7 +37,49 @@ class CustomerFormTest(TestCase):
 
 
 class OrderFormTest(TestCase):
-    pass
+    """Test the order form."""
+
+    def setUp(self):
+        """Set some settings up."""
+        User.objects.create_user(username='regular', password='test')
+        Customer.objects.create(name='Test duplicate',
+                                city='mungia',
+                                phone='666555444',
+                                cp='00000',
+                                )
+
+    def test_avoid_duplicates(self):
+        Order.objects.create(user=User.objects.all()[0],
+                             customer=Customer.objects.all()[0],
+                             ref_name='Duplicate test',
+                             delivery=date(2018, 1, 1),
+                             priority='2',
+                             waist=10,
+                             chest=20,
+                             hip=30,
+                             lenght=40,
+                             others='Duplicate order',
+                             budget=100,
+                             prepaid=100,
+                             )
+        self.assertTrue(Order.objects.get(ref_name='Duplicate test'))
+        duplicated_order = OrderForm({'customer': Customer.objects.all()[0].pk,
+                                      'ref_name': 'Duplicate test',
+                                      'delivery': date(2018, 1, 1),
+                                      'priority': '2',
+                                      'waist': 10,
+                                      'chest': 20,
+                                      'hip': 30,
+                                      'lenght': 40,
+                                      'others': 'Duplicate order',
+                                      'budget': 100,
+                                      'prepaid': 100,
+                                      })
+
+        not_valid = duplicated_order.is_valid()
+        self.assertFalse(not_valid)
+        self.assertEqual(duplicated_order.errors['__all__'][0],
+                         'The order already exists in the db')
 
 
 class ItemFormTest(TestCase):
