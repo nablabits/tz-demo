@@ -71,8 +71,12 @@ $(function () {
       data: form.serialize(),
       type: form.attr('method'),
       dataType: 'json',
+      beforeSend: function () {
+        $('#action-modal #bg-working').removeClass('d-none')
+      },
       success: function (data) {
         if (data.form_is_valid) {
+          $('#action-modal #bg-working').addClass('d-none')
           $('#action-modal #check-success').removeClass('d-none')
           if (data.reload) {
             location.reload()
