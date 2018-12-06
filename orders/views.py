@@ -147,12 +147,9 @@ def orderlist(request, orderby):
             order.status = request.POST.get('status')
         elif request.POST.get('collect'):
             order.prepaid = order.budget
-        try:
-            order.full_clean()
-        except ValidationError:
-            return HttpResponseBadRequest()
         else:
-            order.save()
+            raise Http404('Action required')
+        order.save()
 
     orders = Order.objects.all()
 
