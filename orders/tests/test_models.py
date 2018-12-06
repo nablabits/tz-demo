@@ -28,7 +28,7 @@ class ModelTest(TestCase):
 
         # Create  an order
         customer = Customer.objects.get(name='Customer Test')
-        Order.objects.create(user=User.objects.get(pk=1),
+        Order.objects.create(user=User.objects.all()[0],
                              customer=customer,
                              ref_name='example',
                              delivery=date(2018, 2, 1),
@@ -41,8 +41,8 @@ class ModelTest(TestCase):
                              prepaid=1000)
 
         # Create comment
-        Comment.objects.create(user=User.objects.get(pk=1),
-                               reference=Order.objects.get(pk=1),
+        Comment.objects.create(user=User.objects.all()[0],
+                               reference=Order.objects.all()[0],
                                comment='This is a comment')
 
     def test_customer_creation(self):
@@ -53,7 +53,7 @@ class ModelTest(TestCase):
 
     def test_order_creation(self):
         """Test the order creation."""
-        order = Order.objects.get(pk=1)
+        order = Order.objects.all()[0]
         today = date.today()
         order_str = str(today) + ' Customer Test example'
         self.assertTrue(isinstance(order, Order))
@@ -139,7 +139,7 @@ class ModelTest(TestCase):
 
     def test_comment_creation(self):
         """Test the comment creation."""
-        comment = Comment.objects.get(pk=1)
+        comment = Comment.objects.all()[0]
         today = date.today()
         comment_str = ('El ' + str(today) + ', user comentó en ' +
                        str(today) + ' Customer Test example')
