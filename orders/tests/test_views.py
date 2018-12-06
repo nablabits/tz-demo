@@ -947,7 +947,6 @@ class ActionsGetMethod(TestCase):
         play with.
         """
         regular = User.objects.create_user(username='regular', password='test')
-        regular.save()
 
         # Create customer
         Customer.objects.create(name='Customer',
