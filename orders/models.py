@@ -6,8 +6,7 @@ Its intended use is for business related to tailor made clothes.
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import (ObjectDoesNotExist, ValidationError,
-                                    MultipleObjectsReturned)
+from django.core.exceptions import (ObjectDoesNotExist, ValidationError, )
 from .utils import TimeLenght, WeekColor
 from . import settings
 from datetime import date, timedelta
