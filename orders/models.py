@@ -31,7 +31,7 @@ class Customer(models.Model):
         return self.name
 
     def clean(self):
-        """Avoid duplicate items."""
+        """Avoid duplicate customers."""
         exists = Customer.objects.filter(name=self.name)
         if exists:
             for customer in exists:
@@ -44,7 +44,7 @@ class Customer(models.Model):
                               customer.notes == self.notes)
                 if duplicated:
                     raise ValidationError({'name': _('The customer already ' +
-                                                     'exits in the db')})
+                                                     'exists in the db')})
 
 
 class Order(models.Model):

@@ -30,6 +30,8 @@ class CustomerFormTest(TestCase):
                                             'notes': 'No notes',
                                             })
         self.assertFalse(duplicated_customer.is_valid())
+        self.assertEqual(duplicated_customer.errors['name'][0],
+                         'The customer already exists in the db')
 
 
 class OrderFormTest(TestCase):
