@@ -30,13 +30,8 @@
     <div class="tab-pane show active" id="active-orders" role="tabpanel">
       <div class="d-flex pt-4 px-2">
         <div class="mr-auto d-flex align-items-end">
-            <h3 class="">Pedidos activos ({{active|length}})</h3>
+            <h3 class="">Previsión de pedidos ({{active_calendar|length}})</h3>
             <small class="ml-2 pb-2" data-toggle="collapse" data-target="#legend" role="button" style="cursor: pointer;">Leyenda</small>
-        </div>
-        <div class="d-flex mr-1 align-items-center js-flip">
-          <h5 class="mr-2 my-0">Previsión</h5>
-          <h5 class="mr-2 my-0"><i class="fal fa-toggle-off"></i></h5>
-          <h5 class="mr-2 my-0">Lista</h5>
         </div>
         <div class="d-flex align-items-center">
           <h5 class="px-2 my-0">Ordenados por:</h5>
@@ -72,114 +67,102 @@
         </div>
       </div>
 
-      <div id="view-mode">
 
-        <!-- week view -->
-        <div class="px-2" id="week-view">
-          <div class="row">
-            <div class="col rounded week-view-table pt-2 pb-5" style="border-top: 5px solid {{colors.this}};">
-              <h4 class="text-center mb-3 font-weight-bold">Esta Semana</h4>
-              {%if this_week_active%}
-                {% for order in active %}
-                  {%if order.color == colors.this %}
-                  <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
-                    <div class="d-flex align-items-center">
-                      <div class="d-flex flex-column">
-                        <h5 class="my-0">{{order.ref_name}}</h5>
-                        <small>de {{order.customer}}</small>
-                      </div>
-                      {%if order.overdue%}
-                      <div class="d-flex ml-auto">
-                        <i class="fas fa-exclamation-triangle text-danger"></i>
-                      </div>
-                      {%endif%}
+      <!-- week view -->
+      <div class="px-2" id="week-view">
+        <div class="row">
+          <div class="col rounded week-view-table pt-2 pb-5" style="border-top: 5px solid {{colors.this}};">
+            <h4 class="text-center mb-3 font-weight-bold">Esta Semana</h4>
+            {%if this_week_active%}
+              {% for order in active_calendar %}
+                {%if order.color == colors.this %}
+                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                  <div class="d-flex align-items-center">
+                    <div class="d-flex flex-column">
+                      <h5 class="my-0">{{order.ref_name}}</h5>
+                      <small>de {{order.customer}}</small>
                     </div>
-                    <div class="progress" style="height: 5px;">
-                      <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                    {%if order.overdue%}
+                    <div class="d-flex ml-auto">
+                      <i class="fas fa-exclamation-triangle text-danger"></i>
                     </div>
+                    {%endif%}
                   </div>
-                  {%endif%}
-                {% endfor %}
-              {%else%}
-                <div class="d-flex mt-5 mb-3 justify-content-center">
-                  <i class="fal fa-{{i_relax}} fa-5x"></i>
+                  <div class="progress" style="height: 5px;">
+                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                  </div>
                 </div>
-                <div class="d-flex justify-content-center">
-                  <h3 class="text-center">Genial! habéis acabado por esta semana</h3>
+                {%endif%}
+              {% endfor %}
+            {%else%}
+              <div class="d-flex mt-5 mb-3 justify-content-center">
+                <i class="fal fa-{{i_relax}} fa-5x"></i>
+              </div>
+              <div class="d-flex justify-content-center">
+                <h3 class="text-center">Genial!<br>Habéis acabado por esta semana</h3>
+              </div>
+            {%endif%}
+          </div>
+          <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid {{colors.next}};">
+            <h4 class="text-center mb-3 font-weight-bold">Semana que viene</h4>
+            {% for order in active_calendar %}
+              {%if order.color == colors.next %}
+              <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                <div class="d-flex align-items-center">
+                  <div class="d-flex flex-column">
+                    <h5 class="my-0">{{order.ref_name}}</h5>
+                    <small>de {{order.customer}}</small>
+                  </div>
                 </div>
+                <div class="progress" style="height: 5px;">
+                  <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                </div>
+              </div>
               {%endif%}
-            </div>
-            <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid {{colors.next}};">
-              <h4 class="text-center mb-3 font-weight-bold">Semana que viene</h4>
-              {% for order in active %}
-                {%if order.color == colors.next %}
-                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
-                  <div class="d-flex align-items-center">
-                    <div class="d-flex flex-column">
-                      <h5 class="my-0">{{order.ref_name}}</h5>
-                      <small>de {{order.customer}}</small>
-                    </div>
-                  </div>
-                  <div class="progress" style="height: 5px;">
-                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
-                  </div>
-                </div>
-                {%endif%}
-              {% endfor %}
-            </div>
-            <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid {{colors.in_two}};">
-              <h4 class="text-center mb-3 font-weight-bold">En dos semanas</h4>
-              {% for order in active %}
-                {%if order.color == colors.in_two %}
-                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
-                  <div class="d-flex align-items-center">
-                    <div class="d-flex flex-column">
-                      <h5 class="my-0">{{order.ref_name}}</h5>
-                      <small>de {{order.customer}}</small>
-                    </div>
-                  </div>
-                  <div class="progress" style="height: 5px;">
-                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
-                  </div>
-                </div>
-                {%endif%}
-              {% endfor %}
-            </div>
-            <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid lightgrey;">
-              <h4 class="text-center mb-3 font-weight-bold">Futuro</h4>
-              {% for order in active %}
-                {%if not order.color %}
-                <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
-                  <div class="d-flex align-items-center">
-                    <div class="d-flex flex-column">
-                      <h5 class="my-0">{{order.ref_name}}</h5>
-                      <small>de {{order.customer}}</small>
-                      <small>Entrega en {{order.delivery|date:'M, y'}}</small>
-                    </div>
-                  </div>
-                  <div class="progress" style="height: 5px;">
-                    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
-                  </div>
-                </div>
-                {%endif%}
-              {% endfor %}
-            </div>
+            {% endfor %}
           </div>
-          <div class="d-flex">
+          <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid {{colors.in_two}};">
+            <h4 class="text-center mb-3 font-weight-bold">En dos semanas</h4>
+            {% for order in active_calendar %}
+              {%if order.color == colors.in_two %}
+              <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                <div class="d-flex align-items-center">
+                  <div class="d-flex flex-column">
+                    <h5 class="my-0">{{order.ref_name}}</h5>
+                    <small>de {{order.customer}}</small>
+                  </div>
+                </div>
+                <div class="progress" style="height: 5px;">
+                  <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                </div>
+              </div>
+              {%endif%}
+            {% endfor %}
+          </div>
+          <div class="col rounded week-view-table ml-2 pt-2 pb-5" style="border-top: 5px solid lightgrey;">
+            <h4 class="text-center mb-3 font-weight-bold">Futuro</h4>
+            {% for order in active_calendar %}
+              {%if not order.color %}
+              <div class="d-flex flex-column border rounded my-1 p-2 js-view-list-item" data-href="/order/view/{{order.pk}}">
+                <div class="d-flex align-items-center">
+                  <div class="d-flex flex-column">
+                    <h5 class="my-0">{{order.ref_name}}</h5>
+                    <small>de {{order.customer}}</small>
+                    <small>Entrega en {{order.delivery|date:'M, y'}}</small>
+                  </div>
+                </div>
+                <div class="progress" style="height: 5px;">
+                  <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+                </div>
+              </div>
+              {%endif%}
+            {% endfor %}
           </div>
         </div>
-
-
-        <!-- List view -->
-        <div class="px-2" id="list-view">
-          {% for order in active %}
-          <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
-            {% include 'includes/order_entry_element.html' %}
-          </div>
-          {% endfor %}
+        <div class="d-flex">
         </div>
-
       </div>
+
     </div>
 
     <!-- delievered orders tab -->

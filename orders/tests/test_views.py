@@ -4,9 +4,10 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import Customer, Order, OrderItem, Comment, Timing, Item
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import F
+from django.db.models import F, Q
 from django.http import JsonResponse
 from django.urls import reverse
+from django.utils import timezone
 from datetime import date, timedelta
 from random import randint
 from orders import settings
@@ -325,10 +326,24 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
         this_week = date.today().isocalendar()[1]
-        this_week_entries = Order.objects.filter(delivery__week=this_week)
-        this_week_entries = this_week_entries.exclude(status=8)
+        this_week_entries = Order.objects.filter(Q(delivery__week=this_week) |
+                                                 Q(delivery__lte=timezone.now()
+                                                   ))
+        this_week_entries = this_week_entries.exclude(status__in=[7, 8])
         self.assertEqual(len(resp.context['this_week_active']),
                          len(this_week_entries))
+
+    def test_calendar_view_active(self):
+        """Test the active elements on calendar view."""
+        orders = Order.objects.all()
+        for order in orders:
+            order.delivery = date.today() - timedelta(days=1)
+            order.status = '2'
+            order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['active_calendar']),
+                         len(orders))
 
     def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
         """Trapuzarrak delievered orders shouldn't be seen on orderlist."""

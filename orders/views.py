@@ -13,7 +13,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Count, Sum, F
+from django.db.models import Count, Sum, F, Q
 from datetime import datetime, date
 from random import randint
 from . import settings
@@ -208,17 +208,24 @@ def orderlist(request, orderby):
 
     # This week active entries
     this_week = date.today().isocalendar()[1]
-    this_week_active = Order.objects.filter(delivery__week=this_week)
-    this_week_active = this_week_active.exclude(status=8)
+    this_week_active = Order.objects.filter(Q(delivery__week=this_week) |
+                                            Q(delivery__lte=timezone.now()))
+    this_week_active = this_week_active.exclude(status__in=[7, 8])
     i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
+
+    # calendar view entries
+    active_calendar = Order.objects.exclude(status__in=[7, 8])
 
     # Finally, set the sorting method on view
     if orderby == 'date':
         active = active.order_by('delivery')
+        active_calendar = active_calendar.order_by('delivery')
     elif orderby == 'status':
         active = active.order_by('status')
+        active_calendar = active_calendar.order_by('status')
     elif orderby == 'priority':
         active = active.order_by('priority')
+        active_calendar = active_calendar.order_by('priority')
     else:
         raise Http404('Required sorting method')
 
@@ -231,6 +238,7 @@ def orderlist(request, orderby):
                      'now': now,
                      'version': settings.VERSION,
                      'active_stock': tz_active,
+                     'active_calendar': active_calendar,
                      'this_week_active': this_week_active,
                      'i_relax': i_relax,
                      'delivered_stock': tz_delivered,
