@@ -2259,7 +2259,7 @@ class ActionsPostMethodEdit(TestCase):
     def tests_update_status_successful(self):
         """Test the proper status change."""
         order = Order.objects.get(ref_name='example')
-        for i in range(1, 9):
+        for i in range(2, 9):
             with self.subTest(i=i):
                 resp = self.client.post(reverse('actions'),
                                         {'pk': order.pk,
