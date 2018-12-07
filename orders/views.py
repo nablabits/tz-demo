@@ -166,9 +166,15 @@ def orderlist(request, orderby):
 
         # And the attr collection for them
         tz_active = tz_active.annotate(Count('orderitem', distinct=True),
-                                       Count('comment', distinct=True), )
+                                       Count('comment', distinct=True),
+                                       timing=(Sum('orderitem__sewing') +
+                                               Sum('orderitem__iron') +
+                                               Sum('orderitem__crop')))
         tz_delivered = tz_delivered.annotate(Count('orderitem', distinct=True),
-                                             Count('comment', distinct=True), )
+                                             Count('comment', distinct=True),
+                                             timing=(Sum('orderitem__sewing') +
+                                                     Sum('orderitem__iron') +
+                                                     Sum('orderitem__crop')))
 
         # Finally, exclude tz customer for further queries and sort
         orders = orders.exclude(customer=tz)
@@ -186,10 +192,17 @@ def orderlist(request, orderby):
 
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
-                             Count('comment', distinct=True), )
+                             Count('comment', distinct=True),
+                             timing=(Sum('orderitem__sewing') +
+                                     Sum('orderitem__iron') +
+                                     Sum('orderitem__crop')))
 
     delivered = delivered.annotate(Count('orderitem', distinct=True),
-                                   Count('comment', distinct=True), )
+                                   Count('comment', distinct=True),
+                                   timing=(Sum('orderitem__sewing') +
+                                           Sum('orderitem__iron') +
+                                           Sum('orderitem__crop')))
+
     # Total pending amount
     budgets = pending.aggregate(Sum('budget'))
     prepaid = pending.aggregate(Sum('prepaid'))

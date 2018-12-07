@@ -8,7 +8,7 @@ from django.db.models import F, Q
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
-from datetime import date, timedelta
+from datetime import date, timedelta, time
 from random import randint
 from orders import settings
 import json
@@ -313,6 +313,26 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['active_stock'][0].comment__count, 2)
 
+    def test_tz_active_timing_sum(self):
+        """Test the correct sum of times in orderItems."""
+        self.client.login(username='regular', password='test')
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(2))
+        order.customer = tz
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active_stock'][0].timing,
+                         timedelta(0, 72000))
+
     def test_tz_delivered_orderitems_count(self):
         """Test the correct count of orderItems."""
         self.client.login(username='regular', password='test')
@@ -352,6 +372,26 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['delivered_stock'][0].comment__count, 2)
 
+    def test_tz_delivered_timing_sum(self):
+        """Test the correct sum of times in orderItems."""
+        self.client.login(username='regular', password='test')
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(2))
+        order.customer = tz
+        order.status = '7'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['delivered_stock'][0].timing,
+                         timedelta(0, 72000))
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""

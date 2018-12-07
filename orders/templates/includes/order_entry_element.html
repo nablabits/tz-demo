@@ -53,7 +53,11 @@
             <i class="fa fa-flag"></i></span>
           <span class="px-2">{{order.orderitem__count}} <i class="fa fa-cube"></i> </span>
           <span class="px-2">{{order.comment__count}} <i class="fa fa-comment"></i> </span>
-          <span class="px-2 {% if order.timing__count == 0 %}text-danger font-weight-bold{% endif %}">{{order.timing__count}} <i class="far fa-clock"></i> </span>
+          {%if order.timing%}
+            <span class="px-2">{{order.timing}} <i class="far fa-clock"></i> </span>
+          {%else%}
+            <span class="px-2 text-danger">0 <i class="far fa-clock"></i> </span>
+          {%endif%}
           <span class="px-2">
             <i class="fa fa-calendar"></i> Entrega: {{ order.delivery|naturalday}}
             {% if order.overdue %}
