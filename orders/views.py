@@ -254,7 +254,7 @@ def customerlist(request):
     customers = Customer.objects.all().order_by('name')
     customers = customers.annotate(num_orders=Count('order'))
     page = request.GET.get('page', 1)
-    paginator = Paginator(customers, 5)
+    paginator = Paginator(customers, 10)
     try:
         customers = paginator.page(page)
     except PageNotAnInteger:

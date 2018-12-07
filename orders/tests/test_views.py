@@ -730,6 +730,11 @@ class StandardViewsTest(TestCase):
 
     def test_customer_list_paginator(self):
         """Test paginator functionality on customer list."""
+        for i in range(10):
+            Customer.objects.create(name='Test customer%s' % i,
+                                    city='This computer',
+                                    phone=55,
+                                    cp=30)
         resp = self.client.get('/customers')
 
         self.assertEqual(resp.status_code, 200)
@@ -739,13 +744,18 @@ class StandardViewsTest(TestCase):
         self.assertTrue(customers.has_next())
         self.assertTrue(customers.has_other_pages())
         self.assertEqual(customers.next_page_number(), 2)
-        self.assertEqual(len(customers), 5)
+        self.assertEqual(len(customers), 10)
 
     def test_customer_paginator_not_an_int_exception(self):
         """When page is not an int, paginator should go to the first one.
 
         That is because the exception was catch.
         """
+        for i in range(10):
+            Customer.objects.create(name='Test customer%s' % i,
+                                    city='This computer',
+                                    phone=55,
+                                    cp=30)
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
@@ -762,6 +772,11 @@ class StandardViewsTest(TestCase):
 
         That is because the exception was catch.
         """
+        for i in range(10):
+            Customer.objects.create(name='Test customer%s' % i,
+                                    city='This computer',
+                                    phone=55,
+                                    cp=30)
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
@@ -772,7 +787,7 @@ class StandardViewsTest(TestCase):
         self.assertTrue(customers.has_previous())
         self.assertFalse(customers.has_next())
         self.assertTrue(customers.has_other_pages())
-        self.assertEqual(len(customers), 5)
+        self.assertEqual(len(customers), 10)
 
     def test_customer_view(self):
         """Test the customer details view.

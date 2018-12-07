@@ -1,6 +1,7 @@
 <table class="table">
 <thead>
   <tr>
+    <th scope="col">Id</th>
     <th scope="col">Nombre</th>
     <th scope="col">Alta</th>
     <th scope="col">Pedidos</th>
@@ -9,7 +10,8 @@
 <tbody>
   {% for customer in customers %}
   <tr class="js-view-list-item" data-href="{% url 'customer_view' pk=customer.pk %}">
-    <th>{{ customer.name }}</th>
+    <th>{{customer.pk}}</th>
+    <th>{{customer.name }}</th>
     <th>{{ customer.creation | date:"j/n/Y" }}</th>
     <th>
       {{ customer.num_orders }}
