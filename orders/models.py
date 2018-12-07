@@ -7,7 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import (ObjectDoesNotExist, ValidationError, )
-from .utils import TimeLenght, WeekColor
+from .utils import WeekColor
 from . import settings
 from datetime import date, timedelta
 
@@ -219,25 +219,6 @@ class Item(models.Model):
 class OrderItem(models.Model):
     """Each order can have one or several clothes."""
 
-    # Items are now stored in settings, but keep'em until backup.
-    ITEMS = (
-        ('1', 'Falda'),
-        ('2', 'Pantalón'),
-        ('3', 'Camisa'),
-        ('4', 'Pañuelo'),
-        ('5', 'Delantal'),
-        ('6', 'Corpiño'),
-        ('7', 'Chaleco'),
-        ('8', 'Gerriko'),
-        ('9', 'Bata'),
-        ('10', 'Pololo'),
-        ('11', 'Azpikogona'),
-        ('12', 'Traje de niña'),
-    )
-    # Item & size will be deprecated, keep them until backup
-    item = models.CharField('Prenda', max_length=2, choices=ITEMS, default='1')
-    size = models.CharField('Talla', max_length=3, default='1')
-
     # Element field should be renamed after backup all the previous fields.
     element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
 
@@ -299,61 +280,6 @@ class Comment(models.Model):
         name = ('El ' + str(self.creation.date()) +
                 ', ' + str(self.user) + ' comentó en ' + str(self.reference))
         return name
-
-
-class Timing(models.Model):
-    """Timing let us track production times.
-
-    Time should be given in hours. This model is deprecated since timesnow are
-    stored per OrderItem.
-    """
-
-    ITEMS = OrderItem.ITEMS
-    ITEM_CLASSES = (
-        ('1', 'Standard'),
-        ('2', 'Medium'),
-        ('3', 'Premium')
-    )
-    ACTIVITIES = (
-        ('1', 'Confección'),
-        ('2', 'Corte'),
-        ('3', 'Planchado')
-    )
-    item = models.CharField('Prenda', max_length=2, choices=ITEMS, default='1')
-    item_class = models.CharField('Tipo Prenda',
-                                  max_length=1,
-                                  choices=ITEM_CLASSES,
-                                  default='1')
-    activity = models.CharField('Actividad',
-                                max_length=1,
-                                choices=ACTIVITIES,
-                                default='1')
-    qty = models.IntegerField('Cantidad', default=1)
-    notes = models.TextField('Observaciones', blank=True, null=True)
-    time = models.DecimalField('Tiempo (h)', max_digits=5, decimal_places=2)
-    reference = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True)
-
-    def save(self, *args, **kwargs):
-        """Override the save method.
-
-        If no order is given try to pick up the last one.
-        """
-        order = Order.objects.latest('inbox_date')
-        try:
-            self.reference
-        except ObjectDoesNotExist:
-            self.reference = order
-        super().save(*args, **kwargs)
-
-    def __str__(self):
-        """Object's representation."""
-        return '{}x{}'.format(self.get_item_display(), self.qty)
-
-    def output(self):
-        """Represent times by its str converted form H:MM."""
-        return TimeLenght(float(self.time)).convert()
-
-
 #
 #
 #

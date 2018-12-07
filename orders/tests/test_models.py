@@ -1,7 +1,7 @@
 """Test the app models."""
 from django.test import TestCase
-from orders.models import Customer, Order, Comment, Timing, Item, OrderItem
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from orders.models import Customer, Order, Comment, Item, OrderItem
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from datetime import date, timedelta
 
@@ -124,52 +124,6 @@ class ModelTest(TestCase):
         self.assertTrue(isinstance(comment, Comment))
         self.assertEqual(comment.__str__(), comment_str)
 
-    def test_regular_timing(self):
-        """Test the time creation."""
-        # Create a single-use order
-        customer = Customer.objects.get(name='Customer Test')
-        Order.objects.create(user=User.objects.get(username='user'),
-                             customer=customer,
-                             ref_name='timeEx',
-                             delivery=date(2018, 2, 1),
-                             waist=10,
-                             chest=20,
-                             hip=30,
-                             lenght=40,
-                             budget=2000,
-                             prepaid=1000)
-
-        order = Order.objects.get(ref_name='timeEx')
-        Timing.objects.create(item=1,
-                              item_class=2,
-                              activity=2,
-                              qty=5,
-                              time=0.5,
-                              reference=order,
-                              notes='time test')
-        time = Timing.objects.get(notes='time test')
-        self.assertIsInstance(time, Timing)
-        self.assertEqual(time.__str__(),
-                         '{}x{}'.format(time.get_item_display(), time.qty))
-        self.assertEqual(time.reference, order)
-
-    def test_timimg_without_order_should_pick_up_the_last_one(self):
-        """Test when no order is provided."""
-        Timing.objects.create(item=1,
-                              item_class=2,
-                              activity=2,
-                              qty=5,
-                              time=0.5,
-                              notes='time test')
-        time = Timing.objects.get(notes='time test')
-        order = Order.objects.latest('inbox_date')
-        self.assertEqual(time.reference, order)
-
-    def test_timing_only_accepts_floats(self):
-        """Ensure that duration strings are not allowed."""
-        with self.assertRaises(ValidationError):
-            Timing.objects.create(time='0:35')
-
     def test_item_object_creation(self):
         """Test the proper creation of item objects."""
         Item.objects.create(name='Test item',
@@ -235,8 +189,6 @@ class ModelTest(TestCase):
                                  element=item)
 
         created_item = OrderItem.objects.get(description='Test item')
-        self.assertEqual(created_item.item, '1')
-        self.assertEqual(created_item.size, '1')
         self.assertEqual(created_item.reference, order)
         self.assertEqual(created_item.element, item)
         self.assertEqual(created_item.qty, 1)
@@ -270,17 +222,3 @@ class ModelTest(TestCase):
         self.assertEqual(order_item.time_quality, 1)
         order_item.crop = timedelta(0)
         self.assertEqual(order_item.time_quality, 0)
-
-
-class TimingSpecial(TestCase):
-    """Try creating times without order entries in the db."""
-
-    def test_create_time_without_order_raises_error(self):
-        """Creating times when there are no orders, should raise error."""
-        with self.assertRaises(ObjectDoesNotExist):
-            Timing.objects.create(item=1,
-                                  item_class=2,
-                                  activity=2,
-                                  qty=5,
-                                  time=0.5,
-                                  notes='time test')

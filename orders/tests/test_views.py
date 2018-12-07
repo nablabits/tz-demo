@@ -2,7 +2,7 @@
 
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from orders.models import Customer, Order, OrderItem, Comment, Timing, Item
+from orders.models import Customer, Order, OrderItem, Comment, Item
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import F, Q
 from django.http import JsonResponse
@@ -420,7 +420,7 @@ class StandardViewsTest(TestCase):
         items_count = 5
         for item in range(items_count):
             order = Order.objects.get(ref_name='example0')
-            OrderItem.objects.create(item=1, size='XL', qty=5,
+            OrderItem.objects.create(qty=5,
                                      description='notes',
                                      reference=order)
 
@@ -994,7 +994,7 @@ class SearchBoxTest(TestCase):
         items_count = 5
         for item in range(items_count):
             order = Order.objects.get(ref_name='example0')
-            OrderItem.objects.create(item=1, size='XL', qty=5,
+            OrderItem.objects.create(qty=5,
                                      description='notes',
                                      reference=order)
 
@@ -1168,10 +1168,7 @@ class ActionsGetMethod(TestCase):
 
         # Create Item & time
         order = Order.objects.get(ref_name='example')
-        OrderItem.objects.create(item=1, size='XL', qty=5,
-                                 description='notes',
-                                 reference=order)
-        Timing.objects.create(time=5, reference=order)
+        OrderItem.objects.create(qty=5, description='notes', reference=order)
         cls.client = Client()
 
     def context_vars(self, context, vars):
@@ -2083,9 +2080,7 @@ class ActionsPostMethodEdit(TestCase):
                              prepaid=0)
         # Create an item
         order = Order.objects.get(ref_name='example')
-        OrderItem.objects.create(item=1,
-                                 size='XL',
-                                 qty=1,
+        OrderItem.objects.create(qty=1,
                                  description='example item',
                                  reference=order)
 

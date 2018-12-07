@@ -2,10 +2,9 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
-from django.http import JsonResponse, Http404, HttpResponseBadRequest
+from django.http import JsonResponse, Http404
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, OrderItem, Timing, Item
-from .utils import TimeLenght
+from .models import Comment, Customer, Order, OrderItem, Item
 from django.utils import timezone
 from .forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
                     OrderCloseForm, OrderItemForm, EditDateForm)
@@ -167,11 +166,9 @@ def orderlist(request, orderby):
 
         # And the attr collection for them
         tz_active = tz_active.annotate(Count('orderitem', distinct=True),
-                                       Count('comment', distinct=True),
-                                       Count('timing', distinct=True))
+                                       Count('comment', distinct=True), )
         tz_delivered = tz_delivered.annotate(Count('orderitem', distinct=True),
-                                             Count('comment', distinct=True),
-                                             Count('timing', distinct=True))
+                                             Count('comment', distinct=True), )
 
         # Finally, exclude tz customer for further queries and sort
         orders = orders.exclude(customer=tz)
@@ -189,12 +186,10 @@ def orderlist(request, orderby):
 
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
-                             Count('comment', distinct=True),
-                             Count('timing', distinct=True))
+                             Count('comment', distinct=True), )
 
     delivered = delivered.annotate(Count('orderitem', distinct=True),
-                                   Count('comment', distinct=True),
-                                   Count('timing', distinct=True))
+                                   Count('comment', distinct=True), )
     # Total pending amount
     budgets = pending.aggregate(Sum('budget'))
     prepaid = pending.aggregate(Sum('prepaid'))
@@ -331,14 +326,6 @@ def order_view(request, pk):
     order = get_object_or_404(Order, pk=pk)
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
-    times = Timing.objects.filter(reference=order)
-    total_time = times.aggregate(Sum('time'))
-    try:
-        float_time = float(total_time['time__sum'])
-    except TypeError:
-        total_time = '0:00'
-    else:
-        total_time = TimeLenght(float_time).convert()  # pragma: no cover
 
     if order.status == '7' and order.budget == order.prepaid:
         closed = True
@@ -350,8 +337,6 @@ def order_view(request, pk):
     view_settings = {'order': order,
                      'items': items,
                      'comments': comments,
-                     'times': times,
-                     'total_time': total_time,
                      'closed': closed,
                      'user': cur_user,
                      'now': now,

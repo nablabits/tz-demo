@@ -1,7 +1,7 @@
 """Show all the models in the admin page."""
 
 from django.contrib import admin
-from .models import Customer, Comment, Order, Item, OrderItem, Timing
+from .models import Customer, Comment, Order, Item, OrderItem
 
 
 @admin.register(Customer)
@@ -35,18 +35,9 @@ class ItemAdmin(admin.ModelAdmin):
 class OrderItemAdmin(admin.ModelAdmin):
     """Beautify the order item admin view."""
 
-    list_display = ('pk', 'item', 'size', 'element', 'qty', 'reference',
+    list_display = ('pk', 'element', 'qty', 'reference',
                     'crop', 'sewing', 'iron')
     list_filter = ('element', )
-
-
-@admin.register(Timing)
-class TimingAdmin(admin.ModelAdmin):
-    """Temporary beautify the timing admin view."""
-
-    list_display = ('pk', 'reference', 'item', 'item_class', 'activity', 'qty',
-                    'time')
-    list_filter = ('reference', )
 
 
 admin.site.register(Comment)
