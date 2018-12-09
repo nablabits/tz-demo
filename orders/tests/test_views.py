@@ -393,6 +393,23 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['delivered_stock'][0].timing,
                          timedelta(0, 72000))
 
+    def delivered_orders_show_only_delivered(self):
+        """The status should be 7."""
+        orders = Order.objects.all()
+        for order in orders:
+            order.status = 7
+            order.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        for order in resp.context['delivered']:
+            self.assertEqual(order.status, '7')
+
+    def test_delivered_orders_ten_max(self):
+        """Delivered orders show only last ten entries."""
+        pass
+
+
 class StandardViewsTest(TestCase):
     """Test the standard views."""
 
