@@ -34,7 +34,7 @@ class WeekColorTest(TestCase):
 
     def test_more_than_two_weeks_returns_false(self):
         """The color is stored in settings.py."""
-        delivery = date.today() + timedelta(days=22)
+        delivery = date.today() + timedelta(days=23)
         color = WeekColor(delivery).get()
         self.assertFalse(color)
 
