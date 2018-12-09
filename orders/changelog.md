@@ -1,6 +1,20 @@
 ## Trapuzarrak app registro de cambios
 ***
 
+#### v53, Dic 9
+  * **Nuevo:** ahora se muestra un icono de *trabajando en segundo plano*
+  mientras se procesan los datos.
+  * **Mejora:** se han volcado todos los tiempos al nuevo modelo y se ha borrado
+    el antiguo
+  * **Mejora:** La previsión por semanas ahora muestra los pedidos de TZ.
+    Se ha eliminado la vista de lista de pedidos activos también.
+  * **Bug:** Ahora se muestra la confirmación al eliminar algún elemento.
+  * **Bug:** Se vuelven a mostrar los tiempos añadidos en la lista de pedidos.
+  * **Bug:** Mejorada la efectividad de pedidos duplicados.
+  * **Bug:** Tampoco se pueden duplicar clientes ahora.
+  * **Bug:** Los mensajes de error al editar o añadir datos no se mostraban
+    correctamente, ahora sí.
+
 #### v52, Dic 1
   * **Bug:** Ya no se pueden duplicar prendas.
   * **Bug:** El icono de enviar prenda a pedido solía desaparecer, ahora se
