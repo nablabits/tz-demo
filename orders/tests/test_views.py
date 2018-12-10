@@ -393,12 +393,16 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['delivered_stock'][0].timing,
                          timedelta(0, 72000))
 
-    def delivered_orders_show_only_delivered(self):
-        """The status should be 7."""
+    def test_delivered_orders_show_only_delivered(self):
+        """Test wether the status is 7."""
+        self.client.login(username='regular', password='test')
         orders = Order.objects.all()
         for order in orders:
-            order.status = 7
+            order.status = '7'
             order.save()
+
+        orders = Order.objects.filter(status='7')
+        self.assertEqual(len(orders), 3)
 
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
