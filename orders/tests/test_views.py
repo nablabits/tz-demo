@@ -67,7 +67,7 @@ class OrderListTests(TestCase):
     def setUp(self):
         """Create the necessary items on database at once.
 
-        1 user, 1 customer, 1 orders.
+        1 user, 1 customer, 3 orders.
         """
         self.client = Client()
         user = User.objects.create_user(username='regular', password='test')
