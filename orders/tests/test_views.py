@@ -446,6 +446,21 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['delivered'][0], newer)
         self.assertEqual(resp.context['delivered'][1], older)
 
+    def test_delivered_orderitems_count(self):
+        """Test the proper count of items."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i)
+
+        order.status = '7'
+        order.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['delivered'][0].orderitem__count, 2)
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
