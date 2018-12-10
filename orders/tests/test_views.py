@@ -426,6 +426,26 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(len(resp.context['delivered']), 10)
 
+    def test_delivered_orders_sorting_method(self):
+        """Sort the list by last delivered first."""
+        self.client.login(username='regular', password='test')
+        orders = Order.objects.all()
+        newer, older = orders[:2]
+        newer.status = '7'
+        newer.save()
+
+        older.delivery = date.today() - timedelta(days=1)
+        older.status = '7'
+        older.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+        self.assertEqual(len(resp.context['delivered']), 2)
+        self.assertEqual(resp.context['delivered'][0], newer)
+        self.assertEqual(resp.context['delivered'][1], older)
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
