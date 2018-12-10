@@ -411,7 +411,20 @@ class OrderListTests(TestCase):
 
     def test_delivered_orders_ten_max(self):
         """Delivered orders show only last ten entries."""
-        pass
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        for i in range(11):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status='7',
+                                 budget=100,
+                                 prepaid=100)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['delivered']), 10)
 
 
 class StandardViewsTest(TestCase):
