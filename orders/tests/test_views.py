@@ -480,6 +480,26 @@ class OrderListTests(TestCase):
         self.assertEqual(len(resp.context['cancelled']), 1)
         self.assertEqual(resp.context['cancelled'][0].ref_name, 'Test8')
 
+    def test_cancelled_orders_sorting_method(self):
+        """Sort the list by last inboxed first."""
+        self.client.login(username='regular', password='test')
+        orders = Order.objects.all()
+        newer, older = orders[:2]
+        newer.status = '8'
+        newer.save()
+
+        older.inbox_date = older.inbox_date - timedelta(days=1)
+        older.status = '8'
+        older.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+        self.assertEqual(len(resp.context['cancelled']), 2)
+        self.assertEqual(resp.context['cancelled'][0], newer)
+        self.assertEqual(resp.context['cancelled'][1], older)
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
