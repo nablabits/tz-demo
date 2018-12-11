@@ -517,6 +517,16 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(len(resp.context['cancelled']), 10)
 
+    def test_pending_orders_exclude_cancelled(self):
+        """Pending orders exclude status 8."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        order.status = '8'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['pending']), 2)
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
