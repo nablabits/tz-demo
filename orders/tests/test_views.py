@@ -527,6 +527,13 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(len(resp.context['pending']), 2)
 
+    def test_pending_orders(self):
+        """Test the proper query for pending orders."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['pending']), 3)
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
