@@ -577,6 +577,20 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['active'][0].comment__count, 2)
 
+    def test_active_timing_sum(self):
+        """Test the correct sum of times in orderItems."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(2))
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active'][0].timing,
+                         timedelta(0, 72000))
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
