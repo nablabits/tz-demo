@@ -500,6 +500,23 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['cancelled'][0], newer)
         self.assertEqual(resp.context['cancelled'][1], older)
 
+    def test_cancelled_orders_ten_max(self):
+        """Cancelled orders show only last ten entries."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        for i in range(11):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status='8',
+                                 budget=100,
+                                 prepaid=100)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['cancelled']), 10)
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
