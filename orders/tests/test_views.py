@@ -636,6 +636,13 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['delivered'][0].timing,
                          timedelta(0, 72000))
 
+    def test_pending_total(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(resp.context['pending_total'], 6000)
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
