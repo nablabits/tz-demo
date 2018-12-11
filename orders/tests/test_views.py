@@ -643,6 +643,24 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEquals(resp.context['pending_total'], 6000)
 
+    def test_this_week_active(self):
+        """Test the proper display of this week orders."""
+        self.client.login(username='regular', password='test')
+        this, next, future = Order.objects.all()
+        this.delivery = date.today()
+        this.save()
+        next.delivery = date.today() + timedelta(days=7)
+        next.save()
+        future.delivery = date.today() + timedelta(days=30)
+        future.save()
+
+        this = Order.objects.get(pk=this.pk)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['this_week_active']), 1)
+        self.assertEquals(resp.context['this_week_active'][0], this)
+
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
