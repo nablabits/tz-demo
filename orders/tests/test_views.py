@@ -660,6 +660,15 @@ class OrderListTests(TestCase):
         self.assertEquals(len(resp.context['this_week_active']), 1)
         self.assertEquals(resp.context['this_week_active'][0], this)
 
+    def test_i_relax_does_not_raise_error(self):
+        """Test picking the icon does not raise index error."""
+        self.client.login(username='regular', password='test')
+        for i in range(20):  # big enough
+            resp = self.client.get(reverse('orderlist',
+                                           kwargs={'orderby': 'date'}))
+            if resp.context['i_relax'] not in settings.RELAX_ICONS:
+                raise ValueError('Not in list')
+
 
 
 class StandardViewsTest(TestCase):
