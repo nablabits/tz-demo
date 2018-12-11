@@ -565,6 +565,18 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['active'][0].orderitem__count, 2)
 
+    def test_active_comment_count(self):
+        """Test the correct count of comments."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        order = Order.objects.all()[0]
+        for i in range(2):
+            Comment.objects.create(user=user, reference=order, comment=i)
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active'][0].comment__count, 2)
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
