@@ -446,6 +446,22 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(len(resp.context['delivered']), 10)
 
+    def test_active_exclude_status_7_and_8(self):
+        """Active orders should exclude status 7 & 8."""
+        self.client.login(username='regular', password='test')
+        self.assertEqual(len(Order.objects.all()), 3)
+        active, delivered, cancelled = Order.objects.all()
+        active.status = '1'
+        active.ref_name = 'active'
+        active.save()
+        delivered.status = '7'
+        delivered.save()
+        cancelled.status = '8'
+        cancelled.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active'][0].ref_name, 'active')
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
