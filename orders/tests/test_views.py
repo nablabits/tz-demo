@@ -462,6 +462,24 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['active'][0].ref_name, 'active')
 
+    def test_cancelled_orders_show_only_cancelled(self):
+        """Cancelled orders should exclude all status but 8."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        for i in range(2, 9):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status=str(i),
+                                 budget=100,
+                                 prepaid=100)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['cancelled']), 1)
+        self.assertEqual(resp.context['cancelled'][0].ref_name, 'Test8')
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
