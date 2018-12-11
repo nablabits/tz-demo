@@ -534,6 +534,25 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(len(resp.context['pending']), 3)
 
+    def test_pending_orders_sorting_method(self):
+        """Sort the list by first inboxed first."""
+        self.client.login(username='regular', password='test')
+        newer, older, excluded = Order.objects.all()
+
+        older.inbox_date = older.inbox_date - timedelta(days=1)
+        older.save()
+
+        excluded.status = '8'
+        excluded.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+        self.assertEqual(len(resp.context['pending']), 2)
+        self.assertEqual(resp.context['pending'][0], older)
+        self.assertEqual(resp.context['pending'][1], newer)
+
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
