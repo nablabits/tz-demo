@@ -660,6 +660,22 @@ class OrderListTests(TestCase):
         self.assertEquals(len(resp.context['this_week_active']), 1)
         self.assertEquals(resp.context['this_week_active'][0], this)
 
+    def test_this_week_active_excludes_delivered_and_cancelled(self):
+        """This week entries should exclude statuses 7&8."""
+        self.client.login(username='regular', password='test')
+        active, delivered, cancelled = Order.objects.all()
+        active.status = '1'
+        active.ref_name = 'active'
+        active.save()
+        delivered.status = '7'
+        delivered.save()
+        cancelled.status = '8'
+        cancelled.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['this_week_active'][0].ref_name,
+                         'active')
+
     def test_i_relax_does_not_raise_error(self):
         """Test picking the icon does not raise index error."""
         self.client.login(username='regular', password='test')
