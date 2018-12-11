@@ -409,23 +409,6 @@ class OrderListTests(TestCase):
         for order in resp.context['delivered']:
             self.assertEqual(order.status, '7')
 
-    def test_delivered_orders_ten_max(self):
-        """Delivered orders show only last ten entries."""
-        self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
-        customer = Customer.objects.all()[0]
-        for i in range(11):
-            Order.objects.create(user=user,
-                                 customer=customer,
-                                 ref_name='Test%s' % i,
-                                 delivery=date.today(),
-                                 status='7',
-                                 budget=100,
-                                 prepaid=100)
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEqual(len(resp.context['delivered']), 10)
-
     def test_delivered_orders_sorting_method(self):
         """Sort the list by last delivered first."""
         self.client.login(username='regular', password='test')
@@ -445,6 +428,23 @@ class OrderListTests(TestCase):
         self.assertEqual(len(resp.context['delivered']), 2)
         self.assertEqual(resp.context['delivered'][0], newer)
         self.assertEqual(resp.context['delivered'][1], older)
+
+    def test_delivered_orders_ten_max(self):
+        """Delivered orders show only last ten entries."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        for i in range(11):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status='7',
+                                 budget=100,
+                                 prepaid=100)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['delivered']), 10)
 
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
