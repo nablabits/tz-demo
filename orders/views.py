@@ -255,7 +255,6 @@ def orderlist(request, orderby):
                      'search_on': 'orders',
                      'title': 'TrapuZarrak · Pedidos',
                      'colors': settings.WEEK_COLORS,
-                     'footer': True,
                      }
 
     return render(request, 'tz/orders.html', view_settings)
