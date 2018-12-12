@@ -701,6 +701,19 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['active_calendar'][0].ref_name, 'active')
 
+    def test_active_calendar_includes_tz_orders(self):
+        """Active orders do not include tz, but active_calendar does so."""
+        self.client.login(username='regular', password='test')
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        order = Order.objects.all()[0]
+        order.customer = tz
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['active_calendar']), 3)
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
