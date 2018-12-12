@@ -790,6 +790,13 @@ class OrderListTests(TestCase):
             self.assertEqual(resp.context[var][1].priority, '2')
             self.assertEqual(resp.context[var][2].priority, '3')
 
+    def test_cur_user(self):
+        """Test the proper show of current user."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['user'].username, 'regular')
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
