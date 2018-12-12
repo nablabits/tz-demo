@@ -741,6 +741,38 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['active_calendar'][0], older)
         self.assertEqual(resp.context['active_calendar'][1], newer)
 
+    def test_active_sorting_by_status(self):
+        """Should be sorted from 1 to 6."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        status = 1
+        for order in Order.objects.all():
+            order.status = str(status)
+            order.ref_name = 'Test%s' % status
+            order.save()
+            status += 1
+
+        self.assertEqual(len(Order.objects.all()), 3)
+
+        for i in range(4, 7):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status=str(i),
+                                 budget=100,
+                                 prepaid=100)
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'status'}))
+
+        for i in range(1, 7):
+            self.assertEqual(resp.context['active'][i - 1].ref_name,
+                             'Test%s' % i)
+            self.assertEqual(resp.context['active_calendar'][i - 1].ref_name,
+                             'Test%s' % i)
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
