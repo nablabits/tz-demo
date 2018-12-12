@@ -685,6 +685,21 @@ class OrderListTests(TestCase):
             if resp.context['i_relax'] not in settings.RELAX_ICONS:
                 raise ValueError('Not in list')
 
+    def test_active_calendar_excludes_delivered_and_cancelled(self):
+        """Active orders should exclude status 7 & 8."""
+        self.client.login(username='regular', password='test')
+        self.assertEqual(len(Order.objects.all()), 3)
+        active, delivered, cancelled = Order.objects.all()
+        active.status = '1'
+        active.ref_name = 'active'
+        active.save()
+        delivered.status = '7'
+        delivered.save()
+        cancelled.status = '8'
+        cancelled.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active_calendar'][0].ref_name, 'active')
 
 
 class StandardViewsTest(TestCase):
