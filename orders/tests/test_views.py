@@ -773,6 +773,23 @@ class OrderListTests(TestCase):
             self.assertEqual(resp.context['active_calendar'][i - 1].ref_name,
                              'Test%s' % i)
 
+    def test_active_sorting_by_priority(self):
+        """Test the proper sorting by priority."""
+        self.client.login(username='regular', password='test')
+        low, mid, hi = Order.objects.all()
+        low.priority = '3'
+        low.save()
+        mid.priority = '2'
+        mid.save()
+        hi.priority = '1'
+        hi.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'priority'}))
+        for var in ('active', 'active_calendar'):
+            self.assertEqual(resp.context[var][0].priority, '1')
+            self.assertEqual(resp.context[var][1].priority, '2')
+            self.assertEqual(resp.context[var][2].priority, '3')
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
