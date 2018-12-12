@@ -790,6 +790,13 @@ class OrderListTests(TestCase):
             self.assertEqual(resp.context[var][1].priority, '2')
             self.assertEqual(resp.context[var][2].priority, '3')
 
+    def test_no_valid_sorting_method_raises_404(self):
+        """A valid sorting method is required."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'void'}))
+        self.assertEqual(resp.status_code, 404)
+
     def test_cur_user(self):
         """Test the proper show of current user."""
         self.client.login(username='regular', password='test')
