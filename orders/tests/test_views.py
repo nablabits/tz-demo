@@ -643,6 +643,23 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEquals(resp.context['pending_total'], 6000)
 
+    def test_pending_total_type_error_raising(self):
+        """Avoid TypeError raising
+
+        When there's only one order with no budget & no prepaid a TypeError
+        is raised."""
+        self.client.login(username='regular', password='test')
+        the_one, delete, and_delete = Order.objects.all()
+        delete.delete()
+        and_delete.delete()
+        self.assertEqual(len(Order.objects.all()), 1)
+        the_one.budget = 0.00
+        the_one.prepaid = 0.00
+        the_one.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(resp.context['pending_total'], 0)
+
     def test_this_week_active(self):
         """Test the proper display of this week orders."""
         self.client.login(username='regular', password='test')
