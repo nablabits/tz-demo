@@ -715,6 +715,33 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(len(resp.context['active_calendar']), 3)
 
+    def test_active_sorting_by_date(self):
+        """Test the proper sorting of active orders."""
+        self.client.login(username='regular', password='test')
+        newer, older, excluded = Order.objects.all()
+
+        older.delivery = older.delivery - timedelta(days=1)
+        older.save()
+
+        excluded.status = '8'
+        excluded.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+
+        # first active orders
+        self.assertEqual(len(resp.context['active']), 2)
+        self.assertEqual(resp.context['active'][0], older)
+        self.assertEqual(resp.context['active'][1], newer)
+
+        # Now the calendar ones
+        self.assertEqual(len(resp.context['active_calendar']), 2)
+        self.assertEqual(resp.context['active_calendar'][0], older)
+        self.assertEqual(resp.context['active_calendar'][1], newer)
+
+
 class StandardViewsTest(TestCase):
     """Test the standard views."""
 
