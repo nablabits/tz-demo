@@ -810,7 +810,6 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
 
 
-
 class StandardViewsTest(TestCase):
     """Test the standard views."""
 
