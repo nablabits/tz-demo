@@ -797,6 +797,19 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['user'].username, 'regular')
 
+    def test_context_vars(self):
+        """Test the remaining context vars (fixed)."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['version'], settings.VERSION)
+        self.assertEqual(resp.context['placeholder'],
+                         'Buscar pedido (referencia o nº)')
+        self.assertEqual(resp.context['search_on'], 'orders')
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Pedidos')
+        self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
+
+
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""
