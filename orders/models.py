@@ -219,6 +219,7 @@ class OrderItem(models.Model):
 
     # store if the item is an element that must be fitted
     fit = models.BooleanField('Arreglo', default=False)
+    stock = models.BooleanField('Stock', default=False)
 
     def save(self, *args, **kwargs):
         """Override the save method."""

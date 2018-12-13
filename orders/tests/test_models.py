@@ -259,3 +259,48 @@ class TestOrders(TestCase):
                                      iron=time(0))
         self.assertEqual(order.times[0], 4)
         self.assertEqual(order.times[1], 6)
+
+
+class TestOrderItems(TestCase):
+    """Test the orderItem model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='user', is_staff=True,
+                                        is_superuser=True)
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        Order.objects.create(user=user,
+                             customer=customer,
+                             ref_name='Test order',
+                             delivery=date.today(),
+                             budget=2000,
+                             prepaid=0)
+        # Create item
+        Item.objects.create(name='Test item', fabrics=5)
+
+    def test_orderitem_stock(self):
+        """Items are by default new produced for orders."""
+        item = OrderItem.objects.create(element=Item.objects.all()[0],
+                                        reference=Order.objects.all()[0],
+                                        )
+        self.assertFalse(item.stock)
+        self.assertIsInstance(item.stock, bool)
+        self.assertEqual(item._meta.get_field('stock').verbose_name, 'Stock')
+#
+#
+#
+#
+#
+#
