@@ -2773,6 +2773,23 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_close_order_duplicated(self):
+        """Avoid validation error.
+
+        There used to be an error when trying to close an order with
+        budget==prepaid since the method clean was on model. Not anymore
+        """
+        order = Order.objects.get(ref_name='example')
+        order.prepaid = order.budget
+        order.save()
+        resp = self.client.post(reverse('actions'), {'prepaid': order.prepaid,
+                                                     'pk': order.pk,
+                                                     'action': 'order-close',
+                                                     'test': True
+                                                     })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+
     def test_update_status_returns_false_on_raising_error(self):
         """Invalid statuses should raise an exception."""
         order = Order.objects.get(ref_name='example')
