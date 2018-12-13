@@ -81,12 +81,15 @@
                     <div class="d-flex flex-column">
                       <h5 class="my-0">{{order.ref_name}}</h5>
                       <small>de {{order.customer}}</small>
+                      <small class="{% if order.times.0 == 0%}text-danger{%endif%}">
+                        {{order.times.0}}/{{order.times.1}}<i class="far fa-clock pl-1"></i>
+                      </small>
                     </div>
-                    {%if order.overdue%}
                     <div class="d-flex ml-auto">
+                      {%if order.overdue%}
                       <i class="fas fa-exclamation-triangle text-danger"></i>
+                      {%endif%}
                     </div>
-                    {%endif%}
                   </div>
                   <div class="progress" style="height: 5px;">
                     <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
