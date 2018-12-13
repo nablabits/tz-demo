@@ -2014,6 +2014,40 @@ class ActionsPostMethodCreate(TestCase):
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_duplicated_order_returns_to_form_again(self):
+        """Reload page when trying to save a duplicated order."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Duplicate test',
+                                     delivery=date(2018, 1, 1),
+                                     priority='2',
+                                     waist=10,
+                                     chest=20,
+                                     hip=30,
+                                     lenght=40,
+                                     others='Duplicate order',
+                                     budget=100,
+                                     prepaid=100,
+                                     )
+        resp = self.client.post(reverse('actions'),
+                                {'customer': order.customer.pk,
+                                 'ref_name': order.ref_name,
+                                 'delivery': order.delivery,
+                                 'waist': order.waist,
+                                 'chest': order.chest,
+                                 'hip': order.hip,
+                                 'priority': order.priority,
+                                 'lenght': order.lenght,
+                                 'others': order.others,
+                                 'budget': order.budget,
+                                 'prepaid': order.prepaid,
+                                 'pk': 'None',
+                                 'action': 'order-new',
+                                 'test': True
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+
     def test_customer_new_adds_customer(self):
         """Test new customer creation."""
         resp = self.client.post(reverse('actions'),
