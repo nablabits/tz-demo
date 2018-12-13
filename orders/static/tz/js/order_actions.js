@@ -72,6 +72,7 @@ $(function () {
       type: form.attr('method'),
       dataType: 'json',
       beforeSend: function () {
+        $('#action-modal #submit').addClass('d-none')
         $('#action-modal #bg-working').removeClass('d-none')
       },
       success: function (data) {
