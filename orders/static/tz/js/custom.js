@@ -39,6 +39,11 @@ $(document).ready(function () {
     $(location).attr('href', href)
   }
 
+  // Hide the times when selecting is Stock
+  $('#action-modal').on('change', '#id_stock', function () {
+    $('.js-set-times').slideToggle()
+  })
+
   $('.js-view-list-item').click(openItem)
   loadChangelog()
   $('#item_objects_list').on('submit', '.js-filter-view', filterItems)

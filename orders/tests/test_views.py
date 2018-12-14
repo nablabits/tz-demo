@@ -2189,21 +2189,22 @@ class ActionsPostMethodCreate(TestCase):
         """Test the proper insertion of items."""
         order = Order.objects.get(ref_name='example')
         item_obj = Item.objects.all()[0]
-        self.client.post(reverse('actions'),
-                         {'action': 'order-item-add',
-                          'pk': order.pk,
-                          'element': item_obj.pk,
-                          'qty': 2,
-                          'crop': 0,
-                          'sewing': 0,
-                          'iron': 0,
-                          'fit': True,
-                          'description': 'added item',
-                          'test': True
-                          })
+        self.client.post(reverse('actions'), {'action': 'order-item-add',
+                                              'pk': order.pk,
+                                              'element': item_obj.pk,
+                                              'qty': 2,
+                                              'crop': 0,
+                                              'sewing': 0,
+                                              'iron': 0,
+                                              'fit': True,
+                                              'stock': True,
+                                              'description': 'added item',
+                                              'test': True
+                                              })
         item = OrderItem.objects.get(description='added item')
         self.assertTrue(item)
         self.assertTrue(item.fit)
+        self.assertTrue(item.stock)
         self.assertEqual(item.reference, order)
 
     def test_order_item_add_context_response(self):

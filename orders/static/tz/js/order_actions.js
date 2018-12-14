@@ -60,6 +60,9 @@ $(function () {
       },
       success: function (data) {
         $('#action-modal .modal-content').html(data.html)
+        if ($('#action-modal #id_stock').attr('checked')) {
+          $('#action-modal .js-set-times').slideUp()
+        }
       }
     })
   }
