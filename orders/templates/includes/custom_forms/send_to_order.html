@@ -1,15 +1,22 @@
+<div class="form-group">
+  <label for="orderID">Pedidos activos</label>
+  <select class="form-control ml-auto mb-2" name="order" id="orderID">
+    {% for order in orders %}
+    <option value="{{order.pk}}">{{order}}</option>
+    {%endfor%}
+  </select>
+</div>
 <div class="row">
-  <div class="col-7">
+  <div class="col">
     <div class="form-group">
-      <label for="orderID">Pedidos activos</label>
-      <select class="form-control ml-auto mb-2" name="order" id="orderID">
-        {% for order in orders %}
-        <option value="{{order.pk}}">{{order}}</option>
-        {%endfor%}
+      <label for="isStock">Es una prenda de stock</label>
+      <select class="form-control ml-auto" name="isStock" id="isStock">
+        <option value="0">No</option>
+        <option value="1">Si</option>
       </select>
     </div>
   </div>
-  <div class="col-5">
+  <div class="col">
     <div class="form-group">
       <label for="isFit">Es un arreglo</label>
       <select class="form-control ml-auto" name="isfit" id="isFit">

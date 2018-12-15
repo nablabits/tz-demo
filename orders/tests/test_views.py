@@ -2266,6 +2266,7 @@ class ActionsPostMethodCreate(TestCase):
                                     'pk': 5000,
                                     'order': order.pk,
                                     'isfit': '0',
+                                    'isStock': '1',
                                     'test': True,
                                     })
         self.assertEqual(no_item.status_code, 404)
@@ -2278,12 +2279,13 @@ class ActionsPostMethodCreate(TestCase):
                                      'pk': item.pk,
                                      'order': 50000,
                                      'isfit': '0',
+                                     'isStock': '1',
                                      'test': True,
                                      })
         self.assertEqual(no_order.status_code, 404)
 
     def test_send_to_order_raises_error_invalid_isfit(self):
-        """If no isfit is given raise a 404."""
+        """If no valid isfit is given raise a 404."""
         item = Item.objects.all()[0]
         order = Order.objects.all()[0]
         no_order = self.client.post(reverse('actions'),
@@ -2291,26 +2293,43 @@ class ActionsPostMethodCreate(TestCase):
                                      'pk': item.pk,
                                      'order': order.pk,
                                      'isfit': 'invalid',
+                                     'isStock': '1',
                                      'test': True,
                                      })
         self.assertEqual(no_order.status_code, 404)
 
-    def test_send_to_order_isfit_true(self):
-        """Test the correct store of fit."""
+    def test_send_to_order_raises_error_invalid_isStock(self):
+        """If no valid isStock is given raise a 404."""
+        item = Item.objects.all()[0]
+        order = Order.objects.all()[0]
+        no_order = self.client.post(reverse('actions'),
+                                    {'action': 'send-to-order',
+                                     'pk': item.pk,
+                                     'order': order.pk,
+                                     'isfit': '0',
+                                     'isStock': 'invalid',
+                                     'test': True,
+                                     })
+        self.assertEqual(no_order.status_code, 404)
+
+    def test_send_to_order_isfit_and_isStock_true(self):
+        """Test the correct store of fit and stock."""
         item = Item.objects.all()[0]
         order = Order.objects.all()[0]
         self.client.post(reverse('actions'), {'action': 'send-to-order',
                                               'pk': item.pk,
                                               'order': order.pk,
                                               'isfit': '1',
+                                              'isStock': '1',
                                               'test': True,
                                               })
         order_item = OrderItem.objects.filter(element=item)
         order_item = order_item.filter(reference=order)
         self.assertEqual(len(order_item), 1)
         self.assertTrue(order_item[0].fit)
+        self.assertTrue(order_item[0].stock)
 
-    def test_send_to_order_isfit_false(self):
+    def test_send_to_order_isfit_and_isStock_false(self):
         """Test the correct store of fit."""
         item = Item.objects.all()[0]
         order = Order.objects.all()[0]
@@ -2318,12 +2337,14 @@ class ActionsPostMethodCreate(TestCase):
                                               'pk': item.pk,
                                               'order': order.pk,
                                               'isfit': '0',
+                                              'isStock': '0',
                                               'test': True,
                                               })
         order_item = OrderItem.objects.filter(element=item)
         order_item = order_item.filter(reference=order)
         self.assertEqual(len(order_item), 1)
         self.assertFalse(order_item[0].fit)
+        self.assertFalse(order_item[0].stock)
 
     def test_obj_item_adds_item(self):
         """Test the proepr creation of item objects."""
