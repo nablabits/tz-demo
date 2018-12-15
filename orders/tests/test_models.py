@@ -244,7 +244,7 @@ class TestOrders(TestCase):
                                 notes='Default note',
                                 cp='48100')
 
-    def test_the_sum_of_times_per_item_in_an_order(self):
+    def test_the_count_of_times_per_item_in_an_order(self):
         """Test the correct output of count times per order."""
         order = Order.objects.create(user=User.objects.all()[0],
                                      customer=Customer.objects.all()[0],
@@ -259,6 +259,25 @@ class TestOrders(TestCase):
                                      iron=time(0))
         self.assertEqual(order.times[0], 4)
         self.assertEqual(order.times[1], 6)
+
+    def test_count_of_times_should_esclude_stock_items(self):
+        """Stock has no timing, since it should aready have."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(0))
+        stocked = OrderItem.objects.all()[0]
+        stocked.stock = True
+        stocked.save()
+        self.assertEqual(order.times[0], 2)
+        self.assertEqual(order.times[1], 3)
 
 
 class TestOrderItems(TestCase):

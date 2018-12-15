@@ -137,7 +137,7 @@ class Order(models.Model):
     def times(self):
         """Return the total time tracked and the total trackeable time."""
         tracked = 0
-        items = self.orderitem_set.all()
+        items = self.orderitem_set.filter(stock=False)
         for item in items:
             tracked = tracked + item.time_quality
         return (tracked, len(items) * 3)
