@@ -1,9 +1,16 @@
 ## Trapuzarrak app registro de cambios
 ***
+#### v54, Dic 15
+  * **Nuevo:** las prendas en los pedidos tienen un nuevo atributo, *Stock*,
+    para diferenciarlas de producción nueva.
+  * **Mejora:** se ha añadido la cuenta de tiempos registrados en cada tarjeta
+    de la vista de previsión.
+  * **Mejora:** varias mejoras en el funcionamiento interno de la *app*
+  * **Bug:** refinado el duplicado de prendas.
 
 #### v53, Dic 9
   * **Nuevo:** ahora se muestra un icono de *trabajando en segundo plano*
-  mientras se procesan los datos.
+    mientras se procesan los datos.
   * **Mejora:** se han volcado todos los tiempos al nuevo modelo y se ha borrado
     el antiguo
   * **Mejora:** La previsión por semanas ahora muestra los pedidos de TZ.
