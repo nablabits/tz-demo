@@ -3,7 +3,7 @@ from django.test import TestCase
 from orders.models import Customer, Order, Comment, Item, OrderItem
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
-from datetime import date, timedelta
+from datetime import date, timedelta, time
 
 
 class ModelTest(TestCase):
@@ -222,3 +222,104 @@ class ModelTest(TestCase):
         self.assertEqual(order_item.time_quality, 1)
         order_item.crop = timedelta(0)
         self.assertEqual(order_item.time_quality, 0)
+
+
+class TestOrders(TestCase):
+    """Test the Order model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        User.objects.create_user(username='user', is_staff=True,
+                                 is_superuser=True)
+
+        # Create a customer
+        Customer.objects.create(name='Customer Test',
+                                address='This computer',
+                                city='No city',
+                                phone='666666666',
+                                email='customer@example.com',
+                                CIF='5555G',
+                                notes='Default note',
+                                cp='48100')
+
+    def test_the_count_of_times_per_item_in_an_order(self):
+        """Test the correct output of count times per order."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(0))
+        self.assertEqual(order.times[0], 4)
+        self.assertEqual(order.times[1], 6)
+
+    def test_count_of_times_should_esclude_stock_items(self):
+        """Stock has no timing, since it should aready have."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(0))
+        stocked = OrderItem.objects.all()[0]
+        stocked.stock = True
+        stocked.save()
+        self.assertEqual(order.times[0], 2)
+        self.assertEqual(order.times[1], 3)
+
+
+class TestOrderItems(TestCase):
+    """Test the orderItem model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='user', is_staff=True,
+                                        is_superuser=True)
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        Order.objects.create(user=user,
+                             customer=customer,
+                             ref_name='Test order',
+                             delivery=date.today(),
+                             budget=2000,
+                             prepaid=0)
+        # Create item
+        Item.objects.create(name='Test item', fabrics=5)
+
+    def test_orderitem_stock(self):
+        """Items are by default new produced for orders."""
+        item = OrderItem.objects.create(element=Item.objects.all()[0],
+                                        reference=Order.objects.all()[0],
+                                        )
+        self.assertFalse(item.stock)
+        self.assertIsInstance(item.stock, bool)
+        self.assertEqual(item._meta.get_field('stock').verbose_name, 'Stock')
+#
+#
+#
+#
+#
+#

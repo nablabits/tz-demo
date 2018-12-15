@@ -49,35 +49,35 @@ class OrderFormTest(TestCase):
                                 )
 
     def test_avoid_duplicates(self):
-        Order.objects.create(user=User.objects.all()[0],
-                             customer=Customer.objects.all()[0],
-                             ref_name='Duplicate test',
-                             delivery=date(2018, 1, 1),
-                             priority='2',
-                             waist=10,
-                             chest=20,
-                             hip=30,
-                             lenght=40,
-                             others='Duplicate order',
-                             budget=100,
-                             prepaid=100,
-                             )
+        """Test to avoid duplicates."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Duplicate test',
+                                     delivery=date(2018, 1, 1),
+                                     priority='2',
+                                     waist=10,
+                                     chest=20,
+                                     hip=30,
+                                     lenght=40,
+                                     others='Duplicate order',
+                                     budget=100,
+                                     prepaid=100,
+                                     )
         self.assertTrue(Order.objects.get(ref_name='Duplicate test'))
-        duplicated_order = OrderForm({'customer': Customer.objects.all()[0].pk,
-                                      'ref_name': 'Duplicate test',
-                                      'delivery': date(2018, 1, 1),
-                                      'priority': '2',
-                                      'waist': 10,
-                                      'chest': 20,
-                                      'hip': 30,
-                                      'lenght': 40,
-                                      'others': 'Duplicate order',
-                                      'budget': 100,
-                                      'prepaid': 100,
+        duplicated_order = OrderForm({'customer': order.customer.pk,
+                                      'ref_name': order.ref_name,
+                                      'delivery': order.delivery,
+                                      'waist': order.waist,
+                                      'chest': order.chest,
+                                      'hip': order.hip,
+                                      'priority': order.priority,
+                                      'lenght': order.lenght,
+                                      'others': order.others,
+                                      'budget': order.budget,
+                                      'prepaid': order.prepaid,
                                       })
 
-        not_valid = duplicated_order.is_valid()
-        self.assertFalse(not_valid)
+        self.assertFalse(duplicated_order.is_valid())
         self.assertEqual(duplicated_order.errors['__all__'][0],
                          'The order already exists in the db')
 

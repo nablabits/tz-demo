@@ -67,7 +67,7 @@ class OrderListTests(TestCase):
     def setUp(self):
         """Create the necessary items on database at once.
 
-        1 user, 1 customer, 1 orders.
+        1 user, 1 customer, 3 orders.
         """
         self.client = Client()
         user = User.objects.create_user(username='regular', password='test')
@@ -393,6 +393,447 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['delivered_stock'][0].timing,
                          timedelta(0, 72000))
 
+    def test_delivered_orders_show_only_delivered(self):
+        """Test wether the status is 7."""
+        self.client.login(username='regular', password='test')
+        orders = Order.objects.all()
+        for order in orders:
+            order.status = '7'
+            order.save()
+
+        orders = Order.objects.filter(status='7')
+        self.assertEqual(len(orders), 3)
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        for order in resp.context['delivered']:
+            self.assertEqual(order.status, '7')
+
+    def test_delivered_orders_sorting_method(self):
+        """Sort the list by last delivered first."""
+        self.client.login(username='regular', password='test')
+        orders = Order.objects.all()
+        newer, older = orders[:2]
+        newer.status = '7'
+        newer.save()
+
+        older.delivery = date.today() - timedelta(days=1)
+        older.status = '7'
+        older.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+        self.assertEqual(len(resp.context['delivered']), 2)
+        self.assertEqual(resp.context['delivered'][0], newer)
+        self.assertEqual(resp.context['delivered'][1], older)
+
+    def test_delivered_orders_ten_max(self):
+        """Delivered orders show only last ten entries."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        for i in range(11):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status='7',
+                                 budget=100,
+                                 prepaid=100)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['delivered']), 10)
+
+    def test_active_exclude_status_7_and_8(self):
+        """Active orders should exclude status 7 & 8."""
+        self.client.login(username='regular', password='test')
+        self.assertEqual(len(Order.objects.all()), 3)
+        active, delivered, cancelled = Order.objects.all()
+        active.status = '1'
+        active.ref_name = 'active'
+        active.save()
+        delivered.status = '7'
+        delivered.save()
+        cancelled.status = '8'
+        cancelled.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active'][0].ref_name, 'active')
+
+    def test_cancelled_orders_show_only_cancelled(self):
+        """Cancelled orders should exclude all status but 8."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        for i in range(2, 9):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status=str(i),
+                                 budget=100,
+                                 prepaid=100)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['cancelled']), 1)
+        self.assertEqual(resp.context['cancelled'][0].ref_name, 'Test8')
+
+    def test_cancelled_orders_sorting_method(self):
+        """Sort the list by last inboxed first."""
+        self.client.login(username='regular', password='test')
+        orders = Order.objects.all()
+        newer, older = orders[:2]
+        newer.status = '8'
+        newer.save()
+
+        older.inbox_date = older.inbox_date - timedelta(days=1)
+        older.status = '8'
+        older.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+        self.assertEqual(len(resp.context['cancelled']), 2)
+        self.assertEqual(resp.context['cancelled'][0], newer)
+        self.assertEqual(resp.context['cancelled'][1], older)
+
+    def test_cancelled_orders_ten_max(self):
+        """Cancelled orders show only last ten entries."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        for i in range(11):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status='8',
+                                 budget=100,
+                                 prepaid=100)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['cancelled']), 10)
+
+    def test_pending_orders_exclude_cancelled(self):
+        """Pending orders exclude status 8."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        order.status = '8'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['pending']), 2)
+
+    def test_pending_orders(self):
+        """Test the proper query for pending orders."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['pending']), 3)
+
+    def test_pending_orders_sorting_method(self):
+        """Sort the list by first inboxed first."""
+        self.client.login(username='regular', password='test')
+        newer, older, excluded = Order.objects.all()
+
+        older.inbox_date = older.inbox_date - timedelta(days=1)
+        older.save()
+
+        excluded.status = '8'
+        excluded.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+        self.assertEqual(len(resp.context['pending']), 2)
+        self.assertEqual(resp.context['pending'][0], older)
+        self.assertEqual(resp.context['pending'][1], newer)
+
+    def test_active_orderitems_count(self):
+        """Test the proper count of items."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i)
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active'][0].orderitem__count, 2)
+
+    def test_active_comment_count(self):
+        """Test the correct count of comments."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        order = Order.objects.all()[0]
+        for i in range(2):
+            Comment.objects.create(user=user, reference=order, comment=i)
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active'][0].comment__count, 2)
+
+    def test_active_timing_sum(self):
+        """Test the correct sum of times in orderItems."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(2))
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active'][0].timing,
+                         timedelta(0, 72000))
+
+    def test_delivered_orderitems_count(self):
+        """Test the proper count of items."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i)
+
+        order.status = '7'
+        order.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['delivered'][0].orderitem__count, 2)
+
+    def test_delivered_comments_count(self):
+        """Test the correct count of comments."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        order = Order.objects.all()[0]
+        for i in range(2):
+            Comment.objects.create(user=user, reference=order, comment=i)
+
+        order.status = '7'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['delivered'][0].comment__count, 2)
+
+    def test_delivered_timing_sum(self):
+        """Test the correct sum of times in orderItems."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.all()[0]
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(2))
+        order.status = '7'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['delivered'][0].timing,
+                         timedelta(0, 72000))
+
+    def test_pending_total(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(resp.context['pending_total'], 6000)
+
+    def test_pending_total_type_error_raising(self):
+        """Avoid TypeError raising
+
+        When there's only one order with no budget & no prepaid a TypeError
+        is raised."""
+        self.client.login(username='regular', password='test')
+        the_one, delete, and_delete = Order.objects.all()
+        delete.delete()
+        and_delete.delete()
+        self.assertEqual(len(Order.objects.all()), 1)
+        the_one.budget = 0.00
+        the_one.prepaid = 0.00
+        the_one.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(resp.context['pending_total'], 0)
+
+    def test_this_week_active(self):
+        """Test the proper display of this week orders."""
+        self.client.login(username='regular', password='test')
+        this, next, future = Order.objects.all()
+        this.delivery = date.today()
+        this.save()
+        next.delivery = date.today() + timedelta(days=7)
+        next.save()
+        future.delivery = date.today() + timedelta(days=30)
+        future.save()
+
+        this = Order.objects.get(pk=this.pk)
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEquals(len(resp.context['this_week_active']), 1)
+        self.assertEquals(resp.context['this_week_active'][0], this)
+
+    def test_this_week_active_excludes_delivered_and_cancelled(self):
+        """This week entries should exclude statuses 7&8."""
+        self.client.login(username='regular', password='test')
+        active, delivered, cancelled = Order.objects.all()
+        active.status = '1'
+        active.ref_name = 'active'
+        active.save()
+        delivered.status = '7'
+        delivered.save()
+        cancelled.status = '8'
+        cancelled.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['this_week_active'][0].ref_name,
+                         'active')
+
+    def test_i_relax_does_not_raise_error(self):
+        """Test picking the icon does not raise index error."""
+        self.client.login(username='regular', password='test')
+        for i in range(20):  # big enough
+            resp = self.client.get(reverse('orderlist',
+                                           kwargs={'orderby': 'date'}))
+            if resp.context['i_relax'] not in settings.RELAX_ICONS:
+                raise ValueError('Not in list')
+
+    def test_active_calendar_excludes_delivered_and_cancelled(self):
+        """Active orders should exclude status 7 & 8."""
+        self.client.login(username='regular', password='test')
+        self.assertEqual(len(Order.objects.all()), 3)
+        active, delivered, cancelled = Order.objects.all()
+        active.status = '1'
+        active.ref_name = 'active'
+        active.save()
+        delivered.status = '7'
+        delivered.save()
+        cancelled.status = '8'
+        cancelled.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['active_calendar'][0].ref_name, 'active')
+
+    def test_active_calendar_includes_tz_orders(self):
+        """Active orders do not include tz, but active_calendar does so."""
+        self.client.login(username='regular', password='test')
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        order = Order.objects.all()[0]
+        order.customer = tz
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(len(resp.context['active_calendar']), 3)
+
+    def test_active_sorting_by_date(self):
+        """Test the proper sorting of active orders."""
+        self.client.login(username='regular', password='test')
+        newer, older, excluded = Order.objects.all()
+
+        older.delivery = older.delivery - timedelta(days=1)
+        older.save()
+
+        excluded.status = '8'
+        excluded.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        newer = Order.objects.get(pk=newer.pk)
+        older = Order.objects.get(pk=older.pk)
+
+        # first active orders
+        self.assertEqual(len(resp.context['active']), 2)
+        self.assertEqual(resp.context['active'][0], older)
+        self.assertEqual(resp.context['active'][1], newer)
+
+        # Now the calendar ones
+        self.assertEqual(len(resp.context['active_calendar']), 2)
+        self.assertEqual(resp.context['active_calendar'][0], older)
+        self.assertEqual(resp.context['active_calendar'][1], newer)
+
+    def test_active_sorting_by_status(self):
+        """Should be sorted from 1 to 6."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.all()[0]
+        customer = Customer.objects.all()[0]
+        status = 1
+        for order in Order.objects.all():
+            order.status = str(status)
+            order.ref_name = 'Test%s' % status
+            order.save()
+            status += 1
+
+        self.assertEqual(len(Order.objects.all()), 3)
+
+        for i in range(4, 7):
+            Order.objects.create(user=user,
+                                 customer=customer,
+                                 ref_name='Test%s' % i,
+                                 delivery=date.today(),
+                                 status=str(i),
+                                 budget=100,
+                                 prepaid=100)
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'status'}))
+
+        for i in range(1, 7):
+            self.assertEqual(resp.context['active'][i - 1].ref_name,
+                             'Test%s' % i)
+            self.assertEqual(resp.context['active_calendar'][i - 1].ref_name,
+                             'Test%s' % i)
+
+    def test_active_sorting_by_priority(self):
+        """Test the proper sorting by priority."""
+        self.client.login(username='regular', password='test')
+        low, mid, hi = Order.objects.all()
+        low.priority = '3'
+        low.save()
+        mid.priority = '2'
+        mid.save()
+        hi.priority = '1'
+        hi.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'priority'}))
+        for var in ('active', 'active_calendar'):
+            self.assertEqual(resp.context[var][0].priority, '1')
+            self.assertEqual(resp.context[var][1].priority, '2')
+            self.assertEqual(resp.context[var][2].priority, '3')
+
+    def test_no_valid_sorting_method_raises_404(self):
+        """A valid sorting method is required."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'void'}))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_cur_user(self):
+        """Test the proper show of current user."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['user'].username, 'regular')
+
+    def test_context_vars(self):
+        """Test the remaining context vars (fixed)."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['version'], settings.VERSION)
+        self.assertEqual(resp.context['placeholder'],
+                         'Buscar pedido (referencia o nº)')
+        self.assertEqual(resp.context['search_on'], 'orders')
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Pedidos')
+        self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
+
+
 class StandardViewsTest(TestCase):
     """Test the standard views."""
 
@@ -533,194 +974,6 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('main'))
         for order in resp.context['pending']:
             self.assertNotEqual(order.customer.name, 'Trapuzarrak')
-
-    def test_order_list(self):
-        """Test the main features on order list."""
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/orders.html')
-
-        # Test context vars
-        self.assertEqual(resp.context['active'][0].ref_name, 'example10')
-        self.assertEqual(str(resp.context['user']), 'regular')
-        self.assertEqual(str(resp.context['version']), settings.VERSION)
-        self.assertEqual(str(resp.context['order_by']), 'date')
-        self.assertEqual(resp.context['placeholder'],
-                         'Buscar pedido (referencia o nº)')
-        self.assertEqual(str(resp.context['search_on']), 'orders')
-        self.assertEqual(str(resp.context['title']), 'TrapuZarrak · Pedidos')
-        self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
-        self.assertTrue(resp.context['footer'])
-
-    def test_order_list_delivered_more_recent_first(self):
-        """Test the correct order on delivered orders."""
-        delivered_order = Order.objects.filter(status=7)[0]
-        delivered_order.delivery = date(2030, 12, 1)
-        delivered_order.ref_name = 'latest delivered'
-        delivered_order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.context['delivered'][0], delivered_order)
-
-    def test_order_list_delivered_show_last_ten(self):
-        """Delivered orders should be a list of last ten elements."""
-        Order.objects.all().update(status=7)
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEqual(len(resp.context['delivered']), 10)
-
-    def test_order_list_cancelled_show_last_ten(self):
-        """Delivered orders should be a list of last ten elements."""
-        Order.objects.all().update(status=8)
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEqual(len(resp.context['cancelled']), 10)
-
-    def test_order_list_sorting_methods(self):
-        """Test the correct sorting of entries."""
-        # Order by date
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-
-        self.assertEqual(resp.context['order_by'], 'date')
-        for i in range(9):
-            first_order = resp.context['active'][i].delivery
-            next_order = resp.context['active'][i+1].delivery
-            self.assertTrue(first_order <= next_order)
-
-        # order by status
-        for order in Order.objects.exclude(status__in=[7, 8]):
-            order.status = randint(1, 6)
-            order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'status'}))
-        self.assertEqual(resp.context['order_by'], 'status')
-        for i in range(9):
-            first_order = resp.context['active'][i].status
-            next_order = resp.context['active'][i+1].status
-            self.assertTrue(first_order <= next_order)
-
-        # order by priority
-        order = Order.objects.get(ref_name='example13')
-        order.priority = '1'
-        order.save()
-        order = Order.objects.get(ref_name='example12')
-        order.priority = '3'
-        order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'priority'}))
-        self.assertEqual(resp.context['order_by'], 'priority')
-        for i in range(9):
-            first_order = resp.context['active'][i].priority
-            next_order = resp.context['active'][i+1].priority
-            self.assertTrue(first_order <= next_order)
-
-        # inavlid sorting method
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'invalid'}))
-        self.assertEqual(resp.status_code, 404)
-
-    def test_order_list_active_week_entries(self):
-        """Test whether there are active entries this week."""
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        this_week = date.today().isocalendar()[1]
-        this_week_entries = Order.objects.filter(Q(delivery__week=this_week) |
-                                                 Q(delivery__lte=timezone.now()
-                                                   ))
-        this_week_entries = this_week_entries.exclude(status__in=[7, 8])
-        self.assertEqual(len(resp.context['this_week_active']),
-                         len(this_week_entries))
-
-    def test_calendar_view_active(self):
-        """Test the active elements on calendar view."""
-        orders = Order.objects.all()
-        for order in orders:
-            order.delivery = date.today() - timedelta(days=1)
-            order.status = '2'
-            order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEqual(len(resp.context['active_calendar']),
-                         len(orders))
-
-    def test_trapuzarrak_delivered_orders_dont_show_up_in_views(self):
-        """Trapuzarrak delievered orders shouldn't be seen on orderlist."""
-        tz = Customer.objects.create(name='trapuzarrak',
-                                     address='Foruen',
-                                     city='Mungia',
-                                     phone='662',
-                                     cp=48100)
-        user = User.objects.get(username='regular')
-        Order.objects.create(user=user,
-                             customer=tz,
-                             status=7,
-                             delivery=date.today(),
-                             ref_name='tz order',
-                             budget=100,
-                             prepaid=0)
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        total_orders = len(Order.objects.all())
-        self.assertEqual(total_orders, 21)
-        for order in resp.context['delivered']:
-            self.assertNotEqual(order.ref_name, 'tz order')
-        for order in resp.context['active']:
-            self.assertNotEqual(order.ref_name, 'tz order')
-
-    def test_tz_cancelled_orders(self):
-        """Test the proper return of cancelled orders.
-
-        Trapuzarrak ones should not appear.
-        """
-        order = Order.objects.get(ref_name='example10')
-        order.status = 8
-        order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEquals(len(resp.context['cancelled']), 1)
-
-        # Now change the customer, tz should not appear.
-        tz = Customer.objects.create(name='Trapuzarrak',
-                                     city='Mungia',
-                                     phone=0,
-                                     cp=0)
-        order.customer = tz
-        order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEquals(len(resp.context['cancelled']), 0)
-
-    def test_pending_orders(self):
-        """Test the correct show of pending invoices."""
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEquals(len(resp.context['pending']), 19)
-        self.assertEquals(resp.context['pending_total'], 38000)
-
-    def test_pending_orders_more_ancient_first(self):
-        """The order should be from more ancient up."""
-        order = Order.objects.exclude(status=8)
-        order = order.filter(budget__gt=F('prepaid'))[0]
-        order.inbox_date = order.inbox_date - timedelta(weeks=52)
-        order.ref_name = 'Should be first'
-        order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEquals(resp.context['pending'][0],
-                          Order.objects.get(ref_name='Should be first'))
-
-    def test_pending_orders_should_dismiss_cancelled(self):
-        """Pending orders don't include cancelled orders."""
-        order = Order.objects.all()[0]
-        order.status = 8
-        order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEquals(len(resp.context['pending']), 18)
-        self.assertEquals(resp.context['pending_total'], 36000)
 
     def test_order_closed_view(self):
         """Test a particular order instance.
@@ -1761,6 +2014,40 @@ class ActionsPostMethodCreate(TestCase):
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_duplicated_order_returns_to_form_again(self):
+        """Reload page when trying to save a duplicated order."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Duplicate test',
+                                     delivery=date(2018, 1, 1),
+                                     priority='2',
+                                     waist=10,
+                                     chest=20,
+                                     hip=30,
+                                     lenght=40,
+                                     others='Duplicate order',
+                                     budget=100,
+                                     prepaid=100,
+                                     )
+        resp = self.client.post(reverse('actions'),
+                                {'customer': order.customer.pk,
+                                 'ref_name': order.ref_name,
+                                 'delivery': order.delivery,
+                                 'waist': order.waist,
+                                 'chest': order.chest,
+                                 'hip': order.hip,
+                                 'priority': order.priority,
+                                 'lenght': order.lenght,
+                                 'others': order.others,
+                                 'budget': order.budget,
+                                 'prepaid': order.prepaid,
+                                 'pk': 'None',
+                                 'action': 'order-new',
+                                 'test': True
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+
     def test_customer_new_adds_customer(self):
         """Test new customer creation."""
         resp = self.client.post(reverse('actions'),
@@ -1902,21 +2189,22 @@ class ActionsPostMethodCreate(TestCase):
         """Test the proper insertion of items."""
         order = Order.objects.get(ref_name='example')
         item_obj = Item.objects.all()[0]
-        self.client.post(reverse('actions'),
-                         {'action': 'order-item-add',
-                          'pk': order.pk,
-                          'element': item_obj.pk,
-                          'qty': 2,
-                          'crop': 0,
-                          'sewing': 0,
-                          'iron': 0,
-                          'fit': True,
-                          'description': 'added item',
-                          'test': True
-                          })
+        self.client.post(reverse('actions'), {'action': 'order-item-add',
+                                              'pk': order.pk,
+                                              'element': item_obj.pk,
+                                              'qty': 2,
+                                              'crop': 0,
+                                              'sewing': 0,
+                                              'iron': 0,
+                                              'fit': True,
+                                              'stock': True,
+                                              'description': 'added item',
+                                              'test': True
+                                              })
         item = OrderItem.objects.get(description='added item')
         self.assertTrue(item)
         self.assertTrue(item.fit)
+        self.assertTrue(item.stock)
         self.assertEqual(item.reference, order)
 
     def test_order_item_add_context_response(self):
@@ -1978,6 +2266,7 @@ class ActionsPostMethodCreate(TestCase):
                                     'pk': 5000,
                                     'order': order.pk,
                                     'isfit': '0',
+                                    'isStock': '1',
                                     'test': True,
                                     })
         self.assertEqual(no_item.status_code, 404)
@@ -1990,12 +2279,13 @@ class ActionsPostMethodCreate(TestCase):
                                      'pk': item.pk,
                                      'order': 50000,
                                      'isfit': '0',
+                                     'isStock': '1',
                                      'test': True,
                                      })
         self.assertEqual(no_order.status_code, 404)
 
     def test_send_to_order_raises_error_invalid_isfit(self):
-        """If no isfit is given raise a 404."""
+        """If no valid isfit is given raise a 404."""
         item = Item.objects.all()[0]
         order = Order.objects.all()[0]
         no_order = self.client.post(reverse('actions'),
@@ -2003,26 +2293,43 @@ class ActionsPostMethodCreate(TestCase):
                                      'pk': item.pk,
                                      'order': order.pk,
                                      'isfit': 'invalid',
+                                     'isStock': '1',
                                      'test': True,
                                      })
         self.assertEqual(no_order.status_code, 404)
 
-    def test_send_to_order_isfit_true(self):
-        """Test the correct store of fit."""
+    def test_send_to_order_raises_error_invalid_isStock(self):
+        """If no valid isStock is given raise a 404."""
+        item = Item.objects.all()[0]
+        order = Order.objects.all()[0]
+        no_order = self.client.post(reverse('actions'),
+                                    {'action': 'send-to-order',
+                                     'pk': item.pk,
+                                     'order': order.pk,
+                                     'isfit': '0',
+                                     'isStock': 'invalid',
+                                     'test': True,
+                                     })
+        self.assertEqual(no_order.status_code, 404)
+
+    def test_send_to_order_isfit_and_isStock_true(self):
+        """Test the correct store of fit and stock."""
         item = Item.objects.all()[0]
         order = Order.objects.all()[0]
         self.client.post(reverse('actions'), {'action': 'send-to-order',
                                               'pk': item.pk,
                                               'order': order.pk,
                                               'isfit': '1',
+                                              'isStock': '1',
                                               'test': True,
                                               })
         order_item = OrderItem.objects.filter(element=item)
         order_item = order_item.filter(reference=order)
         self.assertEqual(len(order_item), 1)
         self.assertTrue(order_item[0].fit)
+        self.assertTrue(order_item[0].stock)
 
-    def test_send_to_order_isfit_false(self):
+    def test_send_to_order_isfit_and_isStock_false(self):
         """Test the correct store of fit."""
         item = Item.objects.all()[0]
         order = Order.objects.all()[0]
@@ -2030,12 +2337,14 @@ class ActionsPostMethodCreate(TestCase):
                                               'pk': item.pk,
                                               'order': order.pk,
                                               'isfit': '0',
+                                              'isStock': '0',
                                               'test': True,
                                               })
         order_item = OrderItem.objects.filter(element=item)
         order_item = order_item.filter(reference=order)
         self.assertEqual(len(order_item), 1)
         self.assertFalse(order_item[0].fit)
+        self.assertFalse(order_item[0].stock)
 
     def test_obj_item_adds_item(self):
         """Test the proepr creation of item objects."""
@@ -2485,6 +2794,23 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
+
+    def test_close_order_duplicated(self):
+        """Avoid validation error.
+
+        There used to be an error when trying to close an order with
+        budget==prepaid since the method clean was on model. Not anymore
+        """
+        order = Order.objects.get(ref_name='example')
+        order.prepaid = order.budget
+        order.save()
+        resp = self.client.post(reverse('actions'), {'prepaid': order.prepaid,
+                                                     'pk': order.pk,
+                                                     'action': 'order-close',
+                                                     'test': True
+                                                     })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
 
     def test_update_status_returns_false_on_raising_error(self):
         """Invalid statuses should raise an exception."""

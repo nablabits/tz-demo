@@ -60,6 +60,9 @@ $(function () {
       },
       success: function (data) {
         $('#action-modal .modal-content').html(data.html)
+        if ($('#action-modal #id_stock').attr('checked')) {
+          $('#action-modal .js-set-times').slideUp()
+        }
       }
     })
   }
@@ -72,6 +75,7 @@ $(function () {
       type: form.attr('method'),
       dataType: 'json',
       beforeSend: function () {
+        $('#action-modal #submit').addClass('d-none')
         $('#action-modal #bg-working').removeClass('d-none')
       },
       success: function (data) {

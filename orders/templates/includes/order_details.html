@@ -44,6 +44,9 @@
             {%if item.fit%}
             <i class="far fa-cut"></i>
             {%endif%}
+            {%if item.stock%}
+            <i class="far fa-history"></i>
+            {%endif%}
           </span>
         </td>
         <td>{{item.qty}}</td>

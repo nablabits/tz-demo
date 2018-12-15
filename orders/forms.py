@@ -3,6 +3,7 @@
 from django import forms
 from .models import Customer, Order, Item, OrderItem, Comment
 from django.db.models import Count
+from django.core.exceptions import ValidationError
 
 
 class CustomerForm(forms.ModelForm):
@@ -34,6 +35,28 @@ class OrderForm(forms.ModelForm):
         queryset = Customer.objects.annotate(num_orders=Count('order'))
         self.fields['customer'].queryset = queryset
 
+    def clean(self):
+        """Test duplicated for new orders."""
+        data = self.cleaned_data
+        exists = Order.objects.filter(ref_name=data['ref_name'])
+        duplicated = False
+        if exists:
+            for order in exists:
+                duplicated = (data['customer'] == order.customer and
+                              data['delivery'] == order.delivery and
+                              data['priority'] == order.priority and
+                              data['waist'] == order.waist and
+                              data['chest'] == order.chest and
+                              data['hip'] == order.hip and
+                              data['lenght'] == order.lenght and
+                              data['others'] == order.others and
+                              data['budget'] == order.budget and
+                              data['prepaid'] == order.prepaid
+                              )
+                if duplicated:
+                    raise ValidationError('The order already exists in the db')
+        return data
+
 
 class ItemForm(forms.ModelForm):
     """Add new item objects."""
@@ -54,7 +77,7 @@ class OrderItemForm(forms.ModelForm):
 
         model = OrderItem
         fields = ('element', 'qty', 'crop', 'sewing', 'iron', 'description',
-                  'fit')
+                  'fit', 'stock')
 
     def __init__(self, *args, **kwargs):
         """Override the order in the reference dropdown."""

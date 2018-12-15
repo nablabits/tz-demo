@@ -98,29 +98,6 @@ class Order(models.Model):
         return '%s %s %s' % (self.inbox_date.date(),
                              self.customer, self.ref_name)
 
-    def clean(self):
-        """Avoid duplicate orders."""
-        exists = Order.objects.filter(ref_name=self.ref_name)
-        if exists:
-            for order in exists:
-                diff = self.inbox_date - order.inbox_date
-                duplicated = (diff.seconds < 120 and
-                              self.customer == order.customer and
-                              self.delivery == order.delivery and
-                              self.status == order.status and
-                              self.priority == order.priority and
-                              self.waist == order.waist and
-                              self.chest == order.chest and
-                              self.hip == order.hip and
-                              self.lenght == order.lenght and
-                              self.others == order.others and
-                              self.budget == order.budget and
-                              self.prepaid == order.prepaid
-                              )
-                if duplicated:
-                    raise ValidationError(_('The order already ' +
-                                            'exists in the db'))
-
     @property
     def overdue(self):
         """Set the overdue property."""
@@ -155,6 +132,15 @@ class Order(models.Model):
             return 0
         else:
             return round((int(self.status)-2) * 100 / 4, 0)
+
+    @property
+    def times(self):
+        """Return the total time tracked and the total trackeable time."""
+        tracked = 0
+        items = self.orderitem_set.filter(stock=False)
+        for item in items:
+            tracked = tracked + item.time_quality
+        return (tracked, len(items) * 3)
 
 
 class Item(models.Model):
@@ -233,6 +219,7 @@ class OrderItem(models.Model):
 
     # store if the item is an element that must be fitted
     fit = models.BooleanField('Arreglo', default=False)
+    stock = models.BooleanField('Stock', default=False)
 
     def save(self, *args, **kwargs):
         """Override the save method."""
