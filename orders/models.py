@@ -267,6 +267,74 @@ class Comment(models.Model):
         name = ('El ' + str(self.creation.date()) +
                 ', ' + str(self.user) + ' comentó en ' + str(self.reference))
         return name
+
+
+class PQueue(models.Model):
+    """Create a production queue."""
+
+    item = models.OneToOneField(OrderItem, on_delete=models.CASCADE,
+                                primary_key=True)
+    score = models.IntegerField(unique=True, blank=True, null=True)
+
+    class Meta:
+        """Meta options."""
+
+        ordering = ['score']
+
+    def save(self, *args, **kwargs):
+        """Override the save method."""
+        # Set score if none
+        if self.score is None:
+            highest = PQueue.objects.last()
+            if not highest:
+                self.score = 1000
+            else:
+                self.score = highest.score + 1
+
+        # Set score if 0
+        elif self.score == 0:
+            score_1 = PQueue.objects.filter(score=1)
+            if score_1.exists():
+                for item in PQueue.objects.reverse():
+                    item.score = item.score + 1
+                    item.save()
+                self.score = 1
+            else:
+                self.score = 1
+        super().save(*args, **kwargs)
+
+    def top(self):
+        """Raise the current item to the top."""
+        prev_elements = PQueue.objects.filter(score__lt=self.score)
+        if not prev_elements:
+            return ('Warning: you are trying to raise an item that is ' +
+                    'already on top')
+        else:
+            self.score = prev_elements.first().score - 1
+            return self.save()
+
+    def up(self):
+        """Raise one position the element in the list."""
+        prev_elements = PQueue.objects.filter(score__lt=self.score)
+        if not prev_elements:
+            return ('Warning: you are trying to raise an item that is ' +
+                    'already on top')
+        elif prev_elements.count() == 1:
+            self.top()
+        else:
+            next, closest = prev_elements[:2]
+            if closest.score - next.score > 1:
+                self.score = closest.score - 1
+                return self.save()
+            else:
+                closest.score = -1
+                closest.save()
+                self.score = next.score + 1
+                self.save()
+                closest.score = next.score + 2
+                closest.save()
+
+
 #
 #
 #
