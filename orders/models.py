@@ -334,6 +334,15 @@ class PQueue(models.Model):
                 closest.score = next.score + 2
                 closest.save()
 
+    def complete(self):
+        """Complete an item."""
+        first = PQueue.objects.first()
+        if first.score > 0:
+            self.score = -1
+        else:
+            self.score = first.score - 1
+        self.save()
+
 
 #
 #
