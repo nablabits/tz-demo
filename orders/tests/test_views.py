@@ -644,10 +644,11 @@ class OrderListTests(TestCase):
         self.assertEquals(resp.context['pending_total'], 6000)
 
     def test_pending_total_type_error_raising(self):
-        """Avoid TypeError raising
+        """Avoid TypeError raising.
 
         When there's only one order with no budget & no prepaid a TypeError
-        is raised."""
+        is raised.
+        """
         self.client.login(username='regular', password='test')
         the_one, delete, and_delete = Order.objects.all()
         delete.delete()
