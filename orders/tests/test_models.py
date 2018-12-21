@@ -399,6 +399,15 @@ class PQueueTest(TestCase):
         self.assertEquals((queue[0].score, queue[1].score, queue[2].score),
                           (100, 1000, 1001))
 
+    def test_stock_items_cannot_be_added(self):
+        """Stock items are already produced so can't be queued."""
+        item = OrderItem.objects.first()
+        item.stock = True
+        item.save()
+        queued = PQueue(item=item)
+        with self.assertRaises(ValidationError):
+            queued.clean()
+
     def test_default_score_on_empty_table(self):
         """When saving on an empty table the initial score should be 1000."""
         pqueue = PQueue.objects.create(item=OrderItem.objects.first())

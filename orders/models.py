@@ -281,6 +281,12 @@ class PQueue(models.Model):
 
         ordering = ['score']
 
+    def clean(self):
+        """Override clean method."""
+        # Avoid stock items to be added to the db."""
+        if self.item.stock:
+            raise ValidationError('Stocked items can\'t be queued')
+
     def save(self, *args, **kwargs):
         """Override the save method."""
         # Set score if none
