@@ -1,9 +1,15 @@
 {% extends "tz/base.html" %}
 {% block pqueueview %}
 <section id="customer_detail">
-  <div class="container pt-4">
+  <!-- Tablet view -->
+  <div class="container d-block d-md-none pt-4" id="pqueue-list-tablet">
+    {% include 'includes/pqueue_list_tablet.html' %}
+  </div>
+
+  <!-- Manager view for PC -->
+  <div class="container d-none d-md-block pt-4">
     <div class="row">
-      <div class="d-none d-md-block col-md-6" id="pqueue-editor">
+      <div class="col" id="pqueue-editor">
         <div class="d-none" id="display-errors">
           <div class="alert alert-info" role="alert">
             <i class="fa fa-info mr-2"></i>
@@ -20,14 +26,14 @@
               </a>
               {{item.element.get_item_type_display}} {{item.element.name}} {{item.element.item_class}}-{{item.element.size}}
               <button class="mr-1 btn btn-sm btn-outline-success ml-auto js-queue" data-action="send" data-pk="{{item.pk}}">
-                <i class="fal fa-arrow-alt-right"></i>
+                <i class="fal fa-share"></i>
               </button>
             </div>
           </div>
           {% endfor %}
         </div>
       </div>
-      <div class="col-md-6 col-sm-12 border-left" id="pqueue-list">
+      <div class="col" id="pqueue-list">
         {% include 'includes/pqueue_list.html'%}
       </div>
 
