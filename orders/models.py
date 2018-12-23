@@ -340,6 +340,27 @@ class PQueue(models.Model):
                 closest.score = next.score + 2
                 closest.save()
 
+    def down(self):
+        """Lower one position the element in the list."""
+        next_elements = PQueue.objects.filter(score__gt=self.score)
+        if not next_elements:
+            return ('Warning: you are trying to lower an item that is ' +
+                    'already at the bottom')
+        else:
+            next_elements[0].up()
+            return True
+
+    def bottom(self):
+        """Lower to the bottom."""
+        next_elements = PQueue.objects.filter(score__gt=self.score)
+        if not next_elements:
+            return ('Warning: you are trying to lower an item that is ' +
+                    'already at the bottom')
+        else:
+            self.score = next_elements.last().score + 1
+            self.save()
+            return True
+
     def complete(self):
         """Complete an item."""
         first = PQueue.objects.first()

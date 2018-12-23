@@ -548,6 +548,49 @@ class PQueueTest(TestCase):
         self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1001)
         self.assertEqual(PQueue.objects.get(pk=mid.pk).score, 1002)
 
+    def test_down_if_last(self):
+        """When the element is last, should warn and do nothing."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        last = PQueue.objects.last()
+        warning = last.down()
+        self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
+        self.assertEqual(warning,
+                         ('Warning: you are trying to lower an item that is ' +
+                          'already at the bottom'))
+
+    def test_down(self):
+        """Lower the position of an element."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.down()
+        self.assertEqual(PQueue.objects.get(pk=mid.pk).score, 999)
+        self.assertEqual(PQueue.objects.get(pk=first.pk).score, 1000)
+        self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
+
+    def test_bottom_if_last(self):
+        """When the element is last, should warn and do nothing."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        last = PQueue.objects.last()
+        warning = last.bottom()
+        self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
+        self.assertEqual(warning,
+                         ('Warning: you are trying to lower an item that is ' +
+                          'already at the bottom'))
+
+    def test_bottom(self):
+        """Lower the position of an element to the bottom."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.bottom()
+        self.assertEqual(PQueue.objects.get(pk=mid.pk).score, 1001)
+        self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
+        self.assertEqual(PQueue.objects.get(pk=first.pk).score, 1003)
+
+
     def test_complete(self):
         """Test complete method."""
         for item in OrderItem.objects.all():
