@@ -40,5 +40,12 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_filter = ('element', )
 
 
+@admin.register(PQueue)
+class PQueueAdmin(admin.ModelAdmin):
+    """Beautify the order item admin view."""
+
+    list_display = ('pk', 'item', 'score', )
+    list_filter = ('score', )
+
+
 admin.site.register(Comment)
-admin.site.register(PQueue)
