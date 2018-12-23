@@ -1,0 +1,38 @@
+{% extends "tz/base.html" %}
+{% block pqueueview %}
+<section id="customer_detail">
+  <div class="container pt-4">
+    <div class="row">
+      <div class="d-none d-md-block col-md-6" id="pqueue-editor">
+        <div class="d-none" id="display-errors">
+          <div class="alert alert-info" role="alert">
+            <i class="fa fa-info mr-2"></i>
+            <span class="js-ajax-error"></span>
+          </div>
+        </div>
+        <div class="d-flex flex-column" >
+          <h3>Prendas disponibles</h3>
+          {% for item in available %}
+          <div class="border rounded mr-4 my-1 p-2">
+            <div class="d-flex align-items-center">
+              <a href="{% url 'order_view' item.reference.pk %}">
+              <strong>{{item.reference.pk}}. {{item.reference.ref_name}}</strong>, &nbsp;
+              </a>
+              {{item.element.get_item_type_display}} {{item.element.name}} {{item.element.item_class}}-{{item.element.size}}
+              <button class="mr-1 btn btn-sm btn-outline-success ml-auto js-queue" data-action="send" data-pk="{{item.pk}}">
+                <i class="fal fa-arrow-alt-right"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="col-md-6 col-sm-12 border-left" id="pqueue-list">
+        {% include 'includes/pqueue_list.html'%}
+      </div>
+
+    </div>
+
+  </div>
+</section>
+{% endblock %}

@@ -49,6 +49,8 @@
               <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
             <a class="nav-item nav-link" href="{% url 'itemslist' %}" id="sidebar-items">
               <i class="fa fa-fw fa-cube pr-2"></i> Editor de prendas</a>
+            <a class="nav-item nav-link" href="{% url 'pqueue_manager' %}" id="sidebar-pqueue">
+              <i class="far fa-fw fa-clipboard-list-check pr-2"></i> Cola de producción</a>
             <a class="nav-item nav-link js-logout" data-action="logout" data-pk="0" id="sidebar-logout">
               <i class="fas fa-fw fa-sign-out-alt pr-2"></i> Cerrar sesión</a>
           </nav>
@@ -58,6 +60,7 @@
           {% block homeview %}{% endblock %}
           {% block orderview %}{% endblock %}
           {% block customerview %}{% endblock %}
+          {% block pqueueview %}{% endblock %}
           {% block orders %}{% endblock %}
           {% block listview %}{% endblock %}
         </div>

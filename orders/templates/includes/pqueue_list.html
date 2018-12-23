@@ -1,0 +1,73 @@
+<div class="d-flex flex-column">
+  <h3>Cola de producción</h3>
+
+  <!-- Active queue -->
+  {% if active %}
+    {% for item in active %}
+      <div class="border rounded mr-4 my-1 p-2">
+        <div class="d-flex">
+          <div class="d-flex flex-column justify-content-center">
+            <a href="{% url 'order_view' item.item.reference.pk %}">
+              <strong>{{item.item.reference.pk}}. {{item.item.reference.ref_name}}</strong>
+            </a>
+            <p>{{item.item.element.get_item_type_display}} {{item.item.element.name}} {{item.item.element.item_class}}-{{item.item.element.size}}</p>
+          </div>
+
+
+          <div class="d-flex align-items-center ml-auto">
+            <button class="{%if forloop.first %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="top" data-pk="{{item.pk}}">
+              <i class="fal fa-arrow-alt-to-top"></i>
+            </button>
+            <button class="{%if forloop.first %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="up" data-pk="{{item.pk}}">
+              <i class="fal fa-arrow-alt-up"></i>
+            </button>
+            <button class="{%if forloop.last %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="down" data-pk="{{item.pk}}" {%if forloop.last %}disabled{%endif%}>
+              <i class="fal fa-arrow-alt-down"></i>
+            </button>
+            <button class="{%if forloop.last %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="bottom" data-pk="{{item.pk}}" {%if forloop.last %}disabled{%endif%}>
+              <i class="fal fa-arrow-alt-to-bottom"></i>
+            </button>
+            <button class="mr-1 btn btn-sm btn-outline-danger js-queue" data-action="back" data-pk="{{item.pk}}">
+              <i class="fal fa-times"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="justify-content-center text-center">
+      <h1><i class="fal fa-frown"></i></h1>
+      <h3>Vaya! parece que no hay nada que producir!</h3>
+      <p>Prueba a añadir algún elemento de la izquierda</p>
+    </div>
+  {%endif%}
+
+  <!-- Separator -->
+  <div class="my-5" style="border-bottom: 1px solid lightgrey;"></div>
+
+  <!-- Completed queue -->
+  <h3>Prendas producidas</h3>
+  {% if completed %}
+    {% for item in completed %}
+      <div class="border rounded mr-4 my-1 p-2">
+        <div class="d-flex">
+          <a href="{% url 'order_view' item.item.reference.pk %}">
+            <strong>{{item.item.reference.pk}}. {{item.item.reference.ref_name}}</strong>, &nbsp;
+          </a>
+          {{item.item.element.get_item_type_display}} {{item.item.element.name}} {{item.item.element.item_class}}-{{item.item.element.size}}
+          <div class="d-flex ml-auto">
+            <button class="mr-1 btn btn-sm btn-outline-success js-queue" data-action="uncomplete" data-pk="{{item.pk}}">
+              <i class="fal fa-upload"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="justify-content-center text-center mt-4">
+      <h1><i class="fal fa-forklift"></i></h1>
+      <h3>Oops, parece que no hay nada producido!</h3>
+      <p>Habrá que ponerse a trabajar, no?</p>
+    </div>
+  {%endif%}
+</div>

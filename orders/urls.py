@@ -17,6 +17,7 @@ urlpatterns = [
             views.orderlist, name='orderlist'),
     path('customers', views.customerlist, name='customerlist'),
     path('items', views.itemslist, name='itemslist'),
+    path('pqueue/manager', views.pqueue_manager, name='pqueue_manager'),
 
     # Object related urls
     re_path(r'^order/view/(?P<pk>[0-9]+)$',

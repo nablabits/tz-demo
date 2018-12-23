@@ -2,7 +2,7 @@
 
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from orders.models import Customer, Order, OrderItem, Comment, Item
+from orders.models import Customer, Order, OrderItem, Comment, Item, PQueue
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import F, Q
 from django.http import JsonResponse
@@ -57,6 +57,13 @@ class NotLoggedInTest(TestCase):
         """Test not logged in users should be redirected to login."""
         login_url = '/accounts/login/?next=/customers'
         resp = self.client.get(reverse('customerlist'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+
+    def test_not_logged_in_on_pqueue_manager(self):
+        """Test not logged in users should be redirected to login."""
+        login_url = '/accounts/login/?next=/pqueue/manager'
+        resp = self.client.get(reverse('pqueue_manager'))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
@@ -834,6 +841,154 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Pedidos')
         self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
 
+
+class PQueueManagerTests(TestCase):
+    """Test the pqueue manager view."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        for i in range(1, 3):
+            Item.objects.create(name='Test item%s' % i, fabrics=5)
+
+        # Create orderitems
+        for item in Item.objects.all():
+            OrderItem.objects.create(reference=order, element=item)
+
+        self.client.login(username='regular', password='test')
+
+    def test_view_exists(self):
+        """First test the existence of pqueue view."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
+
+    def test_available_items_exclude_delivered_and_cancelled_orders(self):
+        """The list only includes active orders."""
+        for i in range(2):
+            order = Order.objects.create(user=User.objects.first(),
+                                         customer=Customer.objects.first(),
+                                         ref_name='Void order',
+                                         delivery=date.today(),
+                                         status=i + 7, budget=0, prepaid=0)
+            OrderItem.objects.create(reference=order,
+                                     element=Item.objects.first())
+
+        resp = self.client.get(reverse('pqueue_manager'))
+        for item in resp.context['available']:
+            self.assertEqual(item.reference.ref_name, 'Test order')
+
+    def test_available_items_exclude_stock_items(self):
+        """The list only includes production items."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        stock_item = OrderItem.objects.first()
+        stock_item.stock = True
+        stock_item.description = 'Stocked item'
+        stock_item.save()
+
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(len(resp.context['available']), 2)
+        for item in resp.context['available']:
+            self.assertNotEqual(item.description, 'Stocked item')
+
+    def test_available_items_exclude_items_already_queued(self):
+        """The list only includes items that aren't yet in the queue."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        queued_item = OrderItem.objects.first()
+        queued_item.description = 'Queued item'
+        queued_item.save()
+
+        PQueue.objects.create(item=queued_item)
+
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(len(resp.context['available']), 2)
+        for item in resp.context['available']:
+            self.assertNotEqual(item.description, 'Queued item')
+
+    def test_available_items_sort_by_delivery(self):
+        """Sort by delivery, then by ref_name."""
+        delivery = date.today() + timedelta(days=1)
+        order = Order.objects.create(user=User.objects.first(),
+                                     customer=Customer.objects.first(),
+                                     ref_name='Future order',
+                                     delivery=delivery,
+                                     budget=0, prepaid=0)
+        OrderItem.objects.bulk_create([
+            OrderItem(reference=order, element=Item.objects.first()),
+            OrderItem(reference=order, element=Item.objects.last()),
+        ])
+        orders = Order.objects.all()
+        self.assertEqual(orders.count(), 2)
+        resp = self.client.get(reverse('pqueue_manager'))
+        for item in resp.context['available'][:3]:
+            self.assertEqual(item.reference.ref_name, 'Test order')
+        for item in resp.context['available'][3:5]:
+            self.assertEqual(item.reference.ref_name, 'Future order')
+
+    def test_available_items_sort_by_ref_name(self):
+        """On equal delivery, sort by ref_name."""
+        order = Order.objects.create(user=User.objects.first(),
+                                     customer=Customer.objects.first(),
+                                     ref_name='Future order',
+                                     delivery=date.today(),
+                                     budget=0, prepaid=0)
+        OrderItem.objects.bulk_create([
+            OrderItem(reference=order, element=Item.objects.first()),
+            OrderItem(reference=order, element=Item.objects.last()),
+        ])
+        orders = Order.objects.all()
+        self.assertEqual(orders.count(), 2)
+        resp = self.client.get(reverse('pqueue_manager'))
+        for item in resp.context['available'][:2]:
+            self.assertEqual(item.reference.ref_name, 'Future order')
+        for item in resp.context['available'][2:5]:
+            self.assertEqual(item.reference.ref_name, 'Test order')
+
+    def test_queued_items_exclude_delivered_and_cancelled_orders(self):
+        """The queue only shows active order items."""
+        for i in range(2):
+            order = Order.objects.create(user=User.objects.first(),
+                                         customer=Customer.objects.first(),
+                                         ref_name='Void order',
+                                         delivery=date.today(),
+                                         status=i + 7, budget=0, prepaid=0)
+            OrderItem.objects.create(reference=order,
+                                     element=Item.objects.first())
+
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        resp = self.client.get(reverse('pqueue_manager'))
+        for item in resp.context['active']:
+            self.assertEqual(item.item.reference.ref_name, 'Test order')
+
+    def test_queued_items_active_and_completed(self):
+        """Active items are positive scored, while completed are negative."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        completed_item = PQueue.objects.first()
+        completed_item.complete()
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(len(resp.context['active']), 2)
+        self.assertEqual(len(resp.context['completed']), 1)
 
 class StandardViewsTest(TestCase):
     """Test the standard views."""

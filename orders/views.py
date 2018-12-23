@@ -4,7 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
 from django.http import JsonResponse, Http404
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, OrderItem, Item
+from .models import Comment, Customer, Order, OrderItem, Item, PQueue
 from django.utils import timezone
 from .forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
                     OrderCloseForm, OrderItemForm, EditDateForm)
@@ -397,6 +397,30 @@ def customer_view(request, pk):
                      'footer': True,
                      }
     return render(request, 'tz/customer_view.html', view_settings)
+
+
+@login_required
+def pqueue_manager(request):
+    """Display the production queue and edit it."""
+    available = OrderItem.objects.exclude(reference__status__in=[7, 8])
+    available = available.exclude(stock=True).filter(pqueue__isnull=True)
+    available = available.order_by('reference__delivery',
+                                   'reference__ref_name')
+    pqueue = PQueue.objects.select_related('item__reference')
+    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+    pqueue_completed = pqueue.filter(score__lt=0)
+    pqueue_active = pqueue.filter(score__gt=0)
+    cur_user = request.user
+    now = datetime.now()
+    view_settings = {'available': available,
+                     'active': pqueue_active,
+                     'completed': pqueue_completed,
+                     'user': cur_user,
+                     'now': now,
+                     'version': settings.VERSION,
+                     'title': 'TrapuZarrak · Cola de producción',
+                     }
+    return render(request, 'tz/pqueue_manager.html', view_settings)
 
 
 # Ajax powered views
