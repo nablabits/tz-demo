@@ -990,6 +990,14 @@ class PQueueManagerTests(TestCase):
         self.assertEqual(len(resp.context['active']), 2)
         self.assertEqual(len(resp.context['completed']), 1)
 
+    def test_i_relax_does_not_raise_error(self):
+        """Test picking the icon does not raise index error."""
+        self.client.login(username='regular', password='test')
+        for i in range(20):  # big enough
+            resp = self.client.get(reverse('pqueue_manager'))
+            if resp.context['i_relax'] not in settings.RELAX_ICONS:
+                raise ValueError('Not in list')
+
 
 class PQueueActionsTests(TestCase):
     """Test the AJAX server side."""
@@ -1322,6 +1330,24 @@ class PQueueActionsTests(TestCase):
         self.assertEqual(data['html_id'], '#pqueue-list')
         self.assertFalse(data['error'])
         self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+
+    def test_tablet_complete_action_valid(self):
+        """Test the correct process of complete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'tb-complete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list-tablet')
         self.assertFalse(data['error'])
         self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
 
@@ -1369,6 +1395,26 @@ class PQueueActionsTests(TestCase):
         self.assertEqual(data['html_id'], '#pqueue-list')
         self.assertFalse(data['error'])
         self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 0)
+
+    def test_tablet_uncomplete_action_valid(self):
+        """Test the correct process of uncomplete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.complete()
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'tb-uncomplete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list-tablet')
         self.assertFalse(data['error'])
         self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 0)
 

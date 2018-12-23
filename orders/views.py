@@ -410,11 +410,13 @@ def pqueue_manager(request):
     pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
     pqueue_completed = pqueue.filter(score__lt=0)
     pqueue_active = pqueue.filter(score__gt=0)
+    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
     cur_user = request.user
     now = datetime.now()
     view_settings = {'available': available,
                      'active': pqueue_active,
                      'completed': pqueue_completed,
+                     'i_relax': i_relax,
                      'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
@@ -1192,7 +1194,8 @@ def pqueue_actions(request):
 
     # Ensure the action is fine
     accepted_actions = ('send', 'back', 'up', 'down', 'top', 'bottom',
-                        'complete', 'uncomplete')
+                        'complete', 'uncomplete', 'tb-complete',
+                        'tb-uncomplete')
     if action not in accepted_actions:
         return HttpResponseServerError('The action was not recognized')
 
@@ -1259,19 +1262,24 @@ def pqueue_actions(request):
         else:
             data['error'] = 'Couldn\'t clean the object'
 
-    elif action == 'complete':
+    elif action == 'complete' or action == 'tb-complete':
         item = get_object_or_404(PQueue, pk=pk)
         if item.complete():
             data['is_valid'] = True
         else:
             data['error'] = 'Couldn\'t clean the object'
 
-    elif action == 'uncomplete':
+    elif action == 'uncomplete' or action == 'tb-uncomplete':
         item = get_object_or_404(PQueue, pk=pk)
         if item.uncomplete():
             data['is_valid'] = True
         else:
             data['error'] = 'Couldn\'t clean the object'
+
+    # Tablet view id
+    if action == 'tb-complete' or action == 'tb-uncomplete':
+        data['html_id'] = '#pqueue-list-tablet'
+        template = 'includes/pqueue_list_tablet.html'
 
     """
     Test stuff. Since it's not very straightforward extract this data
