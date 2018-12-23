@@ -590,7 +590,6 @@ class PQueueTest(TestCase):
         self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
         self.assertEqual(PQueue.objects.get(pk=first.pk).score, 1003)
 
-
     def test_complete(self):
         """Test complete method."""
         for item in OrderItem.objects.all():
@@ -599,7 +598,7 @@ class PQueueTest(TestCase):
             item.complete()
         first, mid, last = PQueue.objects.all()
         self.assertEqual((first.score, mid.score, last.score),
-                         (-2, -1, 1002))
+                         (-3, -2, 1002))
 
 
 #
