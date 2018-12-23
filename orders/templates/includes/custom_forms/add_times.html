@@ -1,0 +1,21 @@
+{% load widget_tweaks %}
+<div class="row js-set-times">
+  <div class="col">
+    <div class="form-group">
+      {{form.crop.label_tag}}
+      {% render_field form.crop class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
+      {{form.sewing.label_tag}}
+      {% render_field form.sewing class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
+      {{form.iron.label_tag}}
+      {% render_field form.iron class="form-control" %}
+    </div>
+  </div>
+</div>

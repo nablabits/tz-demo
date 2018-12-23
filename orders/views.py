@@ -7,7 +7,7 @@ from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Item, PQueue
 from django.utils import timezone
 from .forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
-                    OrderCloseForm, OrderItemForm, EditDateForm)
+                    OrderCloseForm, OrderItemForm, EditDateForm, AddTimesForm)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -631,6 +631,21 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
+        # Edit times on pqueue
+        elif action == 'pqueue-add-time':
+            get_object_or_404(OrderItem, pk=pk)
+            item = OrderItem.objects.select_related('reference').get(pk=pk)
+            form = OrderItemForm(instance=item)
+            context = {'form': form,
+                       'item': item,
+                       'modal_title': 'Editar tiempos',
+                       'pk': item.pk,
+                       'action': 'pqueue-add-time',
+                       'submit_btn': 'Guardar',
+                       'custom_form': 'includes/custom_forms/add_times.html',
+                       }
+            template = 'includes/regular_form.html'
+
         # Delete item objects (GET)
         elif action == 'object-item-delete':
             item = get_object_or_404(Item, pk=pk)
@@ -975,6 +990,39 @@ class Actions(View):
                            }
                 template = 'includes/regular_form.html'
                 data['form_is_valid'] = False
+
+        # add times from pqueue
+        elif action == 'pqueue-add-time':
+            get_object_or_404(OrderItem, pk=pk)
+            item = OrderItem.objects.select_related('reference').get(pk=pk)
+            form = AddTimesForm(request.POST, instance=item)
+            if form.is_valid():
+                pqueue = PQueue.objects.select_related('item__reference')
+                pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+                pqueue_completed = pqueue.filter(score__lt=0)
+                pqueue_active = pqueue.filter(score__gt=0)
+                context = {'active': pqueue_active,
+                           'completed': pqueue_completed,
+                           }
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#pqueue-list-tablet'
+                template = 'includes/pqueue_list_tablet.html'
+            else:
+                custom_form = 'includes/custom_forms/add_times.html'
+                context = {'form': form,
+                           'item': item,
+                           'modal_title': 'Editar tiempos',
+                           'pk': item.pk,
+                           'action': 'pqueue-add-time',
+                           'submit_btn': 'Guardar',
+                           'custom_form': custom_form,
+                           }
+                template = 'includes/regular_form.html'
+                data['form_is_valid'] = False
+
+                item = OrderItem.objects.select_related('reference').get(pk=pk)
+                form = OrderItemForm(instance=item)
 
         # Collect order (POST)
         elif action == 'order-pay-now':
