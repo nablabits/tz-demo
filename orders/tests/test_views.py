@@ -2409,6 +2409,24 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_pqueue_add_time(self):
+        """Test context dictionaries and template."""
+        item = OrderItem.objects.get(reference=Order.objects.first())
+        resp = self.client.get(reverse('actions'),
+                               {'pk': item.pk,
+                                'action': 'pqueue-add-time',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        vars = ('item', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(self.context_vars(context, vars))
+
     def test_delete_order_item(self):
         """Test context dictionaries and template."""
         order = Order.objects.get(ref_name='example')
@@ -2716,6 +2734,7 @@ class ActionsPostMethodCreate(TestCase):
                    'customer-edit',
                    'object-item-edit',
                    'order-item-edit',
+                   'pqueue-add-time',
                    'order-pay-now',
                    'order-close',
                    'update-status',
@@ -3348,6 +3367,32 @@ class ActionsPostMethodEdit(TestCase):
         self.assertFalse(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/regular_form.html')
         self.assertTrue(self.context_vars(data['context'], vars))
+
+    def test_pqueue_add_time_adds_time(self):
+        """Test the correct time edition from pqueue."""
+        item = OrderItem.objects.first()
+        for i in (item.sewing, item.crop, item.iron):
+            self.assertEqual(i, timedelta(0))
+        resp = self.client.post(reverse('actions'),
+                                {'iron': '2', 'crop': '2', 'sewing': '2',
+                                 'pk': item.pk,
+                                 'action': 'pqueue-add-time',
+                                 'test': True
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertEqual(data['html_id'], '#pqueue-list-tablet')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
+        # Test if the fields were modified
+        mod_item = OrderItem.objects.get(pk=item.pk)
+        for i in (mod_item.sewing, mod_item.crop, mod_item.iron):
+            self.assertEqual(i, timedelta(0, 2))
 
     def test_collect_order_succesful(self):
         """Test the proper mark-as-paid method."""

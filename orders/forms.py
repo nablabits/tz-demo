@@ -86,6 +86,16 @@ class OrderItemForm(forms.ModelForm):
         self.fields['element'].queryset = queryset
 
 
+class AddTimesForm(forms.ModelForm):
+    """Edit the item times on Pqueue."""
+
+    class Meta:
+        """Meta options for a quick design."""
+
+        model = OrderItem
+        fields = ('crop', 'sewing', 'iron')
+
+
 class CommentForm(forms.ModelForm):
     """Add comments using a form."""
 
