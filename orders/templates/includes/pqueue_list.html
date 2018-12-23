@@ -13,24 +13,31 @@
             <p>{{item.item.element.get_item_type_display}} {{item.item.element.name}} {{item.item.element.item_class}}-{{item.item.element.size}}</p>
           </div>
 
-
-          <div class="d-flex align-items-center ml-auto">
-            <button class="{%if forloop.first %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="top" data-pk="{{item.pk}}">
-              <i class="fal fa-arrow-alt-to-top"></i>
-            </button>
-            <button class="{%if forloop.first %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="up" data-pk="{{item.pk}}">
-              <i class="fal fa-arrow-alt-up"></i>
-            </button>
-            <button class="{%if forloop.last %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="down" data-pk="{{item.pk}}" {%if forloop.last %}disabled{%endif%}>
-              <i class="fal fa-arrow-alt-down"></i>
-            </button>
-            <button class="{%if forloop.last %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="bottom" data-pk="{{item.pk}}" {%if forloop.last %}disabled{%endif%}>
-              <i class="fal fa-arrow-alt-to-bottom"></i>
-            </button>
-            <button class="mr-1 btn btn-sm btn-outline-danger js-queue" data-action="back" data-pk="{{item.pk}}">
-              <i class="fal fa-times"></i>
-            </button>
+          <div class="d-flex flex-column justify-content-center ml-auto">
+            <div class="d-flex justify-content-end">
+              <button class="{%if forloop.first %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="top" data-pk="{{item.pk}}">
+                <i class="fal fa-arrow-alt-to-top"></i>
+              </button>
+              <button class="{%if forloop.first %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="up" data-pk="{{item.pk}}">
+                <i class="fal fa-arrow-alt-up"></i>
+              </button>
+              <button class="{%if forloop.last %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="down" data-pk="{{item.pk}}" {%if forloop.last %}disabled{%endif%}>
+                <i class="fal fa-arrow-alt-down"></i>
+              </button>
+              <button class="{%if forloop.last %}d-none{%endif%} mr-1 btn btn-sm btn-outline-success js-queue" data-action="bottom" data-pk="{{item.pk}}" {%if forloop.last %}disabled{%endif%}>
+                <i class="fal fa-arrow-alt-to-bottom"></i>
+              </button>
+            </div>
+            <div class="d-flex mt-1 justify-content-end">
+              <button class="mr-1 btn btn-sm btn-outline-success js-queue" data-action="complete" data-pk="{{item.pk}}">
+                <i class="far fa-check"></i>
+              </button>
+              <button class="mr-1 btn btn-sm btn-outline-danger js-queue" data-action="back" data-pk="{{item.pk}}">
+                <i class="fal fa-trash"></i>
+              </button>
+            </div>
           </div>
+
         </div>
       </div>
     {% endfor %}
