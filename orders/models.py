@@ -311,7 +311,8 @@ class PQueue(models.Model):
 
     def top(self):
         """Raise the current item to the top."""
-        prev_elements = PQueue.objects.filter(score__lt=self.score)
+        prev_elements = PQueue.objects.filter(score__gt=0)
+        prev_elements = prev_elements.filter(score__lt=self.score)
         if not prev_elements:
             return ('Warning: you are trying to raise an item that is ' +
                     'already on top')
