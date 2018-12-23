@@ -322,14 +322,14 @@ class PQueue(models.Model):
 
     def up(self):
         """Raise one position the element in the list."""
-        prev_elements = PQueue.objects.filter(score__lt=self.score)
-        if not prev_elements:
+        above_elements = PQueue.objects.filter(score__lt=self.score)
+        if not above_elements:
             return ('Warning: you are trying to raise an item that is ' +
                     'already on top')
-        elif prev_elements.count() == 1:
-            self.top()
+        elif above_elements.count() == 1:
+            return self.top()
         else:
-            next, closest = prev_elements[:2]
+            closest, next = above_elements.reverse()[:2]
             if closest.score - next.score > 1:
                 self.score = closest.score - 1
                 return self.save()
