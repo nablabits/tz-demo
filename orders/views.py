@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, HttpResponseServerError
 from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Item, PQueue
 from django.utils import timezone
@@ -1174,3 +1174,129 @@ def filter_items(request):
         data['len_items'] = len(items)
 
     return JsonResponse(data)
+
+
+def pqueue_actions(request):
+    """Manage the ajax actions for PQueue objects."""
+    # Ensure the request method
+    if request.method != 'POST':
+        return HttpResponseServerError('The request should go in a post ' +
+                                       'method')
+
+    pk = request.POST.get('pk', None)
+    action = request.POST.get('action', None)
+
+    # Ensure that there is a pk and action
+    if not pk or not action:
+        return HttpResponseServerError('POST data was poor')
+
+    # Ensure the action is fine
+    accepted_actions = ('send', 'back', 'up', 'down', 'top', 'bottom',
+                        'complete', 'uncomplete')
+    if action not in accepted_actions:
+        return HttpResponseServerError('The action was not recognized')
+
+    # Initial data
+    data = {'html_id': '#pqueue-list',
+            'reload': False,
+            'is_valid': False,
+            'error': False, }
+    template = 'includes/pqueue_list.html'
+
+    pqueue = PQueue.objects.select_related('item__reference')
+    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+    pqueue_completed = pqueue.filter(score__lt=0)
+    pqueue_active = pqueue.filter(score__gt=0)
+    context = {'active': pqueue_active,
+               'completed': pqueue_completed,
+               }
+
+    if action == 'send':
+        item = get_object_or_404(OrderItem, pk=pk)
+        to_queue = PQueue(item=item)
+        try:
+            to_queue.clean()
+        except ValidationError:
+            data['error'] = 'Couldn\'t save the object'
+        else:
+            to_queue.save()
+            data['is_valid'] = True
+            data['reload'] = True
+            data['html_id'] = False
+
+    elif action == 'back':
+        item = get_object_or_404(PQueue, pk=pk)
+        item.delete()
+        data['is_valid'] = True
+        data['reload'] = True
+        data['html_id'] = False
+
+    elif action == 'up':
+        item = get_object_or_404(PQueue, pk=pk)
+        if item.up():
+            data['is_valid'] = True
+        else:
+            data['error'] = 'Couldn\'t clean the object'
+
+    elif action == 'down':
+        item = get_object_or_404(PQueue, pk=pk)
+        if item.down():
+            data['is_valid'] = True
+        else:
+            data['error'] = 'Couldn\'t clean the object'
+
+    elif action == 'top':
+        item = get_object_or_404(PQueue, pk=pk)
+        if item.top():
+            data['is_valid'] = True
+        else:
+            data['error'] = 'Couldn\'t clean the object'
+
+    elif action == 'bottom':
+        item = get_object_or_404(PQueue, pk=pk)
+        if item.bottom():
+            data['is_valid'] = True
+        else:
+            data['error'] = 'Couldn\'t clean the object'
+
+    elif action == 'complete':
+        item = get_object_or_404(PQueue, pk=pk)
+        if item.complete():
+            data['is_valid'] = True
+        else:
+            data['error'] = 'Couldn\'t clean the object'
+
+    elif action == 'uncomplete':
+        item = get_object_or_404(PQueue, pk=pk)
+        if item.uncomplete():
+            data['is_valid'] = True
+        else:
+            data['error'] = 'Couldn\'t clean the object'
+
+    """
+    Test stuff. Since it's not very straightforward extract this data
+    from render_to_string() method, we'll pass them as keys in JSON but
+    just for testing purposes.
+    """
+    if request.POST.get('test'):
+        data['template'] = template
+        add_to_context = []
+        for k in context:
+            add_to_context.append(k)
+        data['context'] = add_to_context
+
+    data['html'] = render_to_string(template, context, request=request)
+    return JsonResponse(data)
+
+
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#

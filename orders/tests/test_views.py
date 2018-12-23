@@ -990,6 +990,410 @@ class PQueueManagerTests(TestCase):
         self.assertEqual(len(resp.context['active']), 2)
         self.assertEqual(len(resp.context['completed']), 1)
 
+
+class PQueueActionsTests(TestCase):
+    """Test the AJAX server side."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        item = Item.objects.create(name='Test item object', fabrics=5)
+
+        # Create orderitems
+        for i in range(3):
+            OrderItem.objects.create(reference=order, element=item)
+
+        self.client.login(username='regular', password='test')
+
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        context_is_valid = 0
+        for item in context:
+            for var in vars:
+                if item == var:
+                    context_is_valid += 1
+        if context_is_valid == len(vars):
+            return True
+        else:
+            return False
+
+    def test_valid_method(self):
+        """Only post method is accepted."""
+        item = OrderItem.objects.first()
+        resp = self.client.get(reverse('queue-actions'),
+                               {'pk': item.pk, 'action': 'send'})
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.content.decode('utf-8'),
+                         'The request should go in a post method')
+
+    def test_no_pk_or_no_action_raise_500(self):
+        """Ensure that action and pk are sent with the request."""
+        item = OrderItem.objects.first()
+        resp_no_pk = self.client.post(reverse('queue-actions'),
+                                      {'action': 'send'})
+        resp_no_action = self.client.post(reverse('queue-actions'),
+                                          {'pk': item.pk})
+        self.assertEqual(resp_no_pk.status_code, 500)
+        self.assertEqual(resp_no_pk.content.decode('utf-8'),
+                         'POST data was poor')
+        self.assertEqual(resp_no_action.status_code, 500)
+        self.assertEqual(resp_no_action.content.decode('utf-8'),
+                         'POST data was poor')
+
+    def test_valid_actions(self):
+        """Only certain actions are possible."""
+        item = OrderItem.objects.first()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'invalid'})
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.content.decode('utf-8'),
+                         'The action was not recognized')
+
+    def test_pk_out_of_range_raises_404(self):
+        """Test the correct pk."""
+        actions = ('send', 'back', 'up', 'down', 'top', 'bottom', 'complete',
+                   'uncomplete')
+        for action in actions:
+            resp = self.client.post(reverse('queue-actions'),
+                                    {'pk': 2000, 'action': action})
+            self.assertEqual(resp.status_code, 404)
+
+    def test_send_action_valid(self):
+        """Test the correct process of send action."""
+        item = OrderItem.objects.first()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'send',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertTrue(data['reload'])
+        self.assertFalse(data['html_id'])
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.all().count(), 1)
+
+    def test_send_action_rejected(self):
+        """Test the correct process of send action."""
+        item = OrderItem.objects.first()
+        item.stock = True
+        item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'send',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t save the object')
+        self.assertEqual(PQueue.objects.all().count(), 0)
+
+    def test_back_action_valid(self):
+        """Test the correct send back to item list."""
+        item = PQueue.objects.create(item=OrderItem.objects.first())
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'back',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertTrue(data['reload'])
+        self.assertFalse(data['html_id'])
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.all().count(), 0)
+
+    def test_up_action_valid(self):
+        """Test the correct process of up action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'up',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], 'pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), first)
+        self.assertEqual(PQueue.objects.last(), mid)
+
+    def test_up_action_rejected(self):
+        """Test the correct process of up action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.last()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'up',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_top_action_valid(self):
+        """Test the correct process of top action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'top',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], 'pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), last)
+        self.assertEqual(PQueue.objects.last(), mid)
+
+    def test_top_action_rejected(self):
+        """Test the correct process of top action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.last()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'top',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_down_action_valid(self):
+        """Test the correct process of down action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'down',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], 'pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), mid)
+        self.assertEqual(PQueue.objects.last(), last)
+
+    def test_down_action_rejected(self):
+        """Test the correct process of down action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'down',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_bottom_action_valid(self):
+        """Test the correct process of bottom action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'bottom',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], 'pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), mid)
+        self.assertEqual(PQueue.objects.last(), first)
+
+    def test_bottom_action_rejected(self):
+        """Test the correct process of bottom action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'bottom',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_complete_action_valid(self):
+        """Test the correct process of complete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'complete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], 'pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+
+    def test_complete_action_rejected(self):
+        """Test the correct process of complete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'complete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+        self.assertFalse(PQueue.objects.filter(score__lt=0).count())
+
+    def test_uncomplete_action_valid(self):
+        """Test the correct process of uncomplete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.complete()
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'uncomplete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], 'pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 0)
+
+    def test_uncomplete_action_rejected(self):
+        """Test the correct process of uncomplete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.complete()
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'uncomplete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+
+
 class StandardViewsTest(TestCase):
     """Test the standard views."""
 
