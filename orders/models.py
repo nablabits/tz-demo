@@ -318,7 +318,13 @@ class PQueue(models.Model):
                     'already on top')
         else:
             self.score = prev_elements.first().score - 1
-            return self.save()
+            try:
+                self.clean()
+            except ValidationError:
+                return False
+            else:
+                self.save()
+                return True
 
     def up(self):
         """Raise one position the element in the list."""
@@ -332,14 +338,26 @@ class PQueue(models.Model):
             closest, next = above_elements.reverse()[:2]
             if closest.score - next.score > 1:
                 self.score = closest.score - 1
-                return self.save()
+                try:
+                    self.clean()
+                except ValidationError:
+                    return False
+                else:
+                    self.save()
+                    return True
             else:
-                closest.score = -1
-                closest.save()
-                self.score = next.score + 1
-                self.save()
-                closest.score = next.score + 2
-                closest.save()
+                try:
+                    self.clean()
+                except ValidationError:
+                    return False
+                else:
+                    closest.score = -1
+                    closest.save()
+                    self.score = next.score + 1
+                    self.save()
+                    closest.score = next.score + 2
+                    closest.save()
+                    return True
 
     def down(self):
         """Lower one position the element in the list."""
@@ -348,8 +366,12 @@ class PQueue(models.Model):
             return ('Warning: you are trying to lower an item that is ' +
                     'already at the bottom')
         else:
-            next_elements[0].up()
-            return True
+            try:
+                self.clean()
+            except ValidationError:
+                return False
+            else:
+                return next_elements[0].up()
 
     def bottom(self):
         """Lower to the bottom."""
@@ -359,17 +381,37 @@ class PQueue(models.Model):
                     'already at the bottom')
         else:
             self.score = next_elements.last().score + 1
-            self.save()
-            return True
+            try:
+                self.clean()
+            except ValidationError:
+                return False
+            else:
+                self.save()
+                return True
 
     def complete(self):
         """Complete an item."""
         first = PQueue.objects.first()
         if first.score > 0:
-            self.score = -1
+            self.score = -2
         else:
             self.score = first.score - 1
-        self.save()
+        try:
+            self.clean()
+        except ValidationError:
+            return False
+        else:
+            self.save()
+            return True
+
+    def uncomplete(self):
+        """Send the item again to list."""
+        try:
+            self.clean()
+        except ValidationError:
+            return False
+        else:
+            return self.bottom()
 
 
 #
