@@ -116,6 +116,32 @@ $(function () {
     return false
   }
 
+  var queueAction = function () {
+    var pk = $(this).attr('data-pk')
+    var action = $(this).attr('data-action')
+    $.ajax({
+      url: '/queue-actions/',
+      data: $.param({
+        'pk': pk, 'action': action
+      }),
+      type: 'post',
+      dataType: 'json',
+      success: function (data) {
+        if (data.is_valid) {
+          if (data.reload) {
+            location.reload()
+          } else {
+            $(data.html_id).html(data.html)
+          }
+        } else {
+          $('.js-ajax-error').html(data.error)
+          $('#display-errors').removeClass('d-none')
+        }
+      }
+    })
+    // return false
+  }
+
   // actions (GET)
   $('.js-order-add').click(loadActionForm)
   $('.js-order-edit').click(loadActionForm)
@@ -143,4 +169,7 @@ $(function () {
   $('#order-status').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
+
+  // Pqueue actions
+  $('#root').on('click', '.js-queue', queueAction)
 })

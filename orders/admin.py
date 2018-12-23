@@ -1,7 +1,7 @@
 """Show all the models in the admin page."""
 
 from django.contrib import admin
-from .models import Customer, Comment, Order, Item, OrderItem
+from .models import Customer, Comment, Order, Item, OrderItem, PQueue
 
 
 @admin.register(Customer)
@@ -38,6 +38,14 @@ class OrderItemAdmin(admin.ModelAdmin):
     list_display = ('pk', 'element', 'qty', 'reference',
                     'crop', 'sewing', 'iron')
     list_filter = ('element', )
+
+
+@admin.register(PQueue)
+class PQueueAdmin(admin.ModelAdmin):
+    """Beautify the order item admin view."""
+
+    list_display = ('pk', 'item', 'score', )
+    list_filter = ('score', )
 
 
 admin.site.register(Comment)

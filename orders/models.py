@@ -267,6 +267,153 @@ class Comment(models.Model):
         name = ('El ' + str(self.creation.date()) +
                 ', ' + str(self.user) + ' comentó en ' + str(self.reference))
         return name
+
+
+class PQueue(models.Model):
+    """Create a production queue."""
+
+    item = models.OneToOneField(OrderItem, on_delete=models.CASCADE,
+                                primary_key=True)
+    score = models.IntegerField(unique=True, blank=True, null=True)
+
+    class Meta:
+        """Meta options."""
+
+        ordering = ['score']
+
+    def clean(self):
+        """Override clean method."""
+        # Avoid stock items to be added to the db."""
+        if self.item.stock:
+            raise ValidationError('Stocked items can\'t be queued')
+
+    def save(self, *args, **kwargs):
+        """Override the save method."""
+        # Set score if none
+        if self.score is None:
+            highest = PQueue.objects.last()
+            if not highest:
+                self.score = 1000
+            else:
+                self.score = highest.score + 1
+
+        # Set score if 0
+        elif self.score == 0:
+            score_1 = PQueue.objects.filter(score=1)
+            if score_1.exists():
+                for item in PQueue.objects.reverse():
+                    item.score = item.score + 1
+                    item.save()
+                self.score = 1
+            else:
+                self.score = 1
+        super().save(*args, **kwargs)
+
+    def top(self):
+        """Raise the current item to the top."""
+        prev_elements = PQueue.objects.filter(score__gt=0)
+        prev_elements = prev_elements.filter(score__lt=self.score)
+        if not prev_elements:
+            return ('Warning: you are trying to raise an item that is ' +
+                    'already on top')
+        else:
+            self.score = prev_elements.first().score - 1
+            try:
+                self.clean()
+            except ValidationError:
+                return False
+            else:
+                self.save()
+                return True
+
+    def up(self):
+        """Raise one position the element in the list."""
+        above_elements = PQueue.objects.filter(score__lt=self.score)
+        if not above_elements:
+            return ('Warning: you are trying to raise an item that is ' +
+                    'already on top')
+        elif above_elements.count() == 1:
+            return self.top()
+        else:
+            closest, next = above_elements.reverse()[:2]
+            if closest.score - next.score > 1:
+                self.score = closest.score - 1
+                try:
+                    self.clean()
+                except ValidationError:
+                    return False
+                else:
+                    self.save()
+                    return True
+            else:
+                try:
+                    self.clean()
+                except ValidationError:
+                    return False
+                else:
+                    closest.score = -1
+                    closest.save()
+                    self.score = next.score + 1
+                    self.save()
+                    closest.score = next.score + 2
+                    closest.save()
+                    return True
+
+    def down(self):
+        """Lower one position the element in the list."""
+        next_elements = PQueue.objects.filter(score__gt=self.score)
+        if not next_elements:
+            return ('Warning: you are trying to lower an item that is ' +
+                    'already at the bottom')
+        else:
+            try:
+                self.clean()
+            except ValidationError:
+                return False
+            else:
+                return next_elements[0].up()
+
+    def bottom(self):
+        """Lower to the bottom."""
+        next_elements = PQueue.objects.filter(score__gt=self.score)
+        if not next_elements:
+            return ('Warning: you are trying to lower an item that is ' +
+                    'already at the bottom')
+        else:
+            self.score = next_elements.last().score + 1
+            try:
+                self.clean()
+            except ValidationError:
+                return False
+            else:
+                self.save()
+                return True
+
+    def complete(self):
+        """Complete an item."""
+        first = PQueue.objects.first()
+        if first.score > 0:
+            self.score = -2
+        else:
+            self.score = first.score - 1
+        try:
+            self.clean()
+        except ValidationError:
+            return False
+        else:
+            self.save()
+            return True
+
+    def uncomplete(self):
+        """Send the item again to list."""
+        try:
+            self.clean()
+        except ValidationError:
+            return False
+        else:
+            return self.bottom()
+
+
 #
 #
 #

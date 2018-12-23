@@ -17,6 +17,7 @@ urlpatterns = [
             views.orderlist, name='orderlist'),
     path('customers', views.customerlist, name='customerlist'),
     path('items', views.itemslist, name='itemslist'),
+    path('pqueue/manager', views.pqueue_manager, name='pqueue_manager'),
 
     # Object related urls
     re_path(r'^order/view/(?P<pk>[0-9]+)$',
@@ -28,6 +29,7 @@ urlpatterns = [
     path('actions/', views.Actions.as_view(), name='actions'),
     path('changelog/', views.changelog, name='changelog'),
     path('filter-items/', views.filter_items, name='filter-items'),
+    path('queue-actions/', views.pqueue_actions, name='queue-actions'),
 
     # Loging related urls
     path('accounts/login/', auth_views.login, name='login'),

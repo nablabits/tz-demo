@@ -108,3 +108,8 @@ th{
   height: 500px;
   overflow: auto;
 }
+
+#pqueue-editor, #pqueue-list{
+  overflow-y: scroll;
+  height: 80vh;
+}
