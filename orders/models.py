@@ -159,6 +159,8 @@ class Item(models.Model):
     notes = models.TextField('Observaciones', blank=True, null=True)
     fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
     foreing = models.BooleanField('Externo', default=False)
+    price = models.DecimalField('Precio unitario',
+                                max_digits=6, decimal_places=2, default=0)
 
     def __str__(self):
         """Object's representation."""
