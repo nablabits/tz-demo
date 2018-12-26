@@ -2984,9 +2984,16 @@ class ActionsPostMethodCreate(TestCase):
                                               'item_class': 'S',
                                               'size': '4',
                                               'fabrics': 4,
+                                              'price': 500,
                                               'notes': 'Custom Notes',
                                               })
-        self.assertTrue(Item.objects.get(name='Example Item'))
+        item = Item.objects.get(name='Example Item')
+        self.assertEqual(item.item_type, '2')
+        self.assertEqual(item.item_class, 'S')
+        self.assertEqual(item.size, '4')
+        self.assertEqual(item.fabrics, 4)
+        self.assertEqual(item.price, 500)
+        self.assertEqual(item.notes, 'Custom Notes')
 
     def test_obj_item_add_context_response(self):
         """Test the context returned by obj item creation."""
@@ -2998,6 +3005,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'item_class': 'S',
                                  'size': '4',
                                  'fabrics': 4,
+                                 'price': 500,
                                  'notes': 'Custom Notes',
                                  'test': True,
                                  })
@@ -3023,7 +3031,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'item_class': 'S',
                                  'size': '4',
                                  'fabrics': 'invalid quantity',
-                                 'notes': 'Custom Notes',
+                                 'notes': 'Custom notes',
                                  'test': True,
                                  })
         self.assertIsInstance(resp, JsonResponse)
@@ -3033,7 +3041,8 @@ class ActionsPostMethodCreate(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertFalse(data['form_is_valid'])
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',)
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
 
@@ -3265,13 +3274,14 @@ class ActionsPostMethodEdit(TestCase):
 
     def test_obj_item_edit(self):
         """Test the correct item edition."""
-        item = Item.objects.all()[0]
+        item = Item.objects.first()
         resp = self.client.post(reverse('actions'),
                                 {'name': 'Changed name',
                                  'item_type': '2',
                                  'item_class': 'M',
                                  'size': 'X',
                                  'fabrics': 5,
+                                 'price': 2000,
                                  'notes': 'Changed notes',
                                  'pk': item.pk,
                                  'action': 'object-item-edit',
@@ -3295,6 +3305,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertNotEqual(item.item_class, edited.item_class)
         self.assertNotEqual(item.size, edited.size)
         self.assertNotEqual(item.fabrics, edited.fabrics)
+        self.assertNotEqual(item.price, edited.price)
 
     def test_obj_item_edit_invalid_form_returns_to_form_again(self):
         """Test the proper rejection of forms."""

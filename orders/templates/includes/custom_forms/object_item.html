@@ -32,6 +32,12 @@
   </div>
   <div class="col">
     <div class="form-group">
+      {{form.price.label_tag}}
+      {% render_field form.price class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
       {{form.foreing.label_tag}}
       {% render_field form.foreing class="form-control" %}
     </div>

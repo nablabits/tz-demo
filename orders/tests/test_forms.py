@@ -92,6 +92,7 @@ class ItemFormTest(TestCase):
                               'item_class': 'S',
                               'size': 10,
                               'fabrics': 10,
+                              'price': 100,
                               'notes': 'Notes',
                               'foreing': True})
         self.assertTrue(self.form.is_valid())
@@ -104,6 +105,7 @@ class ItemFormTest(TestCase):
                                     'item_class': 'S',
                                     'size': 10,
                                     'fabrics': 10,
+                                    'price': 100,
                                     'notes': 'Another Notes',
                                     'foreing': True})
         not_valid = duplicated_form.is_valid()
@@ -119,6 +121,7 @@ class ItemFormTest(TestCase):
                                  'item_class': 'S',
                                  'size': 10,
                                  'fabrics': 12,
+                                 'price': 100,
                                  'notes': 'Another Notes',
                                  'foreing': True})
         self.assertTrue(same_fabrics.is_valid())

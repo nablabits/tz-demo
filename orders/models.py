@@ -175,7 +175,8 @@ class Item(models.Model):
                 duplicated = (self.item_class == item.item_class and
                               self.item_class == item.item_class and
                               self.size == item.size and
-                              self.fabrics == item.fabrics
+                              self.fabrics == item.fabrics and
+                              self.price == item.price
                               )
                 if duplicated:
                     raise ValidationError({'name': _('Items cannot have the ' +
