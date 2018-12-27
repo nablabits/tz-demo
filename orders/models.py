@@ -224,6 +224,10 @@ class OrderItem(models.Model):
     fit = models.BooleanField('Arreglo', default=False)
     stock = models.BooleanField('Stock', default=False)
 
+    # Item defined price
+    price = models.DecimalField('Precio unitario',
+                                max_digits=6, decimal_places=2, blank=True)
+
     def save(self, *args, **kwargs):
         """Override the save method."""
         try:
@@ -234,11 +238,15 @@ class OrderItem(models.Model):
                                           item_class='0',
                                           size=0,
                                           fabrics=0)
-
         try:
             self.element
         except ObjectDoesNotExist:
             self.element = default
+
+        # When no price is given, pickup the object item's default
+        if not self.price:
+            obj_item = Item.objects.get(pk=self.element.pk)
+            self.price = obj_item.price
 
         super().save(*args, **kwargs)
 

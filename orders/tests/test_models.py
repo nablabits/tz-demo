@@ -313,8 +313,8 @@ class TestOrderItems(TestCase):
 
     def test_orderitem_stock(self):
         """Items are by default new produced for orders."""
-        item = OrderItem.objects.create(element=Item.objects.all()[0],
-                                        reference=Order.objects.all()[0],
+        item = OrderItem.objects.create(element=Item.objects.first(),
+                                        reference=Order.objects.first(),
                                         )
         self.assertFalse(item.stock)
         self.assertIsInstance(item.stock, bool)
@@ -322,7 +322,7 @@ class TestOrderItems(TestCase):
 
     def test_add_items_to_orders(self):
         """Test the proper item attachs to orders."""
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=5.2)
         OrderItem.objects.create(description='Test item',
                                  reference=order,
@@ -337,9 +337,28 @@ class TestOrderItems(TestCase):
         self.assertEqual(created_item.iron, timedelta(0))
         self.assertFalse(created_item.fit)
 
+    def test_orderitem_price_attr(self):
+        """Order item's default attributes."""
+        item = OrderItem.objects.create(
+            element=Item.objects.first(), reference=Order.objects.first(),
+            price=0)
+        self.assertEqual(item.price, 0)
+        self.assertEqual(item._meta.get_field('price').verbose_name,
+                         'Precio unitario')
+
+    def test_orderitem_default_price(self):
+        """When no price is given, pickup the object item's default."""
+        object_item = Item.objects.first()
+        object_item.price = 200
+        object_item.name = 'Item default price'
+        object_item.save()
+        item = OrderItem.objects.create(
+            element=object_item, reference=Order.objects.first(), )
+        self.assertEqual(item.price, 200)
+
     def test_add_items_to_orders_default_item(self):
         """If no element is selected, Predetermiando is default."""
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.get(name='Predeterminado')
         OrderItem.objects.create(description='Test item',
                                  reference=order, )
@@ -349,7 +368,7 @@ class TestOrderItems(TestCase):
 
     def test_items_time_quality_property(self):
         """Test the proper value for timing."""
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         order_item = OrderItem.objects.create(description='Test item',
                                               reference=order,
                                               crop=timedelta(2),
