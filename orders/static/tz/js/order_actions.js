@@ -51,9 +51,13 @@ $(function () {
   var loadActionForm = function () {
     var action = $(this).attr('data-action')
     var pk = $(this).attr('data-pk')
+    var aditionalPK = false
+    if ($(this).attr('data-aditional-pk')) {
+      aditionalPK = $(this).attr('data-aditional-pk')
+    }
     $.ajax({
       url: '/actions/',
-      data: { 'pk': pk, 'action': action },
+      data: { 'pk': pk, 'action': action, 'aditionalpk': aditionalPK },
       dataType: 'json',
       beforeSend: function () {
         $('#action-modal').modal('show')

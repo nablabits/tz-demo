@@ -12,7 +12,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Count, Sum, F, Q
+from django.db.models import Count, Sum, F, Q, DecimalField
 from datetime import datetime, date
 from random import randint
 from . import settings
@@ -368,6 +368,36 @@ def order_view(request, pk):
 
 
 @login_required
+def order_express_view(request, pk):
+    """Create a new quick checkout."""
+    order = get_object_or_404(Order, pk=pk)
+    item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
+    items = OrderItem.objects.filter(reference=order)
+    total = items.aggregate(
+        total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+    cur_user = request.user
+    now = datetime.now()
+    view_settings = {'order': order,
+                     'user': cur_user,
+                     'now': now,
+                     'item_types': settings.ITEM_TYPE[1:],
+                     'item_names': item_names,
+                     'items': items,
+                     'total': total,
+                     'version': settings.VERSION,
+                     'title': 'TrapuZarrak · Venta express',
+
+                     # CRUD Actions
+                     'btn_title_add': 'Nueva prenda',
+                     'js_action_add': 'object-item-add',
+                     # 'js_action_edit': 'order-express-item-edit',
+                     'js_action_delete': 'order-express-item-delete',
+                     'js_data_pk': '0',
+                     }
+    return render(request, 'tz/order_express.html', view_settings)
+
+
+@login_required
 def customer_view(request, pk):
     """Display details for an especific customer."""
     customer = get_object_or_404(Customer, pk=pk)
@@ -475,6 +505,17 @@ class Actions(View):
                        'action': 'order-new',
                        'submit_btn': 'Añadir',
                        'custom_form': 'includes/custom_forms/order.html',
+                       }
+            template = 'includes/regular_form.html'
+
+        # Add express order (GET)
+        elif action == 'order-express-add':
+            custom_form = 'includes/custom_forms/order_express.html'
+            context = {'modal_title': 'Nueva venta · Añadir CP',
+                       'pk': '0',
+                       'action': 'order-express-add',
+                       'submit_btn': 'Abrir venta',
+                       'custom_form': custom_form,
                        }
             template = 'includes/regular_form.html'
 
@@ -740,6 +781,21 @@ class Actions(View):
                            'custom_form': 'includes/custom_forms/order.html',
                            }
                 template = 'includes/regular_form.html'
+
+        # Add express order
+        elif action == 'order-express-add':
+            customer, created = Customer.objects.get_or_create(
+                name='express', city='server', phone=0,
+                cp=self.request.POST.get('cp'),
+                notes='AnnonymousUserAutmaticallyCreated'
+            )
+            order = Order.objects.create(
+                user=request.user, customer=customer, ref_name='Quick',
+                delivery=date.today(), status=7, budget=0, prepaid=0,
+            )
+
+            data['redirect'] = (reverse('order_express', args=[order.pk]))
+            data['form_is_valid'] = True
 
         # Add Customer (POST)
         elif action == 'customer-new':
@@ -1140,13 +1196,15 @@ class Actions(View):
         """
         if request.POST.get('test'):
             data['template'] = template
-            add_to_context = []
-            for k in context:
-                add_to_context.append(k)
-            data['context'] = add_to_context
+            if context:
+                add_to_context = []
+                for k in context:
+                    add_to_context.append(k)
+                data['context'] = add_to_context
 
         # Now render_to_string the html for JSON response
-        data['html'] = render_to_string(template, context, request=request)
+        if template and context:
+            data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
 
 
@@ -1207,6 +1265,7 @@ def filter_items(request):
                'js_action_delete': 'object-item-delete',
                }
     template = 'includes/items_list.html'
+    data['id'] = '#item_objects_list'
     data['html'] = render_to_string(template, context, request=request)
 
     """

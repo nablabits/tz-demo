@@ -2165,6 +2165,22 @@ class ActionsGetMethod(TestCase):
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_order_express(self):
+        """Test the correct process of express orders."""
+        resp = self.client.get(reverse('actions'),
+                               {'pk': None,
+                                'action': 'order-express-add',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        vars = ('modal_title', 'pk', 'action', 'submit_btn', 'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
+
     def test_add_customer(self):
         """Return code 200 on customer-add action."""
         resp = self.client.get(reverse('actions'), {'pk': None,
@@ -2206,7 +2222,7 @@ class ActionsGetMethod(TestCase):
 
     def test_send_item_to_order(self):
         """Test context dictionaries and template."""
-        item = Item.objects.all()[0]
+        item = Item.objects.first()
         resp = self.client.get(reverse('actions'),
                                {'pk': item.pk,
                                 'action': 'send-to-order',
@@ -2675,6 +2691,56 @@ class ActionsPostMethodCreate(TestCase):
                                  })
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertFalse(data['form_is_valid'])
+
+    def test_order_express_add_creates_new_customer(self):
+        """When the customer is not yet on db."""
+        self.client.post(reverse('actions'), {'cp': 0,
+                                              'pk': 'None',
+                                              'action': 'order-express-add', })
+        customer = Customer.objects.get(name='express')
+        self.assertEqual(customer.city, 'server')
+        self.assertEqual(customer.phone, 0)
+        self.assertEqual(customer.cp, 0)
+        self.assertEqual(customer.notes, 'AnnonymousUserAutmaticallyCreated')
+
+    def test_order_express_add_takes_existing_customer(self):
+        """When customer is already on db use it."""
+        Customer.objects.create(
+            name='express', city='server', phone=0,
+            cp=0, notes='AnnonymousUserAutmaticallyCreated'
+        )
+        self.client.post(reverse('actions'), {'cp': 0,
+                                              'pk': 'None',
+                                              'action': 'order-express-add', })
+        self.assertTrue(Customer.objects.get(name='express'))
+
+    def test_order_express_add_creates_new_order(self):
+        """Test if creates a new order with the customer."""
+        self.client.post(reverse('actions'), {'cp': 0,
+                                              'pk': 'None',
+                                              'action': 'order-express-add', })
+        order = Order.objects.get(ref_name='Quick')
+        self.assertEqual(order.user, User.objects.get(username='regular'))
+        self.assertEqual(order.customer, Customer.objects.get(name='express'))
+        self.assertEqual(order.delivery, date.today())
+        self.assertEqual(order.status, '7')
+        self.assertEqual(order.budget, 0)
+        self.assertEqual(order.prepaid, 0)
+
+    def test_order_express_add_redirects_to_order_express_view(self):
+        """This action should redirect to the view to add items."""
+        resp = self.client.post(reverse('actions'),
+                                {'cp': 1000,
+                                 'pk': 'None',
+                                 'action': 'order-express-add',
+                                 'test': True, })
+        order = Order.objects.get(ref_name='Quick')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['redirect'],
+                         reverse('order_express', args=[order.pk]))
+        self.assertFalse(data['template'])
 
     def test_customer_new_adds_customer(self):
         """Test new customer creation."""

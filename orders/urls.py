@@ -22,6 +22,8 @@ urlpatterns = [
     # Object related urls
     re_path(r'^order/view/(?P<pk>[0-9]+)$',
             views.order_view, name='order_view'),
+    re_path(r'^order/express/(?P<pk>[0-9]+)$',
+            views.order_express_view, name='order_express'),
     re_path(r'^customer_view/(?P<pk>[0-9]+)$',
             views.customer_view, name='customer_view'),
 
