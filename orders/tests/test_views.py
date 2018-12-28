@@ -933,8 +933,8 @@ class PQueueManagerTests(TestCase):
                                      delivery=delivery,
                                      budget=0, prepaid=0)
         OrderItem.objects.bulk_create([
-            OrderItem(reference=order, element=Item.objects.first()),
-            OrderItem(reference=order, element=Item.objects.last()),
+            OrderItem(reference=order, element=Item.objects.first(), price=0),
+            OrderItem(reference=order, element=Item.objects.last(), price=0),
         ])
         orders = Order.objects.all()
         self.assertEqual(orders.count(), 2)
@@ -952,8 +952,8 @@ class PQueueManagerTests(TestCase):
                                      delivery=date.today(),
                                      budget=0, prepaid=0)
         OrderItem.objects.bulk_create([
-            OrderItem(reference=order, element=Item.objects.first()),
-            OrderItem(reference=order, element=Item.objects.last()),
+            OrderItem(reference=order, element=Item.objects.first(), price=0),
+            OrderItem(reference=order, element=Item.objects.last(), price=0),
         ])
         orders = Order.objects.all()
         self.assertEqual(orders.count(), 2)
@@ -1779,6 +1779,7 @@ class StandardViewsTest(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
+        self.assertEqual(data['id'], '#item_objects_list')
         self.assertEqual(template, 'includes/items_list.html')
         self.assertIsInstance(context, list)
         vars = ('items', 'item_types', 'item_classes', 'add_to_order',
@@ -2104,6 +2105,7 @@ class ActionsGetMethod(TestCase):
     def test_pk_out_of_range_raises_404(self):
         """High pk should raise a 404."""
         actions = ('order-from-customer',
+                   'send-to-order-express',
                    'order-item-add',
                    'order-add-comment',
                    'order-edit',
@@ -2113,6 +2115,7 @@ class ActionsGetMethod(TestCase):
                    'order-close',
                    'object-item-edit',
                    'order-item-edit',
+                   'pqueue-add-time',
                    'object-item-delete',
                    'order-item-delete',
                    'customer-delete',
@@ -2236,6 +2239,24 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         vars = ('orders', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
+
+    def test_send_item_to_order_express(self):
+        """Test context dictionaries and template."""
+        item = Item.objects.first()
+        resp = self.client.get(reverse('actions'),
+                               {'pk': item.pk,
+                                'action': 'send-to-order-express',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        vars = ('items', 'modal_title', 'pk', 'order_pk', 'action',
+                'submit_btn', 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_add_order_item(self):
@@ -3040,6 +3061,85 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(len(order_item), 1)
         self.assertFalse(order_item[0].fit)
         self.assertFalse(order_item[0].stock)
+
+    def test_send_item_to_order_express_raises_404_with_item(self):
+        """Raise a 404 execption when trying to pick up an invalid item."""
+        resp = self.client.post(reverse('actions'),
+                                {'item-pk': 5000,
+                                 'action': 'send-to-order-express',
+                                 'pk': None,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_send_item_to_order_express_raises_404_with_order(self):
+        """Raise a 404 execption when trying to pick up an invalid order."""
+        resp = self.client.post(reverse('actions'),
+                                {'item-pk': Item.objects.first().pk,
+                                 'order-pk': 2000,
+                                 'action': 'send-to-order-express',
+                                 'pk': None,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_send_item_to_order_express_no_price_nor_qty(self):
+        """Should assign 1 item and default item's price."""
+        obj_item = Item.objects.first()
+        obj_item.price = 2000
+        obj_item.name = 'default price'
+        obj_item.save()
+        resp = self.client.post(reverse('actions'),
+                                {'item-pk': Item.objects.first().pk,
+                                 'order-pk': Order.objects.first().pk,
+                                 'action': 'send-to-order-express',
+                                 'pk': None,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        orderitem = OrderItem.objects.first()
+        self.assertEqual(orderitem.price, 2000)
+        self.assertEqual(orderitem.qty, 1)
+        self.assertTrue(orderitem.stock)
+        self.assertFalse(orderitem.fit)
+
+    def test_send_item_to_order_express_price_0(self):
+        """Should assign object item's default."""
+        obj_item = Item.objects.first()
+        obj_item.price = 2000
+        obj_item.name = 'default price'
+        obj_item.save()
+        resp = self.client.post(reverse('actions'),
+                                {'item-pk': Item.objects.first().pk,
+                                 'order-pk': Order.objects.first().pk,
+                                 'action': 'send-to-order-express',
+                                 'custom-price': 0,
+                                 'pk': None,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        orderitem = OrderItem.objects.first()
+        self.assertEqual(orderitem.price, 2000)
+
+    def test_send_item_to_order_express_context_response(self):
+        """Test the correct insertion and response."""
+        resp = self.client.post(reverse('actions'),
+                                {'item-pk': Item.objects.first().pk,
+                                 'order-pk': Order.objects.first().pk,
+                                 'custom-price': 1000,
+                                 'item-qty': 3,
+                                 'action': 'send-to-order-express',
+                                 'pk': None,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['html_id'], '#ticket')
+        self.assertEqual(data['template'], 'includes/ticket.html')
+        vars = ('items', )
+        self.assertTrue(self.context_vars(data['context'], vars))
+
+        orderitem = OrderItem.objects.first()
+        self.assertEqual(orderitem.price, 1000)
+        self.assertEqual(orderitem.qty, 3)
 
     def test_obj_item_adds_item(self):
         """Test the proepr creation of item objects."""

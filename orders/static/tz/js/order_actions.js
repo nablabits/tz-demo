@@ -71,7 +71,8 @@ $(function () {
     })
   }
 
-  var saveActionForm = function () {
+  var saveActionForm = function (e) {
+    // e.preventDefault()
     var form = $(this)
     $.ajax({
       url: form.attr('action'),
@@ -88,6 +89,8 @@ $(function () {
           $('#action-modal #check-success').removeClass('d-none')
           if (data.reload) {
             location.reload()
+          } else if (data.redirect) {
+            window.location.replace(data.redirect)
           } else {
             $(data.html_id).html(data.html)
           }
@@ -101,6 +104,8 @@ $(function () {
         action !== 'send-to-order' &&
         action !== 'customer-delete' &&
         action !== 'comment-read') {
+      $('#action-modal #bg-working').addClass('d-none')
+      $('#action-modal #check-success').removeClass('d-none')
       return false
     }
   }
@@ -147,7 +152,6 @@ $(function () {
   }
 
   // actions (GET)
-  $('.js-order-add').click(loadActionForm)
   $('.js-order-edit').click(loadActionForm)
   $('.js-order-edit-date').click(loadActionForm)
   $('#order-status').on('click', '.js-pay-now', loadActionForm)
@@ -156,7 +160,6 @@ $(function () {
   $('#order-details').on('click', '.js-add-item', loadActionForm)
   $('#order-details').on('click', '.js-edit-item', loadActionForm)
   $('#order-details').on('click', '.js-delete-item', loadActionForm)
-  $('.js-customer-add').click(loadActionForm)
   $('.js-customer-edit').click(loadActionForm)
   $('.js-customer-delete').click(loadActionForm)
   $('#timing-list').on('click', '.js-time-add', loadActionForm)

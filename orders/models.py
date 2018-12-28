@@ -263,6 +263,11 @@ class OrderItem(models.Model):
 
         return rate
 
+    @property
+    def subtotal(self):
+        """Dsiplay the subtotal amount."""
+        return self.qty * self.price
+
 
 class Comment(models.Model):
     """Store the comments related to the orders."""

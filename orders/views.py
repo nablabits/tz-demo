@@ -2,6 +2,7 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
+from django.urls import reverse
 from django.http import JsonResponse, Http404, HttpResponseServerError
 from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Item, PQueue
@@ -554,6 +555,21 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
+        # Send to order express (GET)
+        elif action == 'send-to-order-express':
+            custom_form = 'includes/custom_forms/send_to_order_express.html'
+            item_name = get_object_or_404(Item, pk=pk).name
+            items = Item.objects.filter(name=item_name)
+            context = {'items': items,
+                       'modal_title': 'Selecciona prenda',
+                       'pk': pk,
+                       'order_pk': self.request.GET.get('aditionalpk', None),
+                       'action': 'send-to-order-express',
+                       'submit_btn': 'Añadir a ticket',
+                       'custom_form': custom_form,
+                       }
+            template = 'includes/regular_form.html'
+
         # Add order item (GET)
         elif action == 'order-item-add':
             order = get_object_or_404(Order, pk=pk)
@@ -708,6 +724,17 @@ class Actions(View):
                        'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
+        # Delete order express item (GET)
+        elif action == 'order-express-item-delete':
+            get_object_or_404(OrderItem, pk=pk)
+            item = OrderItem.objects.select_related('reference').get(pk=pk)
+            context = {'modal_title': 'Eliminar prenda',
+                       'msg': 'Realmente borrar la prenda?',
+                       'pk': item.pk,
+                       'action': 'order-express-item-delete',
+                       'submit_btn': 'Sí, borrar'}
+            template = 'includes/delete_confirmation.html'
+
         # Delete Customer (GET)
         elif action == 'customer-delete':
             customer = get_object_or_404(Customer, pk=pk)
@@ -758,6 +785,7 @@ class Actions(View):
         data = dict()
         pk = self.request.POST.get('pk', None)
         action = self.request.POST.get('action', None)
+        template, context = False, False
 
         if not pk or not action:
             raise ValueError('POST data was poor')
@@ -900,6 +928,35 @@ class Actions(View):
             OrderItem.objects.create(element=item, reference=order, fit=is_fit,
                                      stock=is_stock)
             return redirect('order_view', pk=order.pk)
+
+        # Send item to order express (POST)
+        elif action == 'send-to-order-express':
+            item = get_object_or_404(Item,
+                                     pk=self.request.POST.get('item-pk', None))
+            order = get_object_or_404(
+                Order, pk=self.request.POST.get('order-pk', None)
+                )
+            price = self.request.POST.get('custom-price', None)
+            qty = self.request.POST.get('item-qty', 1)
+            if price is '0':
+                price = None
+            OrderItem.objects.create(
+                element=item, reference=order, qty=qty, price=price,
+                stock=True, fit=False)
+            items = OrderItem.objects.filter(reference=order)
+            data['form_is_valid'] = True
+            data['html_id'] = '#ticket'
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            context = {'items': items,
+                       'total': total,
+
+                       # CRUD Actions
+                       # 'js_action_edit': 'order-express-item-edit',
+                       'js_action_delete': 'order-express-item-delete',
+                       'js_data_pk': '0',
+                       }
+            template = 'includes/ticket.html'
 
         # Attach item to order (POST)
         elif action == 'order-item-add':
@@ -1047,6 +1104,10 @@ class Actions(View):
                 template = 'includes/regular_form.html'
                 data['form_is_valid'] = False
 
+        # Edit items on express orders
+        elif action == 'order-express-item-edit':
+            pass
+
         # add times from pqueue
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
@@ -1174,6 +1235,25 @@ class Actions(View):
                        'js_data_pk': order.pk,
                        }
             template = 'includes/order_details.html'
+
+        # Delete items on order express (POST)
+        elif action == 'order-express-item-delete':
+            item = get_object_or_404(OrderItem, pk=pk)
+            items = OrderItem.objects.filter(reference=item.reference)
+            item.delete()
+            data['form_is_valid'] = True
+            data['html_id'] = '#ticket'
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            context = {'items': items,
+                       'total': total,
+
+                       # CRUD Actions
+                       # 'js_action_edit': 'order-express-item-edit',
+                       'js_action_delete': 'order-express-item-delete',
+                       'js_data_pk': '0',
+                       }
+            template = 'includes/ticket.html'
 
         # Delete customer (POST)
         elif action == 'customer-delete':

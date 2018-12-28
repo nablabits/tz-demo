@@ -382,6 +382,14 @@ class TestOrderItems(TestCase):
         order_item.crop = timedelta(0)
         self.assertEqual(order_item.time_quality, 0)
 
+    def test_items_subtotal(self):
+        """Test the proepr value of subtotal."""
+        item = OrderItem.objects.create(
+            element=Item.objects.first(), reference=Order.objects.first(),
+            qty=5, price=10
+        )
+        self.assertEqual(item.subtotal, 50)
+
 
 class PQueueTest(TestCase):
     """Test the production queue model."""
