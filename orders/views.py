@@ -389,6 +389,8 @@ def order_view(request, pk):
 def order_express_view(request, pk):
     """Create a new quick checkout."""
     order = get_object_or_404(Order, pk=pk)
+    if order.customer.name != 'express':
+        return redirect(reverse('order_view', args=[order.pk]))
     item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
     items = OrderItem.objects.filter(reference=order)
     already_invoiced = Invoice.objects.filter(reference=order)
@@ -1171,11 +1173,11 @@ class Actions(View):
                 template = 'includes/regular_form.html'
                 data['form_is_valid'] = False
 
-        # Edit items on express orders
+        # Edit items on express orders (POST)
         elif action == 'order-express-item-edit':
             pass
 
-        # add times from pqueue
+        # Add times from pqueue (POST)
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)

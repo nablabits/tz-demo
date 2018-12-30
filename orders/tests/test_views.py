@@ -47,6 +47,13 @@ class NotLoggedInTest(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
+    def test_not_logged_in_on_order_express_view(self):
+        """Test not logged in users should be redirected to login."""
+        login_url = '/accounts/login/?next=/order/express/1'
+        resp = self.client.get(reverse('order_express', kwargs={'pk': 1}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+
     def test_not_logged_in_on_customers_list_view(self):
         """Test not logged in users should be redirected to login."""
         login_url = '/accounts/login/?next=/customer_view/1'
@@ -841,6 +848,133 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['search_on'], 'orders')
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Pedidos')
         self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
+
+
+class OrderExpressTests(TestCase):
+    """Test the order express view."""
+
+    @classmethod
+    def setUpTestData(self):
+        """Create all the elements at once."""
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Item.objects.create(name='Test', fabrics=5, price=10)
+
+    def test_pk_out_of_range_raises_404(self):
+        """Raise a 404 when trying to select a void order."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('order_express', args=[5000]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_regular_orders_should_be_redirected(self):
+        """Redirect to order view with regular orders."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        resp = self.client.get(reverse('order_express', args=[order.pk]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_items_list_exclude_default_and_selects_distinct(self):
+        """Predeterminado is not shown and each name is once."""
+        self.client.login(username='regular', password='test')
+        for i in range(3):
+            for k in range(2):
+                Item.objects.create(name='test%s' % (i), fabrics=5)
+        self.client.post(reverse('actions'), {'cp': 0, 'pk': 'None',
+                                              'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['item_names'].count(), 4)
+        self.assertTrue(Item.objects.get(name='Predeterminado'))
+        for i in resp.context['item_names']:
+            self.assertNotEqual(i.name, 'Predeterminado')
+
+    def test_items_belong_to_the_order(self):
+        """Dsiplay all the items that are owned by an order."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        regular_order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        excluded_item = OrderItem.objects.create(
+            reference=regular_order, element=Item.objects.last()
+        )
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        included_item = OrderItem.objects.create(
+            reference=order_express, element=Item.objects.last())
+
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['items'].count(), 1)
+        for i in resp.context['items']:
+            self.assertNotEqual(i, excluded_item)
+            self.assertEqual(i, included_item)
+
+    def test_get_already_invoiced_orders(self):
+        """Test the proper display of invoiced orders."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertFalse(resp.context['invoiced'])
+
+        OrderItem.objects.create(
+            reference=order_express, element=Item.objects.last(), price=10)
+        Invoice.objects.create(reference=order_express)
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertTrue(resp.context['invoiced'])
+
+    def test_total_amount(self):
+        """Test the proper sum of ticket."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        item = Item.objects.last()
+        OrderItem.objects.create(
+            reference=order_express, element=item, price=10, qty=3)
+        OrderItem.objects.create(
+            reference=order_express, element=item, price=20, qty=2)
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['total']['total'], 70)
+
+    def test_context_vars(self):
+        """Test the remaining context vars."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['user'].username, 'regular')
+        self.assertEqual(len(resp.context['item_types']), 13)
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
+
+        # CRUD actions
+        self.assertEqual(resp.context['btn_title_add'], 'Nueva prenda')
+        self.assertEqual(resp.context['js_action_add'], 'object-item-add')
+        self.assertEqual(
+            resp.context['js_action_delete'], 'order-express-item-delete')
+        self.assertEqual(resp.context['js_data_pk'], '0')
 
 
 class InvoicesListTest(TestCase):
@@ -2577,6 +2711,26 @@ class ActionsGetMethod(TestCase):
         vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_delete_order_express_item(self):
+        """Test context dictionaries and template."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        item = OrderItem.objects.create(
+            reference=order_express, element=Item.objects.first())
+        resp = self.client.get(reverse('actions'),
+                               {'pk': item.pk,
+                                'action': 'order-express-item-delete',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['template'], 'includes/delete_confirmation.html')
+        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
+        self.assertTrue(self.context_vars(data['context'], vars))
+
     def test_delete_obj_item(self):
         """Test context dictionaries and template."""
         item = Item.objects.all()[0]
@@ -3720,6 +3874,24 @@ class ActionsPostMethodEdit(TestCase):
         for i in (mod_item.sewing, mod_item.crop, mod_item.iron):
             self.assertEqual(i, timedelta(0, 2))
 
+    def test_pqueue_add_time_rejected_form(self):
+        """Test invalid forms."""
+        item = OrderItem.objects.first()
+        for i in (item.sewing, item.crop, item.iron):
+            self.assertEqual(i, timedelta(0))
+        resp = self.client.post(reverse('actions'),
+                                {'iron': '2', 'crop': 'void', 'sewing': '2',
+                                 'pk': item.pk,
+                                 'action': 'pqueue-add-time',
+                                 'test': True
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('form', 'item', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form', )
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/regular_form.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+
     def test_collect_order_succesful(self):
         """Test the proper mark-as-paid method."""
         order = Order.objects.get(ref_name='example')
@@ -3859,6 +4031,46 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
 
+    def test_delete_order_express_item_deletes_item(self):
+        """Test the proper deletion of items."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        item = OrderItem.objects.create(
+            reference=order_express, element=Item.objects.first())
+        self.assertTrue(OrderItem.objects.get(pk=item.pk))
+        self.client.post(reverse('actions'),
+                         {'pk': item.pk,
+                          'action': 'order-express-item-delete',
+                          'test': True})
+        with self.assertRaises(ObjectDoesNotExist):
+            OrderItem.objects.get(pk=item.pk)
+
+    def test_delete_order_express_item_context_response(self):
+        """Test the proper deletion of items."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        item = OrderItem.objects.create(
+            reference=order_express, element=Item.objects.first())
+        self.assertTrue(OrderItem.objects.get(pk=item.pk))
+        resp = self.client.post(reverse('actions'),
+                                {'pk': item.pk,
+                                 'action': 'order-express-item-delete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/ticket.html')
+        self.assertEqual(data['html_id'], '#ticket')
+        vars = ('items', 'total', 'order', 'js_action_delete', 'js_data_pk', )
+        self.assertTrue(self.context_vars(data['context'], vars))
+
     def test_delete_obj_item_deletes_the_item(self):
         """Test the correct item deletion."""
         item = Item.objects.all()[0]
@@ -3892,7 +4104,7 @@ class ActionsPostMethodEdit(TestCase):
         with self.assertRaises(ObjectDoesNotExist):
             OrderItem.objects.get(pk=customer.pk)
 
-    def test_delete_customer_returns_to_custmer_list(self):
+    def test_delete_customer_returns_to_customer_list(self):
         """Test the proper deletion of customers."""
         login = self.client.login(username='regular', password='test')
         if not login:
