@@ -94,20 +94,12 @@ $(function () {
           } else {
             $(data.html_id).html(data.html)
           }
+          $('#action-modal').modal('hide')
         } else {
           $('#action-modal .modal-content').html(data.html)
         }
       }
     })
-    var action = $(this).find('#js-action').attr('value')
-    if (action !== 'order-new' &&
-        action !== 'send-to-order' &&
-        action !== 'customer-delete' &&
-        action !== 'comment-read') {
-      $('#action-modal #bg-working').addClass('d-none')
-      $('#action-modal #check-success').removeClass('d-none')
-      return false
-    }
   }
 
   var searchAction = function () {

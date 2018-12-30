@@ -840,7 +840,8 @@ class Actions(View):
                 order.creation = timezone.now()
                 order.user = request.user
                 order.save()
-                return redirect('order_view', pk=order.pk)
+                data['redirect'] = (reverse('order_view', args=[order.pk]))
+                data['form_is_valid'] = True
             else:
                 data['form_is_valid'] = False
                 context = {'form': form,
@@ -918,7 +919,8 @@ class Actions(View):
             comment = get_object_or_404(Comment, pk=pk)
             comment.read = True
             comment.save()
-            return redirect('main')
+            data['redirect'] = (reverse('main'))
+            data['form_is_valid'] = True
 
         # Add new item Objects (POST)
         elif action == 'object-item-add':
@@ -969,7 +971,8 @@ class Actions(View):
                 raise Http404('No info given about stock')
             OrderItem.objects.create(element=item, reference=order, fit=is_fit,
                                      stock=is_stock)
-            return redirect('order_view', pk=order.pk)
+            data['redirect'] = (reverse('order_view', args=[order.pk]))
+            data['form_is_valid'] = True
 
         # Send item to order express (POST)
         elif action == 'send-to-order-express':
@@ -1330,7 +1333,8 @@ class Actions(View):
         elif action == 'customer-delete':
             customer = get_object_or_404(Customer, pk=pk)
             customer.delete()
-            return redirect('customerlist')
+            data['redirect'] = (reverse('customerlist'))
+            data['form_is_valid'] = True
 
         # logout (POST)
         elif action == 'logout':

@@ -2892,9 +2892,11 @@ class ActionsPostMethodCreate(TestCase):
                                  'test': True
                                  })
 
-        order_created = Order.objects.get(ref_name='created')
-        url = '/order/view/%s' % order_created.pk
-        self.assertRedirects(resp, url)
+        order = Order.objects.get(ref_name='created')
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(
+            data['redirect'], reverse('order_view', args=[order.pk]))
 
     def test_invalid_order_new_returns_to_form_again(self):
         """When form is not valid JsonResponse should be sent again."""
@@ -3146,10 +3148,10 @@ class ActionsPostMethodCreate(TestCase):
                                                      'pk': comment.pk,
                                                      'test': True})
         read_comment = Comment.objects.get(comment='Entered comment')
-        url = '/'
+        data = json.loads(str(resp.content, 'utf-8'))
         self.assertTrue(read_comment.read)
-        self.assertEqual(resp.status_code, 302)
-        self.assertRedirects(resp, url)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(data['redirect'], reverse('main'))
 
     def test_order_item_add_adds_item(self):
         """Test the proper insertion of items."""
@@ -4116,8 +4118,10 @@ class ActionsPostMethodEdit(TestCase):
                                  'action': 'customer-delete',
                                  'test': True
                                  })
-        self.assertEqual(resp.status_code, 302)
-        self.assertRedirects(resp, reverse('customerlist'))
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['redirect'], reverse('customerlist'))
 
     def test_logout_succesfull(self):
         """Test the proper logout from app."""
