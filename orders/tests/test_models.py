@@ -1,10 +1,12 @@
 """Test the app models."""
+from decimal import Decimal
 from django.test import TestCase
-from orders.models import Customer, Order, Comment, Item, OrderItem, PQueue
+from orders.models import (
+    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, )
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.contrib.auth.models import User
-from datetime import date, timedelta, time
+from datetime import date, timedelta, time, datetime
 
 
 class ModelTest(TestCase):
@@ -672,7 +674,122 @@ class PQueueTest(TestCase):
                          (-3, -2, 1002))
 
 
-#
+class TestInvoice(TestCase):
+    """Test the invoice model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(
+            username='user', is_staff=True, )
+
+        # Create a customer
+        customer = Customer.objects.create(
+            name='Customer Test', city='NoCity', phone='6', cp='1')
+
+        # Create an order
+        order = Order.objects.create(
+            user=user, customer=customer, ref_name='Test order',
+            budget=2000, prepaid=0, delivery=date.today())
+
+        # Create obj item
+        item = Item.objects.create(name='Test item', fabrics=5, price=10)
+
+        # Create orderitems
+        OrderItem.objects.create(reference=order, element=item)
+
+    def test_reference_is_a_one_to_one_field(self):
+        """That is, each order should appear once on the table."""
+        Invoice.objects.create(reference=Order.objects.first())
+        with self.assertRaises(IntegrityError):
+            Invoice.objects.create(reference=Order.objects.first())
+
+    def test_reference_delete_cascade(self):
+        """If order is deleted so is invoice."""
+        order = Order.objects.first()
+        Invoice.objects.create(reference=order)
+        self.assertTrue(Invoice.objects.all())
+        order.delete()
+        self.assertFalse(Invoice.objects.all())
+
+    def test_reference_pk_matches_invoice_pk(self):
+        """Since reference has primary key true."""
+        order = Order.objects.first()
+        invoice = Invoice.objects.create(reference=order)
+        self.assertEqual(order.pk, invoice.pk)
+
+    def test_issued_on_is_datetime(self):
+        """Test the data type and the date."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertIsInstance(invoice.issued_on, datetime)
+        self.assertEqual(invoice.issued_on.date(), date.today())
+
+    def test_invoice_no_default_1(self):
+        """When there're no invoices yet, the first one is 1."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertEqual(invoice.invoice_no, 1)
+
+    def test_invoice_no_autoincrement(self):
+        """When there're invoices should add one to the last one."""
+        user = User.objects.first()
+        customer = Customer.objects.first()
+        for i in range(3):
+            order = Order.objects.create(
+                user=user, customer=customer, ref_name='Test%s' % i,
+                budget=10, prepaid=0, delivery=date.today())
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+        i = 1
+        for invoice in Invoice.objects.reverse():
+            self.assertEqual(invoice.invoice_no, i)
+            i += 1
+
+    def test_invoice_no_several_saves(self):
+        """Ensure the number doesn't rise on multiple save calls."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertEqual(invoice.invoice_no, 1)
+        invoice.pay_method = 'V'
+        invoice.save()
+        self.assertEqual(invoice.invoice_no, 1)
+
+    def test_invoice_amount_sums(self):
+        """Test the proper sum of items."""
+        order = Order.objects.first()
+        for i in range(3):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last(), price=20, )
+        invoice = Invoice.objects.create(reference=order)
+        self.assertIsInstance(invoice.amount, Decimal)
+        self.assertEqual(invoice.amount, 70)
+
+    def test_pay_method_allowed_means(self):
+        """Test the proper payment methods."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertEqual(invoice.pay_method, 'C')
+        for pay_method in ('V', 'T'):
+            invoice.pay_method = pay_method
+            invoice.full_clean()
+            invoice.save()
+            self.assertEqual(invoice.pay_method, pay_method)
+            self.assertEqual(invoice.invoice_no, 1)
+
+        with self.assertRaises(ValidationError):
+            invoice.pay_method = 'K'
+            invoice.full_clean()
+
+    def test_total_amount_0_raises_error(self):
+        """Test the proper raise when invoice is empty."""
+        item = OrderItem.objects.first()
+        item.delete()
+        order = Order.objects.first()
+        item = OrderItem.objects.create(
+            reference=order, element=Item.objects.first())
+        self.assertEqual(item.price, 0)
+        with self.assertRaises(ValidationError):
+            Invoice.objects.create(reference=item.reference)
+
 #
 #
 #

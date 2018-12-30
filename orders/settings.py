@@ -28,6 +28,12 @@ ITEM_CLASSES = (
     ('P', 'Premium')
 )
 
+PAYMENT_METHODS = (
+    ('C', 'Metálico'),
+    ('V', 'Tarjeta'),
+    ('T', 'Transferencia')
+)
+
 WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
 
 RELAX_ICONS = ('curling', 'shuttlecock', 'table-tennis', 'coffee-togo',
