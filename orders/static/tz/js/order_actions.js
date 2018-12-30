@@ -72,7 +72,7 @@ $(function () {
   }
 
   var saveActionForm = function (e) {
-    // e.preventDefault()
+    e.preventDefault()
     var form = $(this)
     $.ajax({
       url: form.attr('action'),

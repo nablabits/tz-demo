@@ -7,8 +7,9 @@ from django.http import JsonResponse, Http404, HttpResponseServerError
 from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Item, PQueue, Invoice
 from django.utils import timezone
-from .forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
-                    OrderCloseForm, OrderItemForm, EditDateForm, AddTimesForm)
+from .forms import (
+    CustomerForm, OrderForm, CommentForm, ItemForm, OrderCloseForm,
+    OrderItemForm, EditDateForm, AddTimesForm, InvoiceForm)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -390,6 +391,7 @@ def order_express_view(request, pk):
     order = get_object_or_404(Order, pk=pk)
     item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
     items = OrderItem.objects.filter(reference=order)
+    already_invoiced = Invoice.objects.filter(reference=order)
     total = items.aggregate(
         total=Sum(F('qty') * F('price'), output_field=DecimalField()))
     cur_user = request.user
@@ -400,6 +402,7 @@ def order_express_view(request, pk):
                      'item_types': settings.ITEM_TYPE[1:],
                      'item_names': item_names,
                      'items': items,
+                     'invoiced': already_invoiced,
                      'total': total,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
@@ -609,6 +612,27 @@ class Actions(View):
                        'pk': order.pk,
                        'action': 'order-comment',
                        'submit_btn': 'Añadir',
+                       }
+            template = 'includes/regular_form.html'
+
+        # Issue invoice (GET)
+        elif action == 'ticket-to-invoice':
+            order = get_object_or_404(Order, pk=pk)
+            already_invoiced = Invoice.objects.filter(reference=order)
+            items = OrderItem.objects.filter(reference=order)
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            form = InvoiceForm()
+            context = {'form': form,
+                       'items': items,
+                       'order': order,
+                       'total': total,
+                       'invoiced': already_invoiced,
+                       'modal_title': 'Facturar',
+                       'pk': order.pk,
+                       'action': 'ticket-to-invoice',
+                       'submit_btn': 'Facturar',
+                       'custom_form': 'includes/custom_forms/invoice.html',
                        }
             template = 'includes/regular_form.html'
 
@@ -966,6 +990,7 @@ class Actions(View):
                 total=Sum(F('qty') * F('price'), output_field=DecimalField()))
             context = {'items': items,
                        'total': total,
+                       'order': order,
 
                        # CRUD Actions
                        # 'js_action_edit': 'order-express-item-edit',
@@ -999,6 +1024,32 @@ class Actions(View):
                 context = {'order': order, 'form': form}
                 template = 'includes/order_details.html'
                 data['form_is_valid'] = False
+
+        elif action == 'ticket-to-invoice':
+            order = get_object_or_404(Order, pk=pk)
+            items = OrderItem.objects.filter(reference=order)
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            form = InvoiceForm(request.POST)
+            if form.is_valid():
+                invoice = form.save(commit=False)
+                invoice.reference = order
+                invoice.save()
+                data['redirect'] = (reverse('invoiceslist'))
+                data['form_is_valid'] = True
+            else:
+                data['form_is_valid'] = False
+                context = {'form': form,
+                           'items': items,
+                           'order': order,
+                           'total': total,
+                           'modal_title': 'Facturar',
+                           'pk': order.pk,
+                           'action': 'ticket-to-invoice',
+                           'submit_btn': 'Facturar',
+                           'custom_form': 'includes/custom_forms/invoice.html',
+                           }
+                template = 'includes/regular_form.html'
 
         # Edit order (POST)
         elif action == 'order-edit':
@@ -1255,7 +1306,8 @@ class Actions(View):
         # Delete items on order express (POST)
         elif action == 'order-express-item-delete':
             item = get_object_or_404(OrderItem, pk=pk)
-            items = OrderItem.objects.filter(reference=item.reference)
+            order = item.reference
+            items = OrderItem.objects.filter(reference=order)
             item.delete()
             data['form_is_valid'] = True
             data['html_id'] = '#ticket'
@@ -1263,6 +1315,7 @@ class Actions(View):
                 total=Sum(F('qty') * F('price'), output_field=DecimalField()))
             context = {'items': items,
                        'total': total,
+                       'order': order,
 
                        # CRUD Actions
                        # 'js_action_edit': 'order-express-item-edit',

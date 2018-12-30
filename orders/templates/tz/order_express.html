@@ -11,7 +11,7 @@
             <i class="fa fa-plus"></i> {{btn_title_add}}
           </button>
           {% for item in item_types %}
-          <button class="mr-1 mt-1 btn btn-outline-success js-filter" data-action="{{js_action_edit}}" disabled>{{item.1}}</button>
+          <button class="d-none mr-1 mt-1 btn btn-outline-success js-filter" data-action="{{js_action_edit}}" disabled>{{item.1}}</button>
           {%endfor%}
         </div>
         <div class="d-flex">

@@ -2167,13 +2167,14 @@ class ActionsGetMethod(TestCase):
 
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
-        context_is_valid = 0
-        for item in context:
-            for var in vars:
-                if item == var:
-                    context_is_valid += 1
-        if context_is_valid == len(vars):
-            return True
+        if len(context) == len(vars):
+            context_is_valid = 0
+            for item in context:
+                for var in vars:
+                    if item == var:
+                        context_is_valid += 1
+            if context_is_valid == len(vars):
+                return True
         else:
             return False
 
@@ -2183,6 +2184,7 @@ class ActionsGetMethod(TestCase):
                    'send-to-order-express',
                    'order-item-add',
                    'order-add-comment',
+                   'ticket-to-invoice',
                    'order-edit',
                    'order-edit-date',
                    'customer-edit',
@@ -2386,6 +2388,24 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(template, 'includes/regular_form.html')
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn', )
         self.assertTrue(self.context_vars(context, vars))
+
+    def test_ticket_to_invoice(self):
+        """Test context dictionaries and template."""
+        order = Order.objects.first()
+        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
+        for i in range(3):
+            OrderItem.objects.create(reference=order, element=item_obj)
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk,
+                                'action': 'ticket-to-invoice',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['template'], 'includes/regular_form.html')
+        vars = ('form', 'items', 'order', 'total', 'invoiced', 'modal_title',
+                'pk', 'action', 'submit_btn', 'custom_form', )
+        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_edit_order(self):
         """Test context dictionaries and template.
@@ -2891,6 +2911,7 @@ class ActionsPostMethodCreate(TestCase):
         actions = ('order-comment',
                    'comment-read',
                    'order-item-add',
+                   'ticket-to-invoice',
                    'order-edit',
                    'order-edit-date',
                    'customer-edit',
@@ -3048,6 +3069,59 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(template, 'includes/order_details.html')
         vars = ('form', 'order')
         self.assertTrue(self.context_vars(context, vars))
+
+    def test_ticket_to_invoice_issues_an_invoice(self):
+        """Test the correct issue of invoices."""
+        order = Order.objects.first()
+        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
+        for i in range(3):
+            OrderItem.objects.create(reference=order, element=item_obj)
+        self.client.post(
+            reverse('actions'),
+            {'pk': order.pk, 'action': 'ticket-to-invoice', 'pay_method': 'V',
+             'test': True})
+        invoice = Invoice.objects.first()
+        self.assertEqual(invoice.reference, order)
+        self.assertEqual(invoice.issued_on.date(), date.today())
+        self.assertEqual(invoice.invoice_no, 1)
+        self.assertEqual(invoice.amount, 60)
+        self.assertEqual(invoice.pay_method, 'V')
+
+    def test_ticket_to_invoice_context_response(self):
+        """Test the dictionaries and the response."""
+        order = Order.objects.first()
+        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
+        for i in range(3):
+            OrderItem.objects.create(reference=order, element=item_obj)
+        resp = self.client.post(
+            reverse('actions'),
+            {'pk': order.pk, 'action': 'ticket-to-invoice', 'pay_method': 'V',
+             'test': True})
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(
+            data['redirect'], reverse('invoiceslist'))
+
+    def test_ticket_to_invoice_rejected_form(self):
+        """Test when from is not valid."""
+        order = Order.objects.first()
+        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
+        for i in range(3):
+            OrderItem.objects.create(reference=order, element=item_obj)
+        resp = self.client.post(
+            reverse('actions'),
+            {'pk': order.pk, 'action': 'ticket-to-invoice',
+             'pay_method': 'invalid', 'test': True})
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+        self.assertEqual(data['template'], 'includes/regular_form.html')
+        vars = ('form', 'items', 'order', 'total', 'modal_title', 'pk',
+                'action', 'submit_btn', 'custom_form', )
+        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_send_to_order_raises_error_invalid_item(self):
         """If no item is given raise a 404."""

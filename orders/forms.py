@@ -1,7 +1,7 @@
 """Form models used in the app."""
 
 from django import forms
-from .models import Customer, Order, Item, OrderItem, Comment
+from .models import Customer, Order, Item, OrderItem, Comment, Invoice
 from django.db.models import Count
 from django.core.exceptions import ValidationError
 
@@ -104,6 +104,16 @@ class CommentForm(forms.ModelForm):
 
         model = Comment
         fields = ('comment', )
+
+
+class InvoiceForm(forms.ModelForm):
+    """Issue invoices using a form."""
+
+    class Meta:
+        """Meta options for a quick design."""
+
+        model = Invoice
+        fields = ('pay_method', )
 
 
 class EditDateForm(forms.ModelForm):
