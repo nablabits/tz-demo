@@ -53,6 +53,9 @@
             <a class="nav-item nav-link js-crud-add" href="#" data-action="order-express-add" data-pk="0" id="sidebar-new-order-express">
               <i class="far fa-cash-register pr-2"></i> Nueva venta
             </a>
+            <a class="nav-item nav-link" href="{% url 'invoiceslist' %}" id="sidebar-invoices-list">
+              <i class="far fa-history pr-2"></i> Últimas facturas
+            </a>
             <a class="nav-item nav-link" href="{% url 'itemslist' %}" id="sidebar-items">
               <i class="fa fa-fw fa-cube pr-2"></i> Editor de prendas</a>
             <a class="nav-item nav-link" href="{% url 'pqueue_manager' %}" id="sidebar-pqueue">
@@ -70,6 +73,7 @@
           {% block pqueueview %}{% endblock %}
           {% block orders %}{% endblock %}
           {% block listview %}{% endblock %}
+          {% block invoices %}{% endblock %}
         </div>
       </div>
 

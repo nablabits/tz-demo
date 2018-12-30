@@ -2,7 +2,8 @@
 
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
-from orders.models import Customer, Order, OrderItem, Comment, Item, PQueue
+from orders.models import (
+    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, )
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import F, Q
 from django.http import JsonResponse
@@ -840,6 +841,80 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['search_on'], 'orders')
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Pedidos')
         self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
+
+
+class InvoicesListTest(TestCase):
+    """Test the invoices list."""
+
+    @classmethod
+    def setUpTestData(self):
+        """Create the necessary items on database at once."""
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Item.objects.create(name='Test', fabrics=5, price=10)
+
+    def test_invoices_view_only_displays_last_ten_invoices(self):
+        """Test that view only displays 10 invoices, the last 10."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(22):
+            order = Order.objects.create(
+                user=user, customer=c, ref_name='Test', delivery=date.today(),
+                budget=0, prepaid=0, )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('invoiceslist'))
+        invoices = resp.context['invoices']
+        self.assertEqual(invoices.count(), 20)
+        self.assertTrue(invoices[0].invoice_no > invoices[1].invoice_no)
+        self.assertTrue(invoices[0].issued_on > invoices[1].issued_on)
+
+    def test_invoices_view_current_user(self):
+        """Test the current user."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['user'].username, 'regular')
+
+    def test_invoices_view_title(self):
+        """Test the window title."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Facturas')
+
+    def test_invoices_template_used(self):
+        """Test the window title."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertTemplateUsed(resp, 'tz/invoices.html')
 
 
 class PQueueManagerTests(TestCase):

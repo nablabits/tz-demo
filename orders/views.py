@@ -5,7 +5,7 @@ from django.views import View
 from django.urls import reverse
 from django.http import JsonResponse, Http404, HttpResponseServerError
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, OrderItem, Item, PQueue
+from .models import Comment, Customer, Order, OrderItem, Item, PQueue, Invoice
 from django.utils import timezone
 from .forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
                     OrderCloseForm, OrderItemForm, EditDateForm, AddTimesForm)
@@ -330,6 +330,22 @@ def itemslist(request):
                      }
 
     return render(request, 'tz/list_view.html', view_settings)
+
+
+@login_required
+def invoiceslist(request):
+    invoices = Invoice.objects.all()[:20]
+    cur_user = request.user
+    now = datetime.now()
+
+    view_settings = {'invoices': invoices,
+                     'user': cur_user,
+                     'now': now,
+                     'version': settings.VERSION,
+                     'title': 'TrapuZarrak · Facturas',
+                     }
+
+    return render(request, 'tz/invoices.html', view_settings)
 
 
 # Object views
