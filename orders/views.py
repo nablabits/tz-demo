@@ -335,6 +335,7 @@ def itemslist(request):
 
 @login_required
 def invoiceslist(request):
+    """List all the invoices."""
     invoices = Invoice.objects.all()[:20]
     cur_user = request.user
     now = datetime.now()
@@ -354,6 +355,10 @@ def invoiceslist(request):
 def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
+
+    if order.customer.name == 'express':
+        return redirect(reverse('order_express', args=[order.pk]))
+
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
 
@@ -379,7 +384,6 @@ def order_view(request, pk):
                      'js_action_edit': 'order-item-edit',
                      'js_action_delete': 'order-item-delete',
                      'js_data_pk': order.pk,
-                     'footer': True,
                      }
 
     return render(request, 'tz/order_view.html', view_settings)

@@ -1653,6 +1653,86 @@ class PQueueActionsTests(TestCase):
         self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
 
 
+class OrderViewTests(TestCase):
+    """Test the order view."""
+
+    def setUp(self):
+        """Create the elements at once."""
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        customer = Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Order.objects.create(
+            customer=customer, user=user, ref_name='Test',
+            delivery=date.today(), budget=100, prepaid=0, )
+
+        self.client.login(username='regular', password='test')
+
+    def test_pk_out_of_range_raises_404(self):
+        """Raise a 404 when no order is matched."""
+        resp = self.client.get(reverse('order_view', args=[5000]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_express_orders_should_be_redirected(self):
+        """The are displayed as order_express view."""
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        resp = self.client.get(reverse(
+            'order_view', args=[order_express.pk]))
+        url = reverse('order_express', args=[order_express.pk])
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, url)
+
+    def test_show_comments(self):
+        """Display the correct comments."""
+        order = Order.objects.first()
+        user = User.objects.first()
+        for i in range(3):
+            Comment.objects.create(reference=order, comment='Test', user=user)
+
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertEquals(resp.context['comments'].count(), 3)
+        self.assertTrue(
+            resp.context['comments'][0].creation >
+            resp.context['comments'][1].creation)
+
+    def test_show_items(self):
+        """Display the correct items."""
+        order = Order.objects.first()
+        item = Item.objects.create(name='Test', fabrics=5)
+        for i in range(3):
+            OrderItem.objects.create(reference=order, element=item)
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertEquals(resp.context['items'].count(), 3)
+
+    def test_closed_orders(self):
+        """Closed status."""
+        order = Order.objects.first()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertFalse(resp.context['closed'])
+        order.status = 7
+        order.prepaid = order.budget
+        order.save()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertTrue(resp.context['closed'])
+
+    def test_context_variables(self):
+        """Test the remaining variables."""
+        order = Order.objects.first()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertEquals(resp.context['user'].username, order.user.username)
+        self.assertEquals(resp.context['title'], 'TrapuZarrak · Ver Pedido')
+        self.assertEquals(resp.context['btn_title_add'], 'Añadir prenda')
+        self.assertEquals(resp.context['js_action_add'], 'order-item-add')
+        self.assertEquals(resp.context['js_action_edit'], 'order-item-edit')
+        self.assertEquals(
+            resp.context['js_action_delete'], 'order-item-delete')
+        self.assertEquals(resp.context['js_data_pk'], order.pk)
+
+
 class StandardViewsTest(TestCase):
     """Test the standard views."""
 
@@ -1793,28 +1873,6 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('main'))
         for order in resp.context['pending']:
             self.assertNotEqual(order.customer.name, 'Trapuzarrak')
-
-    def test_order_closed_view(self):
-        """Test a particular order instance.
-
-        The order tested is a closed order with 10 comments, one of them read,
-        5 items and 1 file.
-        """
-        order = Order.objects.get(ref_name='example closed')
-        resp = self.client.get(reverse('order_view', kwargs={'pk': order.pk}))
-
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/order_view.html')
-
-        order = resp.context['order']
-        comments = resp.context['comments']
-        items = resp.context['items']
-
-        self.assertEqual(order.ref_name, 'example closed')
-        self.assertEqual(len(comments), 10)
-        self.assertEqual(len(items), 5)
-        self.assertTrue(resp.context['closed'])
-        self.assertTrue(comments[9].read)
 
     def test_customer_list(self):
         """Test the main features on customer list."""
