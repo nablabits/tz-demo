@@ -5,6 +5,7 @@
   * **Nuevo:** Módulo de ventas.
   * **Bug:** aún más refinado el duplicado de prendas.
   + **Bug:** pequeño error en la vista  de previsión con el cambio de año.
+
 #### v54, Dic 15
   * **Nuevo:** las prendas en los pedidos tienen un nuevo atributo, *Stock*,
     para diferenciarlas de producción nueva.
