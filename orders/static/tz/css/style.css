@@ -25,7 +25,7 @@ th{
   border-right: 1px solid lightgrey;
   border-bottom: 1px solid lightgrey;
 }
-.js-flip{
+.js-flip, .js-crud-add, .js-crud-edit, .js-crud-delete{
   cursor: pointer;
 }
 .aside-wide{

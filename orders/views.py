@@ -152,7 +152,7 @@ def orderlist(request, orderby):
             raise Http404('Action required')
         order.save()
 
-    orders = Order.objects.all()
+    orders = Order.objects.exclude(ref_name__iexact='quick')
 
     try:
         tz = Customer.objects.get(name__iexact='trapuzarrak')
@@ -265,7 +265,8 @@ def orderlist(request, orderby):
 @login_required
 def customerlist(request):
     """Display all customers or search'em."""
-    customers = Customer.objects.all().order_by('name')
+    customers = Customer.objects.all().exclude(name__iexact='express')
+    customers = customers.order_by('name')
     customers = customers.annotate(num_orders=Count('order'))
     page = request.GET.get('page', 1)
     paginator = Paginator(customers, 10)
@@ -571,7 +572,9 @@ class Actions(View):
         # Send item to order (GET)
         elif action == 'send-to-order':
             custom_form = 'includes/custom_forms/send_to_order.html'
-            context = {'orders': Order.objects.exclude(status__in=[7, 8]),
+            order_dropdown = Order.objects.exclude(ref_name__iexact='Quick')
+            order_dropdown = order_dropdown.exclude(status__in=[7, 8])
+            context = {'orders': order_dropdown,
                        'modal_title': 'Añadir prenda a pedido',
                        'pk': pk,
                        'action': 'send-to-order',

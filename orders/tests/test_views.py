@@ -144,11 +144,22 @@ class OrderListTests(TestCase):
     def test_post_method_raises_404_without_action(self):
         """When no action is given raise a 404 error."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
-        resp = self.client.post(reverse('orderlist',
-                                        kwargs={'orderby': 'date'}),
-                                {'void': '5', 'order': order.pk})
+        order = Order.objects.first()
+        resp = self.client.post(
+            reverse('orderlist', args=['date']),
+            {'void': '5', 'order': order.pk})
         self.assertEqual(resp.status_code, 404)
+
+    def test_orders_view_excludes_quick_orders(self):
+        """Express orders should be excluded."""
+        self.client.login(username='regular', password='test')
+        excluded = Order.objects.first()
+        excluded.ref_name = 'Quick'
+        excluded.save()
+        resp = self.client.get(
+            reverse('orderlist', args=['date']))
+        for order in resp.context['active']:
+            self.assertNotEqual(order.ref_name, 'Quick')
 
     def test_tz_should_exist_case_insensitive(self):
         """Tz customer must be recognized regardless the case.
@@ -1883,6 +1894,17 @@ class StandardViewsTest(TestCase):
 
         ctx = resp.context
         self.assertEqual(str(ctx['user']), 'regular')
+
+    def test_customer_view_excludes_express_customer(self):
+        """Express customer is annonymous, so ensure not appearing."""
+        express = Customer.objects.first()
+        express.name = 'express'
+        express.save()
+        resp = self.client.get(reverse('customerlist'))
+        customers = resp.context['customers']
+        self.assertEqual(len(customers), 9)
+        for customer in customers:
+            self.assertNotEqual(customer.name, 'express')
 
     def test_customer_list_context_vars(self):
         """Test the correct context vars."""
