@@ -1,7 +1,7 @@
 """Form models used in the app."""
 
 from django import forms
-from .models import Customer, Order, Item, OrderItem, Comment
+from .models import Customer, Order, Item, OrderItem, Comment, Invoice
 from django.db.models import Count
 from django.core.exceptions import ValidationError
 
@@ -66,7 +66,7 @@ class ItemForm(forms.ModelForm):
 
         model = Item
         fields = ('name', 'item_type', 'item_class', 'size', 'fabrics',
-                  'notes', 'foreing', )
+                  'notes', 'foreing', 'price', )
 
 
 class OrderItemForm(forms.ModelForm):
@@ -86,6 +86,16 @@ class OrderItemForm(forms.ModelForm):
         self.fields['element'].queryset = queryset
 
 
+class AddTimesForm(forms.ModelForm):
+    """Edit the item times on Pqueue."""
+
+    class Meta:
+        """Meta options for a quick design."""
+
+        model = OrderItem
+        fields = ('crop', 'sewing', 'iron')
+
+
 class CommentForm(forms.ModelForm):
     """Add comments using a form."""
 
@@ -94,6 +104,16 @@ class CommentForm(forms.ModelForm):
 
         model = Comment
         fields = ('comment', )
+
+
+class InvoiceForm(forms.ModelForm):
+    """Issue invoices using a form."""
+
+    class Meta:
+        """Meta options for a quick design."""
+
+        model = Invoice
+        fields = ('pay_method', )
 
 
 class EditDateForm(forms.ModelForm):

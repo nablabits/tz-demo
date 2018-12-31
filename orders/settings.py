@@ -2,7 +2,7 @@
 
 # The name for the app
 APP_NAME = "Trapu Zarrak app"
-VERSION = 'v54'  # next version to be delivered
+VERSION = 'v55'  # next version to be delivered
 
 # Available types of clothes
 ITEM_TYPE = (
@@ -28,7 +28,13 @@ ITEM_CLASSES = (
     ('P', 'Premium')
 )
 
+PAYMENT_METHODS = (
+    ('C', 'Metálico'),
+    ('V', 'Tarjeta'),
+    ('T', 'Transferencia')
+)
+
 WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
 
-RELAX_ICONS = ('curling', 'shuttlecock', 'table_tennis', 'coffee-togo',
+RELAX_ICONS = ('curling', 'shuttlecock', 'table-tennis', 'coffee-togo',
                'umbrella-beach', 'clipboard-check', )

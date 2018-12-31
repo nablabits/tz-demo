@@ -1,0 +1,35 @@
+<div class="form-group">
+<div class="row">
+  <div class="col-6">
+    <div class="form-group">
+      <label for="item-pk">Selecciona prenda</label>
+      <select class="form-control ml-auto" name="item-pk" id="item-pk">
+        {%for item in items%}
+        <option value="{{item.pk}}">
+          {{item.get_item_type_display}} {{item.item_class}}-{{item.size}}
+          {% if item.price %}({{item.price}}€){%endif%}
+        </option>
+        {%endfor%}
+      </select>
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="form-group">
+      <label for="item-qty">Cantidad</label>
+      <input type="number" class="form-control ml-auto" name="item-qty" id="item-qty" value="1">
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="form-group">
+      <label for="custom-price">Precio especial</label>
+      <input type="number" class="form-control ml-auto" name="custom-price" id="custom-price" value=0>
+    </div>
+  </div>
+</div>
+<div class="d-flex justify-content-end">
+    <div class="form-check">
+      <input type="checkbox" name="set-default-price" class="form-check-imput" id="set-deafult-price">
+      <label for="set-default-price">Asigna este precio a la prenda genérica</label>
+    </div>
+</div>
+<input type="hidden" name="order-pk" value="{{order_pk}}">

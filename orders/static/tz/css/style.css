@@ -25,7 +25,7 @@ th{
   border-right: 1px solid lightgrey;
   border-bottom: 1px solid lightgrey;
 }
-.js-flip{
+.js-flip, .js-crud-add, .js-crud-edit, .js-crud-delete{
   cursor: pointer;
 }
 .aside-wide{
@@ -107,4 +107,9 @@ th{
 #md-content{
   height: 500px;
   overflow: auto;
+}
+
+#pqueue-editor, #pqueue-list{
+  overflow-y: scroll;
+  height: 80vh;
 }

@@ -51,9 +51,13 @@ $(function () {
   var loadActionForm = function () {
     var action = $(this).attr('data-action')
     var pk = $(this).attr('data-pk')
+    var aditionalPK = false
+    if ($(this).attr('data-aditional-pk')) {
+      aditionalPK = $(this).attr('data-aditional-pk')
+    }
     $.ajax({
       url: '/actions/',
-      data: { 'pk': pk, 'action': action },
+      data: { 'pk': pk, 'action': action, 'aditionalpk': aditionalPK },
       dataType: 'json',
       beforeSend: function () {
         $('#action-modal').modal('show')
@@ -67,7 +71,8 @@ $(function () {
     })
   }
 
-  var saveActionForm = function () {
+  var saveActionForm = function (e) {
+    e.preventDefault()
     var form = $(this)
     $.ajax({
       url: form.attr('action'),
@@ -84,21 +89,17 @@ $(function () {
           $('#action-modal #check-success').removeClass('d-none')
           if (data.reload) {
             location.reload()
+          } else if (data.redirect) {
+            window.location.replace(data.redirect)
           } else {
             $(data.html_id).html(data.html)
           }
+          $('#action-modal').modal('hide')
         } else {
           $('#action-modal .modal-content').html(data.html)
         }
       }
     })
-    var action = $(this).find('#js-action').attr('value')
-    if (action !== 'order-new' &&
-        action !== 'send-to-order' &&
-        action !== 'customer-delete' &&
-        action !== 'comment-read') {
-      return false
-    }
   }
 
   var searchAction = function () {
@@ -116,8 +117,33 @@ $(function () {
     return false
   }
 
+  var queueAction = function () {
+    var pk = $(this).attr('data-pk')
+    var action = $(this).attr('data-action')
+    $.ajax({
+      url: '/queue-actions/',
+      data: $.param({
+        'pk': pk, 'action': action
+      }),
+      type: 'post',
+      dataType: 'json',
+      success: function (data) {
+        if (data.is_valid) {
+          if (data.reload) {
+            location.reload()
+          } else {
+            $(data.html_id).html(data.html)
+          }
+        } else {
+          $('.js-ajax-error').html(data.error)
+          $('#display-errors').removeClass('d-none')
+        }
+      }
+    })
+    // return false
+  }
+
   // actions (GET)
-  $('.js-order-add').click(loadActionForm)
   $('.js-order-edit').click(loadActionForm)
   $('.js-order-edit-date').click(loadActionForm)
   $('#order-status').on('click', '.js-pay-now', loadActionForm)
@@ -126,7 +152,6 @@ $(function () {
   $('#order-details').on('click', '.js-add-item', loadActionForm)
   $('#order-details').on('click', '.js-edit-item', loadActionForm)
   $('#order-details').on('click', '.js-delete-item', loadActionForm)
-  $('.js-customer-add').click(loadActionForm)
   $('.js-customer-edit').click(loadActionForm)
   $('.js-customer-delete').click(loadActionForm)
   $('#timing-list').on('click', '.js-time-add', loadActionForm)
@@ -143,4 +168,7 @@ $(function () {
   $('#order-status').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
+
+  // Pqueue actions
+  $('#root').on('click', '.js-queue', queueAction)
 })
