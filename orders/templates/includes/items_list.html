@@ -35,6 +35,7 @@
     <th scope="col">
       Identificador <i class="far fa-question-circle" style="cursor:pointer;" data-toggle="collapse" data-target="#item-help"></i>
     </th>
+    <th scope="col">Precio</th>
     <th scope="col">Tela</th>
     <th scope="col">
       Acciones
@@ -63,7 +64,8 @@
           <i class="far fa-sign-in-alt"></i>
           {%endif%}
         </th>
-        <th>{{ item.fabrics}}</th>
+        <th>{{ item.price}}€</th>
+        <th>{{ item.fabrics}}m</th>
         <th>{% include 'includes/action_buttons.html' %}</th>
       </tr>
       {%if item.notes%}

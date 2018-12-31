@@ -2,17 +2,19 @@
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views import View
+from django.urls import reverse
 from django.http import JsonResponse, Http404, HttpResponseServerError
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, OrderItem, Item, PQueue
+from .models import Comment, Customer, Order, OrderItem, Item, PQueue, Invoice
 from django.utils import timezone
-from .forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
-                    OrderCloseForm, OrderItemForm, EditDateForm, AddTimesForm)
+from .forms import (
+    CustomerForm, OrderForm, CommentForm, ItemForm, OrderCloseForm,
+    OrderItemForm, EditDateForm, AddTimesForm, InvoiceForm)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import Count, Sum, F, Q
+from django.db.models import Count, Sum, F, Q, DecimalField
 from datetime import datetime, date
 from random import randint
 from . import settings
@@ -150,7 +152,7 @@ def orderlist(request, orderby):
             raise Http404('Action required')
         order.save()
 
-    orders = Order.objects.all()
+    orders = Order.objects.exclude(ref_name__iexact='quick')
 
     try:
         tz = Customer.objects.get(name__iexact='trapuzarrak')
@@ -263,7 +265,8 @@ def orderlist(request, orderby):
 @login_required
 def customerlist(request):
     """Display all customers or search'em."""
-    customers = Customer.objects.all().order_by('name')
+    customers = Customer.objects.all().exclude(name__iexact='express')
+    customers = customers.order_by('name')
     customers = customers.annotate(num_orders=Count('order'))
     page = request.GET.get('page', 1)
     paginator = Paginator(customers, 10)
@@ -331,11 +334,32 @@ def itemslist(request):
     return render(request, 'tz/list_view.html', view_settings)
 
 
+@login_required
+def invoiceslist(request):
+    """List all the invoices."""
+    invoices = Invoice.objects.all()[:20]
+    cur_user = request.user
+    now = datetime.now()
+
+    view_settings = {'invoices': invoices,
+                     'user': cur_user,
+                     'now': now,
+                     'version': settings.VERSION,
+                     'title': 'TrapuZarrak · Facturas',
+                     }
+
+    return render(request, 'tz/invoices.html', view_settings)
+
+
 # Object views
 @login_required
 def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
+
+    if order.customer.name == 'express':
+        return redirect(reverse('order_express', args=[order.pk]))
+
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
 
@@ -361,10 +385,43 @@ def order_view(request, pk):
                      'js_action_edit': 'order-item-edit',
                      'js_action_delete': 'order-item-delete',
                      'js_data_pk': order.pk,
-                     'footer': True,
                      }
 
     return render(request, 'tz/order_view.html', view_settings)
+
+
+@login_required
+def order_express_view(request, pk):
+    """Create a new quick checkout."""
+    order = get_object_or_404(Order, pk=pk)
+    if order.customer.name != 'express':
+        return redirect(reverse('order_view', args=[order.pk]))
+    item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
+    items = OrderItem.objects.filter(reference=order)
+    already_invoiced = Invoice.objects.filter(reference=order)
+    total = items.aggregate(
+        total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+    cur_user = request.user
+    now = datetime.now()
+    view_settings = {'order': order,
+                     'user': cur_user,
+                     'now': now,
+                     'item_types': settings.ITEM_TYPE[1:],
+                     'item_names': item_names,
+                     'items': items,
+                     'invoiced': already_invoiced,
+                     'total': total,
+                     'version': settings.VERSION,
+                     'title': 'TrapuZarrak · Venta express',
+
+                     # CRUD Actions
+                     'btn_title_add': 'Nueva prenda',
+                     'js_action_add': 'object-item-add',
+                     # 'js_action_edit': 'order-express-item-edit',
+                     'js_action_delete': 'order-express-item-delete',
+                     'js_data_pk': '0',
+                     }
+    return render(request, 'tz/order_express.html', view_settings)
 
 
 @login_required
@@ -478,6 +535,17 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
+        # Add express order (GET)
+        elif action == 'order-express-add':
+            custom_form = 'includes/custom_forms/order_express.html'
+            context = {'modal_title': 'Nueva venta · Añadir CP',
+                       'pk': '0',
+                       'action': 'order-express-add',
+                       'submit_btn': 'Abrir venta',
+                       'custom_form': custom_form,
+                       }
+            template = 'includes/regular_form.html'
+
         # Add customer (GET)
         elif action == 'customer-add':
             form = CustomerForm()
@@ -504,11 +572,28 @@ class Actions(View):
         # Send item to order (GET)
         elif action == 'send-to-order':
             custom_form = 'includes/custom_forms/send_to_order.html'
-            context = {'orders': Order.objects.exclude(status__in=[7, 8]),
+            order_dropdown = Order.objects.exclude(ref_name__iexact='Quick')
+            order_dropdown = order_dropdown.exclude(status__in=[7, 8])
+            context = {'orders': order_dropdown,
                        'modal_title': 'Añadir prenda a pedido',
                        'pk': pk,
                        'action': 'send-to-order',
                        'submit_btn': 'Añadir a pedido',
+                       'custom_form': custom_form,
+                       }
+            template = 'includes/regular_form.html'
+
+        # Send to order express (GET)
+        elif action == 'send-to-order-express':
+            custom_form = 'includes/custom_forms/send_to_order_express.html'
+            item_name = get_object_or_404(Item, pk=pk).name
+            items = Item.objects.filter(name=item_name)
+            context = {'items': items,
+                       'modal_title': 'Selecciona prenda',
+                       'pk': pk,
+                       'order_pk': self.request.GET.get('aditionalpk', None),
+                       'action': 'send-to-order-express',
+                       'submit_btn': 'Añadir a ticket',
                        'custom_form': custom_form,
                        }
             template = 'includes/regular_form.html'
@@ -536,6 +621,27 @@ class Actions(View):
                        'pk': order.pk,
                        'action': 'order-comment',
                        'submit_btn': 'Añadir',
+                       }
+            template = 'includes/regular_form.html'
+
+        # Issue invoice (GET)
+        elif action == 'ticket-to-invoice':
+            order = get_object_or_404(Order, pk=pk)
+            already_invoiced = Invoice.objects.filter(reference=order)
+            items = OrderItem.objects.filter(reference=order)
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            form = InvoiceForm()
+            context = {'form': form,
+                       'items': items,
+                       'order': order,
+                       'total': total,
+                       'invoiced': already_invoiced,
+                       'modal_title': 'Facturar',
+                       'pk': order.pk,
+                       'action': 'ticket-to-invoice',
+                       'submit_btn': 'Facturar',
+                       'custom_form': 'includes/custom_forms/invoice.html',
                        }
             template = 'includes/regular_form.html'
 
@@ -667,6 +773,17 @@ class Actions(View):
                        'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
+        # Delete order express item (GET)
+        elif action == 'order-express-item-delete':
+            get_object_or_404(OrderItem, pk=pk)
+            item = OrderItem.objects.select_related('reference').get(pk=pk)
+            context = {'modal_title': 'Eliminar prenda',
+                       'msg': 'Realmente borrar la prenda?',
+                       'pk': item.pk,
+                       'action': 'order-express-item-delete',
+                       'submit_btn': 'Sí, borrar'}
+            template = 'includes/delete_confirmation.html'
+
         # Delete Customer (GET)
         elif action == 'customer-delete':
             customer = get_object_or_404(Customer, pk=pk)
@@ -717,6 +834,7 @@ class Actions(View):
         data = dict()
         pk = self.request.POST.get('pk', None)
         action = self.request.POST.get('action', None)
+        template, context = False, False
 
         if not pk or not action:
             raise ValueError('POST data was poor')
@@ -729,7 +847,8 @@ class Actions(View):
                 order.creation = timezone.now()
                 order.user = request.user
                 order.save()
-                return redirect('order_view', pk=order.pk)
+                data['redirect'] = (reverse('order_view', args=[order.pk]))
+                data['form_is_valid'] = True
             else:
                 data['form_is_valid'] = False
                 context = {'form': form,
@@ -740,6 +859,21 @@ class Actions(View):
                            'custom_form': 'includes/custom_forms/order.html',
                            }
                 template = 'includes/regular_form.html'
+
+        # Add express order
+        elif action == 'order-express-add':
+            customer, created = Customer.objects.get_or_create(
+                name='express', city='server', phone=0,
+                cp=self.request.POST.get('cp'),
+                notes='AnnonymousUserAutmaticallyCreated'
+            )
+            order = Order.objects.create(
+                user=request.user, customer=customer, ref_name='Quick',
+                delivery=date.today(), status=7, budget=0, prepaid=0,
+            )
+
+            data['redirect'] = (reverse('order_express', args=[order.pk]))
+            data['form_is_valid'] = True
 
         # Add Customer (POST)
         elif action == 'customer-new':
@@ -792,7 +926,8 @@ class Actions(View):
             comment = get_object_or_404(Comment, pk=pk)
             comment.read = True
             comment.save()
-            return redirect('main')
+            data['redirect'] = (reverse('main'))
+            data['form_is_valid'] = True
 
         # Add new item Objects (POST)
         elif action == 'object-item-add':
@@ -843,7 +978,38 @@ class Actions(View):
                 raise Http404('No info given about stock')
             OrderItem.objects.create(element=item, reference=order, fit=is_fit,
                                      stock=is_stock)
-            return redirect('order_view', pk=order.pk)
+            data['redirect'] = (reverse('order_view', args=[order.pk]))
+            data['form_is_valid'] = True
+
+        # Send item to order express (POST)
+        elif action == 'send-to-order-express':
+            item = get_object_or_404(Item,
+                                     pk=self.request.POST.get('item-pk', None))
+            order = get_object_or_404(
+                Order, pk=self.request.POST.get('order-pk', None)
+                )
+            price = self.request.POST.get('custom-price', None)
+            qty = self.request.POST.get('item-qty', 1)
+            if price is '0':
+                price = None
+            OrderItem.objects.create(
+                element=item, reference=order, qty=qty, price=price,
+                stock=True, fit=False)
+            items = OrderItem.objects.filter(reference=order)
+            data['form_is_valid'] = True
+            data['html_id'] = '#ticket'
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            context = {'items': items,
+                       'total': total,
+                       'order': order,
+
+                       # CRUD Actions
+                       # 'js_action_edit': 'order-express-item-edit',
+                       'js_action_delete': 'order-express-item-delete',
+                       'js_data_pk': '0',
+                       }
+            template = 'includes/ticket.html'
 
         # Attach item to order (POST)
         elif action == 'order-item-add':
@@ -870,6 +1036,32 @@ class Actions(View):
                 context = {'order': order, 'form': form}
                 template = 'includes/order_details.html'
                 data['form_is_valid'] = False
+
+        elif action == 'ticket-to-invoice':
+            order = get_object_or_404(Order, pk=pk)
+            items = OrderItem.objects.filter(reference=order)
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            form = InvoiceForm(request.POST)
+            if form.is_valid():
+                invoice = form.save(commit=False)
+                invoice.reference = order
+                invoice.save()
+                data['redirect'] = (reverse('invoiceslist'))
+                data['form_is_valid'] = True
+            else:
+                data['form_is_valid'] = False
+                context = {'form': form,
+                           'items': items,
+                           'order': order,
+                           'total': total,
+                           'modal_title': 'Facturar',
+                           'pk': order.pk,
+                           'action': 'ticket-to-invoice',
+                           'submit_btn': 'Facturar',
+                           'custom_form': 'includes/custom_forms/invoice.html',
+                           }
+                template = 'includes/regular_form.html'
 
         # Edit order (POST)
         elif action == 'order-edit':
@@ -991,7 +1183,11 @@ class Actions(View):
                 template = 'includes/regular_form.html'
                 data['form_is_valid'] = False
 
-        # add times from pqueue
+        # Edit items on express orders (POST)
+        elif action == 'order-express-item-edit':
+            pass
+
+        # Add times from pqueue (POST)
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
@@ -1119,11 +1315,33 @@ class Actions(View):
                        }
             template = 'includes/order_details.html'
 
+        # Delete items on order express (POST)
+        elif action == 'order-express-item-delete':
+            item = get_object_or_404(OrderItem, pk=pk)
+            order = item.reference
+            items = OrderItem.objects.filter(reference=order)
+            item.delete()
+            data['form_is_valid'] = True
+            data['html_id'] = '#ticket'
+            total = items.aggregate(
+                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            context = {'items': items,
+                       'total': total,
+                       'order': order,
+
+                       # CRUD Actions
+                       # 'js_action_edit': 'order-express-item-edit',
+                       'js_action_delete': 'order-express-item-delete',
+                       'js_data_pk': '0',
+                       }
+            template = 'includes/ticket.html'
+
         # Delete customer (POST)
         elif action == 'customer-delete':
             customer = get_object_or_404(Customer, pk=pk)
             customer.delete()
-            return redirect('customerlist')
+            data['redirect'] = (reverse('customerlist'))
+            data['form_is_valid'] = True
 
         # logout (POST)
         elif action == 'logout':
@@ -1140,13 +1358,15 @@ class Actions(View):
         """
         if request.POST.get('test'):
             data['template'] = template
-            add_to_context = []
-            for k in context:
-                add_to_context.append(k)
-            data['context'] = add_to_context
+            if context:
+                add_to_context = []
+                for k in context:
+                    add_to_context.append(k)
+                data['context'] = add_to_context
 
         # Now render_to_string the html for JSON response
-        data['html'] = render_to_string(template, context, request=request)
+        if template and context:
+            data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
 
 
@@ -1207,6 +1427,7 @@ def filter_items(request):
                'js_action_delete': 'object-item-delete',
                }
     template = 'includes/items_list.html'
+    data['id'] = '#item_objects_list'
     data['html'] = render_to_string(template, context, request=request)
 
     """

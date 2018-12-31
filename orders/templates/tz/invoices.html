@@ -1,0 +1,39 @@
+{% extends "tz/base.html" %}
+{% block invoices %}
+<div class="container mt-4">
+  <div class="d-flex my-4">
+    <h3>Últimas facturas</h3>
+    <p class="ml-auto">Mostrando últimas {{invoices|length}}</p>
+  </div>
+  <table class="table">
+  <thead>
+    <tr>
+      <th scope="col">Factura nº</th>
+      <th scope="col">Fecha</th>
+      <th scope="col">Pedido</th>
+      <th scope="col">Cliente/CP</th>
+      <th scope="col">Importe</th>
+      <th scope="col">Forma de pago</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for invoice in invoices %}
+    <tr class="js-view-list-item">
+      <th>{{invoice.invoice_no}}</th>
+      <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
+      {%if invoice.reference.ref_name == 'Quick'%}
+        <th>Ticket</th>
+        <th>{{invoice.reference.customer.cp }}</th>
+      {%else%}
+        <th>{{invoice.reference.ref_name }}</th>
+        <th>{{invoice.reference.customer.name }}</th>
+      {%endif%}
+      <th>{{invoice.amount}}€</th>
+      <th>{{invoice.get_pay_method_display}}</th>
+    </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+
+</div>
+{% endblock %}

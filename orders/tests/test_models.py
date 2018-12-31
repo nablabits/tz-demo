@@ -1,10 +1,12 @@
 """Test the app models."""
+from decimal import Decimal
 from django.test import TestCase
-from orders.models import Customer, Order, Comment, Item, OrderItem, PQueue
+from orders.models import (
+    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, )
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.contrib.auth.models import User
-from datetime import date, timedelta, time
+from datetime import date, timedelta, time, datetime
 
 
 class ModelTest(TestCase):
@@ -125,105 +127,6 @@ class ModelTest(TestCase):
         self.assertTrue(isinstance(comment, Comment))
         self.assertEqual(comment.__str__(), comment_str)
 
-    def test_item_object_creation(self):
-        """Test the proper creation of item objects."""
-        Item.objects.create(name='Test item',
-                            item_type='2',
-                            item_class='S',
-                            size='10',
-                            notes='Default notes',
-                            fabrics=5.2)
-        self.assertTrue(Item.objects.get(name='Test item'))
-
-    def test_item_duplicate_raises_error(self):
-        """Clean method should raise ValidationError."""
-        original = Item.objects.create(name='duplicate', fabrics=0, size='2')
-        duplicated = Item(name='duplicate', fabrics=0, size='2')
-        self.assertEqual(original.name, duplicated.name)
-        self.assertEqual(original.item_type, duplicated.item_type)
-        self.assertEqual(original.item_class, duplicated.item_class)
-        self.assertEqual(original.size, duplicated.size)
-        with self.assertRaises(ValidationError):
-            duplicated.clean()
-
-    def test_object_item_allows_6_chars_on_size(self):
-        """Items's size should allow up to 6 chars."""
-        Item.objects.create(name='Test 6 char item',
-                            item_type='2',
-                            item_class='S',
-                            size='6chars',
-                            notes='Default notes',
-                            fabrics=5.2)
-        self.assertTrue(Item.objects.get(name='Test 6 char item'))
-
-    def test_item_object_foreing_is_default_false(self):
-        """Item's default origin should be false (ie homemade)."""
-        Item.objects.create(name='Test 6 char item',
-                            item_type='2',
-                            item_class='S',
-                            size='6chars',
-                            notes='Default notes',
-                            fabrics=5.2)
-
-        item = Item.objects.get(name='Test 6 char item')
-        self.assertFalse(item.foreing)
-
-    def test_default_item_object_should_be_automatically_created(self):
-        """The default item object is created by a migration."""
-        self.assertTrue(Item.objects.get(name='Predeterminado'))
-
-    def test_the_item_object_named_default_is_reserved(self):
-        """The item obj named default is reserved & raises ValidationError."""
-        with self.assertRaises(ValidationError):
-            Item.objects.create(name='Predeterminado',
-                                item_type='0',
-                                item_class='0',
-                                size='0',
-                                fabrics=2.2)
-
-    def test_add_items_to_orders(self):
-        """Test the proper item attachs to orders."""
-        order = Order.objects.all()[0]
-        item = Item.objects.create(name='Test item', fabrics=5.2)
-        OrderItem.objects.create(description='Test item',
-                                 reference=order,
-                                 element=item)
-
-        created_item = OrderItem.objects.get(description='Test item')
-        self.assertEqual(created_item.reference, order)
-        self.assertEqual(created_item.element, item)
-        self.assertEqual(created_item.qty, 1)
-        self.assertEqual(created_item.crop, timedelta(0))
-        self.assertEqual(created_item.sewing, timedelta(0))
-        self.assertEqual(created_item.iron, timedelta(0))
-        self.assertFalse(created_item.fit)
-
-    def test_add_items_to_orders_default_item(self):
-        """If no element is selected, Predetermiando is default."""
-        order = Order.objects.all()[0]
-        item = Item.objects.get(name='Predeterminado')
-        OrderItem.objects.create(description='Test item',
-                                 reference=order, )
-
-        created_item = OrderItem.objects.get(description='Test item')
-        self.assertEqual(created_item.element, item)
-
-    def test_items_time_quality_property(self):
-        """Test the proper value for timing."""
-        order = Order.objects.all()[0]
-        order_item = OrderItem.objects.create(description='Test item',
-                                              reference=order,
-                                              crop=timedelta(2),
-                                              sewing=timedelta(2),
-                                              iron=timedelta(2),)
-        self.assertEqual(order_item.time_quality, 3)
-        order_item.sewing = timedelta(0)
-        self.assertEqual(order_item.time_quality, 2)
-        order_item.iron = timedelta(0)
-        self.assertEqual(order_item.time_quality, 1)
-        order_item.crop = timedelta(0)
-        self.assertEqual(order_item.time_quality, 0)
-
 
 class TestOrders(TestCase):
     """Test the Order model."""
@@ -281,6 +184,106 @@ class TestOrders(TestCase):
         self.assertEqual(order.times[1], 3)
 
 
+class TestObjectItems(TestCase):
+    """Test the Item model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        User.objects.create_user(username='user', is_staff=True,
+                                 is_superuser=True)
+
+        # Create a customer
+        Customer.objects.create(name='Customer Test',
+                                address='This computer',
+                                city='No city',
+                                phone='666666666',
+                                email='customer@example.com',
+                                CIF='5555G',
+                                notes='Default note',
+                                cp='48100')
+
+        # Create  an order
+        Order.objects.create(user=User.objects.first(),
+                             customer=Customer.objects.first(),
+                             ref_name='example',
+                             delivery=date.today(),
+                             budget=2000,
+                             prepaid=1000)
+
+    def test_item_object_creation(self):
+        """Test the proper creation of item objects."""
+        Item.objects.create(name='Test item',
+                            item_type='2',
+                            item_class='S',
+                            size='10',
+                            notes='Default notes',
+                            fabrics=5.2)
+        self.assertTrue(Item.objects.get(name='Test item'))
+
+    def test_item_duplicate_raises_error(self):
+        """Clean method should raise ValidationError."""
+        original = Item.objects.create(name='duplicate', fabrics=0, size='2')
+        duplicated = Item(name='duplicate', fabrics=0, size='2')
+        self.assertEqual(original.name, duplicated.name)
+        self.assertEqual(original.item_type, duplicated.item_type)
+        self.assertEqual(original.item_class, duplicated.item_class)
+        self.assertEqual(original.size, duplicated.size)
+        with self.assertRaises(ValidationError):
+            duplicated.clean()
+
+    def test_object_item_allows_6_chars_on_size(self):
+        """Items's size should allow up to 6 chars."""
+        Item.objects.create(name='Test 6 char item',
+                            item_type='2',
+                            item_class='S',
+                            size='6chars',
+                            notes='Default notes',
+                            fabrics=5.2)
+        self.assertTrue(Item.objects.get(name='Test 6 char item'))
+
+    def test_item_object_foreing_is_default_false(self):
+        """Item's default origin should be false (ie homemade)."""
+        Item.objects.create(name='Test 6 char item',
+                            item_type='2',
+                            item_class='S',
+                            size='6chars',
+                            notes='Default notes',
+                            fabrics=5.2)
+
+        item = Item.objects.get(name='Test 6 char item')
+        self.assertFalse(item.foreing)
+
+    def test_item_object_price_attr(self):
+        """Item's default attributes."""
+        item = Item.objects.create(name='default price', fabrics=1)
+        self.assertEqual(item.price, 0)
+        self.assertEqual(item._meta.get_field('price').verbose_name,
+                         'Precio unitario')
+
+    def test_item_price_values(self):
+        """Test the values for the field."""
+        Item.objects.create(name='default price', fabrics=1, price=1234.45)
+
+        with self.assertRaises(ValidationError):
+            Item.objects.create(name='default price', fabrics=1,
+                                price='invalid')
+
+    def test_default_item_object_should_be_automatically_created(self):
+        """The default item object is created by a migration."""
+        self.assertTrue(Item.objects.get(name='Predeterminado'))
+
+    def test_the_item_object_named_default_is_reserved(self):
+        """The item obj named default is reserved & raises ValidationError."""
+        with self.assertRaises(ValidationError):
+            Item.objects.create(name='Predeterminado',
+                                item_type='0',
+                                item_class='0',
+                                size='0',
+                                fabrics=2.2)
+
+
 class TestOrderItems(TestCase):
     """Test the orderItem model."""
 
@@ -312,12 +315,82 @@ class TestOrderItems(TestCase):
 
     def test_orderitem_stock(self):
         """Items are by default new produced for orders."""
-        item = OrderItem.objects.create(element=Item.objects.all()[0],
-                                        reference=Order.objects.all()[0],
+        item = OrderItem.objects.create(element=Item.objects.first(),
+                                        reference=Order.objects.first(),
                                         )
         self.assertFalse(item.stock)
         self.assertIsInstance(item.stock, bool)
         self.assertEqual(item._meta.get_field('stock').verbose_name, 'Stock')
+
+    def test_add_items_to_orders(self):
+        """Test the proper item attachs to orders."""
+        order = Order.objects.first()
+        item = Item.objects.create(name='Test item', fabrics=5.2)
+        OrderItem.objects.create(description='Test item',
+                                 reference=order,
+                                 element=item)
+
+        created_item = OrderItem.objects.get(description='Test item')
+        self.assertEqual(created_item.reference, order)
+        self.assertEqual(created_item.element, item)
+        self.assertEqual(created_item.qty, 1)
+        self.assertEqual(created_item.crop, timedelta(0))
+        self.assertEqual(created_item.sewing, timedelta(0))
+        self.assertEqual(created_item.iron, timedelta(0))
+        self.assertFalse(created_item.fit)
+
+    def test_orderitem_price_attr(self):
+        """Order item's default attributes."""
+        item = OrderItem.objects.create(
+            element=Item.objects.first(), reference=Order.objects.first(),
+            price=0)
+        self.assertEqual(item.price, 0)
+        self.assertEqual(item._meta.get_field('price').verbose_name,
+                         'Precio unitario')
+
+    def test_orderitem_default_price(self):
+        """When no price is given, pickup the object item's default."""
+        object_item = Item.objects.first()
+        object_item.price = 200
+        object_item.name = 'Item default price'
+        object_item.save()
+        item = OrderItem.objects.create(
+            element=object_item, reference=Order.objects.first(), )
+        self.assertEqual(item.price, 200)
+
+    def test_add_items_to_orders_default_item(self):
+        """If no element is selected, Predetermiando is default."""
+        order = Order.objects.first()
+        item = Item.objects.get(name='Predeterminado')
+        OrderItem.objects.create(description='Test item',
+                                 reference=order, )
+
+        created_item = OrderItem.objects.get(description='Test item')
+        self.assertEqual(created_item.element, item)
+
+    def test_items_time_quality_property(self):
+        """Test the proper value for timing."""
+        order = Order.objects.first()
+        order_item = OrderItem.objects.create(description='Test item',
+                                              reference=order,
+                                              crop=timedelta(2),
+                                              sewing=timedelta(2),
+                                              iron=timedelta(2),)
+        self.assertEqual(order_item.time_quality, 3)
+        order_item.sewing = timedelta(0)
+        self.assertEqual(order_item.time_quality, 2)
+        order_item.iron = timedelta(0)
+        self.assertEqual(order_item.time_quality, 1)
+        order_item.crop = timedelta(0)
+        self.assertEqual(order_item.time_quality, 0)
+
+    def test_items_subtotal(self):
+        """Test the proepr value of subtotal."""
+        item = OrderItem.objects.create(
+            element=Item.objects.first(), reference=Order.objects.first(),
+            qty=5, price=10
+        )
+        self.assertEqual(item.subtotal, 50)
 
 
 class PQueueTest(TestCase):
@@ -601,7 +674,122 @@ class PQueueTest(TestCase):
                          (-3, -2, 1002))
 
 
-#
+class TestInvoice(TestCase):
+    """Test the invoice model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(
+            username='user', is_staff=True, )
+
+        # Create a customer
+        customer = Customer.objects.create(
+            name='Customer Test', city='NoCity', phone='6', cp='1')
+
+        # Create an order
+        order = Order.objects.create(
+            user=user, customer=customer, ref_name='Test order',
+            budget=2000, prepaid=0, delivery=date.today())
+
+        # Create obj item
+        item = Item.objects.create(name='Test item', fabrics=5, price=10)
+
+        # Create orderitems
+        OrderItem.objects.create(reference=order, element=item)
+
+    def test_reference_is_a_one_to_one_field(self):
+        """That is, each order should appear once on the table."""
+        Invoice.objects.create(reference=Order.objects.first())
+        with self.assertRaises(IntegrityError):
+            Invoice.objects.create(reference=Order.objects.first())
+
+    def test_reference_delete_cascade(self):
+        """If order is deleted so is invoice."""
+        order = Order.objects.first()
+        Invoice.objects.create(reference=order)
+        self.assertTrue(Invoice.objects.all())
+        order.delete()
+        self.assertFalse(Invoice.objects.all())
+
+    def test_reference_pk_matches_invoice_pk(self):
+        """Since reference has primary key true."""
+        order = Order.objects.first()
+        invoice = Invoice.objects.create(reference=order)
+        self.assertEqual(order.pk, invoice.pk)
+
+    def test_issued_on_is_datetime(self):
+        """Test the data type and the date."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertIsInstance(invoice.issued_on, datetime)
+        self.assertEqual(invoice.issued_on.date(), date.today())
+
+    def test_invoice_no_default_1(self):
+        """When there're no invoices yet, the first one is 1."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertEqual(invoice.invoice_no, 1)
+
+    def test_invoice_no_autoincrement(self):
+        """When there're invoices should add one to the last one."""
+        user = User.objects.first()
+        customer = Customer.objects.first()
+        for i in range(3):
+            order = Order.objects.create(
+                user=user, customer=customer, ref_name='Test%s' % i,
+                budget=10, prepaid=0, delivery=date.today())
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+        i = 1
+        for invoice in Invoice.objects.reverse():
+            self.assertEqual(invoice.invoice_no, i)
+            i += 1
+
+    def test_invoice_no_several_saves(self):
+        """Ensure the number doesn't rise on multiple save calls."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertEqual(invoice.invoice_no, 1)
+        invoice.pay_method = 'V'
+        invoice.save()
+        self.assertEqual(invoice.invoice_no, 1)
+
+    def test_invoice_amount_sums(self):
+        """Test the proper sum of items."""
+        order = Order.objects.first()
+        for i in range(3):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last(), price=20, )
+        invoice = Invoice.objects.create(reference=order)
+        self.assertIsInstance(invoice.amount, Decimal)
+        self.assertEqual(invoice.amount, 70)
+
+    def test_pay_method_allowed_means(self):
+        """Test the proper payment methods."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertEqual(invoice.pay_method, 'C')
+        for pay_method in ('V', 'T'):
+            invoice.pay_method = pay_method
+            invoice.full_clean()
+            invoice.save()
+            self.assertEqual(invoice.pay_method, pay_method)
+            self.assertEqual(invoice.invoice_no, 1)
+
+        with self.assertRaises(ValidationError):
+            invoice.pay_method = 'K'
+            invoice.full_clean()
+
+    def test_total_amount_0_raises_error(self):
+        """Test the proper raise when invoice is empty."""
+        item = OrderItem.objects.first()
+        item.delete()
+        order = Order.objects.first()
+        item = OrderItem.objects.create(
+            reference=order, element=Item.objects.first())
+        self.assertEqual(item.price, 0)
+        with self.assertRaises(ValidationError):
+            Invoice.objects.create(reference=item.reference)
+
 #
 #
 #

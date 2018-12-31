@@ -27,7 +27,7 @@ $(document).ready(function () {
       type: form.attr('method'),
       dataType: 'json',
       success: function (data) {
-        $('#item_objects_list').html(data.html)
+        $(data.id).html(data.html)
       }
     })
     return false

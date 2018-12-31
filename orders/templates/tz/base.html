@@ -4,7 +4,7 @@
   <head>
     <title>{{title}}</title>
     <link rel="stylesheet" href="{% static 'tz/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-j8y0ITrvFafF4EkV1mPW0BKm6dp3c+J9Fky22Man50Ofxo2wNe5pT1oZejDH9/Dt" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-LRlmVvLKVApDVGuspQFnRQJjkv0P7/YFrw84YYQtmYG4nK8c+M+NlmYDCv0rKWpG" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
@@ -33,7 +33,7 @@
       <!-- define -->
     </div>
 
-    <div class="container-fluid">
+    <div class="container-fluid mt-2" id="root">
       <div class="row">
 
         <!-- PC menu -->
@@ -45,10 +45,17 @@
               <i class="fa fa-fw fa-search pr-2"></i> Clientes</a>
             <a class="nav-item nav-link" href="{% url 'orderlist' orderby='date' %}" id="sidebar-orders">
               <i class="fa fa-fw fa-list pr-2"></i> Pedidos</a>
-            <a class="nav-item nav-link js-customer-add" href="#" data-action="customer-add" data-pk="0" id="sidebar-new-customer">
+            <a class="nav-item nav-link js-crud-add" href="#" data-action="customer-add" data-pk="0" id="sidebar-new-customer">
               <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
-            <a class="nav-item nav-link js-order-add" href="#" data-action="order-add" data-pk="0" id="sidebar-new-order">
-              <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido</a>
+            <a class="nav-item nav-link js-crud-add" href="#" data-action="order-add" data-pk="0" id="sidebar-new-order">
+              <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido
+            </a>
+            <a class="nav-item nav-link js-crud-add" href="#" data-action="order-express-add" data-pk="0" id="sidebar-new-order-express">
+              <i class="far fa-cash-register pr-2"></i> Nueva venta
+            </a>
+            <a class="nav-item nav-link" href="{% url 'invoiceslist' %}" id="sidebar-invoices-list">
+              <i class="far fa-history pr-2"></i> Últimas facturas
+            </a>
             <a class="nav-item nav-link" href="{% url 'itemslist' %}" id="sidebar-items">
               <i class="fa fa-fw fa-cube pr-2"></i> Editor de prendas</a>
             <a class="nav-item nav-link" href="{% url 'pqueue_manager' %}" id="sidebar-pqueue">
@@ -58,15 +65,15 @@
           </nav>
         </div>
 
-        <div class="col-lg-9 col-md-10 col-sm-12 mb-5 pt-5" id="root">
+        <div class="col-lg-10 col-md-10 col-sm-12 mb-5 pt-5">
           {% block homeview %}{% endblock %}
           {% block orderview %}{% endblock %}
+          {% block orderexpress %}{% endblock %}
           {% block customerview %}{% endblock %}
           {% block pqueueview %}{% endblock %}
           {% block orders %}{% endblock %}
           {% block listview %}{% endblock %}
-        </div>
-        <div class="col-md-1">
+          {% block invoices %}{% endblock %}
         </div>
       </div>
 
