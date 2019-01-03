@@ -39,7 +39,7 @@
           </li>
           <li>Telefono: <a href="tel:{{customer.phone}}">{{customer.phone}}</a></li>
           <li>Email: <a href="mailto:{{customer.email}}">{{customer.email}}</a></li>
-          <li>CIF: <a href="mailto:{{customer.email}}">{{customer.CIF}}</a></li>
+          <li>CIF: {{customer.CIF}}</li>
           {% if customer.notes %}
           <li>Observaciones: {{customer.notes}}</li>
           {% endif %}
