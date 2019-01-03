@@ -473,6 +473,17 @@ class Invoice(models.Model):
         ordering = ['-invoice_no']
 
 
+class BankMovement(models.Model):
+    """Hold the movements between the bank and the check out."""
+
+    action_date = models.DateField('Fecha del moviento', default=timezone.now)
+    amount = models.DecimalField('Cantidad', max_digits=7, decimal_places=2)
+    notes = models.TextField('Observaciones', blank=True, null=True)
+
+    class Meta():
+        """Meta options."""
+
+        ordering = ['-action_date']
 #
 #
 #
