@@ -20,6 +20,10 @@ ITEM_TYPE = (
     ('11', 'Azpikogona'),
     ('12', 'Traje de niña'),
     ('13', 'Toquilla'),
+    ('14', 'Bluson'),
+    ('15', 'Kaiku'),
+    ('16', 'Medias'),
+    ('17', 'Bordado'),
 )
 
 ITEM_CLASSES = (
