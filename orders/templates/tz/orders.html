@@ -5,16 +5,22 @@
 <div class="container mt-4" id="#order-list">
     <ul class="nav nav-tabs" id="ordersTab" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" data-toggle="tab" href="#active-orders" role="tab" id="active-orders-tab">Pedidos Activos</a>
+        <a class="nav-link active" data-toggle="tab" href="#active-orders" role="tab" id="active-orders-tab">Pedidos Activos<span class="ml-1 badge badge-info">{{active_calendar|length}}</span></a>
       </li>
       <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#delivered-orders" role="tab" id="delivered-orders-tab">Pedidos Entregados</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#pending-orders" role="tab" id="delivered-orders-tab">Pendiente cobro</a>
+        <a class="nav-link" data-toggle="tab" href="#pending-orders" role="tab" id="delivered-orders-tab">
+          Pendiente cobro
+          <span class="ml-1 badge badge-info">{{pending|length}}</span>
+        </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#active-stock-orders" role="tab" id="stock-orders-tab">Activos TZ</a>
+        <a class="nav-link" data-toggle="tab" href="#active-stock-orders" role="tab" id="stock-orders-tab">
+          Activos TZ
+          <span class="ml-1 badge badge-info">{{active_stock|length}}</span>
+        </a>
       </li>
       <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#finished-stock-orders" role="tab" id="stock-orders-tab">Stock</a>
