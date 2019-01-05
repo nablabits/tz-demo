@@ -1,15 +1,21 @@
 {% load widget_tweaks %}
 <div class="row">
-  <div class="col-9">
+  <div class="col-7">
     <div class="form-group">
       <label for="id_element">Prenda:</label>
       {% render_field form.element class="form-control" %}
     </div>
   </div>
-  <div class="col-3">
+  <div class="col-2">
     <div class="form-group">
       {{form.qty.label_tag}}
       {% render_field form.qty class="form-control" %}
+    </div>
+  </div>
+  <div class="col-3">
+    <div class="form-group">
+      <label for="id_price">Precio:</label>
+      {% render_field form.price class="form-control" %}
     </div>
   </div>
 </div>

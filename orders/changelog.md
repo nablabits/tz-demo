@@ -1,5 +1,8 @@
 ## Trapuzarrak app registro de cambios
 ***
+#### v56-57, Jan 4
+  * **Nuevo:** añadidos nuevos tipos de prenda.
+
 #### v55, Dic 31
   * **Nuevo:** Cola de producción.
   * **Nuevo:** Módulo de ventas.

@@ -56,13 +56,12 @@ class ModelTest(TestCase):
 
     def test_order_creation(self):
         """Test the order creation."""
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         today = date.today()
         order_str = str(today) + ' Customer Test example'
         self.assertTrue(isinstance(order, Order))
         self.assertEqual(order.__str__(), order_str)
         self.assertTrue(order.overdue)
-        self.assertEqual(order.pending, -1000)
 
     def test_order_progress_status_1(self):
         """Test the proper display of progress."""
@@ -147,6 +146,63 @@ class TestOrders(TestCase):
                                 CIF='5555G',
                                 notes='Default note',
                                 cp='48100')
+
+        Item.objects.create(name='test', fabrics=10, price=30)
+
+    def test_budget_and_prepaid_can_be_null(self):
+        """Test the emptyness of fields and default value."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        Order.objects.create(
+            user=user, customer=c, ref_name='No Budget nor prepaid',
+            delivery=date.today())
+        order = Order.objects.get(ref_name='No Budget nor prepaid')
+        self.assertEqual(order.prepaid, 0)
+
+    def test_overdue(self):
+        """Test the overdue attribute."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date(2017, 1, 1))
+        self.assertTrue(order.overdue)
+
+    def test_total_amount(self):
+        """Test the correct sum of all items."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date.today())
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        self.assertEqual(order.total, 150)
+
+    def test_pending(self):
+        """Test the correct amount."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date.today(),
+            prepaid=50)
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        self.assertEqual(order.pending, -100)
+
+    def test_invoiced(self):
+        """Test the invoiced property."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date.today(),
+            prepaid=50)
+        self.assertFalse(order.invoiced)
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order)
+        self.assertTrue(order.invoiced)
 
     def test_the_count_of_times_per_item_in_an_order(self):
         """Test the correct output of count times per order."""

@@ -189,8 +189,8 @@ def orderlist(request, orderby):
     delivered = orders.filter(status=7).order_by('-delivery')[:10]
     active = orders.exclude(status__in=[7, 8])
     cancelled = orders.filter(status=8).order_by('-inbox_date')[:10]
-    pending = orders.exclude(status=8).filter(budget__gt=F('prepaid'))
-    pending = pending.order_by('inbox_date')
+    pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
+    pending = pending.filter(invoice__isnull=True).order_by('inbox_date')
 
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
@@ -206,10 +206,16 @@ def orderlist(request, orderby):
                                            Sum('orderitem__crop')))
 
     # Total pending amount
-    budgets = pending.aggregate(Sum('budget'))
-    prepaid = pending.aggregate(Sum('prepaid'))
+    items = OrderItem.objects.filter(reference__delivery__gte=date(2019, 1, 1))
+    items = items.exclude(reference__status=8)
+    items = items.exclude(reference__ref_name__iexact='quick')
+    items = items.exclude(reference__customer__name__iexact='Trapuzarrak')
+    items = items.filter(reference__invoice__isnull=True)
+    items = items.aggregate(
+        total=Sum(F('price') * F('qty'), output_field=DecimalField()))
+    prepaid = pending.aggregate(total=Sum('prepaid'))
     try:
-        pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
+        pending_total = items['total'] - prepaid['total']
     except TypeError:
         pending_total = 0
 
@@ -252,6 +258,8 @@ def orderlist(request, orderby):
                      'cancelled': cancelled,
                      'pending': pending,
                      'pending_total': pending_total,
+                     'prepaid': prepaid['total'],
+                     'to_invoice': items['total'],
                      'order_by': orderby,
                      'placeholder': 'Buscar pedido (referencia o nº)',
                      'search_on': 'orders',
@@ -434,10 +442,8 @@ def customer_view(request, pk):
     cancelled = orders.filter(status=8).order_by('delivery')
 
     # Evaluate pending orders
-    pending = []
-    for order in orders:
-        if order.pending < 0:
-            pending.append(order)
+    pending = orders.filter(delivery__gte=date(2019, 1, 1))
+    pending = pending.filter(invoice__isnull=True)
 
     cur_user = request.user
     now = datetime.now()
@@ -446,7 +452,7 @@ def customer_view(request, pk):
                      'orders_delivered': delivered,
                      'orders_cancelled': cancelled,
                      'pending': pending,
-                     'orders_made': len(orders),
+                     'orders_made': orders.count(),
                      'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
@@ -602,8 +608,10 @@ class Actions(View):
         elif action == 'order-item-add':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm()
+            items = Item.objects.all()
             context = {'form': form,
                        'order': order,
+                       'items': items,
                        'modal_title': 'Añadir prenda',
                        'pk': order.pk,
                        'action': 'order-item-add',
@@ -681,31 +689,6 @@ class Actions(View):
                        'pk': customer.pk,
                        'action': 'customer-edit',
                        'submit_btn': 'Guardar',
-                       }
-            template = 'includes/regular_form.html'
-
-        # Collect order (GET)
-        elif action == 'order-pay-now':
-            order = get_object_or_404(Order, pk=pk)
-            context = {'modal_title': 'Cobrar Pedido',
-                       'msg': ('Marcar el pedido como cobrado (%s€)?'
-                               % order.budget),
-                       'pk': order.pk,
-                       'action': 'order-pay-now',
-                       'submit_btn': 'Sí, cobrar'}
-            template = 'includes/confirmation.html'
-
-        # Close order (GET)
-        elif action == 'order-close':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderCloseForm(instance=order)
-            context = {'form': form,
-                       'order': order,
-                       'modal_title': 'Cerrar pedido',
-                       'pk': order.pk,
-                       'action': 'order-close',
-                       'submit_btn': 'Cerrar pedido',
-                       'custom_form': 'includes/custom_forms/close_order.html'
                        }
             template = 'includes/regular_form.html'
 
@@ -1220,50 +1203,6 @@ class Actions(View):
                 item = OrderItem.objects.select_related('reference').get(pk=pk)
                 form = OrderItemForm(instance=item)
 
-        # Collect order (POST)
-        elif action == 'order-pay-now':
-            order = get_object_or_404(Order, pk=pk)
-            order.prepaid = order.budget
-            try:
-                order.save()
-            except ValidationError:  # pragma: no cover
-                data['form_is_valid'] = False
-                context = {'modal_title': 'Cobrar Pedido',
-                           'msg': 'Algo ha ido mal, reintentar?',
-                           'pk': order.pk,
-                           'action': 'order-pay-now',
-                           'submit_btn': 'Sí, reintentar'}
-                template = 'includes/confirmation.html'
-            else:
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-
-        # Close order (POST)
-        elif action == 'order-close':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderCloseForm(request.POST, instance=order)
-            if form.is_valid():
-                close = form.save(commit=False)
-                close.status = 7
-                close.delivery = timezone.now()
-                close.save()
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-            else:
-                data['form_is_valid'] = False
-                custom_form = 'includes/custom_forms/close_order.html'
-                context = {'form': form,
-                           'order': order,
-                           'modal_title': 'Cerrar pedido',
-                           'pk': order.pk,
-                           'action': 'order-close',
-                           'submit_btn': 'Cerrar pedido',
-                           'custom_form': custom_form,
-                           }
-                template = 'includes/regular_form.html'
-
         # Update status (POST)
         elif action == 'update-status':
             status = self.request.POST.get('status', None)
@@ -1276,6 +1215,7 @@ class Actions(View):
                 data['reload'] = True
                 return JsonResponse(data)
             else:
+                order.delivery = date.today()
                 order.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-status'

@@ -77,7 +77,7 @@ class OrderItemForm(forms.ModelForm):
 
         model = OrderItem
         fields = ('element', 'qty', 'crop', 'sewing', 'iron', 'description',
-                  'fit', 'stock')
+                  'fit', 'stock', 'price')
 
     def __init__(self, *args, **kwargs):
         """Override the order in the reference dropdown."""

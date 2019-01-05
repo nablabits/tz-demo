@@ -90,8 +90,11 @@ class Order(models.Model):
     others = models.TextField('Observaciones', blank=True, null=True)
 
     # Pricing
-    budget = models.DecimalField('Presupuesto', max_digits=7, decimal_places=2)
-    prepaid = models.DecimalField('Pagado', max_digits=7, decimal_places=2)
+    budget = models.DecimalField(
+        'Presupuesto', max_digits=7, decimal_places=2, blank=True, null=True)
+    prepaid = models.DecimalField(
+        'Prepago', max_digits=7, decimal_places=2, blank=True, null=True,
+        default=0)
 
     def __str__(self):
         """Object's representation."""
@@ -104,19 +107,44 @@ class Order(models.Model):
         return date.today() > self.delivery
 
     @property
+    def total(self):
+        """Get the total amount for the invoice."""
+        items = OrderItem.objects.filter(reference=self)
+        total = items.aggregate(
+            total=models.Sum(models.F('qty') * models.F('price'),
+                             output_field=models.DecimalField()))
+        if total['total'] is None:
+            return 0
+        else:
+            return total['total']
+
+    @property
     def pending(self):
         """Set the pending amount per order."""
-        return self.prepaid - self.budget
+        return self.prepaid - self.total
+
+    @property
+    def invoiced(self):
+        """Determine if the order is already invoiced.
+
+        This setting determines if order appears as pending. Invoiced orders
+        don't appear as pending although their pending property is > 0, this
+        keeps their prepaid amount. This applies to orders > 2019.
+        """
+        if self.delivery >= date(2019, 1, 1):
+            return Invoice.objects.filter(reference=self)
+        else:
+            return True
 
     @property
     def prev_status(self):
         """Determine the previous status."""
-        return str(int(self.status)-1)
+        return str(int(self.status) - 1)
 
     @property
     def next_status(self):
         """Determine the next status."""
-        return str(int(self.status)+1)
+        return str(int(self.status) + 1)
 
     @property
     def color(self):
@@ -164,8 +192,9 @@ class Item(models.Model):
 
     def __str__(self):
         """Object's representation."""
-        return '{} {} {}-{}'.format(self.get_item_type_display(), self.name,
-                                    self.item_class, self.size)
+        return '{} {} {}-{} ({}€)'.format(
+            self.get_item_type_display(), self.name, self.item_class,
+            self.size, self.price)
 
     def clean(self):
         """Clean up the model to avoid duplicate items."""
