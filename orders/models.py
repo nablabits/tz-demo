@@ -201,7 +201,7 @@ class Item(models.Model):
         exists = Item.objects.filter(name=self.name)
         if exists:
             for item in exists:
-                duplicated = (self.item_class == item.item_class and
+                duplicated = (self.item_type == item.item_type and
                               self.item_class == item.item_class and
                               self.size == item.size and
                               self.fabrics == item.fabrics and
@@ -241,7 +241,7 @@ class OrderItem(models.Model):
     element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
 
     qty = models.IntegerField('Cantidad', default=1)
-    description = models.CharField('descripcion', max_length=255, blank=True)
+    description = models.TextField('Descripción', blank=True)
     reference = models.ForeignKey(Order, on_delete=models.CASCADE)
 
     # Timing stuff now goes here
