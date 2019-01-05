@@ -1,8 +1,8 @@
 """Test the app models."""
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.test import TestCase
 from orders.models import (
-    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, )
+    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, BankMovement)
 from django.core.exceptions import ValidationError
 from django.db.utils import IntegrityError
 from django.contrib.auth.models import User
@@ -393,7 +393,7 @@ class TestOrderItems(TestCase):
         self.assertEqual(item.subtotal, 50)
 
 
-class PQueueTest(TestCase):
+class TestPQueue(TestCase):
     """Test the production queue model."""
 
     @classmethod
@@ -789,6 +789,48 @@ class TestInvoice(TestCase):
         self.assertEqual(item.price, 0)
         with self.assertRaises(ValidationError):
             Invoice.objects.create(reference=item.reference)
+
+
+class TestBankMovement(TestCase):
+    """Test the bank movements model."""
+
+    def test_action_date_is_date_instance(self):
+        """Test the field type."""
+        movement = BankMovement.objects.create(amount=100, notes='Test')
+        self.assertIsInstance(movement.action_date, date)
+
+    def test_action_date_default_is_today(self):
+        """Test the field defaults."""
+        movement = BankMovement.objects.create(amount=100, notes='Test')
+        self.assertEqual(movement.action_date.date(), date.today())
+
+    def test_amount_is_decimal(self):
+        """Test the field type."""
+        BankMovement.objects.create(amount=100.5, notes='Test')
+        movement = BankMovement.objects.first()
+        self.assertIsInstance(movement.amount, Decimal)
+
+    def test_amount_max_digits(self):
+        """Test the max length for the field."""
+        with self.assertRaises(InvalidOperation):
+            BankMovement.objects.create(amount=12345678, )
+
+    def test_amount_max_decimal_places(self):
+        """Test the max decimals for the field."""
+        BankMovement.objects.create(amount=12345.678, )
+        movement = BankMovement.objects.first()
+        self.assertEqual(movement.amount, Decimal('12345.68'))
+
+    def test_sorting_default(self):
+        """Test the default ordering for the model."""
+        issued_on = date.today()
+        for i in range(5):
+            BankMovement.objects.create(action_date=issued_on, amount=100)
+            delay = timedelta(days=i+2)
+            issued_on = issued_on + delay
+        bms = BankMovement.objects.all()
+        for i in range(4):
+            self.assertTrue(bms[i].action_date > bms[i+1].action_date)
 
 #
 #

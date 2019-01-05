@@ -1,7 +1,8 @@
 """Show all the models in the admin page."""
 
 from django.contrib import admin
-from .models import Customer, Comment, Order, Item, OrderItem, PQueue, Invoice
+from .models import (
+    Customer, Comment, Order, Item, OrderItem, PQueue, Invoice, BankMovement)
 
 
 @admin.register(Customer)
@@ -50,10 +51,17 @@ class PQueueAdmin(admin.ModelAdmin):
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    """Beautify the order item admin view."""
+    """Beautify the invoice admin view."""
 
     list_display = ('invoice_no', 'reference', 'issued_on', 'amount',
                     'pay_method', )
+
+
+@admin.register(BankMovement)
+class BankMovementAdmin(admin.ModelAdmin):
+    """Beautify the order item admin view."""
+
+    list_display = ('action_date', 'amount', 'notes', )
 
 
 admin.site.register(Comment)
