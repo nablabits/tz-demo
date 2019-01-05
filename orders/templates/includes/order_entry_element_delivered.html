@@ -37,12 +37,12 @@
             <i class="fa fa-eye"></i> Ver
           </a>
           {% if order.status != '8' %}
-          {% if order.pending != 0 %}
-          <button class="btn btn-sm btn-outline-danger js-crud-edit" data-action="order-pay-now" data-pk="{{order.pk}}">
-            {{order.pending}}€
-          </button>
-          {% else %}
-              <button type="button" class="btn btn-sm btn-success">Pagado</button>
+            {%if order.invoiced%}
+              <button type="button" class="btn btn-sm btn-success">Facturado</button>
+            {%else%}
+              <button class="btn btn-sm btn-outline-danger">
+                {{order.pending}}€
+              </button>
             {% endif %}
           {% else %}
             <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">

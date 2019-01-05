@@ -200,9 +200,13 @@
 
     <!-- Pending orders tab -->
     <div class="tab-pane" id="pending-orders" role="tabpanel">
-      <div class="d-flex py-4 px-2">
+      <div class="d-flex py-4 px-2 align-items-center">
         <h3 class="mr-auto">Pedidos Pendientes de cobro</h3>
         <h3 class="px-2">Total pendiente: {{pending_total}}€</h3>
+        <div class="d-flex flex-column text-right">
+          <small class="px-2">Facturable: {{to_invoice}}€</small>
+          <small class="px-2">Prepagos: {{prepaid}}€</small>
+        </div>
       </div>
       <div class="px-2">
         {% if pending_total == 0 %}

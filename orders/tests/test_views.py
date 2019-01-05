@@ -105,6 +105,7 @@ class OrderListTests(TestCase):
                                  others='Custom notes',
                                  budget=2000,
                                  prepaid=0)
+        Item.objects.create(name='test', fabrics=1, price=10)
 
     def test_order_list(self):
         """First test the existence of order list."""
@@ -546,18 +547,36 @@ class OrderListTests(TestCase):
     def test_pending_orders_exclude_cancelled(self):
         """Pending orders exclude status 8."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         order.status = '8'
         order.save()
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(len(resp.context['pending']), 2)
+
+    def test_pending_are_2019_orders(self):
+        """Pending should exclude orders whose delivery was before 2019."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.first()
+        order.delivery = date(2018, 12, 31)
+        order.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(len(resp.context['pending']), 2)
+
+    def test_pending_exclude_invoiced_orders(self):
+        """Pending orders are not invoiced yet."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.first()
+        for i in range(3):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('orderlist', args=['date']))
         self.assertEqual(len(resp.context['pending']), 2)
 
     def test_pending_orders(self):
         """Test the proper query for pending orders."""
         self.client.login(username='regular', password='test')
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
+        resp = self.client.get(reverse('orderlist', args=['date']))
         self.assertEqual(len(resp.context['pending']), 3)
 
     def test_pending_orders_sorting_method(self):
@@ -662,12 +681,82 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['delivered'][0].timing,
                          timedelta(0, 72000))
 
+    def test_pending_total_excludes_2018_orders(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.first()
+        order.delivery = date(2018, 12, 31)
+        order.save()
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 60)
+
+    def test_pending_total_excludes_cancelled_orders(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        cancelled = Order.objects.first()
+        cancelled.status = '8'
+        cancelled.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 60)
+
+    def test_pending_total_excludes_express_orders(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        express_order = Order.objects.first()
+        express_order.ref_name = 'Quick'
+        express_order.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 60)
+
+    def test_pending_total_excludes_tz_orders(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        tz = Customer.objects.create(name='Trapuzarrak',
+                                     city='Mungia',
+                                     phone=0,
+                                     cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 60)
+
+    def test_pending_total_excludes_invoiced_orders(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=Order.objects.first())
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 60)
+
     def test_pending_total(self):
         """Test the proper sum of budgets."""
         self.client.login(username='regular', password='test')
-        resp = self.client.get(reverse('orderlist',
-                                       kwargs={'orderby': 'date'}))
-        self.assertEquals(resp.context['pending_total'], 6000)
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 90)
 
     def test_pending_total_type_error_raising(self):
         """Avoid TypeError raising.
@@ -977,7 +1066,7 @@ class OrderExpressTests(TestCase):
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
         self.assertEqual(resp.context['user'].username, 'regular')
-        self.assertEqual(len(resp.context['item_types']), 13)
+        self.assertEqual(len(resp.context['item_types']), 18)
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
 
         # CRUD actions
@@ -1767,8 +1856,7 @@ class StandardViewsTest(TestCase):
         another.save()
 
         # Create some customers
-        customer_count = 10
-        for customer in range(customer_count):
+        for customer in range(10):
             Customer.objects.create(name='Customer%s' % customer,
                                     address='This computer',
                                     city='No city',
@@ -1778,8 +1866,7 @@ class StandardViewsTest(TestCase):
                                     cp='48100')
 
         # Create some orders
-        orders_count = 20
-        for order in range(orders_count):
+        for order in range(20):
             pk = randint(1, 9)  # The first customer should have no order
             customer = Customer.objects.get(name='Customer%s' % pk)
             delivery = date.today() + timedelta(days=order % 5)
@@ -1796,8 +1883,7 @@ class StandardViewsTest(TestCase):
                                  prepaid=0)
 
         # Create comments
-        comments_count = 10
-        for comment in range(comments_count):
+        for comment in range(10):
             if comment % 2:
                 user = regular
             else:
@@ -1808,8 +1894,7 @@ class StandardViewsTest(TestCase):
                                    comment='Comment%s' % comment)
 
         # Create some items
-        items_count = 5
-        for item in range(items_count):
+        for item in range(5):
             order = Order.objects.get(ref_name='example0')
             OrderItem.objects.create(qty=5,
                                      description='notes',
@@ -1987,29 +2072,31 @@ class StandardViewsTest(TestCase):
         Let the 10 delivered orders be owned by the tested customer who should
         have no previous orders.
         """
-        customer = Customer.objects.all()[0]
+        customer = Customer.objects.first()
         no_orders = Order.objects.filter(customer=customer)
         self.assertEqual(len(no_orders), 0)
+        item = Item.objects.create(name='Test', fabrics=1, price=10)
 
-        orders = Order.objects.filter(status=7)
+        orders = Order.objects.all()
         for order in orders:
             order.customer = customer
+            order.prepaid = 0
             order.save()
+            OrderItem.objects.create(reference=order, element=item)
 
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-        resp = self.client.get(reverse('customer_view',
-                                       kwargs={'pk': customer.pk}))
+        Invoice.objects.create(reference=Order.objects.first())
+
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
 
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/customer_view.html')
 
-        self.assertEqual(len(resp.context['orders_active']), 0)
+        self.assertEqual(len(resp.context['orders_active']), 10)
         self.assertEqual(len(resp.context['orders_delivered']), 10)
         self.assertEqual(len(resp.context['orders_cancelled']), 0)
-        self.assertEqual(resp.context['orders_made'], 10)
-        self.assertEqual(len(resp.context['pending']), 9)
+        self.assertEqual(resp.context['orders_made'], 20)
+        self.assertEqual(len(resp.context['pending']), 19)
 
     def test_items_view_default_item(self):
         """In the begining just one item should be on db."""
@@ -2402,8 +2489,6 @@ class ActionsGetMethod(TestCase):
                    'order-edit',
                    'order-edit-date',
                    'customer-edit',
-                   'order-pay-now',
-                   'order-close',
                    'object-item-edit',
                    'order-item-edit',
                    'pqueue-add-time',
@@ -2563,8 +2648,8 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
-        vars = ('order', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
-                'custom_form')
+        vars = ('order', 'form', 'items', 'modal_title', 'pk', 'action',
+                'submit_btn', 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_add_obj_item(self):
@@ -2676,44 +2761,6 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
-        self.assertEqual(template, 'includes/regular_form.html')
-        self.assertIsInstance(context, list)
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_collect_order(self):
-        """Test context dictionaries and template."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk,
-                                'action': 'order-pay-now',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        vars = ('modal_title', 'msg', 'pk', 'action', 'submit_btn')
-        self.assertEqual(template, 'includes/confirmation.html')
-        self.assertIsInstance(context, list)
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_close_order(self):
-        """Test context dictionaries and template.
-
-        The index for the context items seems to be a bit random (why?).
-        """
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk,
-                                'action': 'order-close',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        vars = ('order', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
-                'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
@@ -3154,8 +3201,6 @@ class ActionsPostMethodCreate(TestCase):
                    'object-item-edit',
                    'order-item-edit',
                    'pqueue-add-time',
-                   'order-pay-now',
-                   'order-close',
                    'update-status',
                    'object-item-delete',
                    'order-item-delete',
@@ -3974,79 +4019,6 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/regular_form.html')
         self.assertTrue(self.context_vars(data['context'], vars))
 
-    def test_collect_order_succesful(self):
-        """Test the proper mark-as-paid method."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.post(reverse('actions'),
-                                {'pk': order.pk,
-                                 'action': 'order-pay-now',
-                                 'test': True
-                                 })
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertTrue(data['form_is_valid'])
-        self.assertTrue(data['reload'])
-
-    def test_close_order_succesful(self):
-        """Test the proper close of orders."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.post(reverse('actions'),
-                                {'prepaid': 2000,
-                                 'pk': order.pk,
-                                 'action': 'order-close',
-                                 'test': True
-                                 })
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        closed_order = Order.objects.get(pk=order.pk)
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertTrue(data['form_is_valid'])
-        self.assertTrue(data['reload'])
-        self.assertEqual(closed_order.status, '7')
-
-    def test_close_order_rejected(self):
-        """Test when a form is not valid."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.post(reverse('actions'),
-                                {'prepaid': 'invalid price',
-                                 'workshop': 200,
-                                 'pk': order.pk,
-                                 'action': 'order-close',
-                                 'test': True
-                                 })
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        vars = ('order', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
-                'custom_form')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/regular_form.html')
-        self.assertIsInstance(context, list)
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_close_order_duplicated(self):
-        """Avoid validation error.
-
-        There used to be an error when trying to close an order with
-        budget==prepaid since the method clean was on model. Not anymore
-        """
-        order = Order.objects.get(ref_name='example')
-        order.prepaid = order.budget
-        order.save()
-        resp = self.client.post(reverse('actions'), {'prepaid': order.prepaid,
-                                                     'pk': order.pk,
-                                                     'action': 'order-close',
-                                                     'test': True
-                                                     })
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-
     def test_update_status_returns_false_on_raising_error(self):
         """Invalid statuses should raise an exception."""
         order = Order.objects.get(ref_name='example')
@@ -4082,6 +4054,21 @@ class ActionsPostMethodEdit(TestCase):
                 self.assertEqual(template, 'includes/order_status.html')
                 self.assertEqual(data['html_id'], '#order-status')
                 self.assertTrue(data['context'][0], 'order')
+
+    def test_update_status_updates_delivery(self):
+        """On changing to delivered, ensure that delivery date is updated."""
+        order = Order.objects.first()
+        order.delivery = date(2018, 1, 1)
+        order.save()
+        self.assertEqual(order.status, '1')
+        self.assertEqual(order.delivery, date(2018, 1, 1))
+        self.client.post(
+            reverse('actions'),
+            {'pk': order.pk, 'action': 'update-status', 'status': '7',
+             'test': True})
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '7')
+        self.assertEqual(order.delivery, date.today())
 
     def test_delete_order_item_deletes_the_item(self):
         """Test the proper deletion of items."""
