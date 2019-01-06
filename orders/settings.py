@@ -25,6 +25,7 @@ ITEM_TYPE = (
     ('16', 'Medias'),
     ('17', 'Bordado'),
     ('18', 'Txapela'),
+    ('19', 'Varios')
 )
 
 ITEM_CLASSES = (
