@@ -71,9 +71,10 @@ def main(request):
 
 
 def search(request):
-    """Perform a search on orders or custmers."""
+    """Perform a search on orders, custmers and items."""
     if request.method == 'POST':
         data = dict()
+        context = dict()
         search_on = request.POST.get('search-on')
         search_obj = request.POST.get('search-obj')
         if not search_obj:
@@ -96,10 +97,18 @@ def search(request):
             else:
                 query_result = table.filter(phone__icontains=search_obj)
             model = 'customers'
+        elif search_on == 'items':
+            order_pk = request.POST.get('order-pk', None)
+            if not order_pk:
+                raise Http404('An id for order should be included.')
+            query_result = Item.objects.filter(name__istartswith=search_obj)
+            model = 'items'
+            context['order_pk'] = order_pk
         else:
             raise ValueError('Search on undefined')
         template = 'includes/search_results.html'
-        context = {'query_result': query_result, 'model': model}
+        context['query_result'] = query_result
+        context['model'] = model
 
         """
         Test stuff. Since it's not very straightforward extract this data
@@ -108,7 +117,7 @@ def search(request):
         """
         if request.POST.get('test'):
             data['template'] = template
-            add_to_context = []
+            add_to_context = list()
             for k in context:
                 add_to_context.append(k)
             data['context'] = add_to_context
@@ -406,6 +415,7 @@ def order_express_view(request, pk):
         return redirect(reverse('order_view', args=[order.pk]))
     item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
     items = OrderItem.objects.filter(reference=order)
+    available_items = Item.objects.all()[:15]
     already_invoiced = Invoice.objects.filter(reference=order)
     total = items.aggregate(
         total=Sum(F('qty') * F('price'), output_field=DecimalField()))
@@ -417,10 +427,13 @@ def order_express_view(request, pk):
                      'item_types': settings.ITEM_TYPE[1:],
                      'item_names': item_names,
                      'items': items,
+                     'available_items': available_items,
                      'invoiced': already_invoiced,
                      'total': total,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
+                     'placeholder': 'Busca un nombre',
+                     'search_on': 'items',
 
                      # CRUD Actions
                      'btn_title_add': 'Nueva prenda',
@@ -589,14 +602,22 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
+        elif action == 'get-item-list':
+            item_type = self.request.GET.get('item_type', None)
+            if not item_type:
+                raise Http404('No item type was sent')
+            available_items = Item.objects.filter(item_type=item_type)
+            order = get_object_or_404(Order, pk=pk)
+            context = {'available_items': available_items, 'order': order, }
+            template = 'includes/item_list_tickets.html'
+
         # Send to order express (GET)
         elif action == 'send-to-order-express':
             custom_form = 'includes/custom_forms/send_to_order_express.html'
-            item_name = get_object_or_404(Item, pk=pk).name
-            items = Item.objects.filter(name=item_name)
-            context = {'items': items,
-                       'modal_title': 'Selecciona prenda',
+            item = get_object_or_404(Item, pk=pk)
+            context = {'modal_title': 'Enviar prenda a pedido',
                        'pk': pk,
+                       'item': item,
                        'order_pk': self.request.GET.get('aditionalpk', None),
                        'action': 'send-to-order-express',
                        'submit_btn': 'Añadir a ticket',
@@ -971,6 +992,8 @@ class Actions(View):
             order = get_object_or_404(
                 Order, pk=self.request.POST.get('order-pk', None)
                 )
+
+            # Now create OrderItem
             price = self.request.POST.get('custom-price', None)
             qty = self.request.POST.get('item-qty', 1)
             if price is '0':
@@ -978,6 +1001,15 @@ class Actions(View):
             OrderItem.objects.create(
                 element=item, reference=order, qty=qty, price=price,
                 stock=True, fit=False)
+
+            # Set default price (if case)
+            set_price = self.request.POST.get('set-default-price', None)
+            if set_price:
+                item.price = price
+                item.full_clean()
+                item.save()
+
+            # Context for the view
             items = OrderItem.objects.filter(reference=order)
             data['form_is_valid'] = True
             data['html_id'] = '#ticket'

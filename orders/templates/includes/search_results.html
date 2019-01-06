@@ -15,6 +15,14 @@
             <a href="{% url 'customer_view' pk=row.pk %}" class="search_link">{{ row.name }}</a>
           </span>
         {% endif %}
+        {% if model == 'items' %}
+        <div class="d-flex my-1 align-items-center">
+          {{row}}
+          <button class="mr-1 btn btn-sm btn-outline-success ml-auto js-crud-add" data-action="send-to-order-express" data-pk="{{row.pk}}" data-aditional-pk="{{order_pk}}">
+            <i class="fal fa-share"></i>
+          </button>
+        </div>
+        {% endif %}
       {% endfor %}
     {% else %}
       <span class="my-2">No se encontraron coincidencias</span>
