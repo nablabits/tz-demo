@@ -456,7 +456,12 @@ class PQueue(models.Model):
         except ValidationError:
             return False
         else:
-            return self.bottom()
+            if PQueue.objects.all().count() == 1:
+                self.score = 1000
+                self.save()
+                return True
+            else:
+                return self.bottom()
 
 
 class Invoice(models.Model):

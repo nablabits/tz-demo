@@ -738,6 +738,14 @@ class TestPQueue(TestCase):
         self.assertEqual((first.score, mid.score, last.score),
                          (-3, -2, 1002))
 
+    def test_uncomplete(self):
+        """Test ucomplete method."""
+        item = PQueue.objects.create(item=OrderItem.objects.first())
+        item.complete()
+        self.assertEqual(item.score, -2)
+        item.uncomplete()
+        self.assertEqual(item.score, 1000)
+
 
 class TestInvoice(TestCase):
     """Test the invoice model."""
