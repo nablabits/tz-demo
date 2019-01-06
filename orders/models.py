@@ -182,7 +182,7 @@ class Item(models.Model):
     item_class = models.CharField('Acabado',
                                   max_length=1,
                                   choices=settings.ITEM_CLASSES,
-                                  default='1')
+                                  default='S')
     size = models.CharField('Talla', max_length=6, default='1')
     notes = models.TextField('Observaciones', blank=True, null=True)
     fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
@@ -456,7 +456,12 @@ class PQueue(models.Model):
         except ValidationError:
             return False
         else:
-            return self.bottom()
+            if PQueue.objects.all().count() == 1:
+                self.score = 1000
+                self.save()
+                return True
+            else:
+                return self.bottom()
 
 
 class Invoice(models.Model):

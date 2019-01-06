@@ -1021,6 +1021,18 @@ class OrderExpressTests(TestCase):
             self.assertNotEqual(i, excluded_item)
             self.assertEqual(i, included_item)
 
+    def test_available_items(self):
+        """Test the correct query."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        for i in range(20):
+            Item.objects.create(name='Test%s' % i, fabrics=5, price=5)
+        resp = self.client.get(reverse('order_express', args=[order.pk]))
+        self.assertEqual(resp.context['available_items'].count(), 15)
+
     def test_get_already_invoiced_orders(self):
         """Test the proper display of invoiced orders."""
         self.client.login(username='regular', password='test')
@@ -1068,6 +1080,8 @@ class OrderExpressTests(TestCase):
         self.assertEqual(resp.context['user'].username, 'regular')
         self.assertEqual(len(resp.context['item_types']), 18)
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
+        self.assertEqual(resp.context['placeholder'], 'Busca un nombre')
+        self.assertEqual(resp.context['search_on'], 'items')
 
         # CRUD actions
         self.assertEqual(resp.context['btn_title_add'], 'Nueva prenda')
@@ -2226,27 +2240,13 @@ class SearchBoxTest(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        """Create the necessary items on database at once.
-
-        Will be created:
-            5 Customers
-            20 Orders (random customer) where:
-                The first 10 are delivered
-                first order has:
-                    5 items (exact one each other)
-                    10 comments (divided in 2 users) & First comment read
-                    Is closed
-                11th order is cancelled
-        """
+        """Create the necessary items on database at once."""
         # Create users
         regular = User.objects.create_user(username='regular', password='test')
-        another = User.objects.create_user(username='another', password='test')
         regular.save()
-        another.save()
 
         # Create some customers
-        customer_count = 10
-        for customer in range(customer_count):
+        for customer in range(10):
             Customer.objects.create(name='Customer%s' % customer,
                                     address='This computer',
                                     city='No city',
@@ -2256,73 +2256,25 @@ class SearchBoxTest(TestCase):
                                     cp='48100')
 
         # Create some orders
-        orders_count = 20
-        for order in range(orders_count):
-            pk = randint(1, 9)  # The first customer should have no order
-            customer = Customer.objects.get(name='Customer%s' % pk)
-            delivery = date.today() + timedelta(days=order % 5)
+        for order in range(20):
+            customer = Customer.objects.first()
+            # delivery = date.today() + timedelta(days=order % 5)
             Order.objects.create(user=regular,
                                  customer=customer,
                                  ref_name='example%s' % order,
-                                 delivery=delivery,
-                                 waist=randint(10, 50),
-                                 chest=randint(10, 50),
-                                 hip=randint(10, 50),
-                                 lenght=randint(10, 50),
-                                 others='Custom notes',
-                                 budget=2000,
+                                 delivery=date.today(),
                                  prepaid=0)
-
-        # Create comments
-        comments_count = 10
-        for comment in range(comments_count):
-            if comment % 2:
-                user = regular
-            else:
-                user = another
-            order = Order.objects.get(ref_name='example0')
-            Comment.objects.create(user=user,
-                                   reference=order,
-                                   comment='Comment%s' % comment)
-
-        # Create some items
-        items_count = 5
-        for item in range(items_count):
-            order = Order.objects.get(ref_name='example0')
-            OrderItem.objects.create(qty=5,
-                                     description='notes',
-                                     reference=order)
-
-        # deliver the first 10 orders
-        order_bulk_edit = Order.objects.all().order_by('inbox_date')[:10]
-        for order in order_bulk_edit:
-            order.ref_name = 'example delivered' + str(order.pk)
-            order.status = 7
-            order.save()
-
-        # Have a closed order (delivered & paid)
-        order = Order.objects.filter(status=7)[0]
-        order.ref_name = 'example closed'
-        order.prepaid = order.budget
-        order.save()
-
-        # Have a read comment
-        order = Order.objects.get(ref_name='example closed')
-        comment = Comment.objects.filter(reference=order)
-        comment = comment.get(comment='Comment0')
-        comment.read = True
-        comment.comment = 'read comment'
-        comment.save()
 
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
-        context_is_valid = 0
-        for item in context:
-            for var in vars:
-                if item == var:
-                    context_is_valid += 1
-        if context_is_valid == len(vars):
-            return True
+        if len(context) == len(vars):
+            context_is_valid = 0
+            for item in context:
+                for var in vars:
+                    if item == var:
+                        context_is_valid += 1
+            if context_is_valid == len(vars):
+                return True
         else:
             return False
 
@@ -2366,7 +2318,7 @@ class SearchBoxTest(TestCase):
 
     def test_search_on_orders_by_pk(self):
         """Test search orders by pk."""
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         resp = self.client.post(reverse('search'),
                                 {'search-on': 'orders',
                                  'search-obj': order.pk,
@@ -2425,6 +2377,31 @@ class SearchBoxTest(TestCase):
         self.assertEquals(data1['query_result_name'],
                           data2['query_result_name'])
 
+    def test_search_on_items_no_order_pk(self):
+        """Test the correct raise of 404."""
+        resp = self.client.post(
+            reverse('search'),
+            {'search-on': 'items', 'search-obj': 'test item', 'test': True})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_search_on_items(self):
+        """Test the correct item search."""
+        order = Order.objects.first()
+        item = Item.objects.create(name='Test', fabrics=0, price=2)
+        resp = self.client.post(
+            reverse('search'),
+            {'search-on': 'items', 'search-obj': 'test',
+             'order-pk': order.pk, 'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model', 'order_pk')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertEquals(data['query_result'], 1)
+        self.assertEquals(data['model'], 'items')
+        self.assertEquals(data['query_result_name'], item.name)
+
 
 class ActionsGetMethod(TestCase):
     """Test the get method on Actions view."""
@@ -2482,6 +2459,7 @@ class ActionsGetMethod(TestCase):
     def test_pk_out_of_range_raises_404(self):
         """High pk should raise a 404."""
         actions = ('order-from-customer',
+                   'get-item-list',
                    'send-to-order-express',
                    'order-item-add',
                    'order-add-comment',
@@ -2497,8 +2475,8 @@ class ActionsGetMethod(TestCase):
                    'customer-delete',
                    )
         for action in actions:
-            resp = self.client.get(reverse('actions'), {'pk': 2000,
-                                                        'action': action})
+            resp = self.client.get(
+                reverse('actions'), {'pk': 2000, 'action': action})
             self.assertEqual(resp.status_code, 404)
 
     def test_no_pk_raises_error(self):
@@ -2617,6 +2595,33 @@ class ActionsGetMethod(TestCase):
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_get_item_list_raises_404_item_type(self):
+        """When no item type is sent raise 404."""
+        order = Order.objects.first()
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk,
+                                'action': 'get-item-list',
+                                'test': True})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_get_item_list(self):
+        """Test context dictionaries and template."""
+        order = Order.objects.first()
+        Item.objects.create(name='Skirt', item_type='1', fabrics=1, price=1, )
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk,
+                                'action': 'get-item-list',
+                                'item_type': '1',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/item_list_tickets.html')
+        vars = ('available_items', 'order', )
+        self.assertTrue(self.context_vars(context, vars))
+
     def test_send_item_to_order_express(self):
         """Test context dictionaries and template."""
         item = Item.objects.first()
@@ -2631,7 +2636,7 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        vars = ('items', 'modal_title', 'pk', 'order_pk', 'action',
+        vars = ('item', 'modal_title', 'pk', 'order_pk', 'action',
                 'submit_btn', 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
@@ -3546,6 +3551,21 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(resp.status_code, 200)
         orderitem = OrderItem.objects.first()
         self.assertEqual(orderitem.price, 2000)
+
+    def test_send_item_to_order_express_set_default(self):
+        """When set-default-price is true set this price on Item object."""
+        obj_item = Item.objects.create(name='Test', fabrics=0, price=0)
+        self.assertEqual(obj_item.price, 0)
+        self.client.post(
+            reverse('actions'), {'item-pk': obj_item.pk,
+                                 'order-pk': Order.objects.first().pk,
+                                 'action': 'send-to-order-express',
+                                 'set-default-price': True,
+                                 'custom-price': 100,
+                                 'pk': None,
+                                 'test': True})
+        obj_item = Item.objects.get(pk=obj_item.pk)
+        self.assertEqual(obj_item.price, 100)
 
     def test_send_item_to_order_express_context_response(self):
         """Test the correct insertion and response."""
