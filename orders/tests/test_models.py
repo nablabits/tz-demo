@@ -204,6 +204,15 @@ class TestOrders(TestCase):
         Invoice.objects.create(reference=order)
         self.assertTrue(order.invoiced)
 
+    def test_invoiced_returns_true_with_older_orders(self):
+        """Orders previous to 2019 should appear as invoiced."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test',
+            delivery=date(2018, 12, 31), prepaid=50, )
+        self.assertTrue(order.invoiced)
+
     def test_the_count_of_times_per_item_in_an_order(self):
         """Test the correct output of count times per order."""
         order = Order.objects.create(user=User.objects.all()[0],
