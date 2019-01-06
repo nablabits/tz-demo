@@ -10,25 +10,19 @@
   </div>
 </div>
 {% endif %}
-{% if order.status == '7' %}
+{%if order.invoiced%}
 <div class="d-flex mt-2">
   <div class="alert alert-info" role="alert">
     <i class="fa fa-info-circle text-info mr-2"></i>
-    Este pedido está entregado
-    {% if order.pending == 0 %}
-      y cobrado ({{order.budget}}€)
-    {% else %}
-     aunque está pendiente de pago
-     <button class="ml-2 btn btn-info js-pay-now" data-action="order-pay-now" data-pk="{{order.pk}}" id="status-pay-closed-order"><i class="fa fa-euro"></i> Cobrar</button>
-    {% endif %}
-      <button class="ml-2 btn btn-info js-order-status" data-status="1" data-pk="{{order.pk}}" id="status-reopen"><i class="fa fa-history"></i> Reabrir</button>
+    Este pedido está entregado y facturado así que ya no se puede editar.
+    (Factura nº: {{order.invoice.invoice_no}})
   </div>
 </div>
 {% else %}
   <div class="d-flex mt-4">
     <h4><strong>Status:</strong></h4>
   </div>
-  <div class="d-flex flex-column flex-md-row mt-2 pl-2">
+  <div class="d-flex flex-column flex-md-row align-items-center mt-2 pl-2">
     <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
       <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '1' %}active{% endif %}" data-pk="{{order.pk}}" data-status="1" id="status-inbox">{{order.STATUS.0.1}}</button>
     </div>
@@ -40,11 +34,17 @@
     </div>
     <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
       <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '6' %}active{% endif %}" data-pk="{{order.pk}}" data-status="6" id="status-outbox">{{order.STATUS.5.1}}</button>
-      <button type="button" class="btn btn-outline-success js-close-order {% if order.status == '7' %}active{% endif %}" data-action="order-close" data-pk="{{order.pk}}" id="status-delivered">{{order.STATUS.6.1}}</button>
+      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '7' %}active{% endif %}" data-pk="{{order.pk}}" data-status="7" id="status-delivered">{{order.STATUS.6.1}}</button>
     </div>
-      <button type="button" class="btn btn-outline-success active {%if order.pending != 0 %}d-none{% endif %}">
-        <i class="fa fa-euro"></i> Cobrado {{order.budget}}€
+    {%if order.status == '7'%}
+      <button type="button" class="btn btn-outline-success js-crud-add" data-action="ticket-to-invoice" data-pk="{{order.pk}}">
+        <i class="fa fa-euro"></i> Facturar
       </button>
-      <button type="button" class="btn btn-outline-danger js-pay-now {%if order.pending == 0 %}d-none{% endif %}" data-action="order-pay-now" data-pk="{{order.pk}}" id="status-close">{{order.pending}}</button>
+    {%else%}
+      <button type="button" class="btn btn-outline-success btn-disabled mr-2" disabled>
+        <i class="fa fa-euro"></i> Facturar
+      </button>
+      <small>Solo los pedidos entregados<br> se pueden facturar.</small>
+    {%endif%}
   </div>
-{% endif %}
+{%endif%}

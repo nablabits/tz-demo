@@ -143,11 +143,24 @@ $(function () {
     // return false
   }
 
+  var getItems = function () {
+    // Get the items of this type
+    var action = $(this).attr('data-action')
+    var pk = $(this).attr('data-pk')
+    var type = $(this).attr('data-type')
+    $.ajax({
+      url: '/actions/',
+      data: { 'pk': pk, 'action': action, 'item_type': type },
+      dataType: 'json',
+      success: function (data) {
+        $('#items-list').html(data.html)
+      }
+    })
+  }
+
   // actions (GET)
   $('.js-order-edit').click(loadActionForm)
   $('.js-order-edit-date').click(loadActionForm)
-  $('#order-status').on('click', '.js-pay-now', loadActionForm)
-  $('#order-status').on('click', '.js-close-order', loadActionForm)
   $('.js-order-add-comment').click(loadActionForm)
   $('#order-details').on('click', '.js-add-item', loadActionForm)
   $('#order-details').on('click', '.js-edit-item', loadActionForm)
@@ -168,6 +181,7 @@ $(function () {
   $('#order-status').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
+  $('#root').on('click', '.js-get-items', getItems)
 
   // Pqueue actions
   $('#root').on('click', '.js-queue', queueAction)

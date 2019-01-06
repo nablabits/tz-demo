@@ -20,7 +20,7 @@ class OrderAdmin(admin.ModelAdmin):
 
     date_hierarchy = 'inbox_date'
     list_display = ('pk', 'inbox_date', 'customer', 'user', 'ref_name',
-                    'status', 'budget', 'prepaid', 'pending')
+                    'status', 'budget', 'prepaid', )
     list_filter = ('customer', 'status')
 
 

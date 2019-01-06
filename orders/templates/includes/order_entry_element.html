@@ -72,7 +72,7 @@
             <i class="fa fa-edit"></i> Editar
           </button>
           {% if order.pending != 0 %}
-            <button class="btn btn-sm btn-outline-danger js-crud-edit" data-action="order-pay-now" data-pk="{{order.pk}}">
+            <button class="btn btn-sm btn-outline-danger">
               {{order.pending}}€
             </button>
           {% else %}

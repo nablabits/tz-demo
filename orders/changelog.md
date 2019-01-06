@@ -1,6 +1,20 @@
 ## Trapuzarrak app registro de cambios
 ***
-#### v56-57, Jan 4
+### v58, Ene 6
+  * **Nuevo:** Los pedidos regulares ya se pueden facturar también.
+  * **Nuevo:** nueva tabla para movimientos del banco (accesible desde la vista
+     admin).
+  * **Nuevo:** ya se puede fijar el precio de las prendas al enviarlas a un
+    ticket.
+  * **Nuevo:** Número de pedidos en las pestañas.
+  * **Nuevo:** añadido tipo de prenda *varios.*
+  * **Mejora:** Las ventas rápidas se han rediseñado incluyendo un selector de
+    prendas y una caja de búsqueda.
+  * **Bug:** al mandar una prenda al ticket ya se pueden añadir los decimales.
+  * **Bug:** al editar una prenda la descripción desaparecía, ahora ya no.
+  * **Bug:** Mejorada la efectividad de prendas duplicadas.
+
+#### v56-57, Ene 4
   * **Nuevo:** añadidos nuevos tipos de prenda.
 
 #### v55, Dic 31

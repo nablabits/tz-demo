@@ -71,9 +71,10 @@ def main(request):
 
 
 def search(request):
-    """Perform a search on orders or custmers."""
+    """Perform a search on orders, custmers and items."""
     if request.method == 'POST':
         data = dict()
+        context = dict()
         search_on = request.POST.get('search-on')
         search_obj = request.POST.get('search-obj')
         if not search_obj:
@@ -96,10 +97,18 @@ def search(request):
             else:
                 query_result = table.filter(phone__icontains=search_obj)
             model = 'customers'
+        elif search_on == 'items':
+            order_pk = request.POST.get('order-pk', None)
+            if not order_pk:
+                raise Http404('An id for order should be included.')
+            query_result = Item.objects.filter(name__istartswith=search_obj)
+            model = 'items'
+            context['order_pk'] = order_pk
         else:
             raise ValueError('Search on undefined')
         template = 'includes/search_results.html'
-        context = {'query_result': query_result, 'model': model}
+        context['query_result'] = query_result
+        context['model'] = model
 
         """
         Test stuff. Since it's not very straightforward extract this data
@@ -108,7 +117,7 @@ def search(request):
         """
         if request.POST.get('test'):
             data['template'] = template
-            add_to_context = []
+            add_to_context = list()
             for k in context:
                 add_to_context.append(k)
             data['context'] = add_to_context
@@ -189,8 +198,8 @@ def orderlist(request, orderby):
     delivered = orders.filter(status=7).order_by('-delivery')[:10]
     active = orders.exclude(status__in=[7, 8])
     cancelled = orders.filter(status=8).order_by('-inbox_date')[:10]
-    pending = orders.exclude(status=8).filter(budget__gt=F('prepaid'))
-    pending = pending.order_by('inbox_date')
+    pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
+    pending = pending.filter(invoice__isnull=True).order_by('inbox_date')
 
     # Active & delivered orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
@@ -206,10 +215,16 @@ def orderlist(request, orderby):
                                            Sum('orderitem__crop')))
 
     # Total pending amount
-    budgets = pending.aggregate(Sum('budget'))
-    prepaid = pending.aggregate(Sum('prepaid'))
+    items = OrderItem.objects.filter(reference__delivery__gte=date(2019, 1, 1))
+    items = items.exclude(reference__status=8)
+    items = items.exclude(reference__ref_name__iexact='quick')
+    items = items.exclude(reference__customer__name__iexact='Trapuzarrak')
+    items = items.filter(reference__invoice__isnull=True)
+    items = items.aggregate(
+        total=Sum(F('price') * F('qty'), output_field=DecimalField()))
+    prepaid = pending.aggregate(total=Sum('prepaid'))
     try:
-        pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
+        pending_total = items['total'] - prepaid['total']
     except TypeError:
         pending_total = 0
 
@@ -252,6 +267,8 @@ def orderlist(request, orderby):
                      'cancelled': cancelled,
                      'pending': pending,
                      'pending_total': pending_total,
+                     'prepaid': prepaid['total'],
+                     'to_invoice': items['total'],
                      'order_by': orderby,
                      'placeholder': 'Buscar pedido (referencia o nº)',
                      'search_on': 'orders',
@@ -398,6 +415,7 @@ def order_express_view(request, pk):
         return redirect(reverse('order_view', args=[order.pk]))
     item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
     items = OrderItem.objects.filter(reference=order)
+    available_items = Item.objects.all()[:15]
     already_invoiced = Invoice.objects.filter(reference=order)
     total = items.aggregate(
         total=Sum(F('qty') * F('price'), output_field=DecimalField()))
@@ -409,10 +427,13 @@ def order_express_view(request, pk):
                      'item_types': settings.ITEM_TYPE[1:],
                      'item_names': item_names,
                      'items': items,
+                     'available_items': available_items,
                      'invoiced': already_invoiced,
                      'total': total,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
+                     'placeholder': 'Busca un nombre',
+                     'search_on': 'items',
 
                      # CRUD Actions
                      'btn_title_add': 'Nueva prenda',
@@ -434,10 +455,8 @@ def customer_view(request, pk):
     cancelled = orders.filter(status=8).order_by('delivery')
 
     # Evaluate pending orders
-    pending = []
-    for order in orders:
-        if order.pending < 0:
-            pending.append(order)
+    pending = orders.filter(delivery__gte=date(2019, 1, 1))
+    pending = pending.filter(invoice__isnull=True)
 
     cur_user = request.user
     now = datetime.now()
@@ -446,7 +465,7 @@ def customer_view(request, pk):
                      'orders_delivered': delivered,
                      'orders_cancelled': cancelled,
                      'pending': pending,
-                     'orders_made': len(orders),
+                     'orders_made': orders.count(),
                      'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
@@ -583,14 +602,22 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
+        elif action == 'get-item-list':
+            item_type = self.request.GET.get('item_type', None)
+            if not item_type:
+                raise Http404('No item type was sent')
+            available_items = Item.objects.filter(item_type=item_type)
+            order = get_object_or_404(Order, pk=pk)
+            context = {'available_items': available_items, 'order': order, }
+            template = 'includes/item_list_tickets.html'
+
         # Send to order express (GET)
         elif action == 'send-to-order-express':
             custom_form = 'includes/custom_forms/send_to_order_express.html'
-            item_name = get_object_or_404(Item, pk=pk).name
-            items = Item.objects.filter(name=item_name)
-            context = {'items': items,
-                       'modal_title': 'Selecciona prenda',
+            item = get_object_or_404(Item, pk=pk)
+            context = {'modal_title': 'Enviar prenda a pedido',
                        'pk': pk,
+                       'item': item,
                        'order_pk': self.request.GET.get('aditionalpk', None),
                        'action': 'send-to-order-express',
                        'submit_btn': 'Añadir a ticket',
@@ -602,8 +629,10 @@ class Actions(View):
         elif action == 'order-item-add':
             order = get_object_or_404(Order, pk=pk)
             form = OrderItemForm()
+            items = Item.objects.all()
             context = {'form': form,
                        'order': order,
+                       'items': items,
                        'modal_title': 'Añadir prenda',
                        'pk': order.pk,
                        'action': 'order-item-add',
@@ -681,31 +710,6 @@ class Actions(View):
                        'pk': customer.pk,
                        'action': 'customer-edit',
                        'submit_btn': 'Guardar',
-                       }
-            template = 'includes/regular_form.html'
-
-        # Collect order (GET)
-        elif action == 'order-pay-now':
-            order = get_object_or_404(Order, pk=pk)
-            context = {'modal_title': 'Cobrar Pedido',
-                       'msg': ('Marcar el pedido como cobrado (%s€)?'
-                               % order.budget),
-                       'pk': order.pk,
-                       'action': 'order-pay-now',
-                       'submit_btn': 'Sí, cobrar'}
-            template = 'includes/confirmation.html'
-
-        # Close order (GET)
-        elif action == 'order-close':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderCloseForm(instance=order)
-            context = {'form': form,
-                       'order': order,
-                       'modal_title': 'Cerrar pedido',
-                       'pk': order.pk,
-                       'action': 'order-close',
-                       'submit_btn': 'Cerrar pedido',
-                       'custom_form': 'includes/custom_forms/close_order.html'
                        }
             template = 'includes/regular_form.html'
 
@@ -988,6 +992,8 @@ class Actions(View):
             order = get_object_or_404(
                 Order, pk=self.request.POST.get('order-pk', None)
                 )
+
+            # Now create OrderItem
             price = self.request.POST.get('custom-price', None)
             qty = self.request.POST.get('item-qty', 1)
             if price is '0':
@@ -995,6 +1001,15 @@ class Actions(View):
             OrderItem.objects.create(
                 element=item, reference=order, qty=qty, price=price,
                 stock=True, fit=False)
+
+            # Set default price (if case)
+            set_price = self.request.POST.get('set-default-price', None)
+            if set_price:
+                item.price = price
+                item.full_clean()
+                item.save()
+
+            # Context for the view
             items = OrderItem.objects.filter(reference=order)
             data['form_is_valid'] = True
             data['html_id'] = '#ticket'
@@ -1220,50 +1235,6 @@ class Actions(View):
                 item = OrderItem.objects.select_related('reference').get(pk=pk)
                 form = OrderItemForm(instance=item)
 
-        # Collect order (POST)
-        elif action == 'order-pay-now':
-            order = get_object_or_404(Order, pk=pk)
-            order.prepaid = order.budget
-            try:
-                order.save()
-            except ValidationError:  # pragma: no cover
-                data['form_is_valid'] = False
-                context = {'modal_title': 'Cobrar Pedido',
-                           'msg': 'Algo ha ido mal, reintentar?',
-                           'pk': order.pk,
-                           'action': 'order-pay-now',
-                           'submit_btn': 'Sí, reintentar'}
-                template = 'includes/confirmation.html'
-            else:
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-
-        # Close order (POST)
-        elif action == 'order-close':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderCloseForm(request.POST, instance=order)
-            if form.is_valid():
-                close = form.save(commit=False)
-                close.status = 7
-                close.delivery = timezone.now()
-                close.save()
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-            else:
-                data['form_is_valid'] = False
-                custom_form = 'includes/custom_forms/close_order.html'
-                context = {'form': form,
-                           'order': order,
-                           'modal_title': 'Cerrar pedido',
-                           'pk': order.pk,
-                           'action': 'order-close',
-                           'submit_btn': 'Cerrar pedido',
-                           'custom_form': custom_form,
-                           }
-                template = 'includes/regular_form.html'
-
         # Update status (POST)
         elif action == 'update-status':
             status = self.request.POST.get('status', None)
@@ -1276,6 +1247,7 @@ class Actions(View):
                 data['reload'] = True
                 return JsonResponse(data)
             else:
+                order.delivery = date.today()
                 order.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-status'
