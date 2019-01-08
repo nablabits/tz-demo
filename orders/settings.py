@@ -21,7 +21,7 @@ ITEM_TYPE = (
     ('12', 'Traje de niña'),
     ('13', 'Toquilla'),
     ('14', 'Bluson'),
-    ('15', 'Kaiku'),
+    ('15', 'Jakea'),
     ('16', 'Medias'),
     ('17', 'Bordado'),
     ('18', 'Txapela'),
