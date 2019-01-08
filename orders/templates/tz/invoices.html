@@ -1,39 +1,265 @@
 {% extends "tz/base.html" %}
 {% block invoices %}
 <div class="container mt-4">
-  <div class="d-flex my-4">
-    <h3>Últimas facturas</h3>
-    <p class="ml-auto">Mostrando últimas {{invoices|length}}</p>
-  </div>
-  <table class="table">
-  <thead>
-    <tr>
-      <th scope="col">Factura nº</th>
-      <th scope="col">Fecha</th>
-      <th scope="col">Pedido</th>
-      <th scope="col">Cliente/CP</th>
-      <th scope="col">Importe</th>
-      <th scope="col">Forma de pago</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for invoice in invoices %}
-    <tr class="js-view-list-item">
-      <th>{{invoice.invoice_no}}</th>
-      <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
-      {%if invoice.reference.ref_name == 'Quick'%}
-        <th>Ticket</th>
-        <th>{{invoice.reference.customer.cp }}</th>
+  <ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item">
+      <a class="nav-link active" data-toggle="tab" href="#invoices-last" role="tab">Últimas Facturas</a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#invoices-today" role="tab">
+        Facturado hoy <span class="ml-1 badge badge-info">{{today|length}}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#invoices-week" role="tab">
+        Esta semana <span class="ml-1 badge badge-info">{{week|length}}</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#invoices-month" role="tab">
+        Este mes
+        {%if month|length < 21%}
+          <span class="ml-1 badge badge-info">{{month|length}}</span>
+        {%else%}
+          <span class="ml-1 badge badge-info">+20</span>
+        {%endif%}
+      </a>
+    </li>
+  </ul>
+  <div class="tab-content">
+
+    <!-- Last invoices tab -->
+    <div class="tab-pane show active" id="invoices-last" role="tabpanel">
+      <div class="d-flex my-4">
+        <h3>Últimas facturas</h3>
+        <p class="ml-auto">Mostrando últimas {{invoices|length}}</p>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th scope="col">Factura nº</th>
+            <th scope="col">Fecha</th>
+            <th scope="col">Pedido</th>
+            <th scope="col">Cliente/CP</th>
+            <th scope="col">Importe</th>
+            <th scope="col">Forma de pago</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for invoice in invoices %}
+          <tr class="js-view-list-item">
+            <th>{{invoice.invoice_no}}</th>
+            <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
+            {%if invoice.reference.ref_name == 'Quick'%}
+            <th>Ticket</th>
+            <th>{{invoice.reference.customer.cp }}</th>
+            {%else%}
+            <th>{{invoice.reference.ref_name }}</th>
+            <th>{{invoice.reference.customer.name }}</th>
+            {%endif%}
+            <th>{{invoice.amount}}€</th>
+            <th>{{invoice.get_pay_method_display}}</th>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Today's invoices -->
+    <div class="tab-pane" id="invoices-today" role="tabpanel">
+      <div class="d-flex my-4">
+        <h3>Facturas hoy</h3>
+        <div class="d-flex ml-auto">
+          {%if today_cash.total_cash%}
+          <span class="ml-2">
+            <i class="fas fa-coins p-1"></i><strong>Efectivo: </strong>{{today_cash.total_cash}}€
+          </span>
+          {%endif%}
+          {%if today_cash.total_card%}
+            <span class="ml-2">
+              <i class="fas fa-credit-card p-1"></i><strong>Tarjeta: </strong>{{today_cash.total_card}}€
+            </span>
+          {%endif%}
+          {%if today_cash.total_transfer%}
+            <span class="ml-2">
+              <i class="fas fa-usd-circle p-1"></i><strong>Transferencia: </strong>{{today_cash.total_transfer}}€
+            </span>
+          {%endif%}
+          <span class="ml-4">
+            <i class="far fa-piggy-bank p-1"></i><strong>Total día:
+            {%if today_cash.total%}{{today_cash.total}}{%else%}0{%endif%}€</strong>
+          </span>
+        </div>
+      </div>
+      {%if today%}
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Factura nº</th>
+              <th scope="col">Pedido</th>
+              <th scope="col">Cliente/CP</th>
+              <th scope="col">Importe</th>
+              <th scope="col">Forma de pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invoice in today %}
+            <tr class="js-view-list-item">
+              <th>{{invoice.invoice_no}}</th>
+              {%if invoice.reference.ref_name == 'Quick'%}
+              <th>Ticket</th>
+              <th>{{invoice.reference.customer.cp }}</th>
+              {%else%}
+              <th>{{invoice.reference.ref_name }}</th>
+              <th>{{invoice.reference.customer.name }}</th>
+              {%endif%}
+              <th>{{invoice.amount}}€</th>
+              <th>{{invoice.get_pay_method_display}}</th>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       {%else%}
-        <th>{{invoice.reference.ref_name }}</th>
-        <th>{{invoice.reference.customer.name }}</th>
+      <div class="justify-content-center text-center">
+        <h1><i class="fal fa-frown"></i></h1>
+        <h3>Vaya! parece que aún no hemos vendido nada hoy</h3>
+        <h5>Ánimo, no desesperes</h5>
+      </div>
       {%endif%}
-      <th>{{invoice.amount}}€</th>
-      <th>{{invoice.get_pay_method_display}}</th>
-    </tr>
-    {% endfor %}
-  </tbody>
-  </table>
+    </div>
+
+    <!-- Week's invoices -->
+    <div class="tab-pane" id="invoices-week" role="tabpanel">
+      <div class="d-flex my-4">
+        <h3>Facturas esta semana</h3>
+        <div class="d-flex ml-auto">
+          {%if week_cash.total_cash%}
+          <span class="ml-2">
+            <i class="fas fa-coins p-1"></i><strong>Efectivo: </strong>{{week_cash.total_cash}}€
+          </span>
+          {%endif%}
+          {%if week_cash.total_card%}
+            <span class="ml-2">
+              <i class="fas fa-credit-card p-1"></i><strong>Tarjeta: </strong>{{week_cash.total_card}}€
+            </span>
+          {%endif%}
+          {%if week_cash.total_transfer%}
+            <span class="ml-2">
+              <i class="fas fa-usd-circle p-1"></i><strong>Transferencia: </strong>{{week_cash.total_transfer}}€
+            </span>
+          {%endif%}
+          <span class="ml-4">
+            <i class="far fa-piggy-bank p-1"></i><strong>Total semana:
+            {%if week_cash.total%}{{week_cash.total}}{%else%}0{%endif%}€</strong>
+          </span>
+        </div>
+      </div>
+      {%if week%}
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Factura nº</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Pedido</th>
+              <th scope="col">Cliente/CP</th>
+              <th scope="col">Importe</th>
+              <th scope="col">Forma de pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invoice in week %}
+            <tr class="js-view-list-item">
+              <th>{{invoice.invoice_no}}</th>
+              <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
+              {%if invoice.reference.ref_name == 'Quick'%}
+              <th>Ticket</th>
+              <th>{{invoice.reference.customer.cp }}</th>
+              {%else%}
+              <th>{{invoice.reference.ref_name }}</th>
+              <th>{{invoice.reference.customer.name }}</th>
+              {%endif%}
+              <th>{{invoice.amount}}€</th>
+              <th>{{invoice.get_pay_method_display}}</th>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {%else%}
+      <div class="justify-content-center text-center">
+        <h1><i class="fal fa-frown"></i></h1>
+        <h3>Vaya! parece que aún no hemos vendido nada esta semana</h3>
+        <h5>Bueno, no desesperes, aun es pronto</h5>
+      </div>
+      {%endif%}
+    </div>
+
+    <!-- Month's invoices -->
+    <div class="tab-pane" id="invoices-month" role="tabpanel">
+      <div class="d-flex my-4">
+        <h3>Facturas este mes</h3>
+        <div class="d-flex ml-auto">
+          {%if month_cash.total_cash%}
+          <span class="ml-2">
+            <i class="fas fa-coins p-1"></i><strong>Efectivo: </strong>{{month_cash.total_cash}}€
+          </span>
+          {%endif%}
+          {%if month_cash.total_card%}
+            <span class="ml-2">
+              <i class="fas fa-credit-card p-1"></i><strong>Tarjeta: </strong>{{month_cash.total_card}}€
+            </span>
+          {%endif%}
+          {%if month_cash.total_transfer%}
+            <span class="ml-2">
+              <i class="fas fa-usd-circle p-1"></i><strong>Transferencia: </strong>{{month_cash.total_transfer}}€
+            </span>
+          {%endif%}
+          <span class="ml-4">
+            <i class="far fa-piggy-bank p-1"></i><strong>Total mes:
+            {%if month_cash.total%}{{month_cash.total}}{%else%}0{%endif%}€</strong>
+          </span>
+        </div>
+      </div>
+      {%if month%}
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Factura nº</th>
+              <th scope="col">Fecha</th>
+              <th scope="col">Pedido</th>
+              <th scope="col">Cliente/CP</th>
+              <th scope="col">Importe</th>
+              <th scope="col">Forma de pago</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for invoice in month %}
+            <tr class="js-view-list-item">
+              <th>{{invoice.invoice_no}}</th>
+              <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
+              {%if invoice.reference.ref_name == 'Quick'%}
+              <th>Ticket</th>
+              <th>{{invoice.reference.customer.cp }}</th>
+              {%else%}
+              <th>{{invoice.reference.ref_name }}</th>
+              <th>{{invoice.reference.customer.name }}</th>
+              {%endif%}
+              <th>{{invoice.amount}}€</th>
+              <th>{{invoice.get_pay_method_display}}</th>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {%else%}
+      <div class="justify-content-center text-center">
+        <h1><i class="fal fa-calendar"></i></h1>
+        <h3>Vaya! parece que aún no hemos vendido nada este mes</h3>
+        <h5>Ánimo, seguro que al final recuperamos</h5>
+      </div>
+      {%endif%}
+    </div>
+
+
+  </div>
 
 </div>
 {% endblock %}

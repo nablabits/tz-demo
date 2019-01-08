@@ -2,7 +2,7 @@
 {% block orders %}
 {% load humanize %}
 {% include 'includes/search_box.html' %}
-<div class="container mt-4" id="#order-list">
+<div class="container mt-4" id="order-list">
     <ul class="nav nav-tabs" id="ordersTab" role="tablist">
       <li class="nav-item">
         <a class="nav-link active" data-toggle="tab" href="#active-orders" role="tab" id="active-orders-tab">Pedidos Activos<span class="ml-1 badge badge-info">{{active_calendar|length}}</span></a>

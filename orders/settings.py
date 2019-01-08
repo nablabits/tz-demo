@@ -2,7 +2,7 @@
 
 # The name for the app
 APP_NAME = "Trapu Zarrak app"
-VERSION = 'v58'  # next version to be delivered
+VERSION = 'v59'  # next version to be delivered
 
 # Available types of clothes
 ITEM_TYPE = (
@@ -21,7 +21,7 @@ ITEM_TYPE = (
     ('12', 'Traje de niña'),
     ('13', 'Toquilla'),
     ('14', 'Bluson'),
-    ('15', 'Kaiku'),
+    ('15', 'Jakea'),
     ('16', 'Medias'),
     ('17', 'Bordado'),
     ('18', 'Txapela'),
