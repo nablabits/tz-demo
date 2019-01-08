@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v59, Ene 8
+  * **Nuevo:** las vista de las facturs ahora es más completa.
+  * **Mejora:** ahora *kaiku* se llama *jakea.*
+
 ### v58, Ene 6
   * **Nuevo:** Los pedidos regulares ya se pueden facturar también.
   * **Nuevo:** nueva tabla para movimientos del banco (accesible desde la vista
