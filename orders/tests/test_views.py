@@ -1078,7 +1078,7 @@ class OrderExpressTests(TestCase):
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
         self.assertEqual(resp.context['user'].username, 'regular')
-        self.assertEqual(len(resp.context['item_types']), 18)
+        self.assertEqual(len(resp.context['item_types']), 19)
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
         self.assertEqual(resp.context['placeholder'], 'Busca un nombre')
         self.assertEqual(resp.context['search_on'], 'items')
@@ -1121,6 +1121,87 @@ class InvoicesListTest(TestCase):
         self.assertEqual(invoices.count(), 20)
         self.assertTrue(invoices[0].invoice_no > invoices[1].invoice_no)
         self.assertTrue(invoices[0].issued_on > invoices[1].issued_on)
+
+    def test_invoices_today_displays_today_invoices(self):
+        """Test display today's invoices and their total amount."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(10):
+            order = Order.objects.create(
+                user=user, customer=c, ref_name='Test', delivery=date.today(),
+                budget=0, prepaid=0, )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+        card, transfer = Invoice.objects.all()[:2]
+        card.pay_method, transfer.pay_method = 'V', 'T'
+        card.save()
+        transfer.save()
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['today'].count(), 10)
+        self.assertEqual(resp.context['today_cash']['total'], 100)
+        self.assertEqual(resp.context['today_cash']['total_cash'], 80)
+        self.assertEqual(resp.context['today_cash']['total_card'], 10)
+        self.assertEqual(resp.context['today_cash']['total_transfer'], 10)
+
+    def test_invoices_week_displays_week_invoices(self):
+        """Test display week's invoices and their total amount."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(10):
+            order = Order.objects.create(
+                user=user, customer=c, ref_name='Test', delivery=date.today(),
+                budget=0, prepaid=0, )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+
+        today = timezone.now().date().isocalendar()[2]
+        delay = timedelta(days=randint(0, today - 1))
+        for invoice in Invoice.objects.all():
+            invoice.issued_on = invoice.issued_on - delay
+            invoice.save()
+        for invoice in Invoice.objects.all()[:5]:
+            invoice.issued_on = invoice.issued_on - timedelta(days=10)
+            invoice.save()
+        card, transfer = Invoice.objects.reverse()[:2]
+        card.pay_method, transfer.pay_method = 'V', 'T'
+        card.save()
+        transfer.save()
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['week'].count(), 5)
+        self.assertEqual(resp.context['week_cash']['total'], 50)
+        self.assertEqual(resp.context['week_cash']['total_cash'], 30)
+        self.assertEqual(resp.context['week_cash']['total_card'], 10)
+        self.assertEqual(resp.context['week_cash']['total_transfer'], 10)
+
+    def test_invoices_month_displays_month_invoices(self):
+        """Test display month's invoices and their total amount."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(10):
+            order = Order.objects.create(
+                user=user, customer=c, ref_name='Test', delivery=date.today(),
+                budget=0, prepaid=0, )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+        for invoice in Invoice.objects.all()[:5]:
+            invoice.issued_on = invoice.issued_on - timedelta(days=30)
+            invoice.save()
+        card, transfer = Invoice.objects.reverse()[:2]
+        card.pay_method, transfer.pay_method = 'V', 'T'
+        card.save()
+        transfer.save()
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['month'].count(), 5)
+        self.assertEqual(resp.context['month_cash']['total'], 50)
+        self.assertEqual(resp.context['month_cash']['total_cash'], 30)
+        self.assertEqual(resp.context['month_cash']['total_card'], 10)
+        self.assertEqual(resp.context['month_cash']['total_transfer'], 10)
 
     def test_invoices_view_current_user(self):
         """Test the current user."""
