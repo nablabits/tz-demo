@@ -355,12 +355,41 @@ def itemslist(request):
 def invoiceslist(request):
     """List all the invoices."""
     invoices = Invoice.objects.all()[:20]
+    today = Invoice.objects.filter(issued_on__date=timezone.now().date())
+    week = Invoice.objects.filter(
+        issued_on__week=timezone.now().date().isocalendar()[1])
+    month = Invoice.objects.filter(
+        issued_on__month=timezone.now().date().month)
+    today_cash = today.aggregate(
+        total=Sum('amount'),
+        total_cash=Sum('amount', filter=Q(pay_method='C')),
+        total_card=Sum('amount', filter=Q(pay_method='V')),
+        total_transfer=Sum('amount', filter=Q(pay_method='T')),
+        )
+    week_cash = week.aggregate(
+        total=Sum('amount'),
+        total_cash=Sum('amount', filter=Q(pay_method='C')),
+        total_card=Sum('amount', filter=Q(pay_method='V')),
+        total_transfer=Sum('amount', filter=Q(pay_method='T')),
+        )
+    month_cash = month.aggregate(
+        total=Sum('amount'),
+        total_cash=Sum('amount', filter=Q(pay_method='C')),
+        total_card=Sum('amount', filter=Q(pay_method='V')),
+        total_transfer=Sum('amount', filter=Q(pay_method='T')),
+        )
     cur_user = request.user
     now = datetime.now()
 
     view_settings = {'invoices': invoices,
                      'user': cur_user,
                      'now': now,
+                     'today': today,
+                     'week': week,
+                     'month': month,
+                     'today_cash': today_cash,
+                     'week_cash': week_cash,
+                     'month_cash': month_cash,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Facturas',
                      }
