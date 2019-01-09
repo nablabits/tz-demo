@@ -835,6 +835,14 @@ class Actions(View):
                        'submit_btn': 'Sí, quiero eliminarlo'}
             template = 'includes/delete_confirmation.html'
 
+        # View a invoiced ticket (GET)
+        elif action == 'view-ticket':
+            invoice = get_object_or_404(Invoice, pk=pk)
+            items = OrderItem.objects.filter(reference=invoice.reference)
+            order = Order.objects.get(pk=pk)
+            context = {'items': items, 'order': order, }
+            template = 'includes/invoiced_ticket.html'
+
         # logout
         elif action == 'logout':
             context = dict()
@@ -1565,7 +1573,6 @@ def pqueue_actions(request):
 
     data['html'] = render_to_string(template, context, request=request)
     return JsonResponse(data)
-
 
 
 #

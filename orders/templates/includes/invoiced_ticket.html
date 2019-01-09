@@ -1,0 +1,22 @@
+<div class="modal-header">
+  <h4 class="modal-title">Resumen del ticket</h4>
+  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true"><i class="fa fa-times"></i></span>
+  </button>
+</div>
+<div class="modal-body" id="md-content">
+  <ul class="list-group list-group-flush">
+    {%for item in items%}
+     <li class="list-group-item d-flex justify-content-between">
+         <span>{{item.qty}} x {{item.element.get_item_type_display}} {{item.element.name}} {{item.element.item_class}}-{{item.element.size}}, {{item.price}}€</span>
+         <span>{{item.subtotal}}€</span>
+     </li>
+    {%endfor%}
+  </ul>
+  <div class="d-flex justify-content-end mt-4">
+    <h3><strong>Total:</strong>&nbsp;{{order.total}}€</h3>
+  </div>
+</div>
+<div class="modal-footer">
+  <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>
+</div>
