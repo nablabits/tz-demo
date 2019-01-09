@@ -4,7 +4,7 @@
     <div class="justify-content-center text-center">
       <h1><i class="fal fa-file-invoice-dollar"></i></h1>
       <h3>Ésta es la vista del ticket</h3>
-      <p>Empieza añadiendo algún elemento de la izquierda.<br>Cuando hayas acabado pincha en facturar</p>
+      <p>Añade prendas desde la izquierda.<br>Cuando hayas acabado pincha en facturar</p>
     </div>
   {%else%}
     {%for item in items%}
@@ -19,7 +19,7 @@
     </div>
     {%endfor%}
     <div class="d-flex justify-content-end">
-      <strong>Total:</strong>&nbsp;{{total.total}}€
+      <strong>Total:</strong>&nbsp;{{order.total}}€
     </div>
     <div class="d-flex justify-content-between">
       {%if order.customer.cp == 0%}

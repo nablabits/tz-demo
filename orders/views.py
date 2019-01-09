@@ -446,8 +446,6 @@ def order_express_view(request, pk):
     items = OrderItem.objects.filter(reference=order)
     available_items = Item.objects.all()[:15]
     already_invoiced = Invoice.objects.filter(reference=order)
-    total = items.aggregate(
-        total=Sum(F('qty') * F('price'), output_field=DecimalField()))
     cur_user = request.user
     now = datetime.now()
     view_settings = {'order': order,
@@ -458,7 +456,6 @@ def order_express_view(request, pk):
                      'items': items,
                      'available_items': available_items,
                      'invoiced': already_invoiced,
-                     'total': total,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
                      'placeholder': 'Busca un nombre',
