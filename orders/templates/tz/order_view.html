@@ -11,7 +11,7 @@
       </div>
       {%if not order.invoiced%}
         <div class="{% if order.status == '8' %}d-none{% else %}d-flex mb-auto{% endif %}">
-            <button class="btn btn-outline-success js-order-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
+            <button class="btn btn-outline-success js-crud-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
               <i class="fa fa-edit"></i> Editar
             </button>
             <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fas fa-times"></i> Anular pedido</button>
@@ -25,7 +25,7 @@
           <strong>Atención!</strong>
           La entrega de este pedido se programó para el {{order.delivery | date:"j/n"}}
           <a href="#">
-            <button class="ml-2 btn btn-warning js-order-edit-date" data-action="order-edit-date" data-pk="{{order.pk}}"><i class="fa fa-history"></i> Actualizar</button>
+            <button class="ml-2 btn btn-warning js-crud-edit" data-action="order-edit-date" data-pk="{{order.pk}}"><i class="fa fa-history"></i> Actualizar</button>
           </a>
         </div>
       </div>
