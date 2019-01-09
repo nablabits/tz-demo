@@ -159,17 +159,6 @@ $(function () {
   }
 
   // actions (GET)
-  $('.js-order-edit').click(loadActionForm)
-  $('.js-order-edit-date').click(loadActionForm)
-  $('.js-order-add-comment').click(loadActionForm)
-  $('#order-details').on('click', '.js-add-item', loadActionForm)
-  $('#order-details').on('click', '.js-edit-item', loadActionForm)
-  $('#order-details').on('click', '.js-delete-item', loadActionForm)
-  $('.js-customer-edit').click(loadActionForm)
-  $('.js-customer-delete').click(loadActionForm)
-  $('#timing-list').on('click', '.js-time-add', loadActionForm)
-  $('#timing-list').on('click', '.js-time-edit', loadActionForm)
-  $('#timing-list').on('click', '.js-time-delete', loadActionForm)
   $('.js-logout').click(loadActionForm)
 
   $('#root').on('click', '.js-crud-add', loadActionForm)
