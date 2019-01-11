@@ -277,6 +277,10 @@ class OrderItem(models.Model):
             obj_item = Item.objects.get(pk=self.element.pk)
             self.price = obj_item.price
 
+        # Ensure that order express items are stocked
+        if self.reference.ref_name == 'Quick':
+            self.stock = True
+
         super().save(*args, **kwargs)
 
     @property
