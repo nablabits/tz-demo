@@ -442,9 +442,8 @@ def order_express_view(request, pk):
     order = get_object_or_404(Order, pk=pk)
     if order.customer.name != 'express':
         return redirect(reverse('order_view', args=[order.pk]))
-    item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
     items = OrderItem.objects.filter(reference=order)
-    available_items = Item.objects.all()[:15]
+    available_items = Item.objects.all()[:10]
     already_invoiced = Invoice.objects.filter(reference=order)
     cur_user = request.user
     now = datetime.now()
@@ -452,7 +451,6 @@ def order_express_view(request, pk):
                      'user': cur_user,
                      'now': now,
                      'item_types': settings.ITEM_TYPE[1:],
-                     'item_names': item_names,
                      'items': items,
                      'available_items': available_items,
                      'invoiced': already_invoiced,
@@ -464,7 +462,6 @@ def order_express_view(request, pk):
                      # CRUD Actions
                      'btn_title_add': 'Nueva prenda',
                      'js_action_add': 'object-item-add',
-                     # 'js_action_edit': 'order-express-item-edit',
                      'js_action_delete': 'order-express-item-delete',
                      'js_data_pk': '0',
                      }
@@ -628,20 +625,11 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        elif action == 'get-item-list':
-            item_type = self.request.GET.get('item_type', None)
-            if not item_type:
-                raise Http404('No item type was sent')
-            available_items = Item.objects.filter(item_type=item_type)
-            order = get_object_or_404(Order, pk=pk)
-            context = {'available_items': available_items, 'order': order, }
-            template = 'includes/item_list_tickets.html'
-
         # Send to order express (GET)
         elif action == 'send-to-order-express':
             custom_form = 'includes/custom_forms/send_to_order_express.html'
             item = get_object_or_404(Item, pk=pk)
-            context = {'modal_title': 'Enviar prenda a pedido',
+            context = {'modal_title': 'Enviar prenda a ticket',
                        'pk': pk,
                        'item': item,
                        'order_pk': self.request.GET.get('aditionalpk', None),
@@ -1571,6 +1559,59 @@ def pqueue_actions(request):
     data['html'] = render_to_string(template, context, request=request)
     return JsonResponse(data)
 
+
+def item_selector(request):
+    """Run the item selector."""
+    if request.method != 'GET':
+        raise ValueError('The request should go in a GET method!')
+
+    # Fix context settings
+    context = {'item_types': settings.ITEM_TYPE[1:],
+               'js_action_send_to': 'send-to-order',
+               'js_action_edit': 'object-item-edit',
+               'js_action_delete': 'object-item-delete'
+               }
+
+    # On orders we should provide the order id to attach items to it
+    order_pk = request.GET.get('aditionalpk', None)
+    if order_pk:
+        context['order'] = get_object_or_404(Order, pk=order_pk)
+        context['js_action_send_to'] = 'send-to-order-express'
+
+    items = Item.objects.all()
+    by_type = request.GET.get('item-type', None)
+    by_name = request.GET.get('item-name', None)
+    by_size = request.GET.get('item-size', None)
+    if by_type:
+        items = items.filter(item_type=by_type)
+        item_names = items.distinct('name')
+        context['item_names'] = item_names
+        context['data_type'] = settings.ITEM_TYPE[int(by_type)]
+
+    if by_name:
+        items = items.filter(name=by_name)
+        item_sizes = items.order_by('size').distinct('size')
+        context['data_name'] = by_name
+        context['item_sizes'] = item_sizes
+
+    if by_size:
+        items = items.filter(size=by_size)
+        context['data_size'] = by_size
+
+    context['available_items'] = items[:11]
+
+    template = 'includes/item_selector.html'
+    data = {'html': render_to_string(template, context, request=request),
+            'id': '#item-selector'}
+
+    """
+    Test stuff. Since it's not very straightforward extract this data
+    from render_to_string() method, we'll render it in a regular way.
+    """
+    if request.GET.get('test'):
+        return render(request, template, context)
+
+    return JsonResponse(data)
 
 #
 #

@@ -4298,6 +4298,104 @@ class ActionsPostMethodEdit(TestCase):
                                                      'test': True})
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, reverse('login'))
+
+
+class ItemSelectorTests(TestCase):
+    """Test the item selector AJAX view."""
+
+    @classmethod
+    def setUpTestData(self):
+        """Create all the elements at once."""
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        customer = Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Order.objects.create(
+            user=user, customer=customer, ref_name='Test',
+            delivery=date.today())
+        for i in range(3):
+            Item.objects.create(name='Test', fabrics=5, price=10)
+
+    def test_item_selector_only_accepts_get(self):
+        """Test the proper http method."""
+        with self.assertRaises(ValueError):
+            self.client.post(reverse('item-selector'))
+
+    def test_fix_context_settings(self):
+        """Test the proper values."""
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['item_types'], settings.ITEM_TYPE[1:])
+        self.assertEqual(resp.context['js_action_send_to'], 'send-to-order')
+        self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
+        self.assertEqual(
+            resp.context['js_action_delete'], 'object-item-delete')
+
+    def test_item_selector_gets_order(self):
+        """Test the correct pickup of order on order view."""
+        order = Order.objects.first()
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
+        self.assertEqual(resp.context['order'], order)
+        self.assertEqual(
+            resp.context['js_action_send_to'], 'send-to-order-express')
+
+    def test_item_selector_picks_up_all_the_items(self):
+        """Test the correct filter 'all' which includes Predeterminado."""
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertEqual(resp.context['available_items'].count(), 4)
+
+    def test_filter_by_type(self):
+        """Test the correct by type filter."""
+        for i in range(3):
+            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True, 'item-type': '2'})
+        self.assertEqual(resp.context['available_items'].count(), 3)
+        self.assertEqual(resp.context['data_type'], ('2', 'Pantalón'))
+        for i in range(3):
+            self.assertEqual(resp.context['item_names'][i].name, 'Test%s' % i)
+
+    def test_filter_by_name(self):
+        """Test the correct by name filter."""
+        for i in range(3):
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type=str(i + 1),
+                size=str(i))
+        resp = self.client.get(
+            reverse('item-selector'),
+            {'test': True, 'item-type': '1', 'item-name': 'Test0'})
+        self.assertEqual(resp.context['available_items'].count(), 1)
+        self.assertEqual(resp.context['item_sizes'][0].size, '0')
+        self.assertEqual(resp.context['data_name'], 'Test0')
+
+    def test_filter_by_size(self):
+        """Test the correct by size filter."""
+        for i in range(3):
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type=str(i + 1),
+                size=str(i))
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True,
+                                       'item-type': '1',
+                                       'item-name': 'Test0',
+                                       'item-size': '0'})
+        self.assertEqual(resp.context['available_items'].count(), 1)
+        self.assertEqual(resp.context['data_size'], '0')
+
+    def test_item_selcetor_limits_to_11(self):
+        """Test the limiting results."""
+        for i in range(10):
+            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertEqual(resp.context['available_items'].count(), 11)
+
+    def test_template_used(self):
+        """Test the proper template."""
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertTemplateUsed(resp, 'includes/item_selector.html')
+
 #
 #
 #
