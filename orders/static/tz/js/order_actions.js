@@ -143,19 +143,28 @@ $(function () {
     // return false
   }
 
-  var getItems = function () {
-    // Get the items of this type
-    var action = $(this).attr('data-action')
-    var pk = $(this).attr('data-pk')
-    var type = $(this).attr('data-type')
+  var itemSelector = function () {
+    // Deal with item_selector view
+    var itemType = $(this).attr('data-type')
+    var itemName = $(this).attr('data-name')
+    var itemSize = $(this).attr('data-size')
+    var aditionalpk = $('#order_view').attr('data-pk')
+
     $.ajax({
-      url: '/actions/',
-      data: { 'pk': pk, 'action': action, 'item_type': type },
+      url: '/item-selector/',
+      data: $.param({
+        'item-type': itemType,
+        'item-name': itemName,
+        'item-size': itemSize,
+        'aditionalpk': aditionalpk
+      }),
+      type: 'get',
       dataType: 'json',
       success: function (data) {
-        $('#items-list').html(data.html)
+        $('#item-selector').html(data.html)
       }
     })
+    return false
   }
 
   // actions (GET)
@@ -165,12 +174,17 @@ $(function () {
   $('#root').on('click', '.js-crud-edit', loadActionForm)
   $('#root').on('click', '.js-crud-delete', loadActionForm)
 
+  // item selector trigger
+  $('#root').on('click', '.js-item-selector', itemSelector)
+  if ($('#item-selector').length) {
+    itemSelector()
+  }
+
   // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
   $('#order-status').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
-  $('#root').on('click', '.js-get-items', getItems)
 
   // Pqueue actions
   $('#root').on('click', '.js-queue', queueAction)

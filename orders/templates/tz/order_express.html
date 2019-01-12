@@ -5,8 +5,8 @@
     <h1>Nueva venta express</h1>
     <div class="row">
       <div class="col-md-8 col-lg-9">
-        <h3>Añadir Prendas</h3>
-        <div class="d-flex mb-3">
+        <h3 class="pb-1 mb-4 border-bottom">Añadir prendas al ticket</h3>
+        <!-- <div class="d-none mb-3">
           <button type="button" class="mr-1 mt-1 btn btn-outline-success js-crud-add" data-action="{{js_action_add}}"  data-pk="{{js_data_pk}}">
             <i class="fa fa-plus"></i> {{btn_title_add}}
           </button>
@@ -28,18 +28,11 @@
               </div>
             </form>
           </div>
-        </div>
+        </div> -->
         <div class="d-flex">
         </div>
         <div class="collapse" id="search-results"></div>
-        <div class="d-flex flex-wrap">
-          {% for item in item_types %}
-          <button class="m-2 btn btn-lg btn-outline-success js-get-items" data-action="get-item-list" data-type="{{item.0}}" data-pk="{{order.pk}}">{{item.1}}</button>
-          {%endfor%}
-        </div>
-        <div class="d-flex flex-column mt-4" id="items-list">
-          {%include 'includes/item_list_tickets.html'%}
-        </div>
+        <div class="d-flex flex-column" id="item-selector"></div>
       </div>
       <div class="col-md-4 col-lg-3 border rounded p-2" id="ticket">
         {% include 'includes/ticket.html' %}

@@ -11,7 +11,9 @@
       </button>
   </div>
   <div id="{{table_id}}">
+    {%if include_template %}
     {% include include_template %}
+    {%endif%}
   </div>
 </div>
 {% endblock %}

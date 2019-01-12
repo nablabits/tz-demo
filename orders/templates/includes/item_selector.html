@@ -1,0 +1,113 @@
+<div class="d-flex align-items-center">
+  <button type="button" class="btn btn-outline-success mx-1 {%if not data_type%}active{%endif%} js-item-selector" data-aditional-pk="{{order.pk}}">
+    <i class="fal fa-filter pr-3"></i>Todas las prendas
+  </button>
+  {%if data_type%}
+  <button type="button" class="btn btn-outline-success mx-1 {%if not data_name%}active{%endif%} js-item-selector" data-type="{{data_type.0}}" data-aditional-pk="{{order.pk}}">
+    <i class="fa fa-tshirt pr-1"></i>{{data_type.1}}
+  </button>
+  {%endif%}
+  {%if data_name%}
+  <button type="button" class="btn btn-outline-success mx-1 {%if not data_size%}active{%endif%} js-item-selector" data-type="{{data_type.0}}" data-name="{{data_name}}" data-aditional-pk="{{order.pk}}">
+    <i class="fa fa-font pr-1"></i>{{data_name}}
+  </button>
+  {%endif%}
+  {%if data_size%}
+  <button type="button" class="btn btn-outline-success mx-1 {%if data_size%}active{%endif%}">
+    <i class="fa fa-expand-alt pr-1"></i>{{data_size}}
+  </button>
+  {%endif%}
+</div>
+
+{%if not data_type%}<!-- Select item type -->
+  <div class="d-flex flex-wrap mt-1">
+    {% for item in item_types %}
+    <div class="border rounded m-1 item-selector js-item-selector" data-order-pk="{{order.pk}}" data-type="{{item.0}}" data-aditional-pk="{{order.pk}}">
+      <h5 class="p-3 text-center">{{item.1}}</h5>
+    </div>
+    {%endfor%}
+    <div class="border rounded border-success m-1 item-selector js-item-selector js-crud-add" data-action="object-item-add" data-pk="0">
+      <h5 class="p-3 text-center text-success">
+        <i class="far fa-plus pr-1"></i>
+        <strong>Añadir una prenda</strong>
+      </h5>
+    </div>
+  </div>
+{%endif%}
+
+{%if data_type and not data_name%}<!-- Select item name -->
+  <div class="d-flex flex-wrap mt-1">
+    {% for item in item_names %}
+    <div class="border rounded m-1 item-selector js-item-selector" data-type="{{data_type.0}}" data-name="{{item.name}}" data-aditional-pk="{{order.pk}}">
+      <h5 class="p-3 text-center">{{item.name}}</h5>
+    </div>
+    {%endfor%}
+
+    <!-- Add item with item-type
+    <div class="border rounded border-success m-1 item-selector js-item-selector">
+      <h5 class="p-3 text-center text-success">
+        <i class="far fa-plus pr-1"></i>
+        <strong>Añadir {{data_type.1}}</strong>
+      </h5>
+    </div> -->
+
+  </div>
+{%endif%}
+
+{%if data_name and not data_size%}<!-- Select item size -->
+    <div class="d-flex flex-wrap mt-1">
+      {% for item in item_sizes %}
+      <div class="border rounded m-1 item-selector js-item-selector" data-type="{{data_type.0}}" data-name="{{data_name}}" data-size="{{item.size}}" data-aditional-pk="{{order.pk}}">
+        <h5 class="p-3 text-center">T-{{item.size}}</h5>
+      </div>
+      {%endfor%}
+
+      <!-- Add item with type and name
+      <div class="border rounded border-success m-1 item-selector js-item-selector">
+        <h5 class="p-3 text-center text-success">
+          <i class="far fa-plus pr-1"></i>
+          <strong>Añadir nueva talla de {{data_type.1}} {{data_name}}</strong>
+        </h5>
+      </div> -->
+
+    </div>
+{%endif%}
+
+<h3 class="mt-4 pb-1 border-bottom">
+  <i class="fa fa-list pr-2"></i>Lista de prendas encontradas
+  <span class="badge badge-info mr-1">
+    {%if available_items|length > 10%}+10{%else%}{{available_items|length}}{%endif%}
+  </span>
+</h3>
+
+<div class="d-flex">
+  <ul class="list-group list-group-flush">
+    {%for item in available_items%}
+     <li class="list-group-item d-flex align-items-center">
+         <span class="mr-1">{{item.get_item_type_display}} {{item.name}}</span>
+         <span class="badge badge-primary mr-1">{{item.get_item_class_display}}</span>
+         <span class="badge badge-info mr-1">T-{{item.size}}</span>
+         {%if item.notes%}
+         <span class="mr-1"><i class="far fa-sticky-note ml-2"></i></span>
+         {%endif%}
+         {%if item.foreing%}
+         <span class="mr-1"><i class="far fa-sign-in-alt"></i></span>
+         {%endif%}
+         <span class="ml-3 mr-5">{{item.price}}€</span>
+         <span class="ml-5">{%include 'includes/action_buttons.html'%}</span>
+     </li>
+    {%endfor%}
+
+    <!-- Add new item with type, name and size defined
+    {%if data_name and data_type and data_size%}
+    <li class="list-group-item d-flex align-items-center">
+      <div class="border rounded border-success m-1 item-selector js-item-selector">
+        <h5 class="p-3 text-center">
+          <i class="far fa-plus pr-1"></i>
+          Añadir nuevo acabado para {{data_type.1}} {{data_name}} T-{{data_size}}
+        </h5>
+      </div>
+    </li>
+    {%endif%} -->
+  </ul>
+</div>

@@ -25,7 +25,8 @@ th{
   border-right: 1px solid lightgrey;
   border-bottom: 1px solid lightgrey;
 }
-.js-flip, .js-crud-add, .js-crud-edit, .js-crud-delete{
+.js-flip, .js-crud-add, .js-crud-edit, .js-crud-delete, .js-view-list-item,
+.js-item-selector{
   cursor: pointer;
 }
 .aside-wide{
@@ -88,11 +89,7 @@ th{
   border-left: 1px solid #ddd;
 }
 
-.js-view-list-item{
-  cursor: pointer;
-}
-
-.js-view-list-item:hover{
+.js-view-list-item:hover, .item-selector:hover{
   background-color: #daf9bc;
 }
 

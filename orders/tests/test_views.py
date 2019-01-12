@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from orders.models import (
     Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, )
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import F, Q
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
@@ -980,22 +979,6 @@ class OrderExpressTests(TestCase):
         resp = self.client.get(reverse('order_express', args=[order.pk]))
         self.assertEqual(resp.status_code, 302)
 
-    def test_items_list_exclude_default_and_selects_distinct(self):
-        """Predeterminado is not shown and each name is once."""
-        self.client.login(username='regular', password='test')
-        for i in range(3):
-            for k in range(2):
-                Item.objects.create(name='test%s' % (i), fabrics=5)
-        self.client.post(reverse('actions'), {'cp': 0, 'pk': 'None',
-                                              'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        resp = self.client.get(
-            reverse('order_express', args=[order_express.pk]))
-        self.assertEqual(resp.context['item_names'].count(), 4)
-        self.assertTrue(Item.objects.get(name='Predeterminado'))
-        for i in resp.context['item_names']:
-            self.assertNotEqual(i.name, 'Predeterminado')
-
     def test_items_belong_to_the_order(self):
         """Dsiplay all the items that are owned by an order."""
         self.client.login(username='regular', password='test')
@@ -1020,18 +1003,6 @@ class OrderExpressTests(TestCase):
         for i in resp.context['items']:
             self.assertNotEqual(i, excluded_item)
             self.assertEqual(i, included_item)
-
-    def test_available_items(self):
-        """Test the correct query."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order = Order.objects.get(customer__name='express')
-        for i in range(20):
-            Item.objects.create(name='Test%s' % i, fabrics=5, price=5)
-        resp = self.client.get(reverse('order_express', args=[order.pk]))
-        self.assertEqual(resp.context['available_items'].count(), 15)
 
     def test_get_already_invoiced_orders(self):
         """Test the proper display of invoiced orders."""
@@ -1066,7 +1037,7 @@ class OrderExpressTests(TestCase):
             reference=order_express, element=item, price=20, qty=2)
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertEqual(resp.context['total']['total'], 70)
+        self.assertEqual(resp.context['order'].total, 70)
 
     def test_context_vars(self):
         """Test the remaining context vars."""
@@ -2212,12 +2183,7 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['js_action_delete'],
                          'object-item-delete')
         self.assertEqual(resp.context['js_data_pk'], '0')
-        self.assertEqual(resp.context['include_template'],
-                         'includes/items_list.html')
-        self.assertTrue(resp.context['footer'])
         self.assertEquals(resp.context['version'], settings.VERSION)
-        self.assertEquals(resp.context['item_types'], settings.ITEM_TYPE[1:])
-        self.assertEquals(resp.context['item_classes'], settings.ITEM_CLASSES)
 
     def test_mark_down_view(self):
         """Test the proper work of view."""
@@ -2540,7 +2506,6 @@ class ActionsGetMethod(TestCase):
     def test_pk_out_of_range_raises_404(self):
         """High pk should raise a 404."""
         actions = ('order-from-customer',
-                   'get-item-list',
                    'send-to-order-express',
                    'order-item-add',
                    'order-add-comment',
@@ -2554,6 +2519,7 @@ class ActionsGetMethod(TestCase):
                    'object-item-delete',
                    'order-item-delete',
                    'customer-delete',
+                   'view-ticket',
                    )
         for action in actions:
             resp = self.client.get(
@@ -2674,33 +2640,6 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         vars = ('orders', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_get_item_list_raises_404_item_type(self):
-        """When no item type is sent raise 404."""
-        order = Order.objects.first()
-        resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk,
-                                'action': 'get-item-list',
-                                'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_get_item_list(self):
-        """Test context dictionaries and template."""
-        order = Order.objects.first()
-        Item.objects.create(name='Skirt', item_type='1', fabrics=1, price=1, )
-        resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk,
-                                'action': 'get-item-list',
-                                'item_type': '1',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/item_list_tickets.html')
-        vars = ('available_items', 'order', )
         self.assertTrue(self.context_vars(context, vars))
 
     def test_send_item_to_order_express(self):
@@ -2971,11 +2910,29 @@ class ActionsGetMethod(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
-        data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
         self.assertEqual(template, 'includes/delete_confirmation.html')
         vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn')
+        self.assertTrue(self.context_vars(context, vars))
+
+    def test_view_ticket(self):
+        """Test the proper ticket display."""
+        order = Order.objects.first()
+        OrderItem.objects.create(
+            element=Item.objects.first(), reference=order, price=10)
+        invoice = Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('actions'),
+                               {'pk': invoice.pk,
+                                'action': 'view-ticket',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/invoiced_ticket.html')
+        vars = ('items', 'order',)
         self.assertTrue(self.context_vars(context, vars))
 
     def test_logout(self):
@@ -4298,6 +4255,111 @@ class ActionsPostMethodEdit(TestCase):
                                                      'test': True})
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, reverse('login'))
+
+
+class ItemSelectorTests(TestCase):
+    """Test the item selector AJAX view."""
+
+    @classmethod
+    def setUpTestData(self):
+        """Create all the elements at once."""
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        customer = Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Order.objects.create(
+            user=user, customer=customer, ref_name='Test',
+            delivery=date.today())
+        for i in range(3):
+            Item.objects.create(name='Test', fabrics=5, price=10)
+
+    def test_item_selector_only_accepts_get(self):
+        """Test the proper http method."""
+        with self.assertRaises(ValueError):
+            self.client.post(reverse('item-selector'))
+
+    def test_fix_context_settings(self):
+        """Test the proper values."""
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['item_types'], settings.ITEM_TYPE[1:])
+        self.assertEqual(resp.context['js_action_send_to'], 'send-to-order')
+        self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
+        self.assertEqual(
+            resp.context['js_action_delete'], 'object-item-delete')
+
+    def test_item_selector_gets_order(self):
+        """Test the correct pickup of order on order view."""
+        order = Order.objects.first()
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
+        self.assertEqual(resp.context['order'], order)
+        self.assertEqual(
+            resp.context['js_action_send_to'], 'send-to-order-express')
+
+    def test_item_selector_picks_up_all_the_items(self):
+        """Test the correct filter 'all' which includes Predeterminado."""
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertEqual(resp.context['available_items'].count(), 4)
+
+    def test_filter_by_type(self):
+        """Test the correct by type filter."""
+        for i in range(3):
+            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True, 'item-type': '2'})
+        self.assertEqual(resp.context['available_items'].count(), 3)
+        self.assertEqual(resp.context['data_type'], ('2', 'Pantalón'))
+        for i in range(3):
+            self.assertEqual(resp.context['item_names'][i].name, 'Test%s' % i)
+
+    def test_filter_by_name(self):
+        """Test the correct by name filter."""
+        for i in range(3):
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type=str(i + 1),
+                size=str(i))
+        resp = self.client.get(
+            reverse('item-selector'),
+            {'test': True, 'item-type': '1', 'item-name': 'Test0'})
+        self.assertEqual(resp.context['available_items'].count(), 1)
+        self.assertEqual(resp.context['item_sizes'][0].size, '0')
+        self.assertEqual(resp.context['data_name'], 'Test0')
+
+    def test_filter_by_size(self):
+        """Test the correct by size filter."""
+        for i in range(3):
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type=str(i + 1),
+                size=str(i))
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True,
+                                       'item-type': '1',
+                                       'item-name': 'Test0',
+                                       'item-size': '0'})
+        self.assertEqual(resp.context['available_items'].count(), 1)
+        self.assertEqual(resp.context['data_size'], '0')
+
+    def test_item_selcetor_limits_to_11(self):
+        """Test the limiting results."""
+        for i in range(10):
+            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertEqual(resp.context['available_items'].count(), 11)
+
+    def test_template_used(self):
+        """Test the proper template."""
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertTemplateUsed(resp, 'includes/item_selector.html')
+
+    def test_return_json(self):
+        """Test the proper json return."""
+        resp = self.client.get(reverse('item-selector'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+
+
 #
 #
 #
