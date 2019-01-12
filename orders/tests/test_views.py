@@ -1038,7 +1038,7 @@ class OrderExpressTests(TestCase):
             reference=order_express, element=item, price=20, qty=2)
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertEqual(resp.context['total']['total'], 70)
+        self.assertEqual(resp.context['order'].total, 70)
 
     def test_context_vars(self):
         """Test the remaining context vars."""
@@ -2520,6 +2520,7 @@ class ActionsGetMethod(TestCase):
                    'object-item-delete',
                    'order-item-delete',
                    'customer-delete',
+                   'view-ticket',
                    )
         for action in actions:
             resp = self.client.get(
@@ -2914,6 +2915,25 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/delete_confirmation.html')
         vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn')
+        self.assertTrue(self.context_vars(context, vars))
+
+    def test_view_ticket(self):
+        """Test the proper ticket display."""
+        order = Order.objects.first()
+        OrderItem.objects.create(
+            element=Item.objects.first(), reference=order, price=10)
+        invoice = Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('actions'),
+                               {'pk': invoice.pk,
+                                'action': 'view-ticket',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/invoiced_ticket.html')
+        vars = ('items', 'order',)
         self.assertTrue(self.context_vars(context, vars))
 
     def test_logout(self):
@@ -4333,6 +4353,13 @@ class ItemSelectorTests(TestCase):
         """Test the proper template."""
         resp = self.client.get(reverse('item-selector'), {'test': True})
         self.assertTemplateUsed(resp, 'includes/item_selector.html')
+
+    def test_return_json(self):
+        """Test the proper json return."""
+        resp = self.client.get(reverse('item-selector'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+
 
 #
 #
