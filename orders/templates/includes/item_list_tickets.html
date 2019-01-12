@@ -1,9 +1,0 @@
-<h5>Selecciona una prenda:</h5>
-<div class="d-flex flex-wrap mt-2">
-  {%for item in available_items%}
-  <div class="mr-2 mt-2 p-4 border rounded js-crud-add" data-action="send-to-order-express" data-pk="{{item.pk}}" data-aditional-pk="{{order.pk}}">
-    {{item.get_item_type_display}} {{item.name}}<br>
-    {{item.item_class}}-{{item.size}} ({{item.price}})
-  </div>
-  {%endfor%}
-</div>

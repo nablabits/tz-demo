@@ -332,7 +332,7 @@ def itemslist(request):
                      'search_on': 'items',
                      'title': 'TrapuZarrak · Prendas',
                      'h3': 'Todas las prendas',
-                     'table_id': 'item_objects_list',
+                     'table_id': 'item-selector',
                      'item_types': settings.ITEM_TYPE[1:],
                      'item_classes': settings.ITEM_CLASSES,
 
@@ -344,7 +344,6 @@ def itemslist(request):
                      'js_action_send_to': 'send-to-order',
                      'js_data_pk': '0',
 
-                     'include_template': 'includes/items_list.html',
                      'footer': True,
                      }
 
