@@ -2,9 +2,8 @@
 
 from django.test import TestCase
 from django.contrib.auth.models import User
-from orders.models import Customer, Order, OrderItem, Comment, Item
-from orders.forms import (CustomerForm, OrderForm, CommentForm, ItemForm,
-                          OrderCloseForm, OrderItemForm, EditDateForm)
+from orders.models import Customer, Order
+from orders.forms import CustomerForm, OrderForm,  ItemForm, OrderCloseForm
 from datetime import date
 
 

@@ -8,8 +8,8 @@ from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Item, PQueue, Invoice
 from django.utils import timezone
 from .forms import (
-    CustomerForm, OrderForm, CommentForm, ItemForm, OrderCloseForm,
-    OrderItemForm, EditDateForm, AddTimesForm, InvoiceForm)
+    CustomerForm, OrderForm, CommentForm, ItemForm, OrderItemForm,
+    EditDateForm, AddTimesForm, InvoiceForm)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger

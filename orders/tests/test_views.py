@@ -5,7 +5,6 @@ from django.contrib.auth.models import User
 from orders.models import (
     Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, )
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.db.models import F, Q
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
