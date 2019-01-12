@@ -333,8 +333,6 @@ def itemslist(request):
                      'title': 'TrapuZarrak · Prendas',
                      'h3': 'Todas las prendas',
                      'table_id': 'item-selector',
-                     'item_types': settings.ITEM_TYPE[1:],
-                     'item_classes': settings.ITEM_CLASSES,
 
                      # CRUD Actions
                      'btn_title_add': 'Añadir prenda',
@@ -343,8 +341,6 @@ def itemslist(request):
                      'js_action_delete': 'object-item-delete',
                      'js_action_send_to': 'send-to-order',
                      'js_data_pk': '0',
-
-                     'footer': True,
                      }
 
     return render(request, 'tz/list_view.html', view_settings)
