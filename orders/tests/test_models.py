@@ -423,6 +423,16 @@ class TestOrderItems(TestCase):
             element=object_item, reference=Order.objects.first(), )
         self.assertEqual(item.price, 200)
 
+    def test_orderitem_stock_true_for_express_orders(self):
+        """Express orders only contain stocked items."""
+        order = Order.objects.first()
+        order.ref_name = 'Quick'
+        order.save()
+        object_item = Item.objects.first()
+        item = OrderItem.objects.create(
+            element=object_item, reference=Order.objects.first(), )
+        self.assertTrue(item.stock)
+
     def test_add_items_to_orders_default_item(self):
         """If no element is selected, Predetermiando is default."""
         order = Order.objects.first()

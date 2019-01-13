@@ -8,8 +8,8 @@ from django.template.loader import render_to_string
 from .models import Comment, Customer, Order, OrderItem, Item, PQueue, Invoice
 from django.utils import timezone
 from .forms import (
-    CustomerForm, OrderForm, CommentForm, ItemForm, OrderCloseForm,
-    OrderItemForm, EditDateForm, AddTimesForm, InvoiceForm)
+    CustomerForm, OrderForm, CommentForm, ItemForm, OrderItemForm,
+    EditDateForm, AddTimesForm, InvoiceForm)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
@@ -321,20 +321,15 @@ def customerlist(request):
 @login_required
 def itemslist(request):
     """Show the different item objects."""
-    items = Item.objects.all()
     cur_user = request.user
     now = datetime.now()
 
-    view_settings = {'items': items,
-                     'user': cur_user,
+    view_settings = {'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
-                     'search_on': 'items',
                      'title': 'TrapuZarrak · Prendas',
                      'h3': 'Todas las prendas',
-                     'table_id': 'item_objects_list',
-                     'item_types': settings.ITEM_TYPE[1:],
-                     'item_classes': settings.ITEM_CLASSES,
+                     'table_id': 'item-selector',
 
                      # CRUD Actions
                      'btn_title_add': 'Añadir prenda',
@@ -343,9 +338,6 @@ def itemslist(request):
                      'js_action_delete': 'object-item-delete',
                      'js_action_send_to': 'send-to-order',
                      'js_data_pk': '0',
-
-                     'include_template': 'includes/items_list.html',
-                     'footer': True,
                      }
 
     return render(request, 'tz/list_view.html', view_settings)
@@ -442,23 +434,18 @@ def order_express_view(request, pk):
     order = get_object_or_404(Order, pk=pk)
     if order.customer.name != 'express':
         return redirect(reverse('order_view', args=[order.pk]))
-    item_names = Item.objects.exclude(name='Predeterminado').distinct('name')
     items = OrderItem.objects.filter(reference=order)
-    available_items = Item.objects.all()[:15]
+    available_items = Item.objects.all()[:10]
     already_invoiced = Invoice.objects.filter(reference=order)
-    total = items.aggregate(
-        total=Sum(F('qty') * F('price'), output_field=DecimalField()))
     cur_user = request.user
     now = datetime.now()
     view_settings = {'order': order,
                      'user': cur_user,
                      'now': now,
                      'item_types': settings.ITEM_TYPE[1:],
-                     'item_names': item_names,
                      'items': items,
                      'available_items': available_items,
                      'invoiced': already_invoiced,
-                     'total': total,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
                      'placeholder': 'Busca un nombre',
@@ -467,7 +454,6 @@ def order_express_view(request, pk):
                      # CRUD Actions
                      'btn_title_add': 'Nueva prenda',
                      'js_action_add': 'object-item-add',
-                     # 'js_action_edit': 'order-express-item-edit',
                      'js_action_delete': 'order-express-item-delete',
                      'js_data_pk': '0',
                      }
@@ -528,6 +514,28 @@ def pqueue_manager(request):
                      'title': 'TrapuZarrak · Cola de producción',
                      }
     return render(request, 'tz/pqueue_manager.html', view_settings)
+
+
+@login_required
+def pqueue_tablet(request):
+    """Tablet view of pqueue."""
+    pqueue = PQueue.objects.select_related('item__reference')
+    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+    pqueue_completed = pqueue.filter(score__lt=0)
+    pqueue_active = pqueue.filter(score__gt=0)
+    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
+    cur_user = request.user
+    now = datetime.now()
+    view_settings = {'active': pqueue_active,
+                     'completed': pqueue_completed,
+                     'i_relax': i_relax,
+                     'user': cur_user,
+                     'now': now,
+                     'version': settings.VERSION,
+                     'title': ('TrapuZarrak · Cola de producción' +
+                               '(vista tablet)'),
+                     }
+    return render(request, 'tz/pqueue_tablet.html', view_settings)
 
 
 # Ajax powered views
@@ -631,20 +639,11 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        elif action == 'get-item-list':
-            item_type = self.request.GET.get('item_type', None)
-            if not item_type:
-                raise Http404('No item type was sent')
-            available_items = Item.objects.filter(item_type=item_type)
-            order = get_object_or_404(Order, pk=pk)
-            context = {'available_items': available_items, 'order': order, }
-            template = 'includes/item_list_tickets.html'
-
         # Send to order express (GET)
         elif action == 'send-to-order-express':
             custom_form = 'includes/custom_forms/send_to_order_express.html'
             item = get_object_or_404(Item, pk=pk)
-            context = {'modal_title': 'Enviar prenda a pedido',
+            context = {'modal_title': 'Enviar prenda a ticket',
                        'pk': pk,
                        'item': item,
                        'order_pk': self.request.GET.get('aditionalpk', None),
@@ -835,6 +834,14 @@ class Actions(View):
                        'submit_btn': 'Sí, quiero eliminarlo'}
             template = 'includes/delete_confirmation.html'
 
+        # View a invoiced ticket (GET)
+        elif action == 'view-ticket':
+            invoice = get_object_or_404(Invoice, pk=pk)
+            items = OrderItem.objects.filter(reference=invoice.reference)
+            order = Order.objects.get(pk=pk)
+            context = {'items': items, 'order': order, }
+            template = 'includes/invoiced_ticket.html'
+
         # logout
         elif action == 'logout':
             context = dict()
@@ -967,15 +974,16 @@ class Actions(View):
             form = ItemForm(request.POST)
             if form.is_valid():
                 add_item = form.save()
-                items = Item.objects.all()
-                data['html_id'] = '#item_objects_list'
+                items = Item.objects.all()[:11]
+                data['html_id'] = '#item-selector'
                 data['form_is_valid'] = True
-                context = {'items': items,
+                context = {'item_types': settings.ITEM_TYPE[1:],
+                           'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
                            'js_action_send_to': 'send-to-order',
                            }
-                template = 'includes/items_list.html'
+                template = 'includes/item_selector.html'
             else:
                 data['form_is_valid'] = False
                 custom_form = 'includes/custom_forms/object_item.html'
@@ -1173,15 +1181,16 @@ class Actions(View):
             form = ItemForm(request.POST, instance=item)
             if form.is_valid():
                 form.save()
-                items = Item.objects.all()
-                data['html_id'] = '#item_objects_list'
+                items = Item.objects.all()[:11]
+                data['html_id'] = '#item-selector'
                 data['form_is_valid'] = True
-                context = {'items': items,
+                context = {'item_types': settings.ITEM_TYPE[1:],
+                           'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
                            'js_action_send_to': 'send-to-order',
                            }
-                template = 'includes/items_list.html'
+                template = 'includes/item_selector.html'
             else:
                 data['form_is_valid'] = False
                 custom_form = 'includes/custom_forms/object_item.html'
@@ -1247,7 +1256,7 @@ class Actions(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#pqueue-list-tablet'
-                template = 'includes/pqueue_list_tablet.html'
+                template = 'tz/pqueue_tablet.html'
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,
@@ -1287,15 +1296,16 @@ class Actions(View):
         elif action == 'object-item-delete':
             item = get_object_or_404(Item, pk=pk)
             item.delete()
-            items = Item.objects.all()
-            data['html_id'] = '#item_objects_list'
+            items = Item.objects.all()[:11]
+            data['html_id'] = '#item-selector'
             data['form_is_valid'] = True
-            context = {'items': items,
+            context = {'item_types': settings.ITEM_TYPE[1:],
+                       'available_items': items,
                        'js_action_edit': 'object-item-edit',
                        'js_action_delete': 'object-item-delete',
                        'js_action_send_to': 'send-to-order',
                        }
-            template = 'includes/items_list.html'
+            template = 'includes/item_selector.html'
 
         # Delete item (POST)
         elif action == 'order-item-delete':
@@ -1381,70 +1391,6 @@ def changelog(request):
         changelog = markdown2.markdown(md_file)
 
     data['html'] = changelog
-    return JsonResponse(data)
-
-
-def filter_items(request):
-    """Filter the item objects list."""
-    if request.method != 'GET':
-        raise Http404('The filter should go in a get request')
-    data = dict()
-    items = Item.objects.all()
-    by_name = request.GET.get('search-obj')
-    by_type = request.GET.get('item-type')
-    by_class = request.GET.get('item-class')
-
-    if not by_name and not by_type and not by_class:
-        filter_on = False
-    else:
-        filter_on = 'Filtrando'
-        if by_name:
-            items = items.filter(name__istartswith=by_name)
-            if items:
-                filter_on = '%s %s' % (filter_on, by_name)
-        else:
-            filter_on = '%s elementos' % filter_on
-        if by_type and by_type != 'all':
-            items = items.filter(item_type=by_type)
-            if items:
-                display = items[0].get_item_type_display()
-                filter_on = '%s en %ss' % (filter_on, display)
-        if by_class and by_class != 'all':
-            items = items.filter(item_class=by_class)
-            if items:
-                display = items[0].get_item_class_display()
-                filter_on = '%s con acabado %s' % (filter_on, display)
-
-        if not items:
-            filter_on = 'El filtro no devolvió ningún resultado'
-
-    context = {'items': items,
-               'item_types': settings.ITEM_TYPE[1:],
-               'item_classes': settings.ITEM_CLASSES,
-               'add_to_order': True,
-               'filter_on': filter_on,
-               'js_action_send_to': 'send-to-order',
-               'js_action_edit': 'object-item-edit',
-               'js_action_delete': 'object-item-delete',
-               }
-    template = 'includes/items_list.html'
-    data['id'] = '#item_objects_list'
-    data['html'] = render_to_string(template, context, request=request)
-
-    """
-    Test stuff. Since it's not very straightforward extract this data
-    from render_to_string() method, we'll pass them as keys in JSON but
-    just for testing purposes.
-    """
-    if request.GET.get('test'):
-        data['template'] = template
-        add_to_context = []
-        for k in context:
-            add_to_context.append(k)
-        data['context'] = add_to_context
-        data['filter_on'] = filter_on
-        data['len_items'] = len(items)
-
     return JsonResponse(data)
 
 
@@ -1549,7 +1495,7 @@ def pqueue_actions(request):
     # Tablet view id
     if action == 'tb-complete' or action == 'tb-uncomplete':
         data['html_id'] = '#pqueue-list-tablet'
-        template = 'includes/pqueue_list_tablet.html'
+        template = 'tz/pqueue_tablet.html'
 
     """
     Test stuff. Since it's not very straightforward extract this data
@@ -1567,6 +1513,58 @@ def pqueue_actions(request):
     return JsonResponse(data)
 
 
+def item_selector(request):
+    """Run the item selector."""
+    if request.method != 'GET':
+        raise ValueError('The request should go in a GET method!')
+
+    # Fix context settings
+    context = {'item_types': settings.ITEM_TYPE[1:],
+               'js_action_send_to': 'send-to-order',
+               'js_action_edit': 'object-item-edit',
+               'js_action_delete': 'object-item-delete'
+               }
+
+    # On orders we should provide the order id to attach items to it
+    order_pk = request.GET.get('aditionalpk', None)
+    if order_pk:
+        context['order'] = get_object_or_404(Order, pk=order_pk)
+        context['js_action_send_to'] = 'send-to-order-express'
+
+    items = Item.objects.all()
+    by_type = request.GET.get('item-type', None)
+    by_name = request.GET.get('item-name', None)
+    by_size = request.GET.get('item-size', None)
+    if by_type:
+        items = items.filter(item_type=by_type)
+        item_names = items.distinct('name')
+        context['item_names'] = item_names
+        context['data_type'] = settings.ITEM_TYPE[int(by_type)]
+
+    if by_name:
+        items = items.filter(name=by_name)
+        item_sizes = items.order_by('size').distinct('size')
+        context['data_name'] = by_name
+        context['item_sizes'] = item_sizes
+
+    if by_size:
+        items = items.filter(size=by_size)
+        context['data_size'] = by_size
+
+    context['available_items'] = items[:11]
+
+    template = 'includes/item_selector.html'
+    data = {'html': render_to_string(template, context, request=request),
+            'id': '#item-selector'}
+
+    """
+    Test stuff. Since it's not very straightforward extract this data
+    from render_to_string() method, we'll render it in a regular way.
+    """
+    if request.GET.get('test'):
+        return render(request, template, context)
+
+    return JsonResponse(data)
 
 #
 #

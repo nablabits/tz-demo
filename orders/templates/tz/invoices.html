@@ -47,7 +47,7 @@
         </thead>
         <tbody>
           {% for invoice in invoices %}
-          <tr class="js-view-list-item">
+          <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{invoice.pk}}">
             <th>{{invoice.invoice_no}}</th>
             <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
             {%if invoice.reference.ref_name == 'Quick'%}
@@ -104,7 +104,7 @@
           </thead>
           <tbody>
             {% for invoice in today %}
-            <tr class="js-view-list-item">
+            <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{invoice.pk}}">
               <th>{{invoice.invoice_no}}</th>
               {%if invoice.reference.ref_name == 'Quick'%}
               <th>Ticket</th>
@@ -168,7 +168,7 @@
           </thead>
           <tbody>
             {% for invoice in week %}
-            <tr class="js-view-list-item">
+            <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{invoice.pk}}">
               <th>{{invoice.invoice_no}}</th>
               <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
               {%if invoice.reference.ref_name == 'Quick'%}
@@ -233,7 +233,7 @@
           </thead>
           <tbody>
             {% for invoice in month %}
-            <tr class="js-view-list-item">
+            <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{invoice.pk}}">
               <th>{{invoice.invoice_no}}</th>
               <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
               {%if invoice.reference.ref_name == 'Quick'%}
