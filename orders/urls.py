@@ -31,7 +31,6 @@ urlpatterns = [
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),
     path('changelog/', views.changelog, name='changelog'),
-    path('filter-items/', views.filter_items, name='filter-items'),
     path('item-selector/', views.item_selector, name='item-selector'),
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),
 

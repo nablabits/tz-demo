@@ -2169,12 +2169,10 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('itemslist'))
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/list_view.html')
-        self.assertEqual(len(resp.context['items']), 1)
 
     def test_items_view_context_vars(self):
         """Test the correct context vars."""
         resp = self.client.get(reverse('itemslist'))
-        self.assertEqual(resp.context['search_on'], 'items')
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Prendas')
         self.assertEqual(resp.context['h3'], 'Todas las prendas')
         self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
@@ -2195,91 +2193,6 @@ class StandardViewsTest(TestCase):
         """Method should be get."""
         resp = self.client.post(reverse('changelog'))
         self.assertEqual(resp.status_code, 404)
-
-    def test_filter_items_view_only_accept_get(self):
-        """Method should be get."""
-        resp = self.client.post(reverse('filter-items'))
-        self.assertEqual(resp.status_code, 404)
-
-    def test_filter_items_view_3_filters(self):
-        """Test the proper function of the filters."""
-        Item.objects.create(name='Object', item_type='3', item_class='S',
-                            fabrics=0)
-        resp = self.client.get(reverse('filter-items'),
-                               {'search-obj': 'obj',
-                                'item-type': '3',
-                                'item-class': 'S',
-                                'test': True,
-                                })
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(data['id'], '#item_objects_list')
-        self.assertEqual(template, 'includes/items_list.html')
-        self.assertIsInstance(context, list)
-        vars = ('items', 'item_types', 'item_classes', 'add_to_order',
-                'filter_on', 'js_action_send_to', 'js_action_edit',
-                'js_action_delete')
-        self.assertTrue(self.context_vars(context, vars))
-        self.assertEqual(data['filter_on'],
-                         'Filtrando obj en Camisas con acabado Standard')
-        self.assertEqual(data['len_items'], 1)
-
-    def test_filter_items_view_no_obj(self):
-        """Test the proper function of the filters."""
-        Item.objects.create(name='Object', item_type='3', item_class='S',
-                            fabrics=0)
-        resp = self.client.get(reverse('filter-items'),
-                               {'item-type': '3',
-                                'item-class': 'S',
-                                'test': True,
-                                })
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/items_list.html')
-        self.assertIsInstance(context, list)
-        vars = ('items', 'item_types', 'item_classes', 'add_to_order',
-                'filter_on', 'js_action_send_to', 'js_action_edit',
-                'js_action_delete')
-        self.assertTrue(self.context_vars(context, vars))
-        self.assertEqual(data['filter_on'],
-                         'Filtrando elementos en Camisas con acabado Standard')
-        self.assertEqual(data['len_items'], 1)
-
-    def test_filter_no_filter_returns_false_filter_on(self):
-        """When no filter is applied, filter_on var should be false."""
-        Item.objects.create(name='Object', item_type='3', item_class='S',
-                            fabrics=0)
-        resp = self.client.get(reverse('filter-items'), {'test': True})
-        self.assertEqual(resp.status_code, 200)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertFalse(data['filter_on'])
-
-    def test_filter_no_obj_returns_empty_queryset(self):
-        """When there are no matches on obj, empty list should be returned."""
-        resp = self.client.get(reverse('filter-items'),
-                               {'search-obj': 'element-null',
-                                'test': True})
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertEqual(data['len_items'], 0)
-
-    def test_filter_no_matches_show_a_warning(self):
-        """When there are no matches, we should show a message."""
-        resp1 = self.client.get(reverse('filter-items'),
-                                {'search-obj': 'Null element', 'test': True})
-        resp2 = self.client.get(reverse('filter-items'),
-                                {'item-type': '5', 'test': True})
-        resp3 = self.client.get(reverse('filter-items'),
-                                {'item-class': 'S', 'test': True})
-        for resp in (resp1, resp2, resp3):
-            data = json.loads(str(resp.content, 'utf-8'))
-            self.assertEqual(data['filter_on'],
-                             'El filtro no devolvió ningún resultado')
 
 
 class SearchBoxTest(TestCase):
@@ -3668,11 +3581,12 @@ class ActionsPostMethodCreate(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/items_list.html')
+        self.assertEqual(template, 'includes/item_selector.html')
         self.assertIsInstance(context, list)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#item_objects_list')
-        vars = ('items', 'js_action_edit', 'js_action_delete', )
+        self.assertEqual(data['html_id'], '#item-selector')
+        vars = ('item_types', 'available_items', 'js_action_edit',
+                'js_action_delete', 'js_action_send_to')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_obj_item_add_invalid_form_returns_to_form_again(self):
@@ -3943,13 +3857,13 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('items', 'js_action_edit', 'js_action_delete',
-                'js_action_send_to')
+        vars = ('item_types', 'available_items', 'js_action_edit',
+                'js_action_delete', 'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/items_list.html')
-        self.assertEqual(data['html_id'], '#item_objects_list')
+        self.assertEqual(data['template'], 'includes/item_selector.html')
+        self.assertEqual(data['html_id'], '#item-selector')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         # Test if the fields were Modified
@@ -4208,13 +4122,13 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('items', 'js_action_edit', 'js_action_delete',
-                'js_action_send_to')
+        vars = ('item_types', 'available_items', 'js_action_edit',
+                        'js_action_delete', 'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/items_list.html')
-        self.assertEqual(data['html_id'], '#item_objects_list')
+        self.assertEqual(data['template'], 'includes/item_selector.html')
+        self.assertEqual(data['html_id'], '#item-selector')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         # test if the object was actually deleted
