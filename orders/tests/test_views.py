@@ -1374,6 +1374,82 @@ class PQueueManagerTests(TestCase):
                 raise ValueError('Not in list')
 
 
+class PQueueTabletTests(TestCase):
+    """Test the pqueue tablet view."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        for i in range(1, 3):
+            Item.objects.create(name='Test item%s' % i, fabrics=5)
+
+        # Create orderitems
+        for item in Item.objects.all():
+            OrderItem.objects.create(reference=order, element=item)
+
+        self.client.login(username='regular', password='test')
+
+    def test_view_exists(self):
+        """First test the existence of pqueue tablet view."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
+
+    def test_queued_items_exclude_delivered_and_cancelled_orders(self):
+        """The queue only shows active order items."""
+        for i in range(2):
+            order = Order.objects.create(user=User.objects.first(),
+                                         customer=Customer.objects.first(),
+                                         ref_name='Void order',
+                                         delivery=date.today(),
+                                         status=i + 7, budget=0, prepaid=0)
+            OrderItem.objects.create(reference=order,
+                                     element=Item.objects.first())
+
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        resp = self.client.get(reverse('pqueue_tablet'))
+        for item in resp.context['active']:
+            self.assertEqual(item.item.reference.ref_name, 'Test order')
+
+    def test_queued_items_active_and_completed(self):
+        """Active items are positive scored, while completed are negative."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        completed_item = PQueue.objects.first()
+        completed_item.complete()
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(len(resp.context['active']), 2)
+        self.assertEqual(len(resp.context['completed']), 1)
+
+    def test_i_relax_does_not_raise_error(self):
+        """Test picking the icon does not raise index error."""
+        self.client.login(username='regular', password='test')
+        for i in range(20):  # big enough
+            resp = self.client.get(reverse('pqueue_tablet'))
+            if resp.context['i_relax'] not in settings.RELAX_ICONS:
+                raise ValueError('Not in list')
+
+
 class PQueueActionsTests(TestCase):
     """Test the AJAX server side."""
 
@@ -1720,7 +1796,7 @@ class PQueueActionsTests(TestCase):
         vars = ('active', 'completed', )
         self.assertTrue(self.context_vars(data['context'], vars))
         self.assertTrue(data['is_valid'])
-        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
         self.assertFalse(data['reload'])
         self.assertEqual(data['html_id'], '#pqueue-list-tablet')
         self.assertFalse(data['error'])
@@ -1785,7 +1861,7 @@ class PQueueActionsTests(TestCase):
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
         self.assertTrue(self.context_vars(data['context'], vars))
         self.assertTrue(data['is_valid'])
         self.assertFalse(data['reload'])
@@ -2169,12 +2245,10 @@ class StandardViewsTest(TestCase):
         resp = self.client.get(reverse('itemslist'))
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/list_view.html')
-        self.assertEqual(len(resp.context['items']), 1)
 
     def test_items_view_context_vars(self):
         """Test the correct context vars."""
         resp = self.client.get(reverse('itemslist'))
-        self.assertEqual(resp.context['search_on'], 'items')
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Prendas')
         self.assertEqual(resp.context['h3'], 'Todas las prendas')
         self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
@@ -2195,91 +2269,6 @@ class StandardViewsTest(TestCase):
         """Method should be get."""
         resp = self.client.post(reverse('changelog'))
         self.assertEqual(resp.status_code, 404)
-
-    def test_filter_items_view_only_accept_get(self):
-        """Method should be get."""
-        resp = self.client.post(reverse('filter-items'))
-        self.assertEqual(resp.status_code, 404)
-
-    def test_filter_items_view_3_filters(self):
-        """Test the proper function of the filters."""
-        Item.objects.create(name='Object', item_type='3', item_class='S',
-                            fabrics=0)
-        resp = self.client.get(reverse('filter-items'),
-                               {'search-obj': 'obj',
-                                'item-type': '3',
-                                'item-class': 'S',
-                                'test': True,
-                                })
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(data['id'], '#item_objects_list')
-        self.assertEqual(template, 'includes/items_list.html')
-        self.assertIsInstance(context, list)
-        vars = ('items', 'item_types', 'item_classes', 'add_to_order',
-                'filter_on', 'js_action_send_to', 'js_action_edit',
-                'js_action_delete')
-        self.assertTrue(self.context_vars(context, vars))
-        self.assertEqual(data['filter_on'],
-                         'Filtrando obj en Camisas con acabado Standard')
-        self.assertEqual(data['len_items'], 1)
-
-    def test_filter_items_view_no_obj(self):
-        """Test the proper function of the filters."""
-        Item.objects.create(name='Object', item_type='3', item_class='S',
-                            fabrics=0)
-        resp = self.client.get(reverse('filter-items'),
-                               {'item-type': '3',
-                                'item-class': 'S',
-                                'test': True,
-                                })
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/items_list.html')
-        self.assertIsInstance(context, list)
-        vars = ('items', 'item_types', 'item_classes', 'add_to_order',
-                'filter_on', 'js_action_send_to', 'js_action_edit',
-                'js_action_delete')
-        self.assertTrue(self.context_vars(context, vars))
-        self.assertEqual(data['filter_on'],
-                         'Filtrando elementos en Camisas con acabado Standard')
-        self.assertEqual(data['len_items'], 1)
-
-    def test_filter_no_filter_returns_false_filter_on(self):
-        """When no filter is applied, filter_on var should be false."""
-        Item.objects.create(name='Object', item_type='3', item_class='S',
-                            fabrics=0)
-        resp = self.client.get(reverse('filter-items'), {'test': True})
-        self.assertEqual(resp.status_code, 200)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertFalse(data['filter_on'])
-
-    def test_filter_no_obj_returns_empty_queryset(self):
-        """When there are no matches on obj, empty list should be returned."""
-        resp = self.client.get(reverse('filter-items'),
-                               {'search-obj': 'element-null',
-                                'test': True})
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertEqual(data['len_items'], 0)
-
-    def test_filter_no_matches_show_a_warning(self):
-        """When there are no matches, we should show a message."""
-        resp1 = self.client.get(reverse('filter-items'),
-                                {'search-obj': 'Null element', 'test': True})
-        resp2 = self.client.get(reverse('filter-items'),
-                                {'item-type': '5', 'test': True})
-        resp3 = self.client.get(reverse('filter-items'),
-                                {'item-class': 'S', 'test': True})
-        for resp in (resp1, resp2, resp3):
-            data = json.loads(str(resp.content, 'utf-8'))
-            self.assertEqual(data['filter_on'],
-                             'El filtro no devolvió ningún resultado')
 
 
 class SearchBoxTest(TestCase):
@@ -3668,11 +3657,12 @@ class ActionsPostMethodCreate(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        self.assertEqual(template, 'includes/items_list.html')
+        self.assertEqual(template, 'includes/item_selector.html')
         self.assertIsInstance(context, list)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#item_objects_list')
-        vars = ('items', 'js_action_edit', 'js_action_delete', )
+        self.assertEqual(data['html_id'], '#item-selector')
+        vars = ('item_types', 'available_items', 'js_action_edit',
+                'js_action_delete', 'js_action_send_to')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_obj_item_add_invalid_form_returns_to_form_again(self):
@@ -3943,13 +3933,13 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('items', 'js_action_edit', 'js_action_delete',
-                'js_action_send_to')
+        vars = ('item_types', 'available_items', 'js_action_edit',
+                'js_action_delete', 'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/items_list.html')
-        self.assertEqual(data['html_id'], '#item_objects_list')
+        self.assertEqual(data['template'], 'includes/item_selector.html')
+        self.assertEqual(data['html_id'], '#item-selector')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         # Test if the fields were Modified
@@ -4050,7 +4040,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
         self.assertEqual(data['html_id'], '#pqueue-list-tablet')
         self.assertTrue(self.context_vars(data['context'], vars))
 
@@ -4208,13 +4198,13 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('items', 'js_action_edit', 'js_action_delete',
-                'js_action_send_to')
+        vars = ('item_types', 'available_items', 'js_action_edit',
+                        'js_action_delete', 'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/items_list.html')
-        self.assertEqual(data['html_id'], '#item_objects_list')
+        self.assertEqual(data['template'], 'includes/item_selector.html')
+        self.assertEqual(data['html_id'], '#item-selector')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         # test if the object was actually deleted

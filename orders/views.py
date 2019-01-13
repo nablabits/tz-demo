@@ -321,15 +321,12 @@ def customerlist(request):
 @login_required
 def itemslist(request):
     """Show the different item objects."""
-    items = Item.objects.all()
     cur_user = request.user
     now = datetime.now()
 
-    view_settings = {'items': items,
-                     'user': cur_user,
+    view_settings = {'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
-                     'search_on': 'items',
                      'title': 'TrapuZarrak · Prendas',
                      'h3': 'Todas las prendas',
                      'table_id': 'item-selector',
@@ -517,6 +514,28 @@ def pqueue_manager(request):
                      'title': 'TrapuZarrak · Cola de producción',
                      }
     return render(request, 'tz/pqueue_manager.html', view_settings)
+
+
+@login_required
+def pqueue_tablet(request):
+    """Tablet view of pqueue."""
+    pqueue = PQueue.objects.select_related('item__reference')
+    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+    pqueue_completed = pqueue.filter(score__lt=0)
+    pqueue_active = pqueue.filter(score__gt=0)
+    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
+    cur_user = request.user
+    now = datetime.now()
+    view_settings = {'active': pqueue_active,
+                     'completed': pqueue_completed,
+                     'i_relax': i_relax,
+                     'user': cur_user,
+                     'now': now,
+                     'version': settings.VERSION,
+                     'title': ('TrapuZarrak · Cola de producción' +
+                               '(vista tablet)'),
+                     }
+    return render(request, 'tz/pqueue_tablet.html', view_settings)
 
 
 # Ajax powered views
@@ -955,15 +974,16 @@ class Actions(View):
             form = ItemForm(request.POST)
             if form.is_valid():
                 add_item = form.save()
-                items = Item.objects.all()
-                data['html_id'] = '#item_objects_list'
+                items = Item.objects.all()[:11]
+                data['html_id'] = '#item-selector'
                 data['form_is_valid'] = True
-                context = {'items': items,
+                context = {'item_types': settings.ITEM_TYPE[1:],
+                           'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
                            'js_action_send_to': 'send-to-order',
                            }
-                template = 'includes/items_list.html'
+                template = 'includes/item_selector.html'
             else:
                 data['form_is_valid'] = False
                 custom_form = 'includes/custom_forms/object_item.html'
@@ -1161,15 +1181,16 @@ class Actions(View):
             form = ItemForm(request.POST, instance=item)
             if form.is_valid():
                 form.save()
-                items = Item.objects.all()
-                data['html_id'] = '#item_objects_list'
+                items = Item.objects.all()[:11]
+                data['html_id'] = '#item-selector'
                 data['form_is_valid'] = True
-                context = {'items': items,
+                context = {'item_types': settings.ITEM_TYPE[1:],
+                           'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
                            'js_action_send_to': 'send-to-order',
                            }
-                template = 'includes/items_list.html'
+                template = 'includes/item_selector.html'
             else:
                 data['form_is_valid'] = False
                 custom_form = 'includes/custom_forms/object_item.html'
@@ -1235,7 +1256,7 @@ class Actions(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#pqueue-list-tablet'
-                template = 'includes/pqueue_list_tablet.html'
+                template = 'tz/pqueue_tablet.html'
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,
@@ -1275,15 +1296,16 @@ class Actions(View):
         elif action == 'object-item-delete':
             item = get_object_or_404(Item, pk=pk)
             item.delete()
-            items = Item.objects.all()
-            data['html_id'] = '#item_objects_list'
+            items = Item.objects.all()[:11]
+            data['html_id'] = '#item-selector'
             data['form_is_valid'] = True
-            context = {'items': items,
+            context = {'item_types': settings.ITEM_TYPE[1:],
+                       'available_items': items,
                        'js_action_edit': 'object-item-edit',
                        'js_action_delete': 'object-item-delete',
                        'js_action_send_to': 'send-to-order',
                        }
-            template = 'includes/items_list.html'
+            template = 'includes/item_selector.html'
 
         # Delete item (POST)
         elif action == 'order-item-delete':
@@ -1369,70 +1391,6 @@ def changelog(request):
         changelog = markdown2.markdown(md_file)
 
     data['html'] = changelog
-    return JsonResponse(data)
-
-
-def filter_items(request):
-    """Filter the item objects list."""
-    if request.method != 'GET':
-        raise Http404('The filter should go in a get request')
-    data = dict()
-    items = Item.objects.all()
-    by_name = request.GET.get('search-obj')
-    by_type = request.GET.get('item-type')
-    by_class = request.GET.get('item-class')
-
-    if not by_name and not by_type and not by_class:
-        filter_on = False
-    else:
-        filter_on = 'Filtrando'
-        if by_name:
-            items = items.filter(name__istartswith=by_name)
-            if items:
-                filter_on = '%s %s' % (filter_on, by_name)
-        else:
-            filter_on = '%s elementos' % filter_on
-        if by_type and by_type != 'all':
-            items = items.filter(item_type=by_type)
-            if items:
-                display = items[0].get_item_type_display()
-                filter_on = '%s en %ss' % (filter_on, display)
-        if by_class and by_class != 'all':
-            items = items.filter(item_class=by_class)
-            if items:
-                display = items[0].get_item_class_display()
-                filter_on = '%s con acabado %s' % (filter_on, display)
-
-        if not items:
-            filter_on = 'El filtro no devolvió ningún resultado'
-
-    context = {'items': items,
-               'item_types': settings.ITEM_TYPE[1:],
-               'item_classes': settings.ITEM_CLASSES,
-               'add_to_order': True,
-               'filter_on': filter_on,
-               'js_action_send_to': 'send-to-order',
-               'js_action_edit': 'object-item-edit',
-               'js_action_delete': 'object-item-delete',
-               }
-    template = 'includes/items_list.html'
-    data['id'] = '#item_objects_list'
-    data['html'] = render_to_string(template, context, request=request)
-
-    """
-    Test stuff. Since it's not very straightforward extract this data
-    from render_to_string() method, we'll pass them as keys in JSON but
-    just for testing purposes.
-    """
-    if request.GET.get('test'):
-        data['template'] = template
-        add_to_context = []
-        for k in context:
-            add_to_context.append(k)
-        data['context'] = add_to_context
-        data['filter_on'] = filter_on
-        data['len_items'] = len(items)
-
     return JsonResponse(data)
 
 
@@ -1537,7 +1495,7 @@ def pqueue_actions(request):
     # Tablet view id
     if action == 'tb-complete' or action == 'tb-uncomplete':
         data['html_id'] = '#pqueue-list-tablet'
-        template = 'includes/pqueue_list_tablet.html'
+        template = 'tz/pqueue_tablet.html'
 
     """
     Test stuff. Since it's not very straightforward extract this data

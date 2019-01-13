@@ -18,6 +18,8 @@ urlpatterns = [
     path('customers', views.customerlist, name='customerlist'),
     path('items', views.itemslist, name='itemslist'),
     path('pqueue/manager', views.pqueue_manager, name='pqueue_manager'),
+    path('pqueue/tablet',
+         views.pqueue_tablet, name='pqueue_tablet'),
     path('invoices', views.invoiceslist, name='invoiceslist'),
 
     # Object related urls
@@ -31,7 +33,6 @@ urlpatterns = [
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),
     path('changelog/', views.changelog, name='changelog'),
-    path('filter-items/', views.filter_items, name='filter-items'),
     path('item-selector/', views.item_selector, name='item-selector'),
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),
 

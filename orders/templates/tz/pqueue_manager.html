@@ -1,13 +1,8 @@
 {% extends "tz/base.html" %}
 {% block pqueueview %}
-<section id="customer_detail">
-  <!-- Tablet view -->
-  <div class="container d-block d-md-none pt-4" id="pqueue-list-tablet">
-    {% include 'includes/pqueue_list_tablet.html' %}
-  </div>
-
-  <!-- Manager view for PC -->
-  <div class="container d-none d-md-block pt-4">
+<section id="pqueue">
+  <!-- Manager view for PC, tablet is in a separate view-->
+  <div class="container pt-4">
     <div class="row">
       <div class="col" id="pqueue-editor">
         <div class="d-none" id="display-errors">
