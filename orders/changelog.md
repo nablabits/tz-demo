@@ -1,5 +1,10 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v60, Ene 13
+  * **Nuevo:** Nueva vista de filtro para los tickets y el editor de prendas.
+  * **Nuevo:** Vista de la cola de producción para la tablet.
+  * **Nuevo:** ahora al hacer click en una factura se ve el ticket de la misma.
+
 ### v59, Ene 8
   * **Nuevo:** las vista de las facturs ahora es más completa.
   * **Mejora:** ahora *kaiku* se llama *jakea.*
