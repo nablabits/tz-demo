@@ -1374,6 +1374,82 @@ class PQueueManagerTests(TestCase):
                 raise ValueError('Not in list')
 
 
+class PQueueTabletTests(TestCase):
+    """Test the pqueue tablet view."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        for i in range(1, 3):
+            Item.objects.create(name='Test item%s' % i, fabrics=5)
+
+        # Create orderitems
+        for item in Item.objects.all():
+            OrderItem.objects.create(reference=order, element=item)
+
+        self.client.login(username='regular', password='test')
+
+    def test_view_exists(self):
+        """First test the existence of pqueue tablet view."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
+
+    def test_queued_items_exclude_delivered_and_cancelled_orders(self):
+        """The queue only shows active order items."""
+        for i in range(2):
+            order = Order.objects.create(user=User.objects.first(),
+                                         customer=Customer.objects.first(),
+                                         ref_name='Void order',
+                                         delivery=date.today(),
+                                         status=i + 7, budget=0, prepaid=0)
+            OrderItem.objects.create(reference=order,
+                                     element=Item.objects.first())
+
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        resp = self.client.get(reverse('pqueue_tablet'))
+        for item in resp.context['active']:
+            self.assertEqual(item.item.reference.ref_name, 'Test order')
+
+    def test_queued_items_active_and_completed(self):
+        """Active items are positive scored, while completed are negative."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        completed_item = PQueue.objects.first()
+        completed_item.complete()
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(len(resp.context['active']), 2)
+        self.assertEqual(len(resp.context['completed']), 1)
+
+    def test_i_relax_does_not_raise_error(self):
+        """Test picking the icon does not raise index error."""
+        self.client.login(username='regular', password='test')
+        for i in range(20):  # big enough
+            resp = self.client.get(reverse('pqueue_tablet'))
+            if resp.context['i_relax'] not in settings.RELAX_ICONS:
+                raise ValueError('Not in list')
+
+
 class PQueueActionsTests(TestCase):
     """Test the AJAX server side."""
 
@@ -1720,7 +1796,7 @@ class PQueueActionsTests(TestCase):
         vars = ('active', 'completed', )
         self.assertTrue(self.context_vars(data['context'], vars))
         self.assertTrue(data['is_valid'])
-        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
         self.assertFalse(data['reload'])
         self.assertEqual(data['html_id'], '#pqueue-list-tablet')
         self.assertFalse(data['error'])
@@ -1785,7 +1861,7 @@ class PQueueActionsTests(TestCase):
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
         self.assertTrue(self.context_vars(data['context'], vars))
         self.assertTrue(data['is_valid'])
         self.assertFalse(data['reload'])
@@ -3964,7 +4040,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/pqueue_list_tablet.html')
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
         self.assertEqual(data['html_id'], '#pqueue-list-tablet')
         self.assertTrue(self.context_vars(data['context'], vars))
 

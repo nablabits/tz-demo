@@ -18,6 +18,8 @@ urlpatterns = [
     path('customers', views.customerlist, name='customerlist'),
     path('items', views.itemslist, name='itemslist'),
     path('pqueue/manager', views.pqueue_manager, name='pqueue_manager'),
+    path('pqueue/tablet',
+         views.pqueue_tablet, name='pqueue_tablet'),
     path('invoices', views.invoiceslist, name='invoiceslist'),
 
     # Object related urls

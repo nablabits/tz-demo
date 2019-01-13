@@ -516,6 +516,28 @@ def pqueue_manager(request):
     return render(request, 'tz/pqueue_manager.html', view_settings)
 
 
+@login_required
+def pqueue_tablet(request):
+    """Tablet view of pqueue."""
+    pqueue = PQueue.objects.select_related('item__reference')
+    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+    pqueue_completed = pqueue.filter(score__lt=0)
+    pqueue_active = pqueue.filter(score__gt=0)
+    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
+    cur_user = request.user
+    now = datetime.now()
+    view_settings = {'active': pqueue_active,
+                     'completed': pqueue_completed,
+                     'i_relax': i_relax,
+                     'user': cur_user,
+                     'now': now,
+                     'version': settings.VERSION,
+                     'title': ('TrapuZarrak · Cola de producción' +
+                               '(vista tablet)'),
+                     }
+    return render(request, 'tz/pqueue_tablet.html', view_settings)
+
+
 # Ajax powered views
 class Actions(View):
     """Unify all the AJAX actions in a single view.
@@ -1234,7 +1256,7 @@ class Actions(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#pqueue-list-tablet'
-                template = 'includes/pqueue_list_tablet.html'
+                template = 'tz/pqueue_tablet.html'
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,
@@ -1473,7 +1495,7 @@ def pqueue_actions(request):
     # Tablet view id
     if action == 'tb-complete' or action == 'tb-uncomplete':
         data['html_id'] = '#pqueue-list-tablet'
-        template = 'includes/pqueue_list_tablet.html'
+        template = 'tz/pqueue_tablet.html'
 
     """
     Test stuff. Since it's not very straightforward extract this data
