@@ -2590,7 +2590,8 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
@@ -2774,7 +2775,8 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
