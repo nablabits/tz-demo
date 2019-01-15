@@ -378,6 +378,14 @@ class TestOrderItems(TestCase):
         # Create item
         Item.objects.create(name='Test item', fabrics=5)
 
+    def test_delete_obj_item_is_porotected(self):
+        """Deleting the reference should be forbidden."""
+        item = Item.objects.first()
+        OrderItem.objects.create(
+            element=item, reference=Order.objects.first())
+        with self.assertRaises(IntegrityError):
+            item.delete()
+
     def test_orderitem_stock(self):
         """Items are by default new produced for orders."""
         item = OrderItem.objects.create(element=Item.objects.first(),

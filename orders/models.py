@@ -238,7 +238,7 @@ class OrderItem(models.Model):
     """Each order can have one or several clothes."""
 
     # Element field should be renamed after backup all the previous fields.
-    element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
+    element = models.ForeignKey(Item, blank=True, on_delete=models.PROTECT)
 
     qty = models.IntegerField('Cantidad', default=1)
     description = models.TextField('Descripción', blank=True)

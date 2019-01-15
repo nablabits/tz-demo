@@ -15,6 +15,7 @@ from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Count, Sum, F, Q, DecimalField
+from django.db.utils import IntegrityError
 from datetime import datetime, date
 from random import randint
 from . import settings
@@ -1299,17 +1300,28 @@ class Actions(View):
         # Delete object Item
         elif action == 'object-item-delete':
             item = get_object_or_404(Item, pk=pk)
-            item.delete()
-            items = Item.objects.all()[:11]
-            data['html_id'] = '#item-selector'
-            data['form_is_valid'] = True
-            context = {'item_types': settings.ITEM_TYPE[1:],
-                       'available_items': items,
-                       'js_action_edit': 'object-item-edit',
-                       'js_action_delete': 'object-item-delete',
-                       'js_action_send_to': 'send-to-order',
-                       }
-            template = 'includes/item_selector.html'
+            try:
+                item.delete()
+            except IntegrityError:
+                data['form_is_valid'] = False
+                # TODO: data['error'] = process error msg
+                context = {'modal_title': 'Eliminar prenda',
+                           'msg': 'Realmente borrar la prenda?',
+                           'pk': item.pk,
+                           'action': 'object-item-delete',
+                           'submit_btn': 'Sí, borrar'}
+                template = 'includes/delete_confirmation.html'
+            else:
+                data['form_is_valid'] = True
+                items = Item.objects.all()[:11]
+                data['html_id'] = '#item-selector'
+                context = {'item_types': settings.ITEM_TYPE[1:],
+                           'available_items': items,
+                           'js_action_edit': 'object-item-edit',
+                           'js_action_delete': 'object-item-delete',
+                           'js_action_send_to': 'send-to-order',
+                           }
+                template = 'includes/item_selector.html'
 
         # Delete item (POST)
         elif action == 'order-item-delete':
