@@ -4192,7 +4192,7 @@ class ActionsPostMethodEdit(TestCase):
 
     def test_delete_obj_item_deletes_the_item(self):
         """Test the correct item deletion."""
-        item = Item.objects.first()
+        item = Item.objects.create(name='Test', fabrics=5)
         resp = self.client.post(reverse('actions'),
                                 {'pk': item.pk,
                                  'action': 'object-item-delete',
