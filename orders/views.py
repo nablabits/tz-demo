@@ -610,6 +610,7 @@ class Actions(View):
                        'pk': '0',
                        'action': 'customer-new',
                        'submit_btn': 'Añadir',
+                       'custom_form': 'includes/custom_forms/customer.html'
                        }
             template = 'includes/regular_form.html'
 
@@ -738,6 +739,7 @@ class Actions(View):
                        'pk': customer.pk,
                        'action': 'customer-edit',
                        'submit_btn': 'Guardar',
+                       'custom_form': 'includes/custom_forms/customer.html'
                        }
             template = 'includes/regular_form.html'
 
@@ -932,6 +934,7 @@ class Actions(View):
                            'pk': '0',
                            'action': 'customer-new',
                            'submit_btn': 'Añadir',
+                           'custom_form': 'includes/custom_forms/customer.html'
                            }
                 template = 'includes/regular_form.html'
 
@@ -1172,6 +1175,7 @@ class Actions(View):
                            'pk': customer.pk,
                            'action': 'customer-edit',
                            'submit_btn': 'Guardar',
+                           'custom_form': 'includes/custom_forms/customer.html'
                            }
                 template = 'includes/regular_form.html'
 

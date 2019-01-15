@@ -18,7 +18,7 @@ class Customer(models.Model):
     creation = models.DateTimeField('Alta', default=timezone.now)
     name = models.CharField('Nombre', max_length=64)
     address = models.CharField('Dirección', max_length=64, blank=True)
-    city = models.CharField('Localidad', max_length=32)
+    city = models.CharField('Localidad', max_length=32, blank=True)
     phone = models.IntegerField('Telefono')
     email = models.EmailField('Email', max_length=64, blank=True)
     CIF = models.CharField('CIF', max_length=10, blank=True)

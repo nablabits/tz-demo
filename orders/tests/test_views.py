@@ -126,7 +126,7 @@ class OrderListTests(TestCase):
     def test_post_method_updates_status(self):
         """Test the proper status update on post method."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         self.client.post(reverse('orderlist', kwargs={'orderby': 'date'}),
                          {'status': '5', 'order': order.pk})
         order = Order.objects.get(pk=order.pk)
@@ -135,7 +135,7 @@ class OrderListTests(TestCase):
     def test_post_method_collect(self):
         """Test the proper set paid on orders."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         self.client.post(reverse('orderlist', kwargs={'orderby': 'date'}),
                          {'collect': True, 'order': order.pk})
         order = Order.objects.get(pk=order.pk)
@@ -167,7 +167,7 @@ class OrderListTests(TestCase):
         They should return 1 active order and an empty queryset delivered.
         """
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
+        user = User.objects.first()
         tz = Customer.objects.create(name='Trapuzarrak',
                                      city='Mungia',
                                      phone=0,
@@ -206,7 +206,7 @@ class OrderListTests(TestCase):
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         order.customer = tz
         order.save()
         resp = self.client.get(reverse('orderlist',
@@ -244,7 +244,7 @@ class OrderListTests(TestCase):
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         order.customer = tz
         order.status = '7'
         order.save()
@@ -281,7 +281,7 @@ class OrderListTests(TestCase):
     def test_tz_max_number_of_delivered_orders(self):
         """Only 10 orders should be shown."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
+        user = User.objects.first()
         tz = Customer.objects.create(name='Trapuzarrak',
                                      city='Mungia',
                                      phone=0,
@@ -310,7 +310,7 @@ class OrderListTests(TestCase):
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i)
@@ -324,12 +324,12 @@ class OrderListTests(TestCase):
     def test_tz_active_comments_count(self):
         """Test the correct count of comments."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
+        user = User.objects.first()
         tz = Customer.objects.create(name='Trapuzarrak',
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         for i in range(2):
             Comment.objects.create(user=user, reference=order, comment=i)
 
@@ -346,7 +346,7 @@ class OrderListTests(TestCase):
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
@@ -366,7 +366,7 @@ class OrderListTests(TestCase):
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i)
@@ -382,12 +382,12 @@ class OrderListTests(TestCase):
     def test_tz_delivered_comments_count(self):
         """Test the correct count of comments."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
+        user = User.objects.first()
         tz = Customer.objects.create(name='Trapuzarrak',
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         for i in range(2):
             Comment.objects.create(user=user, reference=order, comment=i)
 
@@ -405,7 +405,7 @@ class OrderListTests(TestCase):
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
@@ -458,8 +458,8 @@ class OrderListTests(TestCase):
     def test_delivered_orders_ten_max(self):
         """Delivered orders show only last ten entries."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
-        customer = Customer.objects.all()[0]
+        user = User.objects.first()
+        customer = Customer.objects.first()
         for i in range(11):
             Order.objects.create(user=user,
                                  customer=customer,
@@ -491,8 +491,8 @@ class OrderListTests(TestCase):
     def test_cancelled_orders_show_only_cancelled(self):
         """Cancelled orders should exclude all status but 8."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
-        customer = Customer.objects.all()[0]
+        user = User.objects.first()
+        customer = Customer.objects.first()
         for i in range(2, 9):
             Order.objects.create(user=user,
                                  customer=customer,
@@ -529,8 +529,8 @@ class OrderListTests(TestCase):
     def test_cancelled_orders_ten_max(self):
         """Cancelled orders show only last ten entries."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
-        customer = Customer.objects.all()[0]
+        user = User.objects.first()
+        customer = Customer.objects.first()
         for i in range(11):
             Order.objects.create(user=user,
                                  customer=customer,
@@ -600,7 +600,7 @@ class OrderListTests(TestCase):
     def test_active_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i)
@@ -612,8 +612,8 @@ class OrderListTests(TestCase):
     def test_active_comment_count(self):
         """Test the correct count of comments."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
-        order = Order.objects.all()[0]
+        user = User.objects.first()
+        order = Order.objects.first()
         for i in range(2):
             Comment.objects.create(user=user, reference=order, comment=i)
 
@@ -624,7 +624,7 @@ class OrderListTests(TestCase):
     def test_active_timing_sum(self):
         """Test the correct sum of times in orderItems."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
@@ -638,7 +638,7 @@ class OrderListTests(TestCase):
     def test_delivered_orderitems_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i)
@@ -653,8 +653,8 @@ class OrderListTests(TestCase):
     def test_delivered_comments_count(self):
         """Test the correct count of comments."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
-        order = Order.objects.all()[0]
+        user = User.objects.first()
+        order = Order.objects.first()
         for i in range(2):
             Comment.objects.create(user=user, reference=order, comment=i)
 
@@ -667,7 +667,7 @@ class OrderListTests(TestCase):
     def test_delivered_timing_sum(self):
         """Test the correct sum of times in orderItems."""
         self.client.login(username='regular', password='test')
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         item = Item.objects.create(name='Test item', fabrics=2)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
@@ -840,7 +840,7 @@ class OrderListTests(TestCase):
                                      city='Mungia',
                                      phone=0,
                                      cp=0)
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         order.customer = tz
         order.save()
         resp = self.client.get(reverse('orderlist',
@@ -876,8 +876,8 @@ class OrderListTests(TestCase):
     def test_active_sorting_by_status(self):
         """Should be sorted from 1 to 6."""
         self.client.login(username='regular', password='test')
-        user = User.objects.all()[0]
-        customer = Customer.objects.all()[0]
+        user = User.objects.first()
+        customer = Customer.objects.first()
         status = 1
         for order in Order.objects.all():
             order.status = str(status)
@@ -2057,7 +2057,7 @@ class StandardViewsTest(TestCase):
 
         # Have a read comment
         order = Order.objects.get(ref_name='example closed')
-        comment = Comment.objects.all()[0]
+        comment = Comment.objects.first()
         comment.read = True
         comment.reference = order
         comment.comment = 'read comment'
@@ -2590,7 +2590,8 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
@@ -2774,14 +2775,15 @@ class ActionsGetMethod(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
     def test_edit_obj_item(self):
         """Test context dictionaries and template."""
-        item = Item.objects.all()[0]
+        item = Item.objects.first()
         resp = self.client.get(reverse('actions'),
                                {'pk': item.pk,
                                 'action': 'object-item-edit',
@@ -2874,7 +2876,7 @@ class ActionsGetMethod(TestCase):
 
     def test_delete_obj_item(self):
         """Test context dictionaries and template."""
-        item = Item.objects.all()[0]
+        item = Item.objects.first()
         resp = self.client.get(reverse('actions'),
                                {'pk': item.pk,
                                 'action': 'object-item-delete',
@@ -3091,8 +3093,8 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_duplicated_order_returns_to_form_again(self):
         """Reload page when trying to save a duplicated order."""
-        order = Order.objects.create(user=User.objects.all()[0],
-                                     customer=Customer.objects.all()[0],
+        order = Order.objects.create(user=User.objects.first(),
+                                     customer=Customer.objects.first(),
                                      ref_name='Duplicate test',
                                      delivery=date(2018, 1, 1),
                                      priority='2',
@@ -3313,7 +3315,7 @@ class ActionsPostMethodCreate(TestCase):
     def test_order_item_add_adds_item(self):
         """Test the proper insertion of items."""
         order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.all()[0]
+        item_obj = Item.objects.first()
         self.client.post(reverse('actions'), {'action': 'order-item-add',
                                               'pk': order.pk,
                                               'element': item_obj.pk,
@@ -3335,7 +3337,7 @@ class ActionsPostMethodCreate(TestCase):
     def test_order_item_add_context_response(self):
         """Test the response given by add item."""
         order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.all()[0]
+        item_obj = Item.objects.first()
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-item-add',
                                  'pk': order.pk,
@@ -3363,7 +3365,7 @@ class ActionsPostMethodCreate(TestCase):
     def test_order_item_add_invalid_form_returns_to_form_again(self):
         """Test item add invalid form behaviour."""
         order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.all()[0]
+        item_obj = Item.objects.first()
         resp = self.client.post(reverse('actions'),
                                 {'action': 'order-item-add',
                                  'pk': order.pk,
@@ -3438,7 +3440,7 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_send_to_order_raises_error_invalid_item(self):
         """If no item is given raise a 404."""
-        order = Order.objects.all()[0]
+        order = Order.objects.first()
         no_item = self.client.post(reverse('actions'),
                                    {'action': 'send-to-order',
                                     'pk': 5000,
@@ -3451,7 +3453,7 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_send_to_order_raises_error_invalid_order(self):
         """If no order is given raise a 404."""
-        item = Item.objects.all()[0]
+        item = Item.objects.first()
         no_order = self.client.post(reverse('actions'),
                                     {'action': 'send-to-order',
                                      'pk': item.pk,
@@ -3464,8 +3466,8 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_send_to_order_raises_error_invalid_isfit(self):
         """If no valid isfit is given raise a 404."""
-        item = Item.objects.all()[0]
-        order = Order.objects.all()[0]
+        item = Item.objects.first()
+        order = Order.objects.first()
         no_order = self.client.post(reverse('actions'),
                                     {'action': 'send-to-order',
                                      'pk': item.pk,
@@ -3478,8 +3480,8 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_send_to_order_raises_error_invalid_isStock(self):
         """If no valid isStock is given raise a 404."""
-        item = Item.objects.all()[0]
-        order = Order.objects.all()[0]
+        item = Item.objects.first()
+        order = Order.objects.first()
         no_order = self.client.post(reverse('actions'),
                                     {'action': 'send-to-order',
                                      'pk': item.pk,
@@ -3492,8 +3494,8 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_send_to_order_isfit_and_isStock_true(self):
         """Test the correct store of fit and stock."""
-        item = Item.objects.all()[0]
-        order = Order.objects.all()[0]
+        item = Item.objects.first()
+        order = Order.objects.first()
         self.client.post(reverse('actions'), {'action': 'send-to-order',
                                               'pk': item.pk,
                                               'order': order.pk,
@@ -3509,8 +3511,8 @@ class ActionsPostMethodCreate(TestCase):
 
     def test_send_to_order_isfit_and_isStock_false(self):
         """Test the correct store of fit."""
-        item = Item.objects.all()[0]
-        order = Order.objects.all()[0]
+        item = Item.objects.first()
+        order = Order.objects.first()
         self.client.post(reverse('actions'), {'action': 'send-to-order',
                                               'pk': item.pk,
                                               'order': order.pk,
@@ -3953,7 +3955,7 @@ class ActionsPostMethodEdit(TestCase):
 
     def test_obj_item_edit_invalid_form_returns_to_form_again(self):
         """Test the proper rejection of forms."""
-        item = Item.objects.all()[0]
+        item = Item.objects.first()
         resp = self.client.post(reverse('actions'),
                                 {'name': 'Changed name',
                                  'item_type': '2',
@@ -4190,7 +4192,7 @@ class ActionsPostMethodEdit(TestCase):
 
     def test_delete_obj_item_deletes_the_item(self):
         """Test the correct item deletion."""
-        item = Item.objects.all()[0]
+        item = Item.objects.first()
         resp = self.client.post(reverse('actions'),
                                 {'pk': item.pk,
                                  'action': 'object-item-delete',
