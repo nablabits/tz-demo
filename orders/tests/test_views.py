@@ -2133,6 +2133,17 @@ class StandardViewsTest(TestCase):
         for customer in customers:
             self.assertNotEqual(customer.name, 'express')
 
+    def test_customer_view_excludes_providers(self):
+        """Providers are shown only in admin view."""
+        express = Customer.objects.first()
+        express.provider = True
+        express.save()
+        resp = self.client.get(reverse('customerlist'))
+        customers = resp.context['customers']
+        self.assertEqual(len(customers), 9)
+        for customer in customers:
+            self.assertNotEqual(customer.name, 'express')
+
     def test_customer_list_context_vars(self):
         """Test the correct context vars."""
         resp = self.client.get(reverse('customerlist'))

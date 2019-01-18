@@ -90,7 +90,8 @@ def search(request):
                 query_result = table.filter(pk=search_obj)
             model = 'orders'
         elif search_on == 'customers':
-            table = Customer.objects.all()
+            table = Customer.objects.exclude(provider=True)
+            table = table.exclude(name__iexact='express')
             try:
                 int(search_obj)
             except ValueError:
@@ -284,6 +285,7 @@ def orderlist(request, orderby):
 def customerlist(request):
     """Display all customers or search'em."""
     customers = Customer.objects.all().exclude(name__iexact='express')
+    customers = customers.exclude(provider=True)
     customers = customers.order_by('name')
     customers = customers.annotate(num_orders=Count('order'))
     page = request.GET.get('page', 1)

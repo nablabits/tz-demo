@@ -24,6 +24,7 @@ class Customer(models.Model):
     CIF = models.CharField('CIF', max_length=10, blank=True)
     cp = models.IntegerField('CP')
     notes = models.TextField('Observaciones', blank=True, null=True)
+    provider = models.BooleanField('Proveedor', default=False)
 
     def __str__(self):
         """Get the name of the entry."""
@@ -509,6 +510,35 @@ class Invoice(models.Model):
         """Meta options."""
 
         ordering = ['-invoice_no']
+
+
+class Expense(models.Model):
+    """Hold the general expenses of the business."""
+
+    creation = models.DateTimeField('Alta', default=timezone.now)
+    issuer = models.ForeignKey(
+        Customer, on_delete=models.PROTECT,
+        limit_choices_to={'provider': True}, )
+    invoice_no = models.CharField('Número de factura', max_length=64)
+    issued_on = models.DateField('Emisión')
+    concept = models.CharField('Concepto', max_length=64)
+    amount = models.DecimalField(
+        'Importe con IVA', max_digits=7, decimal_places=2)
+    pay_method = models.CharField(
+        'Medio de pago', max_length=1, choices=settings.PAYMENT_METHODS,
+        default='T')
+    notes = models.TextField('Observaciones', blank=True, null=True)
+
+    def clean(self):
+        """Ensure the invoices are valid."""
+        # Ensure issuers have all the fields filled in
+        issuer = Customer.objects.get(pk=self.issuer.pk)
+        void = (not issuer.address or not issuer.city or
+                not issuer.CIF or not issuer.provider)
+        if void:
+            raise ValidationError(
+                {'issuer': _('The customer does not match' +
+                             ' some of the required fields')})
 
 
 class BankMovement(models.Model):

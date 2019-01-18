@@ -2,7 +2,8 @@
 
 from django.contrib import admin
 from .models import (
-    Customer, Comment, Order, Item, OrderItem, PQueue, Invoice, BankMovement)
+    Customer, Comment, Order, Item, OrderItem, PQueue, Invoice, Expense,
+    BankMovement)
 
 
 @admin.register(Customer)
@@ -11,7 +12,7 @@ class CustomerAdmin(admin.ModelAdmin):
 
     date_hierarchy = ('creation')
     list_display = ('name', 'CIF', 'address', 'city', 'cp', 'phone', 'email', )
-    list_filter = ('city', )
+    list_filter = ('city', 'provider' )
 
 
 @admin.register(Order)
@@ -55,6 +56,15 @@ class InvoiceAdmin(admin.ModelAdmin):
 
     list_display = ('invoice_no', 'reference', 'issued_on', 'amount',
                     'pay_method', )
+
+
+@admin.register(Expense)
+class ExpenseAdmin(admin.ModelAdmin):
+    """Beautify the expense admin view."""
+
+    list_display = (
+        'pk', 'issued_on', 'issuer', 'invoice_no', 'concept', 'amount', )
+    list_filter = ('issuer', )
 
 
 @admin.register(BankMovement)
