@@ -1285,6 +1285,18 @@ class PQueueManagerTests(TestCase):
         for item in resp.context['available']:
             self.assertNotEqual(item.description, 'Stocked item')
 
+    def test_available_items_exclude_discount_items(self):
+        """Discounts are excluded from list."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        item = Item.objects.first()
+        item.name = 'Descuento'
+        item.save()
+
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(len(resp.context['available']), 2)
+        for item in resp.context['available']:
+            self.assertNotEqual(item.element.name, 'Descuento')
+
     def test_available_items_exclude_items_already_queued(self):
         """The list only includes items that aren't yet in the queue."""
         self.assertEqual(OrderItem.objects.all().count(), 3)
