@@ -49,32 +49,35 @@
     </div>
   {%endif%}
 
-  <!-- Separator -->
-  <div class="my-5" style="border-bottom: 1px solid lightgrey;"></div>
-
   <!-- Completed queue -->
-  <h3>Prendas producidas</h3>
-  {% if completed %}
-    {% for item in completed %}
-      <div class="border rounded mr-4 my-1 p-2">
-        <div class="d-flex">
-          <a href="{% url 'order_view' item.item.reference.pk %}">
-            <strong>{{item.item.reference.pk}}. {{item.item.reference.ref_name}}</strong>, &nbsp;
-          </a>
-          {{item.item.element.get_item_type_display}} {{item.item.element.name}} {{item.item.element.item_class}}-{{item.item.element.size}}
-          <div class="d-flex ml-auto">
-            <button class="mr-1 btn btn-sm btn-outline-success js-queue" data-action="uncomplete" data-pk="{{item.pk}}">
-              <i class="fal fa-upload"></i>
-            </button>
+  <div class="d-flex justify-content-center mt-5">
+    <button class="btn btn-outline-success" type="button" data-toggle="collapse" data-target="#produced-items">
+      <i class="fal fa-clipboard-list-check pr-1"></i> Ver prendas producidas
+    </button>
+  </div>
+  <div class="collapse mt-3" id="produced-items">
+    {% if completed %}
+      {% for item in completed %}
+        <div class="border rounded mr-4 my-1 p-2">
+          <div class="d-flex">
+            <a href="{% url 'order_view' item.item.reference.pk %}">
+              <strong>{{item.item.reference.pk}}. {{item.item.reference.ref_name}}</strong>, &nbsp;
+            </a>
+            {{item.item.element.get_item_type_display}} {{item.item.element.name}} {{item.item.element.item_class}}-{{item.item.element.size}}
+            <div class="d-flex ml-auto">
+              <button class="mr-1 btn btn-sm btn-outline-success js-queue" data-action="uncomplete" data-pk="{{item.pk}}">
+                <i class="fal fa-upload"></i>
+              </button>
+            </div>
           </div>
         </div>
+      {% endfor %}
+    {% else %}
+      <div class="justify-content-center text-center mt-4">
+        <h1><i class="fal fa-forklift"></i></h1>
+        <h3>Oops, parece que no hay nada producido!</h3>
+        <p>Habrá que ponerse a trabajar, no?</p>
       </div>
-    {% endfor %}
-  {% else %}
-    <div class="justify-content-center text-center mt-4">
-      <h1><i class="fal fa-forklift"></i></h1>
-      <h3>Oops, parece que no hay nada producido!</h3>
-      <p>Habrá que ponerse a trabajar, no?</p>
-    </div>
-  {%endif%}
+    {%endif%}
+  </div>
 </div>

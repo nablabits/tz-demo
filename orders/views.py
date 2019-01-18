@@ -497,6 +497,7 @@ def customer_view(request, pk):
 def pqueue_manager(request):
     """Display the production queue and edit it."""
     available = OrderItem.objects.exclude(reference__status__in=[7, 8])
+    available = available.exclude(element__name__iexact='Descuento')
     available = available.exclude(stock=True).filter(pqueue__isnull=True)
     available = available.order_by('reference__delivery',
                                    'reference__ref_name')
@@ -1263,7 +1264,7 @@ class Actions(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#pqueue-list-tablet'
-                template = 'tz/pqueue_tablet.html'
+                template = 'includes/pqueue_tablet.html'
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,
