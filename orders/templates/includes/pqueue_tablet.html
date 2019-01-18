@@ -65,29 +65,35 @@
   <div class="my-5" style="border-bottom: 1px solid lightgrey;"></div>
 
   <!-- Completed queue -->
-  <h3 class="pqueue-text">Prendas producidas</h3>
-  {% if completed %}
-    {% for item in completed %}
-      <div class="border rounded mr-4 my-1 p-2">
-        <div class="d-flex justify-content-between">
-          <p>
-            <span>{{item.item.element.get_item_type_display}} {{item.item.element.name}}</span>
-            <span class="badge badge-primary mr-1">{{item.item.element.get_item_class_display}}</span>
-            <span class="badge badge-info mr-1">T-{{item.item.element.size}}</span>
-          </p>
-          <div class="d-flex">
-            <button class="mr-1 btn btn-lg btn-outline-success js-queue" data-action="tb-uncomplete" data-pk="{{item.pk}}">
-              <i class="fal fa-upload"></i>
-            </button>
+  <div class="d-flex justify-content-center mt-5">
+    <button class="btn btn-lg btn-outline-success" type="button" data-toggle="collapse" data-target="#produced-items">
+      <i class="fal fa-clipboard-list-check pr-1"></i> Ver prendas producidas
+    </button>
+  </div>
+  <div class="collapse mt-3" id="produced-items">
+    {% if completed %}
+      {% for item in completed %}
+        <div class="border rounded mr-4 my-1 p-2">
+          <div class="d-flex justify-content-between">
+            <p>
+              <span>{{item.item.element.get_item_type_display}} {{item.item.element.name}}</span>
+              <span class="badge badge-primary mr-1">{{item.item.element.get_item_class_display}}</span>
+              <span class="badge badge-info mr-1">T-{{item.item.element.size}}</span>
+            </p>
+            <div class="d-flex">
+              <button class="mr-1 btn btn-lg btn-outline-success js-queue" data-action="tb-uncomplete" data-pk="{{item.pk}}">
+                <i class="fal fa-upload"></i>
+              </button>
+            </div>
           </div>
         </div>
+      {% endfor %}
+    {% else %}
+      <div class="justify-content-center text-center mt-4">
+        <i class="fal fa-forklift fa-5x"></i>
+        <h3 class="pqueue-text">Oops, parece que no hay nada producido!</h3>
+        <p class="pqueue-text">Habrá que ponerse a trabajar, no?</p>
       </div>
-    {% endfor %}
-  {% else %}
-    <div class="justify-content-center text-center mt-4">
-      <i class="fal fa-forklift fa-5x"></i>
-      <h3 class="pqueue-text">Oops, parece que no hay nada producido!</h3>
-      <p class="pqueue-text">Habrá que ponerse a trabajar, no?</p>
-    </div>
-  {%endif%}
+    {%endif%}
+  </div>
 </div>
