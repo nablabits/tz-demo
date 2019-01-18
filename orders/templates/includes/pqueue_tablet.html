@@ -1,0 +1,93 @@
+<div class="d-flex flex-column mt-5">
+  <h3 class="pqueue-text">Cola de producción</h3>
+
+  <!-- Active queue -->
+  {% if active %}
+    {% for item in active %}
+      <div class="border rounded mr-4 my-1 p-3">
+        <div class="d-flex justify-content-between">
+          <div class="d-flex flex-column justify-content-center">
+            <strong>Pedido nº {{item.item.reference.pk}}: {{item.item.reference.ref_name}}</strong>
+            <p>
+              <span>{{item.item.element.get_item_type_display}} {{item.item.element.name}}</span>
+              <span class="badge badge-primary mr-1">{{item.item.element.get_item_class_display}}</span>
+              <span class="badge badge-info mr-1">T-{{item.item.element.size}}</span>
+            </p>
+          </div>
+
+          <div class="d-flex align-items-center">
+            <button class="mr-1 btn btn-lg btn-outline-success" data-toggle="collapse" data-target="#item-details-{{item.pk}}" aria-expanded="false" aria-controls="item-details-{{item.pk}}">
+              <i class="far fa-eye pl-1"></i> Ver
+            </button>
+          </div>
+        </div>
+        <div class="collapse" id="item-details-{{item.pk}}">
+          <div class="d-flex flex-column mt-4">
+            <span><i class="fa fa-tshirt pr-2"></i><strong>Detalles de la prenda:</strong></span>
+            <ul class="ml-4">
+              <li>Cantidad: {{item.item.qty}}</li>
+              <li>Tiempos: {{item.item.crop}}, {{item.item.sewing}}, {{item.item.iron}}</li>
+              {%if item.item.description%}
+                <li>Notas: {{item.item.description}}</li>
+              {%endif%}
+            </ul>
+            <span class="mt-4"><i class="fal fa-clipboard-list pr-2"></i><strong>Detalles del pedido:</strong></span>
+            <ul class="ml-4">
+              <li>Entrega: {{item.item.reference.delivery}}</li>
+              <li>Prioridad: {{item.item.reference.priority}}</li>
+              <li>Medidas: cintura, {{item.item.reference.waist}}; pecho, {{item.item.reference.chest}};
+              cadera, {{item.item.reference.hip}}; largo, {{item.item.reference.lenght}};</li>
+              {%if item.item.reference.others%}
+                <li>Notas: {{item.item.reference.others}}</li>
+              {%endif%}
+            </ul>
+            <div class="d-flex ml-auto mt-2">
+              <button class="mr-2 btn-lg btn btn-outline-success js-crud-edit" data-action="pqueue-add-time" data-pk="{{item.item.pk}}"><i class="fa fa-clock"></i> Añadir tiempos</button>
+              <button class="mr-2 btn-lg btn btn-outline-success js-crud-add" data-action="order-add-comment" data-pk="{{item.item.reference.pk}}"><i class="fa fa-comment"></i> Comentar</button>
+              <button class="mr-1 btn-lg btn btn-sm btn-outline-success js-queue" data-action="tb-complete" data-pk="{{item.pk}}">
+                <i class="far fa-check pl-1"></i> Completar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+  <div class="d-flex mt-5 mb-3 justify-content-center">
+    <i class="fal fa-{{i_relax}} fa-5x"></i>
+  </div>
+  <div class="d-flex justify-content-center">
+    <h3 class="text-center">Genial!<br>has terminado por hoy!</h3>
+  </div>
+  {%endif%}
+
+  <!-- Separator -->
+  <div class="my-5" style="border-bottom: 1px solid lightgrey;"></div>
+
+  <!-- Completed queue -->
+  <h3 class="pqueue-text">Prendas producidas</h3>
+  {% if completed %}
+    {% for item in completed %}
+      <div class="border rounded mr-4 my-1 p-2">
+        <div class="d-flex justify-content-between">
+          <p>
+            <span>{{item.item.element.get_item_type_display}} {{item.item.element.name}}</span>
+            <span class="badge badge-primary mr-1">{{item.item.element.get_item_class_display}}</span>
+            <span class="badge badge-info mr-1">T-{{item.item.element.size}}</span>
+          </p>
+          <div class="d-flex">
+            <button class="mr-1 btn btn-lg btn-outline-success js-queue" data-action="tb-uncomplete" data-pk="{{item.pk}}">
+              <i class="fal fa-upload"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="justify-content-center text-center mt-4">
+      <i class="fal fa-forklift fa-5x"></i>
+      <h3 class="pqueue-text">Oops, parece que no hay nada producido!</h3>
+      <p class="pqueue-text">Habrá que ponerse a trabajar, no?</p>
+    </div>
+  {%endif%}
+</div>

@@ -1264,7 +1264,7 @@ class Actions(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#pqueue-list-tablet'
-                template = 'tz/pqueue_tablet.html'
+                template = 'includes/pqueue_tablet.html'
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,

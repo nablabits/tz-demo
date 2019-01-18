@@ -4065,7 +4065,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
+        self.assertEqual(data['template'], 'includes/pqueue_tablet.html')
         self.assertEqual(data['html_id'], '#pqueue-list-tablet')
         self.assertTrue(self.context_vars(data['context'], vars))
 
