@@ -581,6 +581,15 @@ class TestPQueue(TestCase):
         pqueue = PQueue.objects.create(item=OrderItem.objects.first())
         self.assertEqual(pqueue.score, 1000)
 
+    def test_default_score_on_table_with_negatives(self):
+        """On saving in a table with negatives initial score is 1000."""
+        pqueue = PQueue.objects.create(item=OrderItem.objects.first())
+        self.assertEqual(pqueue.score, 1000)
+        pqueue.complete()
+        self.assertEqual(pqueue.score, -2)
+        pqueue = PQueue.objects.create(item=OrderItem.objects.last())
+        self.assertEqual(pqueue.score, 1000)
+
     def test_send_to_bottom_with_no_score(self):
         """On saving an object without score (new creation), send to bottom."""
         item1, item2 = OrderItem.objects.all()[:2]

@@ -342,7 +342,7 @@ class PQueue(models.Model):
         # Set score if none
         if self.score is None:
             highest = PQueue.objects.last()
-            if not highest:
+            if not highest or highest.score < 0:
                 self.score = 1000
             else:
                 self.score = highest.score + 1
