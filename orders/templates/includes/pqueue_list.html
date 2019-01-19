@@ -10,7 +10,7 @@
             <a href="{% url 'order_view' item.item.reference.pk %}">
               <strong>{{item.item.reference.pk}}. {{item.item.reference.ref_name}}</strong>
             </a>
-            <p>{{item.item.element.get_item_type_display}} {{item.item.element.name}} {{item.item.element.item_class}}-{{item.item.element.size}}</p>
+            <p>{%include 'includes/item_string.html'%}</p>
           </div>
 
           <div class="d-flex flex-column justify-content-center ml-auto">
@@ -59,11 +59,11 @@
     {% if completed %}
       {% for item in completed %}
         <div class="border rounded mr-4 my-1 p-2">
-          <div class="d-flex">
+          <div class="d-flex align-items-center">
             <a href="{% url 'order_view' item.item.reference.pk %}">
               <strong>{{item.item.reference.pk}}. {{item.item.reference.ref_name}}</strong>, &nbsp;
             </a>
-            {{item.item.element.get_item_type_display}} {{item.item.element.name}} {{item.item.element.item_class}}-{{item.item.element.size}}
+            {%include 'includes/item_string.html'%}
             <div class="d-flex ml-auto">
               <button class="mr-1 btn btn-sm btn-outline-success js-queue" data-action="uncomplete" data-pk="{{item.pk}}">
                 <i class="fal fa-upload"></i>
