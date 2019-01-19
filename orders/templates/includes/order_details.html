@@ -22,7 +22,7 @@
       {%for item in items%}
         <div class="d-flex mx-3">
           <div class="">
-            {{item.qty}} x {{item.element.get_item_type_display}} {{item.element.name}} {{item.element.item_class}}-{{item.element.size}}, {{item.price}}€
+            {{item.qty}} x {%include 'includes/item_string.html'%}, {{item.price}}€
           </div>
           <div class="ml-auto">
             {{item.subtotal}}€
@@ -52,22 +52,22 @@
         <tbody>
           {% for item in items %}
           <tr class="item-list" data-toggle="collapse" data-target="#time-detail-{{item.pk}}">
-            <td scope="row">
-              {{item.qty}} x {{item.element}}, {{item.price}}€
-              <span class="ml-2">
-                {%if item.description%}
-                <i class="far fa-sticky-note"></i>
-                {%endif%}
-                {%if item.element.foreing%}
-                <i class="far fa-sign-in-alt"></i>
-                {%endif%}
-                {%if item.fit%}
-                <i class="far fa-cut"></i>
-                {%endif%}
-                {%if item.stock%}
-                <i class="far fa-history"></i>
-                {%endif%}
-              </span>
+            <td scope="row" class="d-flex align-items-center">
+                {{item.qty}} x {%include 'includes/item_string.html'%} {{item.price}}€
+                <span class="ml-2">
+                  {%if item.description%}
+                  <i class="far fa-sticky-note"></i>
+                  {%endif%}
+                  {%if item.element.foreing%}
+                  <i class="far fa-sign-in-alt"></i>
+                  {%endif%}
+                  {%if item.fit%}
+                  <i class="far fa-cut"></i>
+                  {%endif%}
+                  {%if item.stock%}
+                  <i class="far fa-history"></i>
+                  {%endif%}
+                </span>
             </td>
             <td>{{item.subtotal}}€</td>
             <td>

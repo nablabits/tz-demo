@@ -9,9 +9,7 @@
           <div class="d-flex flex-column justify-content-center">
             <strong>Pedido nº {{item.item.reference.pk}}: {{item.item.reference.ref_name}}</strong>
             <p>
-              <span>{{item.item.element.get_item_type_display}} {{item.item.element.name}}</span>
-              <span class="badge badge-primary mr-1">{{item.item.element.get_item_class_display}}</span>
-              <span class="badge badge-info mr-1">T-{{item.item.element.size}}</span>
+              {%include 'includes/item_string.html'%}
             </p>
           </div>
 
@@ -76,9 +74,7 @@
         <div class="border rounded mr-4 my-1 p-2">
           <div class="d-flex justify-content-between">
             <p>
-              <span>{{item.item.element.get_item_type_display}} {{item.item.element.name}}</span>
-              <span class="badge badge-primary mr-1">{{item.item.element.get_item_class_display}}</span>
-              <span class="badge badge-info mr-1">T-{{item.item.element.size}}</span>
+              {%include 'includes/item_string.html'%}
             </p>
             <div class="d-flex">
               <button class="mr-1 btn btn-lg btn-outline-success js-queue" data-action="tb-uncomplete" data-pk="{{item.pk}}">

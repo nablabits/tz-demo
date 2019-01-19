@@ -10,7 +10,7 @@
     {%for item in items%}
     <div class="d-flex">
       <div class="">
-        {{item.element.get_item_type_display}} {{item.element.name}} {{item.element.item_class}}-{{item.element.size}}<br>
+        {%include 'includes/item_string.html'%}<br>
         {{item.qty}} x {{item.price}}€ = {{item.subtotal}}€
       </div>
       <div class="ml-auto">
