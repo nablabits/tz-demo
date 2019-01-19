@@ -10,14 +10,19 @@
     </div>
   </div>
   <div class="card-body order_details">
-    <ul class="">
-      <li>Cintura: {{order.waist}}</li>
-      <li>Pecho: {{order.chest}}</li>
-      <li>Cadera: {{order.hip}}</li>
-      <li>Largo: {{order.lenght}}</li>
-      <li>Observaciones:<br>{{order.others | linebreaksbr}}</li>
-    </ul>
-    <h4>Prendas:</h4>
+    <div class="d-flex mt-2 mb-4">
+        <div class="mr-1 p-3 border rounded"><strong>Cintura:</strong> {{order.waist}}</div>
+        <div class="mx-1 p-3 border rounded"><strong>Pecho:</strong> {{order.chest}}</div>
+        <div class="mx-1 p-3 border rounded"><strong>Cadera:</strong> {{order.hip}}</div>
+        <div class="ml-1 p-3 border rounded"><strong>Largo:</strong> {{order.lenght}}</div>
+    </div>
+    {%if order.others%}
+      <div class="d-flex flex-column my-2">
+        <h4><i class="far fa-sticky-note fa-fw"></i><strong> Observaciones:</strong></h4>
+        <p class="ml-2">{{order.others | linebreaksbr}}</p>
+      </div>
+    {%endif%}
+    <h4><i class="far fa-tshirt fa-fw"></i><strong> Prendas:</strong></h4>
     {%if order.invoiced%}
       {%for item in items%}
         <div class="d-flex mx-3">
