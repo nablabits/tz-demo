@@ -1024,6 +1024,18 @@ class TestExpense(TestCase):
             expense._meta.get_field('pay_method').verbose_name,
             'Medio de pago')
 
+    def test_in_b_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.in_b, bool)
+        self.assertFalse(expense.in_b)
+        self.assertEqual(
+            expense._meta.get_field('in_b').verbose_name,
+            'En B')
+
     def test_notes_field(self):
         """Test the field."""
         expense = Expense.objects.create(
