@@ -15,6 +15,7 @@ from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Count, Sum, F, Q, DecimalField
+from django.db.utils import IntegrityError
 from datetime import datetime, date
 from random import randint
 from . import settings
@@ -89,7 +90,8 @@ def search(request):
                 query_result = table.filter(pk=search_obj)
             model = 'orders'
         elif search_on == 'customers':
-            table = Customer.objects.all()
+            table = Customer.objects.exclude(provider=True)
+            table = table.exclude(name__iexact='express')
             try:
                 int(search_obj)
             except ValueError:
@@ -283,6 +285,7 @@ def orderlist(request, orderby):
 def customerlist(request):
     """Display all customers or search'em."""
     customers = Customer.objects.all().exclude(name__iexact='express')
+    customers = customers.exclude(provider=True)
     customers = customers.order_by('name')
     customers = customers.annotate(num_orders=Count('order'))
     page = request.GET.get('page', 1)
@@ -494,6 +497,7 @@ def customer_view(request, pk):
 def pqueue_manager(request):
     """Display the production queue and edit it."""
     available = OrderItem.objects.exclude(reference__status__in=[7, 8])
+    available = available.exclude(element__name__iexact='Descuento')
     available = available.exclude(stock=True).filter(pqueue__isnull=True)
     available = available.order_by('reference__delivery',
                                    'reference__ref_name')
@@ -610,6 +614,7 @@ class Actions(View):
                        'pk': '0',
                        'action': 'customer-new',
                        'submit_btn': 'Añadir',
+                       'custom_form': 'includes/custom_forms/customer.html'
                        }
             template = 'includes/regular_form.html'
 
@@ -738,6 +743,7 @@ class Actions(View):
                        'pk': customer.pk,
                        'action': 'customer-edit',
                        'submit_btn': 'Guardar',
+                       'custom_form': 'includes/custom_forms/customer.html'
                        }
             template = 'includes/regular_form.html'
 
@@ -932,6 +938,7 @@ class Actions(View):
                            'pk': '0',
                            'action': 'customer-new',
                            'submit_btn': 'Añadir',
+                           'custom_form': 'includes/custom_forms/customer.html'
                            }
                 template = 'includes/regular_form.html'
 
@@ -1172,6 +1179,7 @@ class Actions(View):
                            'pk': customer.pk,
                            'action': 'customer-edit',
                            'submit_btn': 'Guardar',
+                           'custom_form': 'includes/custom_forms/customer.html'
                            }
                 template = 'includes/regular_form.html'
 
@@ -1256,7 +1264,7 @@ class Actions(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#pqueue-list-tablet'
-                template = 'tz/pqueue_tablet.html'
+                template = 'includes/pqueue_tablet.html'
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,
@@ -1295,17 +1303,28 @@ class Actions(View):
         # Delete object Item
         elif action == 'object-item-delete':
             item = get_object_or_404(Item, pk=pk)
-            item.delete()
-            items = Item.objects.all()[:11]
-            data['html_id'] = '#item-selector'
-            data['form_is_valid'] = True
-            context = {'item_types': settings.ITEM_TYPE[1:],
-                       'available_items': items,
-                       'js_action_edit': 'object-item-edit',
-                       'js_action_delete': 'object-item-delete',
-                       'js_action_send_to': 'send-to-order',
-                       }
-            template = 'includes/item_selector.html'
+            try:
+                item.delete()
+            except IntegrityError:
+                data['form_is_valid'] = False
+                # TODO: data['error'] = process error msg
+                context = {'modal_title': 'Eliminar prenda',
+                           'msg': 'Realmente borrar la prenda?',
+                           'pk': item.pk,
+                           'action': 'object-item-delete',
+                           'submit_btn': 'Sí, borrar'}
+                template = 'includes/delete_confirmation.html'
+            else:
+                data['form_is_valid'] = True
+                items = Item.objects.all()[:11]
+                data['html_id'] = '#item-selector'
+                context = {'item_types': settings.ITEM_TYPE[1:],
+                           'available_items': items,
+                           'js_action_edit': 'object-item-edit',
+                           'js_action_delete': 'object-item-delete',
+                           'js_action_send_to': 'send-to-order',
+                           }
+                template = 'includes/item_selector.html'
 
         # Delete item (POST)
         elif action == 'order-item-delete':

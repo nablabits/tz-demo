@@ -15,19 +15,19 @@ class WeekColor(object):
     def get(self):
         """Return the proper color."""
         # first, all the dates in the past have 'this' color
-        past = (self.date < date.today())
         future = (self.date >= date.today())
+        distance = self.date - date.today()
 
         # Get the delivery and current week
         delivery = self.date.isocalendar()[1]
         this_week = date.today().isocalendar()[1]
 
         # Finally evaluate both numbers and return the proper color
-        if delivery <= this_week or past:
+        if delivery <= this_week or distance.days < 0:
             return settings.WEEK_COLORS['this']
         elif delivery == this_week + 1 and future:
             return settings.WEEK_COLORS['next']
-        elif delivery == this_week + 2 and future:
+        elif delivery == this_week + 2 and distance.days < 15:
             return settings.WEEK_COLORS['in_two']
         else:
             return False

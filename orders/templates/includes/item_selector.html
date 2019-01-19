@@ -84,9 +84,7 @@
   <ul class="list-group list-group-flush">
     {%for item in available_items%}
      <li class="list-group-item d-flex align-items-center">
-         <span class="mr-1">{{item.get_item_type_display}} {{item.name}}</span>
-         <span class="badge badge-primary mr-1">{{item.get_item_class_display}}</span>
-         <span class="badge badge-info mr-1">T-{{item.size}}</span>
+         {%include 'includes/item_string.html'%}
          {%if item.notes%}
          <span class="mr-1"><i class="far fa-sticky-note ml-2"></i></span>
          {%endif%}

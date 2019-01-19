@@ -2,9 +2,10 @@
 from decimal import Decimal, InvalidOperation
 from django.test import TestCase
 from orders.models import (
-    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, BankMovement)
+    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, BankMovement,
+    Expense, )
 from django.core.exceptions import ValidationError
-from django.db.utils import IntegrityError
+from django.db.utils import IntegrityError, DataError
 from django.contrib.auth.models import User
 from datetime import date, timedelta, time, datetime
 
@@ -53,6 +54,17 @@ class ModelTest(TestCase):
         customer = Customer.objects.get(name='Customer Test')
         self.assertTrue(isinstance(customer, Customer))
         self.assertEqual(customer.__str__(), 'Customer Test')
+
+    def test_customer_provider_field(self):
+        """Test the field."""
+        customer = Customer.objects.create(
+            name='Customer Test', address='Cache', city='This computer',
+            phone='666666666', CIF='444E', cp=48003, )
+
+        self.assertIsInstance(customer.provider, bool)
+        self.assertFalse(customer.provider)
+        self.assertEqual(
+            customer._meta.get_field('provider').verbose_name, 'Proveedor')
 
     def test_order_creation(self):
         """Test the order creation."""
@@ -378,6 +390,14 @@ class TestOrderItems(TestCase):
         # Create item
         Item.objects.create(name='Test item', fabrics=5)
 
+    def test_delete_obj_item_is_porotected(self):
+        """Deleting the reference should be forbidden."""
+        item = Item.objects.first()
+        OrderItem.objects.create(
+            element=item, reference=Order.objects.first())
+        with self.assertRaises(IntegrityError):
+            item.delete()
+
     def test_orderitem_stock(self):
         """Items are by default new produced for orders."""
         item = OrderItem.objects.create(element=Item.objects.first(),
@@ -559,6 +579,15 @@ class TestPQueue(TestCase):
     def test_default_score_on_empty_table(self):
         """When saving on an empty table the initial score should be 1000."""
         pqueue = PQueue.objects.create(item=OrderItem.objects.first())
+        self.assertEqual(pqueue.score, 1000)
+
+    def test_default_score_on_table_with_negatives(self):
+        """On saving in a table with negatives initial score is 1000."""
+        pqueue = PQueue.objects.create(item=OrderItem.objects.first())
+        self.assertEqual(pqueue.score, 1000)
+        pqueue.complete()
+        self.assertEqual(pqueue.score, -2)
+        pqueue = PQueue.objects.create(item=OrderItem.objects.last())
         self.assertEqual(pqueue.score, 1000)
 
     def test_send_to_bottom_with_no_score(self):
@@ -872,6 +901,197 @@ class TestInvoice(TestCase):
         self.assertEqual(item.price, 0)
         with self.assertRaises(ValidationError):
             Invoice.objects.create(reference=item.reference)
+
+
+class TestExpense(TestCase):
+    """Test the expense model."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a customer
+        Customer.objects.create(
+            name='Customer Test', address='Cache', city='This computer',
+            phone='666666666', CIF='444E', cp=48003, provider=True, )
+
+    def test_creation_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.creation, datetime)
+        self.assertTrue(expense.creation.date, date.today())
+        self.assertEqual(
+            expense._meta.get_field('creation').verbose_name, 'Alta')
+
+    def test_issuer_is_foreign_key(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.issuer, Customer)
+
+    def test_delete_providers_should_raise_error(self):
+        """Providers with isssued invoices should be prevented from delete."""
+        issuer = Customer.objects.first()
+        expense = Expense.objects.create(
+            issuer=issuer, invoice_no='Test', issued_on=date.today(),
+            concept='Concept', amount=100, )
+        expense.full_clean()
+        with self.assertRaises(IntegrityError):
+            issuer.delete()
+
+    def test_invoice_no_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.invoice_no, str)
+        self.assertTrue(expense.invoice_no, 'Test')
+        self.assertEqual(
+            expense._meta.get_field('invoice_no').verbose_name,
+            'Número de factura')
+        with self.assertRaises(DataError):
+            expense = Expense.objects.create(
+                issuer=Customer.objects.first(), invoice_no='T' * 65,
+                issued_on=date.today(), concept='Concept', amount=100, )
+
+    def test_issued_on_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.issued_on, date)
+        self.assertTrue(expense.issued_on, date.today())
+        self.assertEqual(
+            expense._meta.get_field('issued_on').verbose_name,
+            'Emisión')
+
+    def test_concept_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.concept, str)
+        self.assertTrue(expense.concept, 'Concept')
+        self.assertEqual(
+            expense._meta.get_field('concept').verbose_name,
+            'Concepto')
+        with self.assertRaises(DataError):
+            expense = Expense.objects.create(
+                issuer=Customer.objects.first(), invoice_no='Test',
+                issued_on=date.today(), concept='C' * 65, amount=100, )
+
+    def test_amount_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.amount, Decimal)
+        self.assertTrue(expense.amount, 100)
+        self.assertEqual(
+            expense._meta.get_field('amount').verbose_name,
+            'Importe con IVA')
+
+        # More decimals validation
+        void = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100.35566, )
+        with self.assertRaises(ValidationError):
+            void.full_clean()
+
+        # More digits validation
+        with self.assertRaises(InvalidOperation):
+            Expense.objects.create(
+                issuer=Customer.objects.first(), invoice_no='Test',
+                issued_on=date.today(), concept='Concept', amount=10**8, )
+
+    def test_pay_method_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.pay_method, str)
+        self.assertTrue(expense.pay_method, 'T')
+        self.assertEqual(
+            expense._meta.get_field('pay_method').verbose_name,
+            'Medio de pago')
+
+    def test_in_b_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.in_b, bool)
+        self.assertFalse(expense.in_b)
+        self.assertEqual(
+            expense._meta.get_field('in_b').verbose_name,
+            'En B')
+
+    def test_notes_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100,
+            notes='Notes')
+        expense.full_clean()
+        self.assertIsInstance(expense.notes, str)
+        self.assertTrue(expense.notes, 'Notes')
+        self.assertEqual(
+            expense._meta.get_field('notes').verbose_name,
+            'Observaciones')
+
+    def test_no_address_raises_error(self):
+        """Raise ValidationError with partially filled customers."""
+        void = Customer.objects.create(
+            name='Customer Test', city='This computer',
+            phone='666666666', CIF='444E', cp=48003, provider=True, )
+        void_expense = Expense.objects.create(
+            issuer=void, invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        with self.assertRaises(ValidationError):
+            void_expense.full_clean()
+
+    def test_no_city_raises_error(self):
+        """Raise ValidationError with partially filled customers."""
+        void = Customer.objects.create(
+            name='Customer Test', address='Cache', phone='666666666',
+            CIF='444E', cp=48003, provider=True, )
+        void_expense = Expense.objects.create(
+            issuer=void, invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        with self.assertRaises(ValidationError):
+            void_expense.full_clean()
+
+    def test_no_cif_raises_error(self):
+        """Raise ValidationError with partially filled customers."""
+        void = Customer.objects.create(
+            name='Customer Test', address='Cache', city='This computer',
+            phone='666666666', cp=48003, provider=True, )
+        void_expense = Expense.objects.create(
+            issuer=void, invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        with self.assertRaises(ValidationError):
+            void_expense.full_clean()
+
+    def test_no_provider_raises_error(self):
+        """Only providers can be issuers."""
+        void = Customer.objects.create(
+            name='Customer Test', address='Cache', city='This computer',
+            phone='666666666', CIF='444E', cp=48003, )
+        void_expense = Expense.objects.create(
+            issuer=void, invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        with self.assertRaises(ValidationError):
+            void_expense.full_clean()
 
 
 class TestBankMovement(TestCase):

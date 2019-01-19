@@ -19,7 +19,7 @@
               <a href="{% url 'order_view' item.reference.pk %}">
               <strong>{{item.reference.pk}}. {{item.reference.ref_name}}</strong>, &nbsp;
               </a>
-              {{item.element.get_item_type_display}} {{item.element.name}} {{item.element.item_class}}-{{item.element.size}}
+              {%include 'includes/item_string.html'%}
               <button class="mr-1 btn btn-sm btn-outline-success ml-auto js-queue" data-action="send" data-pk="{{item.pk}}">
                 <i class="fal fa-share"></i>
               </button>

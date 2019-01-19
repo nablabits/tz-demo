@@ -18,12 +18,13 @@ class Customer(models.Model):
     creation = models.DateTimeField('Alta', default=timezone.now)
     name = models.CharField('Nombre', max_length=64)
     address = models.CharField('Dirección', max_length=64, blank=True)
-    city = models.CharField('Localidad', max_length=32)
+    city = models.CharField('Localidad', max_length=32, blank=True)
     phone = models.IntegerField('Telefono')
     email = models.EmailField('Email', max_length=64, blank=True)
     CIF = models.CharField('CIF', max_length=10, blank=True)
     cp = models.IntegerField('CP')
     notes = models.TextField('Observaciones', blank=True, null=True)
+    provider = models.BooleanField('Proveedor', default=False)
 
     def __str__(self):
         """Get the name of the entry."""
@@ -238,7 +239,7 @@ class OrderItem(models.Model):
     """Each order can have one or several clothes."""
 
     # Element field should be renamed after backup all the previous fields.
-    element = models.ForeignKey(Item, blank=True, on_delete=models.CASCADE)
+    element = models.ForeignKey(Item, blank=True, on_delete=models.PROTECT)
 
     qty = models.IntegerField('Cantidad', default=1)
     description = models.TextField('Descripción', blank=True)
@@ -341,7 +342,7 @@ class PQueue(models.Model):
         # Set score if none
         if self.score is None:
             highest = PQueue.objects.last()
-            if not highest:
+            if not highest or highest.score < 0:
                 self.score = 1000
             else:
                 self.score = highest.score + 1
@@ -509,6 +510,36 @@ class Invoice(models.Model):
         """Meta options."""
 
         ordering = ['-invoice_no']
+
+
+class Expense(models.Model):
+    """Hold the general expenses of the business."""
+
+    creation = models.DateTimeField('Alta', default=timezone.now)
+    issuer = models.ForeignKey(
+        Customer, on_delete=models.PROTECT,
+        limit_choices_to={'provider': True}, )
+    invoice_no = models.CharField('Número de factura', max_length=64)
+    issued_on = models.DateField('Emisión')
+    concept = models.CharField('Concepto', max_length=64)
+    amount = models.DecimalField(
+        'Importe con IVA', max_digits=7, decimal_places=2)
+    pay_method = models.CharField(
+        'Medio de pago', max_length=1, choices=settings.PAYMENT_METHODS,
+        default='T')
+    in_b = models.BooleanField('En B', default=False)
+    notes = models.TextField('Observaciones', blank=True, null=True)
+
+    def clean(self):
+        """Ensure the invoices are valid."""
+        # Ensure issuers have all the fields filled in
+        issuer = Customer.objects.get(pk=self.issuer.pk)
+        void = (not issuer.address or not issuer.city or
+                not issuer.CIF or not issuer.provider)
+        if void:
+            raise ValidationError(
+                {'issuer': _('The customer does not match' +
+                             ' some of the required fields')})
 
 
 class BankMovement(models.Model):
