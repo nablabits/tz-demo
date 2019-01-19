@@ -527,6 +527,7 @@ class Expense(models.Model):
     pay_method = models.CharField(
         'Medio de pago', max_length=1, choices=settings.PAYMENT_METHODS,
         default='T')
+    in_b = models.BooleanField('En B', default=False)
     notes = models.TextField('Observaciones', blank=True, null=True)
 
     def clean(self):
