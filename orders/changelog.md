@@ -1,5 +1,20 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v61, Ene 19
+  * **Nuevo:** nuevo módulo de gastos (accesible solo por *superusers*).
+  * **Mejora:** al añadir clientes, la ciudad se puede dejar en blanco. Se ha
+    mejorado visualmente el formulario de añadir/editar cliente también.
+  * **Mejora:** se han normalizado las etiquetas de las prendas a través de la
+    *app.*
+  * **Mejora:** las prendas producidas están ahora escondidas detrás de un
+    botón.
+  * **Mejora:** hay pequeños cambios en el *look* de la vista del pedido.
+  * **Mejora:** pequeñas mejoras en el funcionamiento y visuales.
+  * **Bug:** se ha corregido el error al añadir prendas a la producción y la
+    manipulación general de las prendas. Tampoco se muestran ya las prendas con
+    nombre *descuento.*
+  * **Bug:** ya no se pueden borrar prendas que estén en algún pedido.
+
 ### v60, Ene 13
   * **Nuevo:** Nueva vista de filtro para los tickets y el editor de prendas.
   * **Nuevo:** Vista de la cola de producción para la tablet.
