@@ -21,7 +21,7 @@ class Customer(models.Model):
     city = models.CharField('Localidad', max_length=32, blank=True)
     phone = models.IntegerField('Telefono')
     email = models.EmailField('Email', max_length=64, blank=True)
-    CIF = models.CharField('CIF', max_length=10, blank=True)
+    CIF = models.CharField('CIF', max_length=20, blank=True)
     cp = models.IntegerField('CP')
     notes = models.TextField('Observaciones', blank=True, null=True)
     provider = models.BooleanField('Proveedor', default=False)
