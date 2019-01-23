@@ -3,20 +3,26 @@
 <div class="container mt-4">
   <ul class="nav nav-tabs" role="tablist">
     <li class="nav-item">
-      <a class="nav-link active" data-toggle="tab" href="#invoices-last" role="tab">Últimas Facturas</a>
+      <a class="nav-link active" data-toggle="tab" href="#bank-movements" role="tab">
+        <i class="fal fa-exchange-alt pr-2"></i>Banco-Tienda
+        </a>
     </li>
     <li class="nav-item">
       <a class="nav-link" data-toggle="tab" href="#invoices-today" role="tab">
-        Facturado hoy <span class="ml-1 badge badge-info">{{today|length}}</span>
+        <i class="fal fa-calendar-day pr-2"></i>
+        Facturado hoy
+        <span class="ml-1 badge badge-info">{{today|length}}</span>
       </a>
     </li>
     <li class="nav-item">
       <a class="nav-link" data-toggle="tab" href="#invoices-week" role="tab">
+        <i class="fal fa-calendar-week pr-2"></i>
         Esta semana <span class="ml-1 badge badge-info">{{week|length}}</span>
       </a>
     </li>
     <li class="nav-item">
       <a class="nav-link" data-toggle="tab" href="#invoices-month" role="tab">
+        <i class="fal fa-calendar-alt pr-2"></i>
         Este mes
         {%if month|length < 21%}
           <span class="ml-1 badge badge-info">{{month|length}}</span>
@@ -28,41 +34,64 @@
   </ul>
   <div class="tab-content">
 
-    <!-- Last invoices tab -->
-    <div class="tab-pane show active" id="invoices-last" role="tabpanel">
-      <div class="d-flex my-4">
-        <h3>Últimas facturas</h3>
-        <p class="ml-auto">Mostrando últimas {{invoices|length}}</p>
+    <!-- Bank movements tab -->
+    <div class="tab-pane show active" id="bank-movements" role="tabpanel">
+      <div class="row my-4">
+        <div class="col">
+          <h3><i class="fal fa-exchange-alt pr-2"></i>Últimos movimientos</h3>
+          <p>Aquí se muestran los movimientos entre el banco y la caja de la tienda</p>
+          {% if bank_movements %}
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item d-flex justify-content-between text-center">
+             <h5>Fecha</h5>
+             <h5>Cantidad</h5>
+             <h5>Observaciones</h5>
+            </li>
+            {%for mov in bank_movements%}
+             <li class="list-group-item d-flex justify-content-between text-center">
+               <h5>{{mov.action_date}}</h5>
+               <h5>{{mov.amount}}</h5>
+               <h5>{{mov.notes}}</h5>
+             </li>
+            {%endfor%}
+          </ul>
+          {%else%}
+          <div class="d-flex justify-content-center">
+            <div class="d-inline-flex flex-column border rounded text-center mt-4 p-3">
+              <h1><i class="fal fa-times-octagon"></i></h1>
+              <h4>De momento no hay movimientos</h4>
+            </div>
+          </div>
+          {%endif%}
+        </div>
+        <div class="col">
+          <div class="d-flex flex-column align-items-center">
+            <div class="d-inline-flex flex-column border border-success rounded-circle py-4 px-2 text-center bank_status">
+              <h3><i class="fas fa-coins"></i></h3>
+              <h3 class="mb-0">Total Producido</h3>
+              <small>En efectivo</small>
+              {{all_time_cash.total_cash}}€
+            </div>
+            <div class="d-inline-flex flex-column border border-info rounded-circle mt-4 py-4 px-2 text-center bank_status">
+              <h3><i class="far fa-paper-plane"></i></h3>
+              <h3>Total Ingresado</h3>
+              <h5>{{all_time_deposit.total_cash}}€</h5>
+            </div>
+            <div class="d-inline-flex flex-column border border-primary rounded-circle mt-4 py-4 px-2 text-center bank_status">
+              <h3><i class="far fa-balance-scale-right"></i></h3>
+              <h3>Status</h3>
+              {% if balance > 0 %}
+                <h5>Has ingresado {{balance}}€ de más</h5>
+              {% elif balance == 0 %}
+                <h5>Estás en paz con el banco</h5>
+              {%else%}
+                <h5 class="mb-0">{{balance}}€</h5>
+                <h5>A ingresar</h5>
+              {%endif%}
+            </div>
+          </div>
+        </div>
       </div>
-      <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">Factura nº</th>
-            <th scope="col">Fecha</th>
-            <th scope="col">Pedido</th>
-            <th scope="col">Cliente/CP</th>
-            <th scope="col">Importe</th>
-            <th scope="col">Forma de pago</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for invoice in invoices %}
-          <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{invoice.pk}}">
-            <th>{{invoice.invoice_no}}</th>
-            <th>{{invoice.issued_on | date:"j/n/Y" }}</th>
-            {%if invoice.reference.ref_name == 'Quick'%}
-            <th>Ticket</th>
-            <th>{{invoice.reference.customer.cp }}</th>
-            {%else%}
-            <th>{{invoice.reference.ref_name }}</th>
-            <th>{{invoice.reference.customer.name }}</th>
-            {%endif%}
-            <th>{{invoice.amount}}€</th>
-            <th>{{invoice.get_pay_method_display}}</th>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
     </div>
 
     <!-- Today's invoices -->

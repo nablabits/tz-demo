@@ -5,7 +5,8 @@ from django.views import View
 from django.urls import reverse
 from django.http import JsonResponse, Http404, HttpResponseServerError
 from django.template.loader import render_to_string
-from .models import Comment, Customer, Order, OrderItem, Item, PQueue, Invoice
+from .models import (
+    Comment, Customer, Order, OrderItem, Item, PQueue, Invoice, BankMovement, )
 from django.utils import timezone
 from .forms import (
     CustomerForm, OrderForm, CommentForm, ItemForm, OrderItemForm,
@@ -349,12 +350,13 @@ def itemslist(request):
 @login_required
 def invoiceslist(request):
     """List all the invoices."""
-    invoices = Invoice.objects.all()[:20]
     today = Invoice.objects.filter(issued_on__date=timezone.now().date())
     week = Invoice.objects.filter(
         issued_on__week=timezone.now().date().isocalendar()[1])
     month = Invoice.objects.filter(
         issued_on__month=timezone.now().date().month)
+    all_time_cash = Invoice.objects.filter(pay_method='C')
+    all_time_cash = all_time_cash.aggregate(total_cash=Sum('amount'))
     today_cash = today.aggregate(
         total=Sum('amount'),
         total_cash=Sum('amount', filter=Q(pay_method='C')),
@@ -373,11 +375,19 @@ def invoiceslist(request):
         total_card=Sum('amount', filter=Q(pay_method='V')),
         total_transfer=Sum('amount', filter=Q(pay_method='T')),
         )
+
+    bank_movements = BankMovement.objects.all()[:10]
+    all_time_deposit = BankMovement.objects.filter(amount__gt=0)
+    all_time_deposit = all_time_deposit.aggregate(total_cash=Sum('amount'))
+    if not all_time_deposit['total_cash']:
+        all_time_deposit['total_cash'] = 0
+    if not all_time_cash['total_cash']:
+        all_time_cash['total_cash'] = 0
+    balance = all_time_deposit['total_cash'] - all_time_cash['total_cash']
     cur_user = request.user
     now = datetime.now()
 
-    view_settings = {'invoices': invoices,
-                     'user': cur_user,
+    view_settings = {'user': cur_user,
                      'now': now,
                      'today': today,
                      'week': week,
@@ -385,6 +395,10 @@ def invoiceslist(request):
                      'today_cash': today_cash,
                      'week_cash': week_cash,
                      'month_cash': month_cash,
+                     'bank_movements': bank_movements,
+                     'all_time_cash': all_time_cash,
+                     'all_time_deposit': all_time_deposit,
+                     'balance': balance,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Facturas',
                      }
