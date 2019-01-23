@@ -25,9 +25,9 @@ class WeekColor(object):
         # Finally evaluate both numbers and return the proper color
         if delivery <= this_week or distance.days < 0:
             return settings.WEEK_COLORS['this']
-        elif delivery == this_week + 1 and future:
+        elif delivery == this_week + 1 and distance.days < 15:
             return settings.WEEK_COLORS['next']
-        elif delivery == this_week + 2 and distance.days < 15:
+        elif delivery == this_week + 2 and distance.days < 22:
             return settings.WEEK_COLORS['in_two']
         else:
             return False
