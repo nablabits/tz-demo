@@ -15,7 +15,6 @@ class WeekColor(object):
     def get(self):
         """Return the proper color."""
         # first, all the dates in the past have 'this' color
-        future = (self.date >= date.today())
         distance = self.date - date.today()
 
         # Get the delivery and current week

@@ -1246,7 +1246,6 @@ class InvoicesListTest(TestCase):
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['balance'], 0)
 
-
     def test_invoices_view_current_user(self):
         """Test the current user."""
         self.client.login(username='regular', password='test')
@@ -4297,7 +4296,7 @@ class ActionsPostMethodEdit(TestCase):
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('item_types', 'available_items', 'js_action_edit',
-                        'js_action_delete', 'js_action_send_to')
+                'js_action_delete', 'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
