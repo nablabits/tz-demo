@@ -3,7 +3,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import (
-    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, )
+    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, BankMovement)
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.http import JsonResponse
 from django.urls import reverse
@@ -1075,24 +1075,6 @@ class InvoicesListTest(TestCase):
             name='Test', city='Bilbao', phone=0, cp=48003)
         Item.objects.create(name='Test', fabrics=5, price=10)
 
-    def test_invoices_view_only_displays_last_ten_invoices(self):
-        """Test that view only displays 10 invoices, the last 10."""
-        self.client.login(username='regular', password='test')
-        user = User.objects.first()
-        c = Customer.objects.first()
-        for i in range(22):
-            order = Order.objects.create(
-                user=user, customer=c, ref_name='Test', delivery=date.today(),
-                budget=0, prepaid=0, )
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-            Invoice.objects.create(reference=order)
-        resp = self.client.get(reverse('invoiceslist'))
-        invoices = resp.context['invoices']
-        self.assertEqual(invoices.count(), 20)
-        self.assertTrue(invoices[0].invoice_no > invoices[1].invoice_no)
-        self.assertTrue(invoices[0].issued_on > invoices[1].issued_on)
-
     def test_invoices_today_displays_today_invoices(self):
         """Test display today's invoices and their total amount."""
         self.client.login(username='regular', password='test')
@@ -1173,6 +1155,96 @@ class InvoicesListTest(TestCase):
         self.assertEqual(resp.context['month_cash']['total_cash'], 30)
         self.assertEqual(resp.context['month_cash']['total_card'], 10)
         self.assertEqual(resp.context['month_cash']['total_transfer'], 10)
+
+    def test_invoices_all_time_cash(self):
+        """Test all-time invoices and their total amount."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(10):
+            order = Order.objects.create(
+                user=user, customer=c, ref_name='Test', delivery=date.today(),
+                budget=0, prepaid=0, )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+        for invoice in Invoice.objects.all()[:5]:
+            invoice.issued_on = invoice.issued_on - timedelta(days=30)
+            invoice.save()
+        card, transfer = Invoice.objects.reverse()[:2]
+        card.pay_method, transfer.pay_method = 'V', 'T'
+        card.save()
+        transfer.save()
+        resp = self.client.get(reverse('invoiceslist'))
+        # 100€ - 10€ (card) - 10€ (transfer)
+        self.assertEqual(resp.context['all_time_cash']['total_cash'], 80)
+
+    def test_bank_movements_displays_last_ten(self):
+        """Test bank movements list."""
+        self.client.login(username='regular', password='test')
+        for i in range(15):
+            BankMovement.objects.create(
+                action_date=date.today(), amount=100, notes=str(i))
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['bank_movements'].count(), 10)
+
+    def test_bank_movements_sums_only_positive_values(self):
+        """Bank movement should aggregate only positive entries."""
+        self.client.login(username='regular', password='test')
+        BankMovement.objects.create(
+            action_date=date.today(), amount=100, notes='positive')
+        BankMovement.objects.create(
+            action_date=date.today(), amount=-10, notes='negative')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['all_time_deposit']['total_cash'], 100)
+
+    def test_bank_movements_0_value(self):
+        """When there are no movements, all-time deposit should be 0."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['all_time_deposit']['total_cash'], 0)
+
+    def test_total_cash_0_value(self):
+        """When there are no cash, all-time cash should be 0."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['all_time_cash']['total_cash'], 0)
+
+    def test_balance(self):
+        """Test the correct output of balance."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+
+        # First test no invoices nor bank movements
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], 0)
+
+        # Now, have an invoice
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order, pay_method='C')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], -10)
+
+        # Now, a bank movement
+        BankMovement.objects.create(
+            action_date=date.today(), amount=100, notes='positive')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], 90)
+
+        # Finally, balance out
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=90)
+        Invoice.objects.create(reference=order, pay_method='C')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], 0)
 
     def test_invoices_view_current_user(self):
         """Test the current user."""
@@ -4224,7 +4296,7 @@ class ActionsPostMethodEdit(TestCase):
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('item_types', 'available_items', 'js_action_edit',
-                        'js_action_delete', 'js_action_send_to')
+                'js_action_delete', 'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
