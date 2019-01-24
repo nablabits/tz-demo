@@ -14,45 +14,50 @@
       <a class="navbar-brand" href="{% url 'main' %}">
         <img src="{% static 'tz/img/tz_logo.svg' %}" height="30">
       </a>
-      <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
-        {% if user.is_superuser %}
-        <li class="nav-item">
-          <a class="nav-link" href="{%url 'admin:index'%}"><i class="far fa-user-ninja pr-1"></i>Admin</a>
-        </li>
-        {%endif%}
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'main' %}"><i class="far fa-home pr-1"></i>Inicio</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'customerlist' %}"><i class="far fa-users pr-1"></i>Clientes</a>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="orders-dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="far fa-dolly pr-1"></i>Pedidos
-          </a>
-          <div class="dropdown-menu" aria-labelledby="orders-dropdown">
-            <a class="dropdown-item" href="{% url 'orderlist' orderby='date' %}"><i class="fal fa-list fa-fw"></i> Lista de pedidos</a>
-            <a class="dropdown-item" href="{% url 'itemslist' %}"><i class="fal fa-tshirt fa-fw"></i> Editor de prendas</a>
-            <a class="dropdown-item" href="{% url 'pqueue_manager' %}"><i class="fal fa-fw fa-clipboard-list-check"></i> Cola de producción</a>
-            <a class="dropdown-item js-crud-add" href="#" data-action="order-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nuevo pedido</a>
-          </div>
-        </li>
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="sales-dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="far fa-cash-register pr-1"></i>Ventas
-          </a>
-          <div class="dropdown-menu" aria-labelledby="sales-dropdown">
-            <a class="dropdown-item js-crud-add" href="#" data-action="order-express-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nueva venta express</a>
-            <a class="dropdown-item" href="{% url 'invoiceslist' %}"><i class="fal fa-fw fa-chart-line"></i> Facturación & banco</a>
-          </div>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link js-logout" href="#" data-action="logout" data-pk="0">{{user}}<i class="far fa-sign-out-alt pl-2"></i></a>
-        </li>
-        <li class="nav-item">
-          <button class="btn btn-sm btn-success nav-link" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-cogs"></i> tz app {{version}}</button>
-        </li>
-      </ul>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#top-menu" aria-controls="top-menu" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="top-menu">
+        <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
+          {% if user.is_superuser %}
+          <li class="nav-item">
+            <a class="nav-link" href="{%url 'admin:index'%}"><i class="far fa-user-ninja pr-1"></i>Admin</a>
+          </li>
+          {%endif%}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'main' %}"><i class="far fa-home pr-1"></i>Inicio</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'customerlist' %}"><i class="far fa-users pr-1"></i>Clientes</a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="orders-dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="far fa-dolly pr-1"></i>Pedidos
+            </a>
+            <div class="dropdown-menu" aria-labelledby="orders-dropdown">
+              <a class="dropdown-item" href="{% url 'orderlist' orderby='date' %}"><i class="fal fa-list fa-fw"></i> Lista de pedidos</a>
+              <a class="dropdown-item" href="{% url 'itemslist' %}"><i class="fal fa-tshirt fa-fw"></i> Editor de prendas</a>
+              <a class="dropdown-item" href="{% url 'pqueue_manager' %}"><i class="fal fa-fw fa-clipboard-list-check"></i> Cola de producción</a>
+              <a class="dropdown-item js-crud-add" href="#" data-action="order-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nuevo pedido</a>
+            </div>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="sales-dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="far fa-cash-register pr-1"></i>Ventas
+            </a>
+            <div class="dropdown-menu" aria-labelledby="sales-dropdown">
+              <a class="dropdown-item js-crud-add" href="#" data-action="order-express-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nueva venta express</a>
+              <a class="dropdown-item" href="{% url 'invoiceslist' %}"><i class="fal fa-fw fa-chart-line"></i> Facturación & banco</a>
+            </div>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link js-logout" href="#" data-action="logout" data-pk="0">{{user}}<i class="far fa-sign-out-alt pl-2"></i></a>
+          </li>
+          <li class="nav-item">
+            <button class="btn btn-sm btn-success nav-link" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-cogs"></i> tz app {{version}}</button>
+          </li>
+        </ul>
+      </div>
     </nav>
 
     <div class="container">
