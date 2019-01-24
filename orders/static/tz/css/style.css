@@ -11,7 +11,7 @@ h3, h4, h5 {
   font-family: dosis;
   color: #555;
 }
-header{
+.top_bar{
   background-color: #62DDBD;
   border-bottom: 1px solid #ccc;
 }
