@@ -9,7 +9,7 @@ class WeekColor(object):
     def __init__(self, delivery):
         """Start the object."""
         if not isinstance(delivery, date):
-            raise TypeError('The imput should be a datetype')
+            raise TypeError('The input should be a datetype')
         self.date = delivery
 
     def get(self):
@@ -22,7 +22,9 @@ class WeekColor(object):
         this_week = date.today().isocalendar()[1]
 
         # Finally evaluate both numbers and return the proper color
-        if delivery <= this_week or distance.days < 0:
+        if distance.days < 0:
+            return settings.WEEK_COLORS['this']
+        elif delivery == this_week and distance.days < 7:
             return settings.WEEK_COLORS['this']
         elif delivery == this_week + 1 and distance.days < 15:
             return settings.WEEK_COLORS['next']

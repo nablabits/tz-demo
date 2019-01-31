@@ -40,8 +40,7 @@ class WeekColorTest(TestCase):
 
     def test_delivery_on_next_year_returns_false(self):
         """On changing year."""
-        next_year = date.today().year + 1
-        delivery = date(next_year, 2, 1)
+        delivery = date.today() + timedelta(days=365)
         color = WeekColor(delivery).get()
         self.assertFalse(color)
 
