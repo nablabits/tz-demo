@@ -2,7 +2,7 @@
 
 # The name for the app
 APP_NAME = "Trapu Zarrak app"
-VERSION = 'v61'
+VERSION = 'v62'
 
 # Available types of clothes
 ITEM_TYPE = (
@@ -39,6 +39,8 @@ PAYMENT_METHODS = (
     ('V', 'Tarjeta'),
     ('T', 'Transferencia')
 )
+
+GOAL = 240
 
 WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
 

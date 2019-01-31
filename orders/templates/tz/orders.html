@@ -5,28 +5,32 @@
 <div class="container mt-4" id="order-list">
     <ul class="nav nav-tabs" id="ordersTab" role="tablist">
       <li class="nav-item">
-        <a class="nav-link active" data-toggle="tab" href="#active-orders" role="tab" id="active-orders-tab">Pedidos Activos<span class="ml-1 badge badge-info">{{active_calendar|length}}</span></a>
+        <a class="nav-link active" data-toggle="tab" href="#active-orders" role="tab" id="active-orders-tab">
+          <i class="far fa-star pr-2"></i>Pedidos Activos<span class="ml-1 badge badge-info">{{active_calendar|length}}</span></a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#delivered-orders" role="tab" id="delivered-orders-tab">Pedidos Entregados</a>
+        <a class="nav-link" data-toggle="tab" href="#delivered-orders" role="tab" id="delivered-orders-tab">
+          <i class="far fa-truck-container pr-2"></i>Pedidos Entregados</a>
       </li>
       <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#pending-orders" role="tab" id="delivered-orders-tab">
-          Pendiente cobro
+          <i class="far fa-hand-holding-usd pr-2"></i>Pendiente cobro
           <span class="ml-1 badge badge-info">{{pending|length}}</span>
         </a>
       </li>
       <li class="nav-item">
         <a class="nav-link" data-toggle="tab" href="#active-stock-orders" role="tab" id="stock-orders-tab">
-          Activos TZ
+          <i class="far fa-industry-alt pr-2"></i>Activos TZ
           <span class="ml-1 badge badge-info">{{active_stock|length}}</span>
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#finished-stock-orders" role="tab" id="stock-orders-tab">Stock</a>
+        <a class="nav-link" data-toggle="tab" href="#finished-stock-orders" role="tab" id="stock-orders-tab">
+          <i class="far fa-warehouse-alt pr-2"></i>Stock</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" data-toggle="tab" href="#cancelled-orders" role="tab" id="stock-orders-tab">Cancelados</a>
+        <a class="nav-link" data-toggle="tab" href="#cancelled-orders" role="tab" id="stock-orders-tab">
+          <i class="far fa-times-octagon pr-2"></i>Cancelados</a>
       </li>
     </ul>
 
@@ -36,7 +40,7 @@
     <div class="tab-pane show active" id="active-orders" role="tabpanel">
       <div class="d-flex pt-4 px-2">
         <div class="mr-auto d-flex align-items-end">
-            <h3 class="">Previsión de pedidos ({{active_calendar|length}})</h3>
+            <h3><i class="far fa-star pr-2"></i>Previsión de pedidos ({{active_calendar|length}})</h3>
             <small class="ml-2 pb-2" data-toggle="collapse" data-target="#legend" role="button" style="cursor: pointer;">Leyenda</small>
         </div>
         <div class="d-flex align-items-center">
@@ -186,7 +190,7 @@
     <!-- delievered orders tab -->
     <div class="tab-pane" id="delivered-orders" role="tabpanel">
       <div class="d-flex py-4 px-2">
-        <h3 class="mr-auto">Pedidos entregados</h3>
+        <h3 class="mr-auto"><i class="far fa-truck-container pr-2"></i>Pedidos entregados</h3>
         <p class="px-2">Mostrando últimos 10</p>
       </div>
       <div class="px-2">
@@ -201,7 +205,7 @@
     <!-- Pending orders tab -->
     <div class="tab-pane" id="pending-orders" role="tabpanel">
       <div class="d-flex py-4 px-2 align-items-center">
-        <h3 class="mr-auto">Pedidos Pendientes de cobro</h3>
+        <h3 class="mr-auto"><i class="far fa-hand-holding-usd pr-2"></i>Pedidos Pendientes de cobro</h3>
         <h3 class="px-2">Total pendiente: {{pending_total}}€</h3>
         <div class="d-flex flex-column text-right">
           <small class="px-2">Facturable: {{to_invoice}}€</small>
@@ -231,7 +235,7 @@
     <!-- Active stock orders tab -->
     <div class="tab-pane" id="active-stock-orders" role="tabpanel">
       <div class="d-flex py-4 px-2">
-        <h3>Producción de Trapuzarrak</h3>
+        <h3><i class="far fa-industry-alt pr-2"></i>Producción de Trapuzarrak</h3>
       </div>
       <div class="px-2">
         {% if not active_stock %}
@@ -253,7 +257,7 @@
     <div class="tab-pane" id="finished-stock-orders" role="tabpanel">
       <div class="tab-pane" id="active-stock-orders" role="tabpanel">
         <div class="d-flex py-4 px-2">
-          <h3 class="mr-auto">Stock de Trapuzarrak</h3>
+          <h3 class="mr-auto"><i class="far fa-warehouse-alt pr-2"></i>Stock de Trapuzarrak</h3>
           <p class="px-2">Mostrando últimos 10</p>
         </div>
         <div class="px-2">
@@ -278,7 +282,7 @@
       <div class="tab-pane" id="finished-stock-orders" role="tabpanel">
         <div class="tab-pane" id="active-stock-orders" role="tabpanel">
           <div class="d-flex py-4 px-2">
-            <h3 class="mr-auto">Pedidos anulados</h3>
+            <h3 class="mr-auto"><i class="far fa-times-octagon pr-2"></i>Pedidos anulados</h3>
             <p class="px-2">Mostrando últimos 10</p>
           </div>
           <div class="px-2">

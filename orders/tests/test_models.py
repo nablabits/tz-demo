@@ -171,6 +171,52 @@ class TestOrders(TestCase):
         order = Order.objects.get(ref_name='No Budget nor prepaid')
         self.assertEqual(order.prepaid, 0)
 
+    def test_custom_manager_active(self):
+        """Test the active custom manager."""
+        u = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(4):
+            Order.objects.create(
+                user=u, customer=c, ref_name='Test', delivery=date.today())
+        self.assertEqual(Order.active.count(), 4)
+        delivered, cancelled = Order.active.all()[:2]
+        delivered.status = '7'
+        delivered.save()
+        cancelled.status = '8'
+        cancelled.save()
+        self.assertEqual(Order.active.count(), 2)
+
+    def test_custom_manager_pending(self):
+        """Test the pending custom manager."""
+        u = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(5):
+            Order.objects.create(
+                user=u, customer=c, ref_name='Test', delivery=date.today())
+        self.assertEqual(Order.pending_orders.count(), 5)
+        cancelled, old, invoiced = Order.pending_orders.all()[:3]
+        cancelled.status = '8'
+        cancelled.save()
+        old.delivery = date(2018, 12, 31)
+        old.save()
+        OrderItem.objects.create(
+            reference=invoiced, element=Item.objects.last())
+        Invoice.objects.create(reference=invoiced)
+        self.assertEqual(Order.pending_orders.count(), 2)
+
+    def test_custom_manager_outdated(self):
+        """Test the outdated custom manager."""
+        u = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(3):
+            Order.objects.create(
+                user=u, customer=c, ref_name='Test', delivery=date.today())
+        self.assertEqual(Order.outdated.count(), 0)
+        past = Order.objects.first()
+        past.delivery = date.today() - timedelta(days=5)
+        past.save()
+        self.assertEqual(Order.outdated.count(), 1)
+
     def test_overdue(self):
         """Test the overdue attribute."""
         user = User.objects.first()
@@ -189,18 +235,6 @@ class TestOrders(TestCase):
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
         self.assertEqual(order.total, 150)
-
-    def test_pending(self):
-        """Test the correct amount."""
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='test', delivery=date.today(),
-            prepaid=50)
-        for i in range(5):
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-        self.assertEqual(order.pending, -100)
 
     def test_invoiced(self):
         """Test the invoiced property."""
@@ -388,7 +422,7 @@ class TestOrderItems(TestCase):
                              budget=2000,
                              prepaid=0)
         # Create item
-        Item.objects.create(name='Test item', fabrics=5)
+        Item.objects.create(name='Test item', fabrics=5, price=10)
 
     def test_delete_obj_item_is_porotected(self):
         """Deleting the reference should be forbidden."""
@@ -462,6 +496,35 @@ class TestOrderItems(TestCase):
 
         created_item = OrderItem.objects.get(description='Test item')
         self.assertEqual(created_item.element, item)
+
+    def test_custom_manager_active(self):
+        """Test the proper custom manager."""
+        u = User.objects.first()
+        c = Customer.objects.first()
+
+        # Create some orders
+        for i in range(6):
+            Order.objects.create(
+                user=u, customer=c, ref_name='Test', delivery=date.today())
+
+        # Add an item to these orders
+        for i in Order.objects.all():
+            OrderItem.objects.create(reference=i, element=Item.objects.last())
+
+        self.assertEqual(OrderItem.active.count(), 7)
+
+        # Now modify
+        cancelled, old, invoiced, tz_owned = Order.pending_orders.all()[:4]
+        cancelled.status = '8'
+        cancelled.save()
+        old.delivery = date(2018, 12, 31)
+        old.save()
+        Invoice.objects.create(reference=invoiced)
+        tz = Customer.objects.create(name='Trapuzarrak', phone=0, cp=12)
+        tz_owned.customer = tz
+        tz_owned.save()
+
+        self.assertEqual(OrderItem.active.count(), 3)
 
     def test_items_time_quality_property(self):
         """Test the proper value for timing."""
@@ -892,15 +955,22 @@ class TestInvoice(TestCase):
             invoice.full_clean()
 
     def test_total_amount_0_raises_error(self):
-        """Test the proper raise when invoice is empty."""
+        """Test the proper raise when invoice has no items."""
         item = OrderItem.objects.first()
         item.delete()
         order = Order.objects.first()
-        item = OrderItem.objects.create(
-            reference=order, element=Item.objects.first())
-        self.assertEqual(item.price, 0)
         with self.assertRaises(ValidationError):
-            Invoice.objects.create(reference=item.reference)
+            Invoice.objects.create(reference=order)
+
+    def test_total_amount_0_is_allowed(self):
+        """But invoices with 0 amount are allowed, eg, with discount."""
+        order = Order.objects.first()
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.first(), price=100)
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.first(), price=-110)
+        invoice = Invoice.objects.create(reference=order)
+        self.assertEqual(invoice.amount, 0)
 
 
 class TestExpense(TestCase):

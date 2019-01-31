@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import (ObjectDoesNotExist, ValidationError, )
 from .utils import WeekColor
-from . import settings
+from . import settings, managers
 from datetime import date, timedelta
 
 
@@ -21,7 +21,7 @@ class Customer(models.Model):
     city = models.CharField('Localidad', max_length=32, blank=True)
     phone = models.IntegerField('Telefono')
     email = models.EmailField('Email', max_length=64, blank=True)
-    CIF = models.CharField('CIF', max_length=10, blank=True)
+    CIF = models.CharField('CIF', max_length=20, blank=True)
     cp = models.IntegerField('CP')
     notes = models.TextField('Observaciones', blank=True, null=True)
     provider = models.BooleanField('Proveedor', default=False)
@@ -76,8 +76,8 @@ class Order(models.Model):
     ref_name = models.CharField('Referencia', max_length=32)
     delivery = models.DateField('Entrega prevista', blank=True)
     status = models.CharField(max_length=1, choices=STATUS, default='1')
-    priority = models.CharField('Prioridad', max_length=1, choices=PRIORITY,
-                                default='2')
+    priority = models.CharField(
+        'Prioridad', max_length=1, choices=PRIORITY, default='2')
 
     # Measures
     waist = models.DecimalField('Cintura', max_digits=5, decimal_places=2,
@@ -96,6 +96,12 @@ class Order(models.Model):
     prepaid = models.DecimalField(
         'Prepago', max_digits=7, decimal_places=2, blank=True, null=True,
         default=0)
+
+    # Custom managers
+    objects = models.Manager()
+    active = managers.ActiveOrders()
+    pending_orders = managers.PendingOrders()
+    outdated = managers.OutdatedOrders()
 
     def __str__(self):
         """Object's representation."""
@@ -118,11 +124,6 @@ class Order(models.Model):
             return 0
         else:
             return total['total']
-
-    @property
-    def pending(self):
-        """Set the pending amount per order."""
-        return self.prepaid - self.total
 
     @property
     def invoiced(self):
@@ -257,6 +258,10 @@ class OrderItem(models.Model):
     # Item defined price
     price = models.DecimalField('Precio unitario',
                                 max_digits=6, decimal_places=2, blank=True)
+
+    # Custom managers
+    objects = models.Manager()
+    active = managers.ActiveItems()
 
     def save(self, *args, **kwargs):
         """Override the save method."""
@@ -499,8 +504,8 @@ class Invoice(models.Model):
         total = items.aggregate(
             amount=models.Sum(field('qty') * field('price'),
                               output_field=models.DecimalField()))
-        if not total['amount']:
-            raise ValidationError('The invoice has no amount')
+        if not items:
+            raise ValidationError('The invoice has no items')
         else:
             self.amount = total['amount']
 

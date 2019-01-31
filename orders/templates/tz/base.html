@@ -9,77 +9,68 @@
     <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
   </head>
-  <body>
-    <header class="fixed-top">
-      <div class="container-fluid">
-        <div class="d-flex justify-content-between mt-1 py-sm-2">
-          <div class="d-none d-md-flex align-items-baseline">
-            <span><a href="{% url 'main' %}"><h1 class="intro_text">Trapu Zarrak App</h1></a></span>
-            <span class="ml-4">{% if user.is_superuser %}
-              <a href="{%url 'admin:index'%}"><i class="far fa-user-ninja pr-1"></i>Admin</a>{%endif%}
-            </span>
-          </div>
-          <div class="d-flex align-items-center">
-            <span class="pr-3">
-              <i class="far fa-user"></i>
-              <strong>Usuaria:</strong> {{user}}
-            </span>
-            <span class="pr-3"><i class="far fa-clock"></i> {{ now|date:"d/m" }}; {{ now|time:"H:i" }}</span>
-              <button class="btn btn-sm btn-success" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-cogs"></i> tz app {{version}}</button>
-          </div>
-        </div>
+  <body id="root">
+    <nav class="navbar navbar-expand-lg sticky-top navbar-light top_bar">
+      <a class="navbar-brand" href="{% url 'main' %}">
+        <img src="{% static 'tz/img/tz_logo.svg' %}" height="30">
+      </a>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#top-menu" aria-controls="top-menu" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="top-menu">
+        <ul class="navbar-nav ml-auto mt-2 mt-lg-0">
+          {% if user.is_superuser %}
+          <li class="nav-item">
+            <a class="nav-link" href="{%url 'admin:index'%}"><i class="far fa-user-ninja pr-1"></i>Admin</a>
+          </li>
+          {%endif%}
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'main' %}"><i class="far fa-home pr-1"></i>Inicio</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="{% url 'customerlist' %}"><i class="far fa-users pr-1"></i>Clientes</a>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="orders-dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="far fa-dolly pr-1"></i>Pedidos
+            </a>
+            <div class="dropdown-menu" aria-labelledby="orders-dropdown">
+              <a class="dropdown-item" href="{% url 'orderlist' orderby='date' %}"><i class="fal fa-list fa-fw"></i> Lista de pedidos</a>
+              <a class="dropdown-item" href="{% url 'itemslist' %}"><i class="fal fa-tshirt fa-fw"></i> Editor de prendas</a>
+              <a class="dropdown-item" href="{% url 'pqueue_manager' %}"><i class="fal fa-fw fa-clipboard-list-check"></i> Cola de producción</a>
+              <a class="dropdown-item js-crud-add" href="#" data-action="order-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nuevo pedido</a>
+            </div>
+          </li>
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="sales-dropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              <i class="far fa-cash-register pr-1"></i>Ventas
+            </a>
+            <div class="dropdown-menu" aria-labelledby="sales-dropdown">
+              <a class="dropdown-item js-crud-add" href="#" data-action="order-express-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nueva venta express</a>
+              <a class="dropdown-item" href="{% url 'invoiceslist' %}"><i class="fal fa-fw fa-chart-line"></i> Facturación & banco</a>
+            </div>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link js-logout" href="#" data-action="logout" data-pk="0">{{user}}<i class="far fa-sign-out-alt pl-2"></i></a>
+          </li>
+          <li class="nav-item">
+            <button class="btn btn-sm btn-success nav-link" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-cogs"></i> tz app {{version}}</button>
+          </li>
+        </ul>
       </div>
-    </header>
+    </nav>
 
-    <!-- Mobile menu -->
-    <div class="collapse bg-light aside-narrow" id="sidebar">
-      <!-- define -->
+    <div class="container-fluid">
+      {% block homeview %}{% endblock %}
+      {% block orderview %}{% endblock %}
+      {% block orderexpress %}{% endblock %}
+      {% block customerview %}{% endblock %}
+      {% block pqueueview %}{% endblock %}
+      {% block orders %}{% endblock %}
+      {% block listview %}{% endblock %}
+      {% block invoices %}{% endblock %}
+      {% block pqueuetablet %}{% endblock %}
     </div>
-
-    <div class="container-fluid mt-2" id="root">
-      <div class="row">
-
-        <!-- PC menu -->
-        <div class="d-none d-lg-block col aside-wide bg-light">
-          <nav class="nav d-flex flex-column align-items-end">
-            <a class="nav-item nav-link" href="{% url 'main' %}" id="sidebar-home">
-              <i class="fa fa-fw fa-home pr-2"></i> Inicio</a>
-            <a class="nav-item nav-link" href="{% url 'customerlist' %}" id="sidebar-customers">
-              <i class="fa fa-fw fa-search pr-2"></i> Clientes</a>
-            <a class="nav-item nav-link" href="{% url 'orderlist' orderby='date' %}" id="sidebar-orders">
-              <i class="fa fa-fw fa-list pr-2"></i> Pedidos</a>
-            <a class="nav-item nav-link js-crud-add" href="#" data-action="customer-add" data-pk="0" id="sidebar-new-customer">
-              <i class="fa fa-fw fa-user pr-2"></i> Nuevo cliente</a>
-            <a class="nav-item nav-link js-crud-add" href="#" data-action="order-add" data-pk="0" id="sidebar-new-order">
-              <i class="fa fa-fw fa-plus pr-2"></i> Nuevo pedido
-            </a>
-            <a class="nav-item nav-link js-crud-add" href="#" data-action="order-express-add" data-pk="0" id="sidebar-new-order-express">
-              <i class="far fa-cash-register pr-2"></i> Nueva venta
-            </a>
-            <a class="nav-item nav-link" href="{% url 'invoiceslist' %}" id="sidebar-invoices-list">
-              <i class="far fa-history pr-2"></i> Últimas facturas
-            </a>
-            <a class="nav-item nav-link" href="{% url 'itemslist' %}" id="sidebar-items">
-              <i class="fa fa-fw fa-cube pr-2"></i> Editor de prendas</a>
-            <a class="nav-item nav-link" href="{% url 'pqueue_manager' %}" id="sidebar-pqueue">
-              <i class="far fa-fw fa-clipboard-list-check pr-2"></i> Cola de producción</a>
-            <a class="nav-item nav-link js-logout" data-action="logout" data-pk="0" id="sidebar-logout">
-              <i class="fas fa-fw fa-sign-out-alt pr-2"></i> Cerrar sesión</a>
-          </nav>
-        </div>
-
-        <div class="col-lg-10 col-md-12 col-sm-12 mb-5 pt-5">
-          {% block homeview %}{% endblock %}
-          {% block orderview %}{% endblock %}
-          {% block orderexpress %}{% endblock %}
-          {% block customerview %}{% endblock %}
-          {% block pqueueview %}{% endblock %}
-          {% block orders %}{% endblock %}
-          {% block listview %}{% endblock %}
-          {% block invoices %}{% endblock %}
-          {% block pqueuetablet %}{% endblock %}
-        </div>
-      </div>
 
     <!-- Action Modal -->
       <div class="modal fade" id="action-modal">

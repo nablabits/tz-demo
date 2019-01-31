@@ -3,7 +3,7 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import (
-    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, )
+    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, BankMovement)
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.http import JsonResponse
 from django.urls import reverse
@@ -73,6 +73,428 @@ class NotLoggedInTest(TestCase):
         resp = self.client.get(reverse('pqueue_manager'))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
+
+
+class MainViewTests(TestCase):
+    """Test the homepage."""
+
+    def setUp(self):
+        """Create the necessary items on database at once.
+
+        1 user, 1 customer, 3 orders.
+        """
+        self.client = Client()
+        user = User.objects.create_user(username='regular', password='test')
+        customer = Customer.objects.create(name='Test Customer',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           cp='48100')
+        for i in range(3):
+            Order.objects.create(
+                user=user, customer=customer, ref_name='Test order%s' % i,
+                delivery=date.today(), inbox_date=timezone.now())
+        Item.objects.create(name='test', fabrics=1, price=10)
+        for order in Order.objects.all():
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        self.client.login(username='regular', password='test')
+
+    def test_view_exists(self):
+        """Test the view exists and template used."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/main.html')
+
+    def test_goal(self):
+        """Test the goal var."""
+        elapsed = date.today() - date(2018, 12, 31)
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['goal'], elapsed.days * settings.GOAL)
+
+    def test_production_excludes_items_in_2018_orders(self):
+        """Inbox date should be >2018."""
+        for order in Order.objects.all():
+            order.status = '6'
+            order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 30)
+        old, new = Order.objects.all()[:2]
+        offset = date.today() - date(2018, 12, 31)
+        old.inbox_date = timezone.now() - timedelta(days=offset.days)
+        old.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 20)
+
+    def test_production_excludes_stock_items(self):
+        """Stocked items are excluded."""
+        for order in Order.objects.all():
+            order.status = '6'
+            order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 30)
+        excluded = OrderItem.objects.first()
+        excluded.stock = True
+        excluded.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 20)
+
+    def test_forecast_in_multiplies_qty_by_price(self):
+        """Total is the qty by the price."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['forecast'], 30)
+        item = OrderItem.objects.first()
+        item.qty = 5
+        item.price = 20
+        item.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['forecast'], 120)
+
+    def test_production_excludes_status_different_than_6_7(self):
+        """Only 6 & 7 statuses are allowed."""
+        for order in Order.objects.all():
+            order.status = '6'
+            order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 30)
+        i = 1
+        # statuses 1, 2 & 3
+        for order in Order.objects.all():
+            order.status = i
+            order.save()
+            i += 1
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 0)
+
+        # statuses 4, 5 & 6
+        for order in Order.objects.all():
+            order.status = i
+            order.save()
+            i += 1
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 10)
+
+        # statuses 7 & 8
+        for order in Order.objects.all()[:2]:
+            order.status = i
+            order.save()
+            i += 1
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 20)  # Keeps the last 10
+
+    def test_production_multiplies_qty_by_price(self):
+        """Total is the qty by the price."""
+        order = Order.objects.first()
+        order.status = '6'
+        order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 10)
+        item = OrderItem.objects.filter(reference=order).first()
+        item.qty = 5
+        item.price = 20
+        item.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 100)
+
+    def test_avoid_none_type_aggregate(self):
+        """Empty querysets return NoneType and that can't be substracted."""
+        for item in OrderItem.objects.all():
+            item.delete()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['production'], 0)
+        self.assertEqual(resp.context['forecast'], 0)
+
+    def test_offset(self):
+        """Test the offset var."""
+        elapsed = date.today() - date(2018, 12, 31)
+        goal = elapsed.days * settings.GOAL
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['offset'], (goal, goal - 30))
+
+    def test_under_goal_boolean(self):
+        """Test under_goal bool value."""
+        elapsed = date.today() - date(2018, 12, 31)
+        goal = elapsed.days * settings.GOAL
+        resp = self.client.get(reverse('main'))
+        self.assertTrue(resp.context['under_goal'])
+        order = Order.objects.first()
+        order.status = 6
+        order.save()
+        item = OrderItem.objects.filter(reference=order).first()
+        item.price = goal + 10
+        item.save()
+        resp = self.client.get(reverse('main'))
+        self.assertFalse(resp.context['under_goal'])
+
+    def test_production_and_forecast_bars(self):
+        """Test production and forecast bars."""
+        elapsed = date.today() - date(2018, 12, 31)
+        goal = elapsed.days * settings.GOAL
+        order = Order.objects.first()
+        order.status = 6
+        order.save()
+        for item in OrderItem.objects.all():
+            item.price = goal / 2
+            item.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['bar'][0], 25)
+        self.assertEqual(resp.context['bar'][1], 50)  # Only forecast
+
+    def test_production_and_forecast_bars_dont_run_over_100(self):
+        """Test production and forecast bars."""
+        elapsed = date.today() - date(2018, 12, 31)
+        goal = elapsed.days * settings.GOAL
+        order = Order.objects.first()
+        order.status = 6
+        order.save()
+        for item in OrderItem.objects.all():
+            item.price = goal / 2
+            item.qty = 3
+            item.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['bar'][0], 75)
+        self.assertEqual(resp.context['bar'][1], 25)  # it's actually 150
+
+    def test_bar_colors(self):
+        """Test the bar color."""
+        elapsed = date.today() - date(2018, 12, 31)
+        goal = elapsed.days * settings.GOAL
+        order = Order.objects.first()
+        order.status = 6
+        order.save()
+
+        # Danger
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['bar'][2], 'danger')
+
+        # Warning
+        item = OrderItem.objects.filter(reference=order).first()
+        item.price = goal * 0.9
+        item.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['bar'][2], 'warning')
+
+        # Success
+        item = OrderItem.objects.filter(reference=order).first()
+        item.price = goal + 10
+        item.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['bar'][2], 'success')
+
+    def test_active_count_box(self):
+        """Test the active box."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['active'], 3)
+        self.assertFalse(resp.context['active_msg'])
+        order = Order.objects.first()
+        order.status = 6
+        order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['active_msg'], 'Aunque hay 1 a la espera')
+
+    def test_pending_orders_count(self):
+        """This var appears on view settings."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['pending'], 3)
+
+    def test_pending_amount_prepaid(self):
+        """Test the total pending amount changing prepaids."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['pending_msg'], '30€ tenemos aún<br>por cobrar')
+        order = Order.objects.first()
+        order.prepaid = 5
+        order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['pending_msg'], '25€ tenemos aún<br>por cobrar')
+
+    def test_pending_amount_no_items(self):
+        """Test the total pending amount."""
+        for item in OrderItem.objects.all():
+            item.delete()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['pending_msg'],
+                         'Hay pedidos activos pero no tienen prendas añadidas')
+
+    def test_pending_no_orders(self):
+        """Test the message when there are no active orders."""
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['pending_msg'], 'Genial, tenemos todo cobrado!')
+
+    def test_outdated(self):
+        """Test the proper show of outdated orders."""
+        resp = self.client.get(reverse('main'))
+        self.assertFalse(resp.context['outdated'])
+        for order in Order.objects.all()[:2]:
+            order.delivery = date.today() - timedelta(days=1)
+            order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['outdated'], 2)
+
+    def test_year(self):
+        """Test the vars on year box."""
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['year'], 30)
+
+    def test_balance_box_excludes_card_and_transfer(self):
+        """Only cash invoices are summed."""
+        i = 0
+        pay_method = ('C', 'V', 'T')
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order, pay_method=pay_method[i])
+            i += 1
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">10.00€</h3>
+            <h4 class="box_link_h">Pendientes de ingresar
+            </h4>""")
+
+    def test_balance_box_excludes_negative_bank_movements(self):
+        """Only positive amounts are involved."""
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">30.00€</h3>
+            <h4 class="box_link_h">Pendientes de ingresar
+            </h4>""")
+        BankMovement.objects.create(amount=-10)
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">30.00€</h3>
+            <h4 class="box_link_h">Pendientes de ingresar
+            </h4>""")
+
+    def test_balance_box_sums_bank_movements(self):
+        """Test the correct sum of bank movements."""
+        for i in range(3):
+            BankMovement.objects.create(amount=50)
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">150.00€</h3>
+            <h4 class="box_link_h">has ingresado de más
+            </h4>""")
+
+    def test_balance_box_no_deposits_nor_cash(self):
+        """Test when there are neither deposits nor invoices."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(
+            resp.context['balance_msg'],
+            '<h4 class="box_link_h">Estás en paz con el banco<h4>')
+
+    def test_month_box(self):
+        """Test the correct sum of month invoices."""
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+        last_month = Invoice.objects.first()
+        last_month.issued_on = last_month.issued_on - timedelta(days=32)
+        last_month.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['month'], 20)
+
+    def test_week_box(self):
+        """Test the correct sum of week invoices."""
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+        last_week = Invoice.objects.first()
+        last_week.issued_on = last_week.issued_on - timedelta(days=7)
+        last_week.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['week'], 20)
+
+    def test_top_five_excludes_customer_express(self):
+        """Express customer is for express tickets."""
+        customer = Customer.objects.create(name='express', phone=5, cp=55)
+        order = Order.objects.first()
+        order.customer = customer
+        order.save()
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+        active_customer = Customer.objects.get(name='Test Customer')
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['top5'][0], active_customer)
+        self.assertEqual(resp.context['top5'][0].total, 20)
+
+    def test_top_five_excludes_orders_not_invoiced(self):
+        """Orders not invoiced should not count."""
+        for order in Order.objects.all()[:2]:
+            Invoice.objects.create(reference=order)
+        active_customer = Customer.objects.get(name='Test Customer')
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['top5'][0], active_customer)
+        self.assertEqual(resp.context['top5'][0].total, 20)
+
+    def test_top_five_multiplies_qty_by_price(self):
+        """Express customer is for express tickets."""
+        item = OrderItem.objects.first()
+        item.qty = 5
+        item.price = 30
+        item.save()
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+        active_customer = Customer.objects.get(name='Test Customer')
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['top5'][0], active_customer)
+        self.assertEqual(resp.context['top5'][0].total, 170)
+
+    def test_top_five_displays_five_customers(self):
+        """Test the number and the order."""
+        for i in range(10):
+            u = User.objects.first()
+            c = Customer.objects.create(name='Test%s' % i, phone=i, cp=i)
+            o = Order.objects.create(user=u, customer=c, ref_name='Test%s' % i,
+                                     delivery=date.today(), )
+            OrderItem.objects.create(
+                reference=o, element=Item.objects.last(), qty=randint(1, 5),
+                price=randint(10, 100))
+            Invoice.objects.create(reference=o)
+
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['top5'].count(), 5)
+        for i in range(4):
+            self.assertTrue(resp.context['top5'][i].total >=
+                            resp.context['top5'][i+1].total)
+
+    def test_comments(self):
+        """Exclude user comments & read ones."""
+        f = User.objects.create(username='foreign', password='void')
+        for i in range(5):
+            Comment.objects.create(
+                user=f, reference=Order.objects.first(), comment='test', )
+        read, own = Comment.objects.all()[:2]
+        read.read = True
+        read.save()
+        own.user = User.objects.get(username='regular')
+        own.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['comments'].count(), 3)
+        for i in range(2):
+            self.assertTrue(resp.context['comments'][i].creation >=
+                            resp.context['comments'][i+1].creation)
+
+    def test_additional_vars(self):
+        """Test the remaining vars."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['user'].username, 'regular')
+        self.assertEqual(resp.context['version'], settings.VERSION)
+        self.assertEqual(resp.context['search_on'], 'orders')
+        self.assertEqual(
+            resp.context['placeholder'], 'Buscar pedido (referencia)')
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Inicio')
 
 
 class OrderListTests(TestCase):
@@ -1075,24 +1497,6 @@ class InvoicesListTest(TestCase):
             name='Test', city='Bilbao', phone=0, cp=48003)
         Item.objects.create(name='Test', fabrics=5, price=10)
 
-    def test_invoices_view_only_displays_last_ten_invoices(self):
-        """Test that view only displays 10 invoices, the last 10."""
-        self.client.login(username='regular', password='test')
-        user = User.objects.first()
-        c = Customer.objects.first()
-        for i in range(22):
-            order = Order.objects.create(
-                user=user, customer=c, ref_name='Test', delivery=date.today(),
-                budget=0, prepaid=0, )
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-            Invoice.objects.create(reference=order)
-        resp = self.client.get(reverse('invoiceslist'))
-        invoices = resp.context['invoices']
-        self.assertEqual(invoices.count(), 20)
-        self.assertTrue(invoices[0].invoice_no > invoices[1].invoice_no)
-        self.assertTrue(invoices[0].issued_on > invoices[1].issued_on)
-
     def test_invoices_today_displays_today_invoices(self):
         """Test display today's invoices and their total amount."""
         self.client.login(username='regular', password='test')
@@ -1161,7 +1565,7 @@ class InvoicesListTest(TestCase):
                 reference=order, element=Item.objects.last())
             Invoice.objects.create(reference=order)
         for invoice in Invoice.objects.all()[:5]:
-            invoice.issued_on = invoice.issued_on - timedelta(days=30)
+            invoice.issued_on = invoice.issued_on - timedelta(days=31)
             invoice.save()
         card, transfer = Invoice.objects.reverse()[:2]
         card.pay_method, transfer.pay_method = 'V', 'T'
@@ -1173,6 +1577,96 @@ class InvoicesListTest(TestCase):
         self.assertEqual(resp.context['month_cash']['total_cash'], 30)
         self.assertEqual(resp.context['month_cash']['total_card'], 10)
         self.assertEqual(resp.context['month_cash']['total_transfer'], 10)
+
+    def test_invoices_all_time_cash(self):
+        """Test all-time invoices and their total amount."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        for i in range(10):
+            order = Order.objects.create(
+                user=user, customer=c, ref_name='Test', delivery=date.today(),
+                budget=0, prepaid=0, )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            Invoice.objects.create(reference=order)
+        for invoice in Invoice.objects.all()[:5]:
+            invoice.issued_on = invoice.issued_on - timedelta(days=30)
+            invoice.save()
+        card, transfer = Invoice.objects.reverse()[:2]
+        card.pay_method, transfer.pay_method = 'V', 'T'
+        card.save()
+        transfer.save()
+        resp = self.client.get(reverse('invoiceslist'))
+        # 100€ - 10€ (card) - 10€ (transfer)
+        self.assertEqual(resp.context['all_time_cash']['total_cash'], 80)
+
+    def test_bank_movements_displays_last_ten(self):
+        """Test bank movements list."""
+        self.client.login(username='regular', password='test')
+        for i in range(15):
+            BankMovement.objects.create(
+                action_date=date.today(), amount=100, notes=str(i))
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['bank_movements'].count(), 10)
+
+    def test_bank_movements_sums_only_positive_values(self):
+        """Bank movement should aggregate only positive entries."""
+        self.client.login(username='regular', password='test')
+        BankMovement.objects.create(
+            action_date=date.today(), amount=100, notes='positive')
+        BankMovement.objects.create(
+            action_date=date.today(), amount=-10, notes='negative')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['all_time_deposit']['total_cash'], 100)
+
+    def test_bank_movements_0_value(self):
+        """When there are no movements, all-time deposit should be 0."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['all_time_deposit']['total_cash'], 0)
+
+    def test_total_cash_0_value(self):
+        """When there are no cash, all-time cash should be 0."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['all_time_cash']['total_cash'], 0)
+
+    def test_balance(self):
+        """Test the correct output of balance."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+
+        # First test no invoices nor bank movements
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], 0)
+
+        # Now, have an invoice
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order, pay_method='C')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], -10)
+
+        # Now, a bank movement
+        BankMovement.objects.create(
+            action_date=date.today(), amount=100, notes='positive')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], 90)
+
+        # Finally, balance out
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=90)
+        Invoice.objects.create(reference=order, pay_method='C')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['balance'], 0)
 
     def test_invoices_view_current_user(self):
         """Test the current user."""
@@ -2091,38 +2585,6 @@ class StandardViewsTest(TestCase):
             return True
         else:
             return False
-
-    def test_main_view(self):
-        """Test the main view."""
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/main.html')
-
-        # Test context variables
-        self.assertEqual(str(resp.context['orders'][0].ref_name), 'example10')
-        self.assertEqual(resp.context['orders_count'], 10)
-        self.assertEqual(resp.context['comments_count'], 4)
-        self.assertEqual(str(resp.context['comments'][0].comment), 'Comment8')
-        self.assertEqual(str(resp.context['user']), 'regular')
-
-    def test_main_view_pending_orders(self):
-        """Test the proper display of pending orders on main view."""
-        resp = self.client.get(reverse('main'))
-        self.assertEquals(len(resp.context['pending']), 19)
-        self.assertEquals(resp.context['pending_total'], 38000)
-
-    def test_main_view_pending_orders_exclude_tz_ones(self):
-        """Pending query results should exclude tz orders."""
-        tz = Customer.objects.create(name='Trapuzarrak',
-                                     city='Mungia',
-                                     phone=0,
-                                     cp=0)
-        order = Order.objects.exclude(status=8)[1]
-        order.customer = tz
-        order.save()
-        resp = self.client.get(reverse('main'))
-        for order in resp.context['pending']:
-            self.assertNotEqual(order.customer.name, 'Trapuzarrak')
 
     def test_customer_list(self):
         """Test the main features on customer list."""
@@ -4224,7 +4686,7 @@ class ActionsPostMethodEdit(TestCase):
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('item_types', 'available_items', 'js_action_edit',
-                        'js_action_delete', 'js_action_send_to')
+                'js_action_delete', 'js_action_send_to')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
