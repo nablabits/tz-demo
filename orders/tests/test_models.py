@@ -236,18 +236,6 @@ class TestOrders(TestCase):
                 reference=order, element=Item.objects.last())
         self.assertEqual(order.total, 150)
 
-    def test_pending(self):
-        """Test the correct amount."""
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='test', delivery=date.today(),
-            prepaid=50)
-        for i in range(5):
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-        self.assertEqual(order.pending, -100)
-
     def test_invoiced(self):
         """Test the invoiced property."""
         user = User.objects.first()

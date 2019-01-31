@@ -76,8 +76,8 @@ class Order(models.Model):
     ref_name = models.CharField('Referencia', max_length=32)
     delivery = models.DateField('Entrega prevista', blank=True)
     status = models.CharField(max_length=1, choices=STATUS, default='1')
-    priority = models.CharField('Prioridad', max_length=1, choices=PRIORITY,
-                                default='2')
+    priority = models.CharField(
+        'Prioridad', max_length=1, choices=PRIORITY, default='2')
 
     # Measures
     waist = models.DecimalField('Cintura', max_digits=5, decimal_places=2,
@@ -124,11 +124,6 @@ class Order(models.Model):
             return 0
         else:
             return total['total']
-
-    @property
-    def pending(self):
-        """Set the pending amount per order."""
-        return self.prepaid - self.total
 
     @property
     def invoiced(self):
