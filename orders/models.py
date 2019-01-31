@@ -8,7 +8,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import (ObjectDoesNotExist, ValidationError, )
 from .utils import WeekColor
-from . import settings
+from . import settings, managers
 from datetime import date, timedelta
 
 
@@ -96,6 +96,12 @@ class Order(models.Model):
     prepaid = models.DecimalField(
         'Prepago', max_digits=7, decimal_places=2, blank=True, null=True,
         default=0)
+
+    # Custom managers
+    objects = models.Manager()
+    active = managers.ActiveOrders()
+    pending_orders = managers.PendingOrders()
+    outdated = managers.OutdatedOrders()
 
     def __str__(self):
         """Object's representation."""
@@ -257,6 +263,10 @@ class OrderItem(models.Model):
     # Item defined price
     price = models.DecimalField('Precio unitario',
                                 max_digits=6, decimal_places=2, blank=True)
+
+    # Custom managers
+    objects = models.Manager()
+    active = managers.ActiveItems()
 
     def save(self, *args, **kwargs):
         """Override the save method."""
