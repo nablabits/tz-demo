@@ -1,5 +1,12 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v62, Ene31
+  * **Nuevo:** página de inicio renovada con un montón de datos útiles.
+  * **Nuevo:** el menu se encuentra ahora en la parte superior.
+  * **Nuevo:** muchos iconos añadidos para mejorar la comprensión.
+  * **Nuevo:** página de facturación y banco que refleja los movimientos entre
+    ambos
+
 ### v61, Ene 19
   * **Nuevo:** nuevo módulo de gastos (accesible solo por *superusers*).
   * **Mejora:** al añadir clientes, la ciudad se puede dejar en blanco. Se ha
