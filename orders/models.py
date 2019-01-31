@@ -504,8 +504,8 @@ class Invoice(models.Model):
         total = items.aggregate(
             amount=models.Sum(field('qty') * field('price'),
                               output_field=models.DecimalField()))
-        if not total['amount']:
-            raise ValidationError('The invoice has no amount')
+        if not items:
+            raise ValidationError('The invoice has no items')
         else:
             self.amount = total['amount']
 

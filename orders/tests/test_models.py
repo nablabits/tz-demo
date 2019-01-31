@@ -955,15 +955,22 @@ class TestInvoice(TestCase):
             invoice.full_clean()
 
     def test_total_amount_0_raises_error(self):
-        """Test the proper raise when invoice is empty."""
+        """Test the proper raise when invoice has no items."""
         item = OrderItem.objects.first()
         item.delete()
         order = Order.objects.first()
-        item = OrderItem.objects.create(
-            reference=order, element=Item.objects.first())
-        self.assertEqual(item.price, 0)
         with self.assertRaises(ValidationError):
-            Invoice.objects.create(reference=item.reference)
+            Invoice.objects.create(reference=order)
+
+    def test_total_amount_0_is_allowed(self):
+        """But invoices with 0 amount are allowed, eg, with discount."""
+        order = Order.objects.first()
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.first(), price=100)
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.first(), price=-110)
+        invoice = Invoice.objects.create(reference=order)
+        self.assertEqual(invoice.amount, 0)
 
 
 class TestExpense(TestCase):
