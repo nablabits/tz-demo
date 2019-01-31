@@ -116,12 +116,16 @@ def main(request):
     balance = all_time_deposit['total_cash'] - all_time_cash['total_cash']
     if balance < 0:
         balance_msg = (
-            '<h3>%s€</h3><h4>Pendientes de ingresar</h4>' % abs(balance))
+            """<h3 class="box_link_h">%s€</h3>
+            <h4 class="box_link_h">Pendientes de ingresar
+            </h4>""" % abs(balance))
     elif balance > 0:
         balance_msg = (
-            '<h3>%s€</h3><h4>has ingresado de más</h4>' % abs(balance))
+            """<h3 class="box_link_h">%s€</h3>
+            <h4 class="box_link_h">has ingresado de más
+            </h4>""" % abs(balance))
     else:
-        balance_msg = '<h4>Estás en paz con el banco<h4>'
+        balance_msg = '<h4 class="box_link_h">Estás en paz con el banco<h4>'
 
     # Month production box
     month = Invoice.objects.filter(
