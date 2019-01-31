@@ -3,11 +3,8 @@ body{
   color: #555;
 }
 a{color: #555;}
-h1, h2 {
-  font-family: Oswald;
-  color: #555;
-}
-h3, h4, h5 {
+
+h1, h2, h3, h4, h5 {
   font-family: dosis;
   color: #555;
 }
@@ -38,13 +35,26 @@ th{
 .intro_text{
   font-size: 2.3em;
 }
-.ordersbox{
-  background-color: #C4FF84;
-  border-top-left-radius: 5px;
-  border-top-right-radius: 5px;
-  border: 1px solid lightgrey;
-  text: #fff;
-  cursor: pointer;
+.custom_bg_1{
+  background-color: #DFFCBF;
+}
+.custom_bg_2{
+  background-color: #9BF2BE;
+}
+.custom_bg_3{
+  background-color: #BEEBFE;
+}
+.custom_bg_4{
+  background-color: #B9F3D1;
+}
+.custom_bg_5{
+  background-color: #A7FFEF;
+}
+.custom_bg_6{
+  background-color: #BAF8FF;;
+}
+.custom_bg_7{
+  background-color: #D1F5EE;
 }
 .pending_ordersbox{
   background-color: #9BF2BE;
