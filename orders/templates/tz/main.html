@@ -23,27 +23,27 @@
             <small class="w-75 text-left">*Esto es, prendas que no son de stock en pedidos abiertos este año  que están a la espera o entregados.</small>
           </div>
 
-          <!-- Add box -->
+          <!-- Add boxes -->
           <div class="row mt-2">
             <div class="col pr-1">
-              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add" data-action="order-add" data-pk="0">
+              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add item-list" data-action="order-add" data-pk="0">
                 <h5><i class="far fa-dolly"></i><br>Nuevo pedido</h5>
               </div>
             </div>
             <div class="col pl-1">
-              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add" data-action="order-express-add" data-pk="0">
+              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add item-list" data-action="order-express-add" data-pk="0">
                 <h5><i class="far fa-cash-register"></i><br>Nueva venta rápida</h5>
               </div>
             </div>
           </div>
           <div class="row mt-2">
             <div class="col pr-1">
-              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add" data-action="object-item-add" data-pk="0">
+              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add item-list" data-action="object-item-add" data-pk="0">
                 <h5><i class="far fa-tshirt"></i><br>Nueva prenda</h5>
               </div>
             </div>
             <div class="col pl-1">
-              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add" data-action="customer-add" data-pk="0">
+              <div class="d-flex p-4 justify-content-center border border-success rounded js-crud-add item-list" data-action="customer-add" data-pk="0">
                 <h5><i class="far fa-users"></i><br>Nuevo cliente</h5>
               </div>
             </div>
@@ -52,19 +52,25 @@
 
         <div class="col-lg-3 col-md-12 text-center px-1">
           <div class="d-flex flex-column border rounded custom_bg_2 mb-1 py-4 px-2">
-            <h3><i class="far fa-star pr-2"></i><br>{{active}} Activos</h3>
-            {%if active_msg%}
-            <h6>{{active_msg}}</h6>
-            {%endif%}
+            <a class="box_link" href="{% url 'orderlist' orderby='date' %}">
+              <h3 class="box_link_h"><i class="far fa-star pr-2"></i><br>{{active}} Activos</h3>
+              {%if active_msg%}
+              <h6 class="box_link_h">{{active_msg}}</h6>
+              {%endif%}
+            </a>
           </div>
           <div class="d-flex flex-column border rounded custom_bg_3 mb-1 py-4 px-2">
-            <h3><i class="far fa-piggy-bank pr-2"></i></h3>
-            <h3>{{year}}€</h3>
-            <h4>Hemos vendido ya este año</h4>
+            <a class="box_link" href="{% url 'invoiceslist' %}">
+              <h3 class="box_link_h"><i class="far fa-piggy-bank pr-2"></i></h3>
+              <h3 class="box_link_h">{{year}}€</h3>
+              <h4 class="box_link_h">Hemos vendido ya este año</h4>
+            </a>
           </div>
           <div class="d-flex flex-column border rounded custom_bg_7 mb-1 py-4 px-2">
-            <h3><i class="far fa-balance-scale-right"></i></h3>
-              {{balance_msg|safe}}
+            <a class="box_link" href="{% url 'invoiceslist' %}">
+              <h3 class="box_link_h"><i class="far fa-balance-scale-right"></i></h3>
+                {{balance_msg|safe}}
+              </a>
           </div>
 
           <div class="d-flex flex-column border rounded custom_bg_1 py-4 px-2">
@@ -81,38 +87,45 @@
           <div class="row mb-1">
             <div class="col px-1">
               <div class="d-flex flex-column border rounded custom_bg_4 mb-1 py-4 px-2">
-                <h3><i class="far fa-hand-holding-usd pr-2"></i><br>{{pending}} Pendientes</h3>
-                <h6>{{pending_msg|safe}}</h6>
+                <a class="box_link" href="{% url 'orderlist' orderby='date' %}">
+                  <h3 class="box_link_h"><i class="far fa-hand-holding-usd pr-2"></i><br>{{pending}} Pendientes</h3>
+                  <h6 class="box_link_h">{{pending_msg|safe}}</h6>
+                </a>
               </div>
               <div class="d-flex flex-column border rounded custom_bg_5 py-4 px-2">
-                <h3><i class="far fa-calendar-week pr-2"></i></h3>
-                {%if not week%}
-                  <h4>Nada vendido esta semana aun</h4>
-                {%else%}
-                  <h3>{{week}}€</h3>
-                  <h6>LLevamos esta semana</h6>
-                {%endif%}
-
+                <a class="box_link" href="{% url 'invoiceslist' %}">
+                  <h3 class="box_link_h"><i class="far fa-calendar-week pr-2"></i></h3>
+                  {%if not week%}
+                    <h4 class="box_link_h">Nada vendido esta semana aun</h4>
+                  {%else%}
+                    <h3 class="box_link_h">{{week}}€</h3>
+                    <h6 class="box_link_h">LLevamos esta semana</h6>
+                  {%endif%}
+                </a>
               </div>
             </div>
             <div class="col px-1">
               <div class="d-flex flex-column border rounded custom_bg_6 mb-1 py-4 px-2">
-                {%if outdated%}
-                <h3><i class="far fa-exclamation-triangle"></i><br>{{outdated}} vencidos</h3>
-                <h6>Que ya deberíamos haber entregado</h6>
-                {%else%}
-                <h3><i class="far fa-thumbs-up"></i><br>Genial</h3>
-                <h6>Todos los pedidos están al día</h6>
-                {%endif%}
+                <a class="box_link" href="{% url 'orderlist' orderby='date' %}">
+                  {%if outdated%}
+                    <h3 class="box_link_h"><i class="far fa-exclamation-triangle"></i><br>{{outdated}} vencidos</h3>
+                    <h6 class="box_link_h">Que ya deberíamos haber entregado</h6>
+                  {%else%}
+                    <h3 class="box_link_h"><i class="far fa-thumbs-up"></i><br>Genial</h3>
+                    <h6 class="box_link_h">Todos los pedidos están al día</h6>
+                  {%endif%}
+                </a>
               </div>
               <div class="d-flex flex-column border rounded custom_bg_7 py-4 px-2">
-                <h3><i class="far fa-calendar-alt pr-2"></i></h3>
-                {%if not month%}
-                  <h6>Aun no hay ventas este mes</h6>
-                {%else%}
-                  <h3>{{month}}€</h3>
-                  <h6>En lo que va de mes</h6>
-                {%endif%}
+                <a class="box_link" href="{% url 'invoiceslist' %}">
+                  <h3><i class="far fa-calendar-alt pr-2"></i></h3>
+                  {%if not month%}
+                    <h6 class="box_link_h">Aun no hay ventas este mes</h6>
+                  {%else%}
+                    <h3 class="box_link_h">{{month}}€</h3>
+                    <h6 class="box_link_h">En lo que va de mes</h6>
+                  {%endif%}
+                </a>
               </div>
             </div>
           </div>

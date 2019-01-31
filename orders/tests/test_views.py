@@ -354,34 +354,47 @@ class MainViewTests(TestCase):
             Invoice.objects.create(reference=order, pay_method=pay_method[i])
             i += 1
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['balance_msg'],
-                         '<h3>10.00€</h3><h4>Pendientes de ingresar</h4>')
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">10.00€</h3>
+            <h4 class="box_link_h">Pendientes de ingresar
+            </h4>""")
 
     def test_balance_box_excludes_negative_bank_movements(self):
         """Only positive amounts are involved."""
         for order in Order.objects.all():
             Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['balance_msg'],
-                         '<h3>30.00€</h3><h4>Pendientes de ingresar</h4>')
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">30.00€</h3>
+            <h4 class="box_link_h">Pendientes de ingresar
+            </h4>""")
         BankMovement.objects.create(amount=-10)
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['balance_msg'],
-                         '<h3>30.00€</h3><h4>Pendientes de ingresar</h4>')
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">30.00€</h3>
+            <h4 class="box_link_h">Pendientes de ingresar
+            </h4>""")
 
     def test_balance_box_sums_bank_movements(self):
         """Test the correct sum of bank movements."""
         for i in range(3):
             BankMovement.objects.create(amount=50)
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['balance_msg'],
-                         '<h3>150.00€</h3><h4>has ingresado de más</h4>')
+        self.assertEqual(
+            resp.context['balance_msg'],
+            """<h3 class="box_link_h">150.00€</h3>
+            <h4 class="box_link_h">has ingresado de más
+            </h4>""")
 
     def test_balance_box_no_deposits_nor_cash(self):
         """Test when there are neither deposits nor invoices."""
         resp = self.client.get(reverse('main'))
         self.assertEqual(
-            resp.context['balance_msg'], '<h4>Estás en paz con el banco<h4>')
+            resp.context['balance_msg'],
+            '<h4 class="box_link_h">Estás en paz con el banco<h4>')
 
     def test_month_box(self):
         """Test the correct sum of month invoices."""
