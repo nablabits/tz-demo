@@ -17,7 +17,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Count, Sum, F, Q, DecimalField
 from django.db.utils import IntegrityError
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from random import randint
 from . import settings
 import markdown2
@@ -26,23 +26,120 @@ import markdown2
 # Root View
 @login_required()
 def main(request):
-    """Create the root view."""
-    # Query all active orders
-    orders = Order.objects.exclude(status__in=[7, 8]).order_by('delivery')
-    pending = Order.objects.exclude(status=8).filter(budget__gt=F('prepaid'))
+    """Create the home page view."""
+    # Goal box, goal
+    elapsed = date.today() - date(2018, 12, 31)
+    goal = elapsed.days * settings.GOAL
 
-    # Pending orders should avoid tz orders
-    try:
-        tz = Customer.objects.get(name__iexact='trapuzarrak')
-    except ObjectDoesNotExist:
-        tz = None
+    # Goal box, production & forecast
+    offset = date.today() - date(2018, 12, 31)
+    start = timezone.now() - offset  # Avoid naive dates
+    production = OrderItem.objects.filter(reference__inbox_date__gte=start)
+    production = production.exclude(stock=True)
+    forecast_in = production.aggregate(total=Sum(
+        F('price') * F('qty'), output_field=DecimalField()))
+    production = production.filter(reference__status__in=[6, 7])
+    production = production.aggregate(total=Sum(
+        F('price') * F('qty'), output_field=DecimalField()))
+
+    # Goal box, avoid NoneType aggregate
+    if not forecast_in['total']:
+        forecast_in['total'] = 0
+    if not production['total']:
+        production['total'] = 0
+    forecast = int(forecast_in['total'] - production['total'])
+
+    # Goal box, offset
+    offset = (abs(goal - production['total']),
+              abs(goal - forecast_in['total']), )
+    under_goal = False
+    if goal > production['total']:
+        under_goal = True
+
+    # Goal Box, bar
+    total_size = goal * 2
+    production_bar = int(production['total'] * 100 / total_size)
+    forecast_bar = int(forecast * 100 / total_size)
+    if forecast_bar + production_bar >= 100:
+        forecast_bar = 100 - production_bar
+    color = 'warning'
+    if production_bar < 30:
+        color = 'danger'
+    if production_bar >= 50:
+        color = 'success'
+    bar = (production_bar, forecast_bar, color)
+
+    # Active Box
+    active = Order.active.count()
+    active_msg = False
+    waiting = Order.active.filter(status='6').count()
+    if waiting:
+        active_msg = 'Aunque hay %s a la espera' % waiting
+
+    # Pending box
+    pending = Order.pending_orders.all()
+    if pending:
+        pending_amount = OrderItem.active.aggregate(
+            total=Sum(F('price') * F('qty'), output_field=DecimalField()))
+        prepaid = pending.aggregate(total=Sum('prepaid'))
+        if not pending_amount['total']:
+            pending_amount['total'] = 0
+        if not prepaid['total']:
+            prepaid['total'] = 0
+        pending_amount = abs(int(pending_amount['total'] - prepaid['total']))
+        if pending_amount == 0:
+            pending_msg = 'Hay pedidos activos pero no tienen prendas añadidas'
+        else:
+            pending_msg = '%s€ tenemos aún<br>por cobrar' % pending_amount
     else:
-        pending = pending.exclude(customer=tz)
+        pending_msg = 'Genial, tenemos todo cobrado!'
 
-    # Total pending amount
-    budgets = pending.aggregate(Sum('budget'))
-    prepaid = pending.aggregate(Sum('prepaid'))
-    pending_total = budgets['budget__sum'] - prepaid['prepaid__sum']
+    # Outdated box
+    outdated = Order.outdated.count()
+    if not outdated:
+        outdated = False
+
+    # Year sales Box
+    year = Invoice.objects.filter(
+        issued_on__year=timezone.now().date().year)
+    year = year.aggregate(total=Sum('amount'))
+
+    # Balance box (copied from invoiceslist view)
+    all_time_cash = Invoice.objects.filter(pay_method='C')
+    all_time_cash = all_time_cash.aggregate(total_cash=Sum('amount'))
+    all_time_deposit = BankMovement.objects.filter(amount__gt=0)
+    all_time_deposit = all_time_deposit.aggregate(total_cash=Sum('amount'))
+    if not all_time_deposit['total_cash']:
+        all_time_deposit['total_cash'] = 0
+    if not all_time_cash['total_cash']:
+        all_time_cash['total_cash'] = 0
+    balance = all_time_deposit['total_cash'] - all_time_cash['total_cash']
+    if balance < 0:
+        balance_msg = (
+            '<h3>%s€</h3><h4>Pendientes de ingresar</h4>' % abs(balance))
+    elif balance > 0:
+        balance_msg = (
+            '<h3>%s€</h3><h4>has ingresado de más</h4>' % abs(balance))
+    else:
+        balance_msg = '<h4>Estás en paz con el banco<h4>'
+
+    # Month production box
+    month = Invoice.objects.filter(
+        issued_on__month=timezone.now().date().month)
+    month = month.aggregate(total=Sum('amount'))
+
+    # week production box
+    week = Invoice.objects.filter(
+        issued_on__week=timezone.now().date().isocalendar()[1])
+    week = week.aggregate(total=Sum('amount'))
+
+    # top5 customers Box
+    top5 = Customer.objects.exclude(name__iexact='express')
+    top5 = top5.filter(order__invoice__isnull=False)
+    top5 = top5.annotate(
+        total=Sum(F('order__orderitem__price') * F('order__orderitem__qty'),
+                  output_field=DecimalField()))
+    top5 = top5.order_by('-total')[:5]
 
     cur_user = request.user
 
@@ -53,20 +150,29 @@ def main(request):
 
     now = datetime.now()
 
-    view_settings = {'orders': orders,
-                     'orders_count': len(orders),
+    view_settings = {'goal': goal,
+                     'forecast': forecast,
+                     'offset': offset,
+                     'under_goal': under_goal,
+                     'production': production['total'],
+                     'bar': bar,
+                     'active': active,
+                     'active_msg': active_msg,
+                     'pending': Order.pending_orders.count(),
+                     'pending_msg': pending_msg,
+                     'outdated': outdated,
+                     'year': year['total'],
+                     'month': month['total'],
+                     'week': week['total'],
+                     'balance_msg': balance_msg,
+                     'top5': top5,
                      'comments': comments,
-                     'comments_count': len(comments),
-                     'pending': pending,
-                     'pending_total': pending_total,
-                     'pending_count': len(pending),
                      'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
                      'search_on': 'orders',
                      'placeholder': 'Buscar pedido (referencia)',
                      'title': 'TrapuZarrak · Inicio',
-                     'footer': True,
                      }
 
     return render(request, 'tz/main.html', view_settings)
