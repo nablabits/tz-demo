@@ -1,5 +1,8 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v63, Feb 1
+  * **Bug:** han vuelto a casa las cantidades que pendientes habían huido.
+
 ### v62, Ene31
   * **Nuevo:** página de inicio renovada con un montón de datos útiles.
   * **Nuevo:** el menu se encuentra ahora en la parte superior.
