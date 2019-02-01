@@ -126,6 +126,11 @@ class Order(models.Model):
             return total['total']
 
     @property
+    def pending(self):
+        """Get the pending amount of the order."""
+        return self.prepaid - self.total
+
+    @property
     def invoiced(self):
         """Determine if the order is already invoiced.
 
