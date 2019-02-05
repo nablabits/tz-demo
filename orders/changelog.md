@@ -1,18 +1,18 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v64,
-  * **Bug:** los ingresos negativos yos gastos en metalico afectan ahora al
+### v64, Feb 5
+  * **Bug:** los ingresos negativos y los gastos en metálico afectan ahora al
     balance con el banco.
 
 ### v63, Feb 1
-  * **Bug:** han vuelto a casa las cantidades que pendientes habían huido.
+  * **Bug:** han vuelto a casa las cantidades pendientes que habían huido.
 
 ### v62, Ene31
   * **Nuevo:** página de inicio renovada con un montón de datos útiles.
   * **Nuevo:** el menu se encuentra ahora en la parte superior.
   * **Nuevo:** muchos iconos añadidos para mejorar la comprensión.
   * **Nuevo:** página de facturación y banco que refleja los movimientos entre
-    ambos
+    ambos.
 
 ### v61, Ene 19
   * **Nuevo:** nuevo módulo de gastos (accesible solo por *superusers*).
