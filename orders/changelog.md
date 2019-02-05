@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v64,
+  * **Bug:** los ingresos negativos yos gastos en metalico afectan ahora al
+    balance con el banco.
+
 ### v63, Feb 1
   * **Bug:** han vuelto a casa las cantidades que pendientes habían huido.
 
