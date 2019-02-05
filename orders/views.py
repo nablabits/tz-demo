@@ -6,7 +6,8 @@ from django.urls import reverse
 from django.http import JsonResponse, Http404, HttpResponseServerError
 from django.template.loader import render_to_string
 from .models import (
-    Comment, Customer, Order, OrderItem, Item, PQueue, Invoice, BankMovement, )
+    Comment, Customer, Order, OrderItem, Item, PQueue, Invoice, BankMovement,
+    Expense)
 from django.utils import timezone
 from .forms import (
     CustomerForm, OrderForm, CommentForm, ItemForm, OrderItemForm,
@@ -17,7 +18,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.models import Count, Sum, F, Q, DecimalField
 from django.db.utils import IntegrityError
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from random import randint
 from . import settings
 import markdown2
@@ -105,15 +106,21 @@ def main(request):
     year = year.aggregate(total=Sum('amount'))
 
     # Balance box (copied from invoiceslist view)
+    expenses = Expense.objects.filter(pay_method='C').aggregate(
+        total_cash=Sum('amount')
+    )
+    if not expenses['total_cash']:
+        expenses['total_cash'] = 0
     all_time_cash = Invoice.objects.filter(pay_method='C')
     all_time_cash = all_time_cash.aggregate(total_cash=Sum('amount'))
-    all_time_deposit = BankMovement.objects.filter(amount__gt=0)
+    all_time_deposit = BankMovement.objects.all()
     all_time_deposit = all_time_deposit.aggregate(total_cash=Sum('amount'))
     if not all_time_deposit['total_cash']:
         all_time_deposit['total_cash'] = 0
     if not all_time_cash['total_cash']:
         all_time_cash['total_cash'] = 0
     balance = all_time_deposit['total_cash'] - all_time_cash['total_cash']
+    balance = balance + expenses['total_cash']
     if balance < 0:
         balance_msg = (
             """<h3 class="box_link_h">%s€</h3>
@@ -487,13 +494,18 @@ def invoiceslist(request):
         )
 
     bank_movements = BankMovement.objects.all()[:10]
-    all_time_deposit = BankMovement.objects.filter(amount__gt=0)
-    all_time_deposit = all_time_deposit.aggregate(total_cash=Sum('amount'))
+    expenses = Expense.objects.filter(pay_method='C').aggregate(
+        total_cash=Sum('amount')
+    )
+    if not expenses['total_cash']:
+        expenses['total_cash'] = 0
+    all_time_deposit = BankMovement.objects.aggregate(total_cash=Sum('amount'))
     if not all_time_deposit['total_cash']:
         all_time_deposit['total_cash'] = 0
     if not all_time_cash['total_cash']:
         all_time_cash['total_cash'] = 0
     balance = all_time_deposit['total_cash'] - all_time_cash['total_cash']
+    balance = balance + expenses['total_cash']
     cur_user = request.user
     now = datetime.now()
 

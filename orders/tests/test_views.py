@@ -3,7 +3,8 @@
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from orders.models import (
-    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, BankMovement)
+    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, BankMovement,
+    Expense)
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.http import JsonResponse
 from django.urls import reverse
@@ -360,7 +361,7 @@ class MainViewTests(TestCase):
             <h4 class="box_link_h">Pendientes de ingresar
             </h4>""")
 
-    def test_balance_box_excludes_negative_bank_movements(self):
+    def test_balance_box_includes_negative_bank_movements(self):
         """Only positive amounts are involved."""
         for order in Order.objects.all():
             Invoice.objects.create(reference=order)
@@ -374,7 +375,7 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(
             resp.context['balance_msg'],
-            """<h3 class="box_link_h">30.00€</h3>
+            """<h3 class="box_link_h">40.00€</h3>
             <h4 class="box_link_h">Pendientes de ingresar
             </h4>""")
 
@@ -1610,15 +1611,15 @@ class InvoicesListTest(TestCase):
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['bank_movements'].count(), 10)
 
-    def test_bank_movements_sums_only_positive_values(self):
-        """Bank movement should aggregate only positive entries."""
+    def test_bank_movements_sums_both_positive_and_negative_values(self):
+        """Bank movement should aggregate every value."""
         self.client.login(username='regular', password='test')
         BankMovement.objects.create(
             action_date=date.today(), amount=100, notes='positive')
         BankMovement.objects.create(
             action_date=date.today(), amount=-10, notes='negative')
         resp = self.client.get(reverse('invoiceslist'))
-        self.assertEqual(resp.context['all_time_deposit']['total_cash'], 100)
+        self.assertEqual(resp.context['all_time_deposit']['total_cash'], 90)
 
     def test_bank_movements_0_value(self):
         """When there are no movements, all-time deposit should be 0."""
@@ -1658,12 +1659,20 @@ class InvoicesListTest(TestCase):
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['balance'], 90)
 
+        # Now have an expense
+        p = Customer.objects.create(
+            name='Customer Test', address='Cache', city='This computer',
+            phone='666666666', CIF='444E', cp=48003, provider=True, )
+        Expense.objects.create(
+            issuer=p, invoice_no='Test', issued_on=date.today(),
+            concept='Concept', amount=100, pay_method='C')
+
         # Finally, balance out
         order = Order.objects.create(
             user=user, customer=c, ref_name='Test', delivery=date.today(),
             budget=0, prepaid=0, )
         OrderItem.objects.create(
-            reference=order, element=Item.objects.last(), price=90)
+            reference=order, element=Item.objects.last(), price=190)
         Invoice.objects.create(reference=order, pay_method='C')
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['balance'], 0)
