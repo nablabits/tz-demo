@@ -3,8 +3,12 @@
     <div class="row px-2">
       <h4 class="font-weight-bold mr-auto">Detalles:</h4>
       {%if not order.invoiced%}
-      <button type="button" class="btn btn-sm btn-outline-success js-crud-add" data-action="{{js_action_add}}"  data-pk="{{js_data_pk}}">
-        <i class="fa fa-plus"></i> {{btn_title_add}}
+      <button class="btn btn-outline-success mr-2 js-crud-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
+        <i class="fal fa-edit"></i> Editar pedido
+      </button>
+      <button type="button" class="btn btn-sm btn-outline-success mr-2 js-crud-add" data-action="{{js_action_add}}"  data-pk="{{js_data_pk}}">
+        <i class="fal fa-tshirt"></i> {{btn_title_add}}
+      </button>
       </button>
       {%endif%}
     </div>
