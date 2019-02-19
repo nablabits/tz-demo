@@ -1,0 +1,41 @@
+{% load widget_tweaks %}
+
+{{ form.customer.as_hidden }}
+{{ form.ref_name.as_hidden }}
+{{ form.delivery.as_hidden }}
+{{ form.priority.as_hidden }}
+{{ form.waist.as_hidden }}
+{{ form.chest.as_hidden}}
+{{ form.hip.as_hidden }}
+{{ form.lenght.as_hidden }}
+
+
+<div class="row">
+  <div class="col">
+    <div class="form-group">
+      {{ form.customer.prepaid }}
+      {% render_field form.prepaid class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" name="send-mail" value="0" id="send-email" {%if email%}checked{%else%}disabled{%endif%}>
+      <label class="form-check-label" for="send-email">
+        Enviar email
+      </label>
+    </div>
+  </div>
+</div>
+{%if email%}
+<div class="d-flex">
+  <div class="alert alert-info" role="alert">
+    <i class="fa fa-info mr-2"></i> Se enviará el email a {{order.customer.email}}
+  </div>
+</div>
+{%else%}
+<div class="d-flex">
+  <div class="alert alert-info" role="alert">
+    <i class="fa fa-info mr-2"></i> Este cliente no tiene email, añade uno para poder enviarle comprobantes.
+  </div>
+</div>
+{%endif%}

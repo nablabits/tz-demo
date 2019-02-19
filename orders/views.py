@@ -857,6 +857,25 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
+        # Add a prepaid (GET)
+        elif action == 'order-edit-add-prepaid':
+            order = get_object_or_404(Order, pk=pk)
+            email = False
+            if order.customer.email:
+                email = True
+            form = OrderForm(instance=order)
+            custom_form = 'includes/custom_forms/order_add_prepaid.html'
+            context = {'form': form,
+                       'order': order,
+                       'modal_title': 'Añadir Prepago',
+                       'pk': order.pk,
+                       'email': email,
+                       'action': 'order-edit-add-prepaid',
+                       'submit_btn': 'Añadir',
+                       'custom_form': custom_form,
+                       }
+            template = 'includes/regular_form.html'
+
         # Edit the date (GET)
         elif action == 'order-edit-date':
             order = get_object_or_404(Order, pk=pk)
@@ -1276,6 +1295,62 @@ class Actions(View):
                            'action': 'order-edit',
                            'submit_btn': 'Guardar',
                            'custom_form': 'includes/custom_forms/order.html',
+                           }
+                template = 'includes/regular_form.html'
+
+        # Add prepaid (POST)
+        elif action == 'order-edit-add-prepaid':
+            order = get_object_or_404(Order, pk=pk)
+            form = OrderForm(request.POST, instance=order)
+            if form.is_valid():
+                form.save()
+
+                # Now email settings
+                if order.customer.email and self.request.POST.get('send-mail'):
+                    subject = 'Tu comprobante de depósito en Trapuzarrak'
+                    from_email = settings.CONTACT_EMAIL
+                    to = order.customer.email
+                    txt = ('Kaixo %s:\n\n' +
+                           'Oraitxe bertan %s€-ko aurre ordainketa egin ' +
+                           'dozu eskaera baten kontuan.\n' +
+                           '00%s da zure eskaeraren erreferentzia zenbakia, ' +
+                           'ahalik eta behin prestatu egotea, zugaz ' +
+                           'kontaktuan jarriko gara.\n\n' +
+                           'Eskerrik asko zure kofidantzagaitik.\n\n' +
+                           'Trapuzarraen taldea.\n' +
+                           '\n---\n\n' +
+                           'Acabas de dejarnos un depósito en efectivo de %s' +
+                           '€ a cuenta de un encargo que has realizado.\n' +
+                           'La referencia de tu pedido es %s, en cuanto lo ' +
+                           'tengamos listo nos pondremos en contacto ' +
+                           'contigo.\n\n' +
+                           'Gracias por tu confianza.\n\n' +
+                           'El equipo de Trapuzarrak.\n\n' +
+                           '%s\n%s') % (order.customer.email_name(),
+                                        order.prepaid, order.pk,
+                                        order.prepaid, order.pk,
+                                        settings.CONTACT_EMAIL,
+                                        settings.CONTACT_PHONE)
+                    msg = EmailMultiAlternatives(
+                        subject, txt, from_email, [to])
+                    msg.send()
+
+                data['form_is_valid'] = True
+                data['reload'] = True
+                return JsonResponse(data)
+            else:
+                data['form_is_valid'] = False
+                custom_form = 'includes/custom_forms/order_add_prepaid.html'
+                if order.customer.email:
+                    email = True
+                context = {'form': form,
+                           'order': order,
+                           'modal_title': 'Añadir prepago',
+                           'pk': order.pk,
+                           'email': email,
+                           'action': 'order-edit-add-prepaid',
+                           'submit_btn': 'Guardar',
+                           'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
 
