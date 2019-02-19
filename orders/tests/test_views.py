@@ -225,7 +225,8 @@ class MainViewTests(TestCase):
         order.status = 6
         order.save()
         item = OrderItem.objects.filter(reference=order).first()
-        item.price = goal + 10
+        item.qty = 40
+        item.price = goal * 0.03
         item.save()
         resp = self.client.get(reverse('main'))
         self.assertFalse(resp.context['under_goal'])
@@ -273,14 +274,16 @@ class MainViewTests(TestCase):
 
         # Warning
         item = OrderItem.objects.filter(reference=order).first()
-        item.price = goal * 0.9
+        item.qty = 30
+        item.price = goal * 0.03
         item.save()
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['bar'][2], 'warning')
 
         # Success
         item = OrderItem.objects.filter(reference=order).first()
-        item.price = goal + 10
+        item.qty = 40
+        item.price = goal * 0.03
         item.save()
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['bar'][2], 'success')
