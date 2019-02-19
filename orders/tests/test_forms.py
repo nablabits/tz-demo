@@ -3,7 +3,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from orders.models import Customer, Order
-from orders.forms import CustomerForm, OrderForm,  ItemForm, OrderCloseForm
+from orders.forms import CustomerForm, OrderForm, ItemForm
 from datetime import date
 
 
@@ -135,8 +135,4 @@ class CommentFormTest(TestCase):
 
 
 class EditDateFormTest(TestCase):
-    pass
-
-
-class OrderCloseForm(TestCase):
     pass

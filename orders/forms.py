@@ -124,13 +124,3 @@ class EditDateForm(forms.ModelForm):
 
         model = Order
         fields = ('delivery', )
-
-
-class OrderCloseForm(forms.ModelForm):
-    """Close orders using a form."""
-
-    class Meta:
-        """Meta options for a quick design."""
-
-        model = Order
-        fields = ('prepaid',)
