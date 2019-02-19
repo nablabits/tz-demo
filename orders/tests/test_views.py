@@ -6,6 +6,7 @@ from orders.models import (
     Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, BankMovement,
     Expense)
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core import mail
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
@@ -4309,6 +4310,31 @@ class ActionsPostMethodEdit(TestCase):
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
+
+    def test_add_prepaid_sends_mail(self):
+        """Test the correct mail sending."""
+        order = Order.objects.get(ref_name='example')
+        self.assertEqual(order.prepaid, 0)
+        self.client.post(
+            reverse('actions'), {'ref_name': order.ref_name,
+                                 'customer': order.customer.pk,
+                                 'delivery': order.delivery,
+                                 'priority': order.priority,
+                                 'waist': order.waist,
+                                 'chest': order.chest,
+                                 'hip': order.hip,
+                                 'lenght': order.lenght,
+                                 'prepaid': '100',
+                                 'send-mail': True,
+                                 'pk': order.pk,
+                                 'action': 'order-edit-add-prepaid',
+                                 'test': True
+                                 })
+        self.assertTrue(mail.outbox)
+        self.assertEqual(mail.outbox[0].subject,
+                         'Tu comprobante de depósito en Trapuzarrak')
+        self.assertEqual(mail.outbox[0].from_email, settings.CONTACT_EMAIL)
+        self.assertEqual(mail.outbox[0].to[0], order.customer.email)
 
     def test_edit_date_successful(self):
         """Test the correct quick-edit date."""

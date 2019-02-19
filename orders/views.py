@@ -16,6 +16,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core.mail import EmailMultiAlternatives
 from django.db.models import Count, Sum, F, Q, DecimalField
 from django.db.utils import IntegrityError
 from datetime import datetime, date

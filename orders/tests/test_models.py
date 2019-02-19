@@ -139,6 +139,16 @@ class ModelTest(TestCase):
         self.assertEqual(comment.__str__(), comment_str)
 
 
+class TestCustomer(TestCase):
+    """Test the attributes & the methods of customer model."""
+
+    def test_email_name(self):
+        """Test the correct output for email comunications."""
+        c = Customer.objects.create(
+            name='teSt With RaNDom eNtries', phone=0, cp=0, )
+        self.assertEqual(c.email_name(), 'Test')
+
+
 class TestOrders(TestCase):
     """Test the Order model."""
 
