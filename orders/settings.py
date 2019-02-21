@@ -48,5 +48,5 @@ RELAX_ICONS = ('curling', 'shuttlecock', 'table-tennis', 'coffee-togo',
                'umbrella-beach', 'clipboard-check', )
 
 # Contact settings
-CONTACT_EMAIL = 'trapuzarrak@gmail.com'
+CONTACT_EMAIL = 'denda@trapuzarrak.eus'
 CONTACT_PHONE = '+34688725891'
