@@ -46,6 +46,12 @@ class Customer(models.Model):
                     raise ValidationError({'name': _('The customer already ' +
                                                      'exists in the db')})
 
+    def email_name(self):
+        """Get first name in lower case and properly capitalized."""
+        return self.name.lower().split()[0].capitalize()
+
+    class Meta:
+        ordering = ('name',)
 
 class Order(models.Model):
     """The main object, store the order info."""

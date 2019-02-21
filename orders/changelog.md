@@ -1,5 +1,14 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v65, Feb 21
+  * **Nuevo:** ahora los prepagos se añaden de forma independiente y hay opción
+    de mandar un email al cliente.
+  * **Mejora:** se ha reubicado el botón de editar pedido.
+  * **Mejora:** en la cola de producción ahora aparece el nombre del cliente en
+    lugar del pedido.
+  * **Bug:** la lista de clientes al añadir pedido no muestra el cliente express
+    (reservado para ventas anónimas) y está ordenada por nombre ahora.
+
 ### v64, Feb 5
   * **Bug:** los ingresos negativos y los gastos en metálico afectan ahora al
     balance con el banco.

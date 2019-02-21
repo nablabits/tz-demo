@@ -2,7 +2,6 @@
 
 from django import forms
 from .models import Customer, Order, Item, OrderItem, Comment, Invoice
-from django.db.models import Count
 from django.core.exceptions import ValidationError
 
 
@@ -29,10 +28,10 @@ class OrderForm(forms.ModelForm):
                   'budget', 'prepaid')
 
     def __init__(self, *args, **kwargs):
-        """Sort selection dropdown by getting the orders made by customer."""
+        """Override default settings."""
         super(OrderForm, self).__init__(*args, **kwargs)
         self.fields['customer'].label = 'Cliente'
-        queryset = Customer.objects.annotate(num_orders=Count('order'))
+        queryset = Customer.objects.exclude(name__iexact='express')
         self.fields['customer'].queryset = queryset
 
     def clean(self):
@@ -124,13 +123,3 @@ class EditDateForm(forms.ModelForm):
 
         model = Order
         fields = ('delivery', )
-
-
-class OrderCloseForm(forms.ModelForm):
-    """Close orders using a form."""
-
-    class Meta:
-        """Meta options for a quick design."""
-
-        model = Order
-        fields = ('prepaid',)

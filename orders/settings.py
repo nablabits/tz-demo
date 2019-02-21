@@ -2,7 +2,7 @@
 
 # The name for the app
 APP_NAME = "Trapu Zarrak app"
-VERSION = 'v64'
+VERSION = 'v65'
 
 # Available types of clothes
 ITEM_TYPE = (
@@ -46,3 +46,7 @@ WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
 
 RELAX_ICONS = ('curling', 'shuttlecock', 'table-tennis', 'coffee-togo',
                'umbrella-beach', 'clipboard-check', )
+
+# Contact settings
+CONTACT_EMAIL = 'denda@trapuzarrak.eus'
+CONTACT_PHONE = '+34688725891'

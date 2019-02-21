@@ -6,6 +6,7 @@ from orders.models import (
     Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, BankMovement,
     Expense)
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
+from django.core import mail
 from django.http import JsonResponse
 from django.urls import reverse
 from django.utils import timezone
@@ -224,7 +225,8 @@ class MainViewTests(TestCase):
         order.status = 6
         order.save()
         item = OrderItem.objects.filter(reference=order).first()
-        item.price = goal + 10
+        item.qty = 40
+        item.price = goal * 0.03
         item.save()
         resp = self.client.get(reverse('main'))
         self.assertFalse(resp.context['under_goal'])
@@ -272,14 +274,16 @@ class MainViewTests(TestCase):
 
         # Warning
         item = OrderItem.objects.filter(reference=order).first()
-        item.price = goal * 0.9
+        item.qty = 30
+        item.price = goal * 0.03
         item.save()
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['bar'][2], 'warning')
 
         # Success
         item = OrderItem.objects.filter(reference=order).first()
-        item.price = goal + 10
+        item.qty = 40
+        item.price = goal * 0.03
         item.save()
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['bar'][2], 'success')
@@ -2994,6 +2998,7 @@ class ActionsGetMethod(TestCase):
                    'order-add-comment',
                    'ticket-to-invoice',
                    'order-edit',
+                   'order-edit-add-prepaid',
                    'order-edit-date',
                    'customer-edit',
                    'object-item-edit',
@@ -3232,6 +3237,24 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertIsInstance(context, list)
+        self.assertTrue(self.context_vars(context, vars))
+
+    def test_add_prepaid(self):
+        """When customer has no email, return false."""
+        order = Order.objects.get(ref_name='example')
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk,
+                                'action': 'order-edit-add-prepaid',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        vars = ('form', 'order', 'modal_title', 'pk', 'email', 'action',
+                'submit_btn', 'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
@@ -4309,6 +4332,94 @@ class ActionsPostMethodEdit(TestCase):
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
+
+    def test_add_prepaid_adds_prepaid(self):
+        """Test the correct edition for prepaids."""
+        order = Order.objects.get(ref_name='example')
+        self.assertEqual(order.prepaid, 0)
+        resp = self.client.post(reverse('actions'),
+                                {'ref_name': order.ref_name,
+                                 'customer': order.customer.pk,
+                                 'delivery': order.delivery,
+                                 'priority': order.priority,
+                                 'waist': order.waist,
+                                 'chest': order.chest,
+                                 'hip': order.hip,
+                                 'lenght': order.lenght,
+                                 'prepaid': '100',
+                                 'pk': order.pk,
+                                 'action': 'order-edit-add-prepaid',
+                                 'test': True
+                                 })
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.prepaid, 100)
+        self.assertFalse(mail.outbox)
+
+    def test_add_prepaid_sends_mail(self):
+        """Test the correct mail sending."""
+        order = Order.objects.get(ref_name='example')
+        self.assertEqual(order.prepaid, 0)
+        self.client.post(
+            reverse('actions'), {'ref_name': order.ref_name,
+                                 'customer': order.customer.pk,
+                                 'delivery': order.delivery,
+                                 'priority': order.priority,
+                                 'waist': order.waist,
+                                 'chest': order.chest,
+                                 'hip': order.hip,
+                                 'lenght': order.lenght,
+                                 'prepaid': '100',
+                                 'send-mail': True,
+                                 'pk': order.pk,
+                                 'action': 'order-edit-add-prepaid',
+                                 'test': True
+                                 })
+        self.assertTrue(mail.outbox)
+        self.assertEqual(mail.outbox[0].subject,
+                         'Tu comprobante de depósito en Trapuzarrak')
+        self.assertEqual(mail.outbox[0].from_email, settings.CONTACT_EMAIL)
+        self.assertEqual(mail.outbox[0].to[0], order.customer.email)
+
+    def test_add_prepaid_invalid_returns_to_modal(self):
+        """Test the correct mail sending."""
+        order = Order.objects.get(ref_name='example')
+        self.assertEqual(order.prepaid, 0)
+        resp = self.client.post(
+            reverse('actions'), {'ref_name': 'modified',
+                                 'customer': 'wrong customer',
+                                 'delivery': date(2017, 1, 1),
+                                 'waist': '1',
+                                 'chest': '2',
+                                 'hip': '3',
+                                 'lenght': 5,
+                                 'others': 'None',
+                                 'prepaid': '100',
+                                 'send-email': True,
+                                 'pk': order.pk,
+                                 'action': 'order-edit-add-prepaid',
+                                 'test': True
+                                 })
+
+        # Test the response object
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertFalse(data['form_is_valid'])
+        template = data['template']
+        context = data['context']
+        vars = ('form', 'order', 'modal_title', 'pk', 'email', 'action',
+                'submit_btn', 'custom_form')
+        self.assertEqual(template, 'includes/regular_form.html')
+        self.assertTrue(self.context_vars(context, vars))
+
+        self.assertFalse(mail.outbox)
 
     def test_edit_date_successful(self):
         """Test the correct quick-edit date."""

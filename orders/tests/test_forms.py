@@ -3,7 +3,7 @@
 from django.test import TestCase
 from django.contrib.auth.models import User
 from orders.models import Customer, Order
-from orders.forms import CustomerForm, OrderForm,  ItemForm, OrderCloseForm
+from orders.forms import CustomerForm, OrderForm, ItemForm
 from datetime import date
 
 
@@ -80,6 +80,19 @@ class OrderFormTest(TestCase):
         self.assertEqual(duplicated_order.errors['__all__'][0],
                          'The order already exists in the db')
 
+    def test_customer_label(self):
+        """Test the proper customer label."""
+        form = OrderForm()
+        self.assertEqual(form.fields['customer'].label, 'Cliente')
+
+    def test_customer_excludes_express(self):
+        """Express customer should be excluded from choices."""
+        form = OrderForm()
+        Customer.objects.create(name='express', phone=5, cp=1,)
+        self.assertEqual(len(form.fields['customer'].choices), 2)
+        for customer in form.fields['customer'].choices:
+            self.assertNotEqual(customer, 'express')
+
 
 class ItemFormTest(TestCase):
     """Test the ItemForm."""
@@ -135,8 +148,4 @@ class CommentFormTest(TestCase):
 
 
 class EditDateFormTest(TestCase):
-    pass
-
-
-class OrderCloseForm(TestCase):
     pass
