@@ -32,6 +32,7 @@ class OrderForm(forms.ModelForm):
         super(OrderForm, self).__init__(*args, **kwargs)
         self.fields['customer'].label = 'Cliente'
         queryset = Customer.objects.exclude(name__iexact='express')
+        queryset = queryset.exclude(provider=True)
         self.fields['customer'].queryset = queryset
 
     def clean(self):
