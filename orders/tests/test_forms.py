@@ -91,7 +91,15 @@ class OrderFormTest(TestCase):
         Customer.objects.create(name='express', phone=5, cp=1,)
         self.assertEqual(len(form.fields['customer'].choices), 2)
         for customer in form.fields['customer'].choices:
-            self.assertNotEqual(customer, 'express')
+            self.assertNotEqual(customer[1], 'express')
+
+    def test_customer_excludes_providers(self):
+        """Providers should be excluded from dropdown."""
+        form = OrderForm()
+        Customer.objects.create(name='Provider', phone=5, cp=1, provider=True)
+        self.assertEqual(len(form.fields['customer'].choices), 2)
+        for customer in form.fields['customer'].choices:
+            self.assertNotEqual(customer[1], 'express')
 
 
 class ItemFormTest(TestCase):
