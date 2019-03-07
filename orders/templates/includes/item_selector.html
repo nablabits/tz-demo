@@ -26,32 +26,57 @@
       <h5 class="p-3 text-center">{{item.1}}</h5>
     </div>
     {%endfor%}
-    <div class="border rounded border-success m-1 item-selector js-item-selector js-crud-add" data-action="object-item-add" data-pk="0">
-      <h5 class="p-3 text-center text-success">
-        <i class="far fa-plus pr-1"></i>
-        <strong>Añadir una prenda</strong>
-      </h5>
-    </div>
   </div>
 {%endif%}
 
 {%if data_type and not data_name%}<!-- Select item name -->
-  <div class="d-flex flex-wrap mt-1">
+  <div class="d-flex flex-wrap mt-1 mb-3">
     {% for item in item_names %}
     <div class="border rounded m-1 item-selector js-item-selector" data-type="{{data_type.0}}" data-name="{{item.name}}" data-aditional-pk="{{order.pk}}">
       <h5 class="p-3 text-center">{{item.name}}</h5>
     </div>
     {%endfor%}
-
-    <!-- Add item with item-type
-    <div class="border rounded border-success m-1 item-selector js-item-selector">
-      <h5 class="p-3 text-center text-success">
-        <i class="far fa-plus pr-1"></i>
-        <strong>Añadir {{data_type.1}}</strong>
-      </h5>
-    </div> -->
-
   </div>
+    {%if errors%}{{errors}}{%endif%}
+    <form class="js-item-selector-add"><!-- New name for item-->
+      {%csrf_token%}
+      <input type="hidden" name="item_type" value="{{data_type.0}}">
+      <input type="hidden" name="filter-on-type" value="{{data_type.0}}">
+      <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+      <div class="form-row m-1">
+        <div class="col-4">
+          <input class="form-control" type="text" name="name" placeholder="Nuevo modelo de {{data_type.1}}" required>
+        </div>
+        <div class="col">
+          <input class="form-control" type="text" name="size" placeholder="Talla" required>
+        </div>
+        <div class="col">
+          <select class="form-control" name="item_class">
+            {%for iClass in item_classes%}
+            <option value="{{iClass.0}}" {%if forloop.first%}selected{%endif%}>{{iClass.1}}</option>
+            {%endfor%}
+
+          </select>
+        </div>
+        <div class="col">
+          <input class="form-control" type="number" name="fabrics" placeholder="Tela" step="0.01" required>
+        </div>
+        <div class="col">
+          <input class="form-control" type="number" name="price" placeholder="Precio" step="0.01" required>
+        </div>
+        <div class="col">
+          <div class="form-check pt-2">
+            <input class="form-check-input" type="checkbox" name="foreign" id="id_foreign">
+            <label class="form-check-label" for="id_foreign">Externo</label>
+          </div>
+        </div>
+        <div class="col">
+          <button type="submit" class="btn btn-outline-success">Añadir</button>
+        </div>
+      </div>
+    </form>
+
+
 {%endif%}
 
 {%if data_name and not data_size%}<!-- Select item size -->
@@ -61,16 +86,83 @@
         <h5 class="p-3 text-center">T-{{item.size}}</h5>
       </div>
       {%endfor%}
-
-      <!-- Add item with type and name
-      <div class="border rounded border-success m-1 item-selector js-item-selector">
-        <h5 class="p-3 text-center text-success">
-          <i class="far fa-plus pr-1"></i>
-          <strong>Añadir nueva talla de {{data_type.1}} {{data_name}}</strong>
-        </h5>
-      </div> -->
-
     </div>
+    <form class="js-item-selector-add">  <!--New size for item-->
+      {%csrf_token%}
+      <input type="hidden" name="item_type" value="{{data_type.0}}">
+      <input type="hidden" name="filter-on-type" value="{{data_type.0}}">
+      <input type="hidden" name="filter-on-name" value="{{data_name}}">
+      <input type="hidden" name="name" value="{{data_name}}">
+      <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+      <div class="form-row m-1">
+        <div class="col">
+          <input class="form-control" type="text" name="size" placeholder="Nueva Talla" required>
+        </div>
+        <div class="col">
+          <select class="form-control" name="item_class">
+            {%for iClass in item_classes%}
+            <option value="{{iClass.0}}" {%if forloop.first%}selected{%endif%}>{{iClass.1}}</option>
+            {%endfor%}
+
+          </select>
+        </div>
+        <div class="col">
+          <input class="form-control" type="number" name="fabrics" placeholder="Tela" step="0.01" required>
+        </div>
+        <div class="col">
+          <input class="form-control" type="number" name="price" placeholder="Precio" step="0.01" required>
+        </div>
+        <div class="col">
+          <div class="form-check pt-2">
+            <input class="form-check-input" type="checkbox" name="foreign" id="id_foreign">
+            <label class="form-check-label" for="id_foreign">Externo</label>
+          </div>
+        </div>
+        <div class="col">
+          <button type="submit" class="btn btn-outline-success">Añadir talla</button>
+        </div>
+      </div>
+    </form>
+
+
+{%endif%}
+{%if data_size%}
+<h5>Nuevo acabado para T-{{data_size}}</h5>
+<form class="js-item-selector-add">  <!--New class for item-->
+  {%csrf_token%}
+  <input type="hidden" name="item_type" value="{{data_type.0}}">
+  <input type="hidden" name="filter-on-type" value="{{data_type.0}}">
+  <input type="hidden" name="filter-on-name" value="{{data_name}}">
+  <input type="hidden" name="filter-on-size" value="{{data_size}}">
+  <input type="hidden" name="name" value="{{data_name}}">
+  <input type="hidden" name="size" value="{{data_size}}">
+  <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+  <div class="form-row align-items-center m-1">
+    <div class="col-auto">
+      <select class="form-control" name="item_class">
+        {%for iClass in item_classes%}
+        <option value="{{iClass.0}}" {%if forloop.first%}selected{%endif%}>{{iClass.1}}</option>
+        {%endfor%}
+
+      </select>
+    </div>
+    <div class="col-auto">
+      <input class="form-control" type="number" name="fabrics" placeholder="Tela" step="0.01" required>
+    </div>
+    <div class="col-auto">
+      <input class="form-control" type="number" name="price" placeholder="Precio" step="0.01" required>
+    </div>
+    <div class="col-auto">
+      <div class="form-check pt-2">
+        <input class="form-check-input" type="checkbox" name="foreign" id="id_foreign">
+        <label class="form-check-label" for="id_foreign">Externo</label>
+      </div>
+    </div>
+    <div class="col">
+      <button type="submit" class="btn btn-outline-success">Añadir acabado T-{{data_size}}</button>
+    </div>
+  </div>
+</form>
 {%endif%}
 
 <h3 class="mt-4 pb-1 border-bottom">
@@ -91,21 +183,10 @@
          {%if item.foreing%}
          <span class="mr-1"><i class="far fa-sign-in-alt"></i></span>
          {%endif%}
-         <span class="ml-3 mr-5">{{item.price}}€</span>
+         <span class="ml-3">{{item.price}}€</span>
+         <span class="ml-1 mr-5">({{item.fabrics}}m)</span>
          <span class="ml-5">{%include 'includes/action_buttons.html'%}</span>
      </li>
     {%endfor%}
-
-    <!-- Add new item with type, name and size defined
-    {%if data_name and data_type and data_size%}
-    <li class="list-group-item d-flex align-items-center">
-      <div class="border rounded border-success m-1 item-selector js-item-selector">
-        <h5 class="p-3 text-center">
-          <i class="far fa-plus pr-1"></i>
-          Añadir nuevo acabado para {{data_type.1}} {{data_name}} T-{{data_size}}
-        </h5>
-      </div>
-    </li>
-    {%endif%} -->
   </ul>
 </div>

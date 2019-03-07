@@ -167,6 +167,22 @@ $(function () {
     return false
   }
 
+  var itemSelectorAdd = function (e) {
+    // add items from selector
+    e.preventDefault()
+    var form = $(this)
+    $.ajax({
+      url: '/item-selector/',
+      type: 'post',
+      data: form.serialize(),
+      dataType: 'json',
+      success: function (data) {
+        $('#item-selector').html(data.html)
+      }
+    })
+    // return false
+  }
+
   // actions (GET)
   $('.js-logout').click(loadActionForm)
 
@@ -179,6 +195,9 @@ $(function () {
   if ($('#item-selector').length) {
     itemSelector()
   }
+
+  // item selector add
+  $('#root').on('submit', '.js-item-selector-add', itemSelectorAdd)
 
   // actions (POST)
   $('#action-modal').on('submit', '.js-send-form', saveActionForm)
