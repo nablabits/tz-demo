@@ -4871,20 +4871,64 @@ class ItemSelectorTests(TestCase):
         for i in range(3):
             Item.objects.create(name='Test', fabrics=5, price=10)
 
-    def test_item_selector_only_accepts_get(self):
-        """Test the proper http method."""
-        with self.assertRaises(ValueError):
-            self.client.post(reverse('item-selector'))
-
     def test_fix_context_settings(self):
         """Test the proper values."""
         resp = self.client.get(reverse('item-selector'), {'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['item_types'], settings.ITEM_TYPE[1:])
+        self.assertEqual(resp.context['item_classes'], settings.ITEM_CLASSES)
         self.assertEqual(resp.context['js_action_send_to'], 'send-to-order')
         self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
         self.assertEqual(
             resp.context['js_action_delete'], 'object-item-delete')
+
+    def test_form_saves_item(self):
+        """Test the proper save of new items."""
+        self.client.post(reverse('item-selector'), {'name': 'test form',
+                                                    'item_type': '1',
+                                                    'item_class': 'S',
+                                                    'size': '12',
+                                                    'fabrics': 10,
+                                                    'foreing': True,
+                                                    'price': 10,
+                                                    })
+        item = Item.objects.get(name='test form')
+        self.assertEqual(item.item_type, '1')
+        self.assertEqual(item.item_class, 'S')
+        self.assertEqual(item.size, '12')
+        self.assertEqual(item.fabrics, 10)
+        self.assertTrue(item.foreing)
+        self.assertEqual(item.price, 10)
+
+    def test_invalid_form(self):
+        """Test the proper response of invalid forms."""
+        resp = self.client.post(reverse('item-selector'), {'name': 'test form',
+                                                           'item_type': '1',
+                                                           'item_class': 'S',
+                                                           'size': '12',
+                                                           'fabrics': 'void',
+                                                           'foreing': True,
+                                                           'price': 10,
+                                                           })
+        self.assertEqual(
+            resp.context['errors'], dict(fabrics=['Enter a number.']))
+
+    def test_post_povides_aditional_pk(self):
+        """Aditional pk should be passed down to the chain."""
+        order = Order.objects.first()
+        resp = self.client.post(reverse('item-selector'),
+                                {'name': 'test form',
+                                 'item_type': '1',
+                                 'item_class': 'S',
+                                 'size': '12',
+                                 'fabrics': 10,
+                                 'foreing': True,
+                                 'price': 10,
+                                 'aditionalpk': order.pk,
+                                 })
+        self.assertEqual(resp.context['order'], order)
+        self.assertEqual(
+            resp.context['js_action_send_to'], 'send-to-order-express')
 
     def test_item_selector_gets_order(self):
         """Test the correct pickup of order on order view."""
@@ -4895,12 +4939,25 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(
             resp.context['js_action_send_to'], 'send-to-order-express')
 
-    def test_item_selector_picks_up_all_the_items(self):
+    def test_item_selector_picks_up_all_the_items_get(self):
         """Test the correct filter 'all' which includes Predeterminado."""
         resp = self.client.get(reverse('item-selector'), {'test': True})
         self.assertEqual(resp.context['available_items'].count(), 4)
 
-    def test_filter_by_type(self):
+    def test_item_selector_picks_up_all_the_items_post(self):
+        """Test the correct filter 'all' which includes Predeterminado."""
+        resp = self.client.post(reverse('item-selector'),
+                                {'name': 'test form',
+                                 'item_type': '1',
+                                 'item_class': 'S',
+                                 'size': '12',
+                                 'fabrics': 10,
+                                 'foreing': True,
+                                 'price': 10,
+                                 })
+        self.assertEqual(resp.context['available_items'].count(), 5)
+
+    def test_filter_by_type_get(self):
         """Test the correct by type filter."""
         for i in range(3):
             Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
@@ -4911,7 +4968,26 @@ class ItemSelectorTests(TestCase):
         for i in range(3):
             self.assertEqual(resp.context['item_names'][i].name, 'Test%s' % i)
 
-    def test_filter_by_name(self):
+    def test_filter_by_type_post(self):
+        """Test the correct by type filter."""
+        for i in range(3):
+            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+        resp = self.client.post(reverse('item-selector'),
+                                {'name': 'test form',
+                                 'item_type': '1',
+                                 'item_class': 'S',
+                                 'size': '12',
+                                 'fabrics': 10,
+                                 'foreing': True,
+                                 'filter-on-type': '2',
+                                 'price': 10,
+                                 })
+        self.assertEqual(resp.context['available_items'].count(), 3)
+        self.assertEqual(resp.context['data_type'], ('2', 'Pantalón'))
+        for i in range(3):
+            self.assertEqual(resp.context['item_names'][i].name, 'Test%s' % i)
+
+    def test_filter_by_name_get(self):
         """Test the correct by name filter."""
         for i in range(3):
             Item.objects.create(
@@ -4924,7 +5000,28 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(resp.context['item_sizes'][0].size, '0')
         self.assertEqual(resp.context['data_name'], 'Test0')
 
-    def test_filter_by_size(self):
+    def test_filter_by_name_post(self):
+        """Test the correct by name filter."""
+        for i in range(3):
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type=str(i + 1),
+                size=str(i))
+        resp = self.client.post(reverse('item-selector'),
+                                {'name': 'test form',
+                                 'item_type': '1',
+                                 'item_class': 'S',
+                                 'size': '12',
+                                 'fabrics': 10,
+                                 'foreing': True,
+                                 'filter-on-type': '1',
+                                 'filter-on-name': 'Test0',
+                                 'price': 10,
+                                 })
+        self.assertEqual(resp.context['available_items'].count(), 1)
+        self.assertEqual(resp.context['item_sizes'][0].size, '0')
+        self.assertEqual(resp.context['data_name'], 'Test0')
+
+    def test_filter_by_size_get(self):
         """Test the correct by size filter."""
         for i in range(3):
             Item.objects.create(
@@ -4938,7 +5035,28 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(resp.context['available_items'].count(), 1)
         self.assertEqual(resp.context['data_size'], '0')
 
-    def test_item_selcetor_limits_to_11(self):
+    def test_filter_by_size_post(self):
+        """Test the correct by size filter."""
+        for i in range(3):
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type=str(i + 1),
+                size=str(i))
+        resp = self.client.post(reverse('item-selector'),
+                                {'name': 'test form',
+                                 'item_type': '1',
+                                 'item_class': 'S',
+                                 'size': '12',
+                                 'fabrics': 10,
+                                 'foreing': True,
+                                 'filter-on-type': '1',
+                                 'filter-on-name': 'Test0',
+                                 'filter-on-size': '0',
+                                 'price': 10,
+                                 })
+        self.assertEqual(resp.context['available_items'].count(), 1)
+        self.assertEqual(resp.context['data_size'], '0')
+
+    def test_item_selector_limits_to_11(self):
         """Test the limiting results."""
         for i in range(10):
             Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
