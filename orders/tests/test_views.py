@@ -4725,6 +4725,22 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(order.status, '7')
         self.assertEqual(order.delivery, date.today())
 
+    def test_update_status_doesnt_update_on_status_change(self):
+        """On changing to anyone but delivered, keep the delivery date."""
+        order = Order.objects.first()
+        order.delivery = date(2018, 1, 1)
+        order.save()
+        self.assertEqual(order.status, '1')
+        self.assertEqual(order.delivery, date(2018, 1, 1))
+        for i in range(1, 7):
+            self.client.post(
+                reverse('actions'),
+                {'pk': order.pk, 'action': 'update-status', 'status': str(i),
+                 'test': True})
+            order = Order.objects.get(pk=order.pk)
+            self.assertEqual(order.status, str(i))
+            self.assertNotEqual(order.delivery, date.today())
+
     def test_delete_order_item_deletes_the_item(self):
         """Test the proper deletion of items."""
         item = OrderItem.objects.get(description='example item')
