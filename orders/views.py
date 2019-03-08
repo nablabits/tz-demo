@@ -1505,7 +1505,8 @@ class Actions(View):
                 data['reload'] = True
                 return JsonResponse(data)
             else:
-                order.delivery = date.today()
+                if status == '7':
+                    order.delivery = date.today()
                 order.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-status'
