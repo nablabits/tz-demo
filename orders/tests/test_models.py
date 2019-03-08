@@ -227,6 +227,34 @@ class TestOrders(TestCase):
         past.save()
         self.assertEqual(Order.outdated.count(), 1)
 
+    def test_custom_manager_obsolete(self):
+        """Test the obsolete order custom manager."""
+        u = User.objects.first()
+        c = Customer.objects.first()
+        express = Customer.objects.create(name='express', phone=0, cp=0)
+
+        # First a common order
+        Order.objects.create(
+            user=u, customer=c, ref_name='Test', delivery=date.today())
+
+        # Now an invoiced express order
+        invoiced = Order.objects.create(
+            user=u, customer=express, ref_name='Test', delivery=date.today())
+        OrderItem.objects.create(
+            reference=invoiced, element=Item.objects.last())
+        Invoice.objects.create(reference=invoiced)
+
+        # finally an obsolete order, invoice missing
+        obsolete = Order.objects.create(
+            user=u, customer=express, ref_name='Obsolete',
+            delivery=date.today())
+        OrderItem.objects.create(
+            reference=obsolete, element=Item.objects.last())
+
+        self.assertEqual(Order.objects.count(), 3)  # total orders
+        self.assertEqual(Order.obsolete.count(), 1)
+        self.assertEqual(Order.obsolete.first().ref_name, 'Obsolete')
+
     def test_overdue(self):
         """Test the overdue attribute."""
         user = User.objects.first()

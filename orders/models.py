@@ -109,6 +109,7 @@ class Order(models.Model):
     active = managers.ActiveOrders()
     pending_orders = managers.PendingOrders()
     outdated = managers.OutdatedOrders()
+    obsolete = managers.ObsoleteOrders()
 
     def __str__(self):
         """Object's representation."""

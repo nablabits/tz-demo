@@ -3,9 +3,8 @@
 from django.db import models
 from datetime import date
 
+
 # First, Order managers
-
-
 class ActiveOrders(models.Manager):
     """Get the active orders (all)."""
 
@@ -35,9 +34,17 @@ class OutdatedOrders(models.Manager):
         return orders.exclude(status__in=[7, 8])
 
 
+class ObsoleteOrders(models.Manager):
+    """Get the express orders that don't have invoice."""
+
+    def get_queryset(self):
+        """Return the queryset."""
+        orders = super().get_queryset().filter(
+            customer__name__iexact='express')
+        return orders.filter(invoice__isnull=True)
+
+
 # Now, OrderItems managers
-
-
 class ActiveItems(models.Manager):
     """Get the active items (excluding tz ones)."""
 
