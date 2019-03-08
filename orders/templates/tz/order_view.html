@@ -52,6 +52,11 @@
     {% include 'includes/comment_list.html' %}
     </div>
 
+    <a href="{% url 'orderlist' orderby='date' %}">
+    <button class="fixed-bottom btn btn-info border-dark ml-5 mb-3" type="button">
+      <i class="fa fa-arrow-alt-left mr-2"></i>Vuelve a lista de pedidos
+    </button>
+    </a>
 
   </div>
 </section>
