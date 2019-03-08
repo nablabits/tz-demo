@@ -967,6 +967,16 @@ class Actions(View):
                        'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
+        # delete order express (GET)
+        elif action == 'order-express-delete':
+            order = get_object_or_404(Order, pk=pk)
+            context = {'modal_title': 'Eliminar ticket express',
+                       'msg': 'Quieres realmente descartar el ticket?',
+                       'pk': order.pk,
+                       'action': 'order-express-delete',
+                       'submit_btn': 'Sí, descartar'}
+            template = 'includes/delete_confirmation.html'
+
         # Delete order express item (GET)
         elif action == 'order-express-item-delete':
             get_object_or_404(OrderItem, pk=pk)
@@ -1557,6 +1567,13 @@ class Actions(View):
                        'js_data_pk': order.pk,
                        }
             template = 'includes/order_details.html'
+
+        # Delete order express (POST)
+        elif action == 'order-express-delete':
+            order = get_object_or_404(Order, pk=pk)
+            order.delete()
+            data['redirect'] = (reverse('main'))
+            data['form_is_valid'] = True
 
         # Delete items on order express (POST)
         elif action == 'order-express-item-delete':

@@ -2,7 +2,12 @@
 {% block orderexpress %}
 <section id="order_view" data-pk="{{ order.pk }}">
   <div class="container pt-4">
-    <h1>Nueva venta express</h1>
+    <h1>
+      Nueva venta express
+      <button class="btn btn-sm btn-outline-danger js-crud-delete" data-action="order-express-delete" data-pk="{{order.pk}}">
+        <i class="far fa-trash"></i> Descartar ticket
+      </button>
+    </h1>
     <div class="row">
       <div class="col-md-8 col-lg-9">
         <h3 class="pb-1 mb-4 border-bottom">Añadir prendas al ticket</h3>

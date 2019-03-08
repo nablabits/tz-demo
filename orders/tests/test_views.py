@@ -3006,6 +3006,8 @@ class ActionsGetMethod(TestCase):
                    'pqueue-add-time',
                    'object-item-delete',
                    'order-item-delete',
+                   'order-express-delete',
+                   'order-express-item-delete',
                    'customer-delete',
                    'view-ticket',
                    )
@@ -3371,6 +3373,23 @@ class ActionsGetMethod(TestCase):
         vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
         self.assertTrue(self.context_vars(context, vars))
 
+    def test_delete_order_express(self):
+        """Testthe correct content for the modal."""
+        order = Order.objects.first()
+        resp = self.client.get(reverse('actions'),
+                               {'pk': order.pk,
+                                'action': 'order-express-delete',
+                                'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/delete_confirmation.html')
+        self.assertIsInstance(context, list)
+        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
+        self.assertTrue(self.context_vars(context, vars))
+
     def test_delete_order_express_item(self):
         """Test context dictionaries and template."""
         self.client.login(username='regular', password='test')
@@ -3474,6 +3493,34 @@ class ActionsPostMethodRaises(TestCase):
         """Raise an error when action doesn't match any condition."""
         with self.assertRaisesMessage(NameError, 'Action was not recogniced'):
             self.client.post(reverse('actions'), {'pk': 5, 'action': 'null'})
+
+    def test_pk_out_of_range_raises_404(self):
+        """High pk should raise a 404."""
+        actions = (
+                   'order-comment',
+                   'comment-read',
+                   'send-to-order',
+                   'send-to-order-express',
+                   'order-item-add',
+                   'ticket-to-invoice',
+                   'order-edit',
+                   'order-edit-add-prepaid',
+                   'order-edit-date',
+                   'customer-edit',
+                   'object-item-edit',
+                   'order-item-edit',
+                   'pqueue-add-time',
+                   'update-status',
+                   'object-item-delete',
+                   'order-item-delete',
+                   'order-express-delete',
+                   'order-express-item-delete',
+                   'customer-delete',
+                   )
+        for action in actions:
+            resp = self.client.post(
+                reverse('actions'), {'pk': 2000, 'action': action})
+            self.assertEqual(resp.status_code, 404)
 
 
 class ActionsPostMethodCreate(TestCase):
@@ -4770,6 +4817,20 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['template'], 'includes/order_details.html')
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
+
+    def test_delete_order_express_deletes_order(self):
+        """Test the correct deletion of order express."""
+        order = Order.objects.first()
+        resp = self.client.post(reverse('actions'),
+                                {'pk': order.pk,
+                                 'action': 'order-express-delete',
+                                 'test': True
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['redirect'], reverse('main'))
+        with self.assertRaises(ObjectDoesNotExist):
+            OrderItem.objects.get(pk=order.pk)
 
     def test_delete_order_express_item_deletes_item(self):
         """Test the proper deletion of items."""
