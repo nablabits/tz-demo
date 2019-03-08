@@ -126,7 +126,7 @@ class ItemFormTest(TestCase):
                                     'size': 10,
                                     'fabrics': 10,
                                     'price': 100,
-                                    'notes': 'Another Notes',
+                                    'notes': 'Notes',
                                     'foreing': True})
         not_valid = duplicated_form.is_valid()
         self.assertFalse(not_valid)
