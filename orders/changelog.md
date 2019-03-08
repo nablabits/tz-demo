@@ -1,5 +1,18 @@
 ## Trapuzarrak app registro de cambios
 ***
+
+### v66, Mar 8
+  * **Nuevo:** ahora se pueden añadir prendas desde el filtro aplicado.
+  * **Nuevo:** ahora hay un botón siempre visible en la vista de pedido para
+    volver a la lista de pedidos.
+  * **Nuevo:** las ventas express se pueden eliminar desde la vista.
+    `[order.delete() for order in Order.obsolete.all()]`
+  * **Bug:** al cambiar de status ya no se actualiza la fecha (excepto si es
+    para entregar)
+  * **Bug:** se ha refinado la efectividad de las prendas duplicadas.
+  * **Bug:** se han eliminado los provedores del desplegable de añadir/editar
+    pedido
+
 ### v65, Feb 21
   * **Nuevo:** ahora los prepagos se añaden de forma independiente y hay opción
     de mandar un email al cliente.
