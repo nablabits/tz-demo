@@ -53,6 +53,7 @@ class Customer(models.Model):
     class Meta:
         ordering = ('name',)
 
+
 class Order(models.Model):
     """The main object, store the order info."""
 
@@ -218,7 +219,9 @@ class Item(models.Model):
                               self.item_class == item.item_class and
                               self.size == item.size and
                               self.fabrics == item.fabrics and
-                              self.price == item.price
+                              self.price == item.price and
+                              self.foreing == item.foreing and
+                              self.notes == item.notes
                               )
                 if duplicated:
                     raise ValidationError({'name': _('Items cannot have the ' +
@@ -315,7 +318,7 @@ class OrderItem(models.Model):
 
     @property
     def subtotal(self):
-        """Dsiplay the subtotal amount."""
+        """Display the subtotal amount."""
         return self.qty * self.price
 
 
