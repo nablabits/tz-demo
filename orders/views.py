@@ -967,6 +967,16 @@ class Actions(View):
                        'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
+        # delete order express (GET)
+        elif action == 'order-express-delete':
+            order = get_object_or_404(Order, pk=pk)
+            context = {'modal_title': 'Eliminar ticket express',
+                       'msg': 'Quieres realmente descartar el ticket?',
+                       'pk': order.pk,
+                       'action': 'order-express-delete',
+                       'submit_btn': 'Sí, descartar'}
+            template = 'includes/delete_confirmation.html'
+
         # Delete order express item (GET)
         elif action == 'order-express-item-delete':
             get_object_or_404(OrderItem, pk=pk)
@@ -1505,7 +1515,8 @@ class Actions(View):
                 data['reload'] = True
                 return JsonResponse(data)
             else:
-                order.delivery = date.today()
+                if status == '7':
+                    order.delivery = date.today()
                 order.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#order-status'
@@ -1556,6 +1567,13 @@ class Actions(View):
                        'js_data_pk': order.pk,
                        }
             template = 'includes/order_details.html'
+
+        # Delete order express (POST)
+        elif action == 'order-express-delete':
+            order = get_object_or_404(Order, pk=pk)
+            order.delete()
+            data['redirect'] = (reverse('main'))
+            data['form_is_valid'] = True
 
         # Delete items on order express (POST)
         elif action == 'order-express-item-delete':
@@ -1745,27 +1763,45 @@ def pqueue_actions(request):
 
 
 def item_selector(request):
-    """Run the item selector."""
-    if request.method != 'GET':
-        raise ValueError('The request should go in a GET method!')
+    """Select and add new items."""
+    # Set initial search filters as unknown
+    by_type, by_size, by_name = None, None, None
 
     # Fix context settings
     context = {'item_types': settings.ITEM_TYPE[1:],
+               'item_classes': settings.ITEM_CLASSES,
                'js_action_send_to': 'send-to-order',
                'js_action_edit': 'object-item-edit',
                'js_action_delete': 'object-item-delete'
                }
 
-    # On orders we should provide the order id to attach items to it
+    # Process form
+    if request.method == 'POST':
+        form = ItemForm(request.POST)
+        if form.is_valid():
+            form.save()
+        else:
+            context['errors'] = form.errors
+
+    # On express orders we should provide the order id to attach items to it
     order_pk = request.GET.get('aditionalpk', None)
+    if not order_pk:
+        order_pk = request.POST.get('aditionalpk', None)
     if order_pk:
         context['order'] = get_object_or_404(Order, pk=order_pk)
         context['js_action_send_to'] = 'send-to-order-express'
 
     items = Item.objects.all()
-    by_type = request.GET.get('item-type', None)
-    by_name = request.GET.get('item-name', None)
-    by_size = request.GET.get('item-size', None)
+
+    # Look for filters in GET or POST
+    by_type = (request.GET.get('item-type', None) or
+               request.POST.get('filter-on-type', None))
+    by_name = (request.GET.get('item-name', None) or
+               request.POST.get('filter-on-name', None))
+    by_size = (request.GET.get('item-size', None) or
+               request.POST.get('filter-on-size', None))
+
+    # Finally, apply the proper filter once known above values
     if by_type:
         items = items.filter(item_type=by_type)
         item_names = items.distinct('name')
@@ -1792,7 +1828,7 @@ def item_selector(request):
     Test stuff. Since it's not very straightforward extract this data
     from render_to_string() method, we'll render it in a regular way.
     """
-    if request.GET.get('test'):
+    if request.GET.get('test', None) or request.POST.get('test', None):
         return render(request, template, context)
 
     return JsonResponse(data)

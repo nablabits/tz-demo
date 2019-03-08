@@ -2,33 +2,15 @@
 {% block orderexpress %}
 <section id="order_view" data-pk="{{ order.pk }}">
   <div class="container pt-4">
-    <h1>Nueva venta express</h1>
+    <h1>
+      Nueva venta express
+      <button class="btn btn-sm btn-outline-danger js-crud-delete" data-action="order-express-delete" data-pk="{{order.pk}}">
+        <i class="far fa-trash"></i> Descartar ticket
+      </button>
+    </h1>
     <div class="row">
       <div class="col-md-8 col-lg-9">
         <h3 class="pb-1 mb-4 border-bottom">Añadir prendas al ticket</h3>
-        <!-- <div class="d-none mb-3">
-          <button type="button" class="mr-1 mt-1 btn btn-outline-success js-crud-add" data-action="{{js_action_add}}"  data-pk="{{js_data_pk}}">
-            <i class="fa fa-plus"></i> {{btn_title_add}}
-          </button>
-          <div class="d-flex" id="search">
-            <form class="mt-1 ml-2 js-search-order" method="post" action="{% url 'search' %}">
-              {% csrf_token %}
-              <input type="hidden" name="search-on" value="{{search_on}}">
-              <input type="hidden" name="order-pk" value="{{order.pk}}">
-              <div class="d-flex">
-                <div class="input-group mt-1">
-                  <div class="input-group-prepend">
-                    <span class="input-group-text" id="basic-addon1">
-                      <i class="fa fa-search"></i>
-                    </span>
-                  </div>
-                  <input class="form-control" type="search" placeholder="{{placeholder}}" aria-label="Buscar" name="search-obj">
-                </div>
-                <button class="btn btn-outline-success my-2 my-sm-0 mx-sm-2" type="submit">Buscar</button>
-              </div>
-            </form>
-          </div>
-        </div> -->
         <div class="d-flex">
         </div>
         <div class="collapse" id="search-results"></div>
