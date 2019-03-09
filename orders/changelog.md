@@ -1,6 +1,10 @@
 ## Trapuzarrak app registro de cambios
 ***
 
+### v67, Mar 9
+  * **Nuevo:** nueva REST API para sacar estadísticas sobre los datos
+    almacenados
+
 ### v66, Mar 8
   * **Nuevo:** ahora se pueden añadir prendas desde el filtro aplicado.
   * **Nuevo:** ahora hay un botón siempre visible en la vista de pedido para
