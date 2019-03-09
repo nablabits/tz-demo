@@ -1,11 +1,22 @@
 """Set the url for the views."""
 
-from django.urls import path, re_path
-from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
+from rest_framework.routers import DefaultRouter
+from django.urls import path, re_path, include
 from . import views
 
+
+# API urls generator
+router = DefaultRouter()
+router.register(r'customer', views.CustomerAPIList)
+router.register(r'order', views.OrderAPIList)
+router.register(r'item', views.ItemAPIList)
+router.register(r'order_item', views.OrderItemAPIList)
+router.register(r'invoice', views.InvoiceAPIList)
+router.register(r'expense', views.ExpenseAPIList)
+router.register(r'bank_movement', views.BankMovementAPIList)
 
 urlpatterns = [
     # The root url
@@ -39,5 +50,8 @@ urlpatterns = [
     # Loging related urls
     path('accounts/login/', auth_views.login, name='login'),
     path('accounts/logout/', auth_views.logout, name='logout'),
+
+    # The API url
+    path('API/', include(router.urls)),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

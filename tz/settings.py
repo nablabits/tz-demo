@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     'orders',
     'widget_tweaks',
     'coverage',
+    'rest_framework',
+    'rest_framework.authtoken',
 ]
 
 MIDDLEWARE = [
@@ -110,6 +112,17 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# REST API AUTH
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.BasicAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAdminUser',
+    ),
+}
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.0/topics/i18n/
