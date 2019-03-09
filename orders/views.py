@@ -1,27 +1,29 @@
 """Define all the views for the app."""
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.views import View
-from django.urls import reverse
-from django.http import JsonResponse, Http404, HttpResponseServerError
-from django.template.loader import render_to_string
-from .models import (
-    Comment, Customer, Order, OrderItem, Item, PQueue, Invoice, BankMovement,
-    Expense)
-from django.utils import timezone
-from .forms import (
-    CustomerForm, OrderForm, CommentForm, ItemForm, OrderItemForm,
-    EditDateForm, AddTimesForm, InvoiceForm)
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core.mail import EmailMultiAlternatives
+from django.http import JsonResponse, Http404, HttpResponseServerError
+from rest_framework import viewsets
+from django.shortcuts import render, redirect, get_object_or_404
+from django.template.loader import render_to_string
+from django.utils import timezone
+from django.urls import reverse
+from django.views import View
 from django.db.models import Count, Sum, F, Q, DecimalField
 from django.db.utils import IntegrityError
+from .models import (
+    Comment, Customer, Order, OrderItem, Item, PQueue, Invoice, BankMovement,
+    Expense)
+from .forms import (
+    CustomerForm, OrderForm, CommentForm, ItemForm, OrderItemForm,
+    EditDateForm, AddTimesForm, InvoiceForm)
+from . import serializers
+from . import settings
 from datetime import datetime, date
 from random import randint
-from . import settings
 import markdown2
 
 
@@ -1833,6 +1835,50 @@ def item_selector(request):
 
     return JsonResponse(data)
 
+
+# API view
+class CustomerAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for customers."""
+
+    queryset = Customer.objects.all()
+    serializer_class = serializers.CustomerSerializer
+
+
+class OrderAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for orders."""
+
+    queryset = Order.objects.all()
+    serializer_class = serializers.OrderSerializer
+
+
+class ItemAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for items."""
+    queryset = Item.objects.all()
+    serializer_class = serializers.ItemSerializer
+
+
+class OrderItemAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for order items."""
+    queryset = OrderItem.objects.all()
+    serializer_class = serializers.OrderItemSerializer
+
+
+class InvoiceAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for invoices."""
+    queryset = Invoice.objects.all()
+    serializer_class = serializers.InvoiceSerializer
+
+
+class ExpenseAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for expenses."""
+    queryset = Expense.objects.all()
+    serializer_class = serializers.ExpenseSerializer
+
+
+class BankMovementAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for bank movements."""
+    queryset = BankMovement.objects.all()
+    serializer_class = serializers.BankMovementSerializer
 #
 #
 #
