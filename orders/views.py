@@ -1835,6 +1835,50 @@ def item_selector(request):
 
     return JsonResponse(data)
 
+
+# API view
+class CustomerAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for customers."""
+
+    queryset = Customer.objects.all()
+    serializer_class = serializers.CustomerSerializer
+
+
+class OrderAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for orders."""
+
+    queryset = Order.objects.all()
+    serializer_class = serializers.OrderSerializer
+
+
+class ItemAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for items."""
+    queryset = Item.objects.all()
+    serializer_class = serializers.ItemSerializer
+
+
+class OrderItemAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for order items."""
+    queryset = OrderItem.objects.all()
+    serializer_class = serializers.OrderItemSerializer
+
+
+class InvoiceAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for invoices."""
+    queryset = Invoice.objects.all()
+    serializer_class = serializers.InvoiceSerializer
+
+
+class ExpenseAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for expenses."""
+    queryset = Expense.objects.all()
+    serializer_class = serializers.ExpenseSerializer
+
+
+class BankMovementAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for bank movements."""
+    queryset = BankMovement.objects.all()
+    serializer_class = serializers.BankMovementSerializer
 #
 #
 #
