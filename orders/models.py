@@ -266,7 +266,8 @@ class OrderItem(models.Model):
     sewing = models.DurationField('Confeccion', default=timedelta(0))
     iron = models.DurationField('Planchado', default=timedelta(0))
 
-    # store if the item is an element that must be fitted
+    """Store if the item is an element that must be fitted (deprecated, since
+    we have the 'Varios Arreglo' Item to match that.)"""
     fit = models.BooleanField('Arreglo', default=False)
     stock = models.BooleanField('Stock', default=False)
 
@@ -280,6 +281,9 @@ class OrderItem(models.Model):
 
     def save(self, *args, **kwargs):
         """Override the save method."""
+        # Avoid items to be stock and fit simultaneously.
+        if self.stock:
+            self.fit = False
         try:
             default = Item.objects.get(name='Predeterminado')
         except ObjectDoesNotExist:
@@ -301,6 +305,10 @@ class OrderItem(models.Model):
         # Ensure that order express items are stocked
         if self.reference.ref_name == 'Quick':
             self.stock = True
+
+        # Finally, ensure that foreign items are not Stock
+        if self.element.foreing:
+            self.stock = False
 
         super().save(*args, **kwargs)
 

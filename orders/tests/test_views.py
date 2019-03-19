@@ -1024,7 +1024,7 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['pending'][0], older)
         self.assertEqual(resp.context['pending'][1], newer)
 
-    def test_active_orderitems_count(self):
+    def test_active_order_items_count(self):
         """Test the proper count of items."""
         self.client.login(username='regular', password='test')
         order = Order.objects.first()
@@ -1105,6 +1105,51 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['delivered'][0].timing,
+                         timedelta(0, 72000))
+
+    def test_pending_count_items(self):
+        """Test the correct sum of items."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.first()
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i)
+
+        order.status = '7'
+        order.save()
+
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['pending'][0].orderitem__count, 2)
+
+    def test_pending_count_comments(self):
+        """Test the correct count of comments."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        order = Order.objects.first()
+        for i in range(2):
+            Comment.objects.create(user=user, reference=order, comment=i)
+
+        order.status = '7'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['pending'][0].comment__count, 2)
+
+    def test_pending_timing_sum(self):
+        """Test the correct sum of times in orderItems."""
+        self.client.login(username='regular', password='test')
+        order = Order.objects.first()
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(2))
+        order.status = '7'
+        order.save()
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertEqual(resp.context['pending'][0].timing,
                          timedelta(0, 72000))
 
     def test_pending_total_excludes_2018_orders(self):
@@ -1812,6 +1857,19 @@ class PQueueManagerTests(TestCase):
         queued_item.save()
 
         PQueue.objects.create(item=queued_item)
+
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(len(resp.context['available']), 2)
+        for item in resp.context['available']:
+            self.assertNotEqual(item.description, 'Queued item')
+
+    def test_available_items_exclude_foreign(self):
+        """Foreign items can't be shown in PQueue."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        queued_item = OrderItem.objects.last()
+        queued_item.description = 'Foreign item'
+        queued_item.element.foreing = True
+        queued_item.element.save()
 
         resp = self.client.get(reverse('pqueue_manager'))
         self.assertEqual(len(resp.context['available']), 2)
@@ -3129,7 +3187,7 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        vars = ('orders', 'modal_title', 'pk', 'action', 'submit_btn',
+        vars = ('orders', 'modal_title', 'pk', 'item', 'action', 'submit_btn',
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
@@ -3894,7 +3952,7 @@ class ActionsPostMethodCreate(TestCase):
                                               })
         item = OrderItem.objects.get(description='added item')
         self.assertTrue(item)
-        self.assertTrue(item.fit)
+        self.assertFalse(item.fit)
         self.assertTrue(item.stock)
         self.assertEqual(item.reference, order)
 
@@ -4028,20 +4086,6 @@ class ActionsPostMethodCreate(TestCase):
                                      })
         self.assertEqual(no_order.status_code, 404)
 
-    def test_send_to_order_raises_error_invalid_isfit(self):
-        """If no valid isfit is given raise a 404."""
-        item = Item.objects.first()
-        order = Order.objects.first()
-        no_order = self.client.post(reverse('actions'),
-                                    {'action': 'send-to-order',
-                                     'pk': item.pk,
-                                     'order': order.pk,
-                                     'isfit': 'invalid',
-                                     'isStock': '1',
-                                     'test': True,
-                                     })
-        self.assertEqual(no_order.status_code, 404)
-
     def test_send_to_order_raises_error_invalid_isStock(self):
         """If no valid isStock is given raise a 404."""
         item = Item.objects.first()
@@ -4070,7 +4114,7 @@ class ActionsPostMethodCreate(TestCase):
         order_item = OrderItem.objects.filter(element=item)
         order_item = order_item.filter(reference=order)
         self.assertEqual(len(order_item), 1)
-        self.assertTrue(order_item[0].fit)
+        self.assertFalse(order_item[0].fit)
         self.assertTrue(order_item[0].stock)
 
     def test_send_to_order_isfit_and_isStock_false(self):

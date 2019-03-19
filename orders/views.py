@@ -324,7 +324,7 @@ def orderlist(request, orderby):
     pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
     pending = pending.filter(invoice__isnull=True).order_by('inbox_date')
 
-    # Active & delivered orders show some attr at glance
+    # Active, delivered & pending orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
                              Count('comment', distinct=True),
                              timing=(Sum('orderitem__sewing') +
@@ -336,6 +336,12 @@ def orderlist(request, orderby):
                                    timing=(Sum('orderitem__sewing') +
                                            Sum('orderitem__iron') +
                                            Sum('orderitem__crop')))
+
+    pending = pending.annotate(Count('orderitem', distinct=True),
+                               Count('comment', distinct=True),
+                               timing=(Sum('orderitem__sewing') +
+                                       Sum('orderitem__iron') +
+                                       Sum('orderitem__crop')))
 
     # Total pending amount
     items = OrderItem.objects.filter(reference__delivery__gte=date(2019, 1, 1))
@@ -638,6 +644,7 @@ def pqueue_manager(request):
     available = OrderItem.objects.exclude(reference__status__in=[7, 8])
     available = available.exclude(element__name__iexact='Descuento')
     available = available.exclude(stock=True).filter(pqueue__isnull=True)
+    available = available.exclude(element__foreing=True)
     available = available.order_by('reference__delivery',
                                    'reference__ref_name')
     pqueue = PQueue.objects.select_related('item__reference')
@@ -774,9 +781,11 @@ class Actions(View):
             custom_form = 'includes/custom_forms/send_to_order.html'
             order_dropdown = Order.objects.exclude(ref_name__iexact='Quick')
             order_dropdown = order_dropdown.exclude(status__in=[7, 8])
+            item = get_object_or_404(Item, pk=pk)
             context = {'orders': order_dropdown,
                        'modal_title': 'Añadir prenda a pedido',
                        'pk': pk,
+                       'item': item,
                        'action': 'send-to-order',
                        'submit_btn': 'Añadir a pedido',
                        'custom_form': custom_form,
@@ -1177,13 +1186,6 @@ class Actions(View):
                                      pk=self.request.POST.get('pk', None))
             order = get_object_or_404(Order,
                                       pk=self.request.POST.get('order', None))
-            # Test isFit
-            if self.request.POST.get('isfit', None) == '1':
-                is_fit = True
-            elif self.request.POST.get('isfit', None) == '0':
-                is_fit = False
-            else:
-                raise Http404('No info given about fit')
 
             # Test isStock
             if self.request.POST.get('isStock', None) == '1':
@@ -1192,7 +1194,7 @@ class Actions(View):
                 is_stock = False
             else:
                 raise Http404('No info given about stock')
-            OrderItem.objects.create(element=item, reference=order, fit=is_fit,
+            OrderItem.objects.create(element=item, reference=order, fit=False,
                                      stock=is_stock)
             data['redirect'] = (reverse('order_view', args=[order.pk]))
             data['form_is_valid'] = True
