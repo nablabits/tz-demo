@@ -3687,13 +3687,14 @@ class ActionsPostMethodCreate(TestCase):
 
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
-        context_is_valid = 0
-        for item in context:
-            for var in vars:
-                if item == var:
-                    context_is_valid += 1
-        if context_is_valid == len(vars):
-            return True
+        if len(context) == len(vars):
+            context_is_valid = 0
+            for item in context:
+                for var in vars:
+                    if item == var:
+                        context_is_valid += 1
+            if context_is_valid == len(vars):
+                return True
         else:
             return False
 
@@ -3896,7 +3897,8 @@ class ActionsPostMethodCreate(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         template = data['template']
         context = data['context']
-        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn')
+        vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
+                'custom_form')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
