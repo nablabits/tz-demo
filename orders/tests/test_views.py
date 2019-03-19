@@ -3894,7 +3894,7 @@ class ActionsPostMethodCreate(TestCase):
                                               })
         item = OrderItem.objects.get(description='added item')
         self.assertTrue(item)
-        self.assertTrue(item.fit)
+        self.assertFalse(item.fit)
         self.assertTrue(item.stock)
         self.assertEqual(item.reference, order)
 
@@ -4028,20 +4028,6 @@ class ActionsPostMethodCreate(TestCase):
                                      })
         self.assertEqual(no_order.status_code, 404)
 
-    def test_send_to_order_raises_error_invalid_isfit(self):
-        """If no valid isfit is given raise a 404."""
-        item = Item.objects.first()
-        order = Order.objects.first()
-        no_order = self.client.post(reverse('actions'),
-                                    {'action': 'send-to-order',
-                                     'pk': item.pk,
-                                     'order': order.pk,
-                                     'isfit': 'invalid',
-                                     'isStock': '1',
-                                     'test': True,
-                                     })
-        self.assertEqual(no_order.status_code, 404)
-
     def test_send_to_order_raises_error_invalid_isStock(self):
         """If no valid isStock is given raise a 404."""
         item = Item.objects.first()
@@ -4070,7 +4056,7 @@ class ActionsPostMethodCreate(TestCase):
         order_item = OrderItem.objects.filter(element=item)
         order_item = order_item.filter(reference=order)
         self.assertEqual(len(order_item), 1)
-        self.assertTrue(order_item[0].fit)
+        self.assertFalse(order_item[0].fit)
         self.assertTrue(order_item[0].stock)
 
     def test_send_to_order_isfit_and_isStock_false(self):

@@ -1177,13 +1177,6 @@ class Actions(View):
                                      pk=self.request.POST.get('pk', None))
             order = get_object_or_404(Order,
                                       pk=self.request.POST.get('order', None))
-            # Test isFit
-            if self.request.POST.get('isfit', None) == '1':
-                is_fit = True
-            elif self.request.POST.get('isfit', None) == '0':
-                is_fit = False
-            else:
-                raise Http404('No info given about fit')
 
             # Test isStock
             if self.request.POST.get('isStock', None) == '1':
@@ -1192,7 +1185,7 @@ class Actions(View):
                 is_stock = False
             else:
                 raise Http404('No info given about stock')
-            OrderItem.objects.create(element=item, reference=order, fit=is_fit,
+            OrderItem.objects.create(element=item, reference=order, fit=False,
                                      stock=is_stock)
             data['redirect'] = (reverse('order_view', args=[order.pk]))
             data['form_is_valid'] = True

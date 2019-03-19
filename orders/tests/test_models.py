@@ -537,6 +537,18 @@ class TestOrderItems(TestCase):
             element=object_item, reference=Order.objects.first(), )
         self.assertTrue(item.stock)
 
+    def test_stock_items_cant_be_fit(self):
+        """Ensure that fit items cant be stock."""
+        order = Order.objects.first()
+        item = Item.objects.last()
+        o_item = OrderItem.objects.create(
+            element=item, reference=order, fit=True, stock=True)
+        self.assertFalse(o_item.fit)
+        self.assertTrue(o_item.stock)
+        o_item.fit = True
+        o_item.save()
+        self.assertFalse(OrderItem.objects.get(pk=o_item.pk).fit)
+
     def test_add_items_to_orders_default_item(self):
         """If no element is selected, Predetermiando is default."""
         order = Order.objects.first()
