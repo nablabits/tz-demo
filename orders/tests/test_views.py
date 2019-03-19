@@ -1818,6 +1818,19 @@ class PQueueManagerTests(TestCase):
         for item in resp.context['available']:
             self.assertNotEqual(item.description, 'Queued item')
 
+    def test_available_items_exclude_foreign(self):
+        """Foreign items can't be shown in PQueue."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        queued_item = OrderItem.objects.last()
+        queued_item.description = 'Foreign item'
+        queued_item.element.foreing = True
+        queued_item.element.save()
+
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(len(resp.context['available']), 2)
+        for item in resp.context['available']:
+            self.assertNotEqual(item.description, 'Queued item')
+
     def test_available_items_sort_by_delivery(self):
         """Sort by delivery, then by ref_name."""
         delivery = date.today() + timedelta(days=1)

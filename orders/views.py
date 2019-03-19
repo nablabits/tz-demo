@@ -638,6 +638,7 @@ def pqueue_manager(request):
     available = OrderItem.objects.exclude(reference__status__in=[7, 8])
     available = available.exclude(element__name__iexact='Descuento')
     available = available.exclude(stock=True).filter(pqueue__isnull=True)
+    available = available.exclude(element__foreing=True)
     available = available.order_by('reference__delivery',
                                    'reference__ref_name')
     pqueue = PQueue.objects.select_related('item__reference')
