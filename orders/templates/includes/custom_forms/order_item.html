@@ -40,20 +40,13 @@
   </div>
 </div>
 <div class="d-flex">
-  <div class="form-group">
-    <div class="form-check">
-      {% render_field form.fit class="form-check-input ml-0" %}
-      <label class="form-check-label" for="id_fit">Es un arreglo</label>
-    </div>
-  </div>
-  <div class="form-group ml-5">
-    <div class="form-check">
-      {% render_field form.stock class="form-check-input ml-0" %}
-      <label class="form-check-label" for="id_stock">Es de stock</label>
-    </div>
+  <div class="form-group form-check">
+      {% render_field form.stock class="form-check-input" %}
+      <label class="form-check-label" for="id_stock">Es una prenda de stock</label>
   </div>
 </div>
 <div class="form-group">
   {{form.description.label_tag}}
   {% render_field form.description class="form-control" %}
 </div>
+{{form.fit.as_hidden}}

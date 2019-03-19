@@ -1,5 +1,17 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v68, Mar 19
+  * **Nuevo:** Ahora las ventas express se pueden convertir en pedidos regulares
+  para añadirles arreglos.
+  * **Mejora:** ya se puede añadir el CP a la venta express después de crearla.
+  * **Mejora:** Ha desaparecido la casilla de arreglo, ya que los arreglos los
+  marcamos con la prenda *varios arreglo.*
+  * **Bug:** los elementos de stock son solo producción nuestra, por lo que
+  ahora las prendas externas ya no podrán ser de stock.
+  * **Bug:** ya no aparecen las prendas externas en la cola de producción.
+  * **Bug:** las prendas externas ya no muestran los tiempos, entre otras cosas
+  porque no tienen.
+
 
 ### v67, Mar 9
   * **Nuevo:** nueva REST API para sacar estadísticas sobre los datos
