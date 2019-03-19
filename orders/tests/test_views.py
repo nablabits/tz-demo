@@ -3129,7 +3129,7 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        vars = ('orders', 'modal_title', 'pk', 'action', 'submit_btn',
+        vars = ('orders', 'modal_title', 'pk', 'item', 'action', 'submit_btn',
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 

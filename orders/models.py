@@ -306,6 +306,10 @@ class OrderItem(models.Model):
         if self.reference.ref_name == 'Quick':
             self.stock = True
 
+        # Finally, ensure that foreign items are not Stock
+        if self.element.foreing:
+            self.stock = False
+
         super().save(*args, **kwargs)
 
     @property

@@ -537,6 +537,18 @@ class TestOrderItems(TestCase):
             element=object_item, reference=Order.objects.first(), )
         self.assertTrue(item.stock)
 
+    def test_orderitem_stock_false_for_foreign_items(self):
+        """Ensure that foreign items are not stock."""
+        order = Order.objects.first()
+        order.ref_name = 'Quick'
+        order.save()
+        object_item = Item.objects.last()
+        object_item.foreing = True
+        object_item.save()
+        item = OrderItem.objects.create(
+            element=object_item, reference=Order.objects.first(), stock=True)
+        self.assertFalse(item.stock)
+
     def test_stock_items_cant_be_fit(self):
         """Ensure that fit items cant be stock."""
         order = Order.objects.first()

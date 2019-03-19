@@ -774,9 +774,11 @@ class Actions(View):
             custom_form = 'includes/custom_forms/send_to_order.html'
             order_dropdown = Order.objects.exclude(ref_name__iexact='Quick')
             order_dropdown = order_dropdown.exclude(status__in=[7, 8])
+            item = get_object_or_404(Item, pk=pk)
             context = {'orders': order_dropdown,
                        'modal_title': 'Añadir prenda a pedido',
                        'pk': pk,
+                       'item': item,
                        'action': 'send-to-order',
                        'submit_btn': 'Añadir a pedido',
                        'custom_form': custom_form,
