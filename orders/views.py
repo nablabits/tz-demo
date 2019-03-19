@@ -580,6 +580,17 @@ def order_view(request, pk):
 def order_express_view(request, pk):
     """Create a new quick checkout."""
     order = get_object_or_404(Order, pk=pk)
+
+    if request.method == 'POST':
+        cp = request.POST.get('cp', None)
+        customer = request.POST.get('Customer', None)
+        if cp:
+            c = Customer.objects.get_or_create(
+                name='express', city='server', phone=0, cp=cp,
+                notes='AnnonymousUserAutmaticallyCreated')
+            order.customer = c[0]
+            order.save()
+
     if order.customer.name != 'express':
         return redirect(reverse('order_view', args=[order.pk]))
     items = OrderItem.objects.filter(reference=order)

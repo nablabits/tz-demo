@@ -1440,6 +1440,17 @@ class OrderExpressTests(TestCase):
         resp = self.client.get(reverse('order_express', args=[5000]))
         self.assertEqual(resp.status_code, 404)
 
+    def test_post_cp_changes_cp(self):
+        """Test the correct update of customer."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'cp': 230})
+        self.assertEqual(resp.context['order'].customer.cp, '230')
+
     def test_regular_orders_should_be_redirected(self):
         """Redirect to order view with regular orders."""
         self.client.login(username='regular', password='test')
