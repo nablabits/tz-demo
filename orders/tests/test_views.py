@@ -1451,6 +1451,42 @@ class OrderExpressTests(TestCase):
                                 {'cp': 230})
         self.assertEqual(resp.context['order'].customer.cp, '230')
 
+    def test_post_customer_changes_customer(self):
+        """Test the proper change of customer."""
+        self.client.login(username='regular', password='test')
+        c = Customer.objects.first()
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'customer': c.pk})
+        self.assertEqual(resp.status_code, 302)
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.customer.name, 'Test')
+
+    def test_invalid_pk_raises_404(self):
+        """Raise a 404 when trying to select a void customer."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'customer': 3000})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_no_cp_or_not_customerpk_should_raise_404(self):
+        """Raise a 404 when not passing valid arguments"""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'void': 'null'})
+        self.assertEqual(resp.status_code, 404)
+
     def test_regular_orders_should_be_redirected(self):
         """Redirect to order view with regular orders."""
         self.client.login(username='regular', password='test')
@@ -1462,8 +1498,23 @@ class OrderExpressTests(TestCase):
         resp = self.client.get(reverse('order_express', args=[order.pk]))
         self.assertEqual(resp.status_code, 302)
 
+    def test_customer_list_excludes_express_and_providers(self):
+        """These customers should be excluded."""
+        self.client.login(username='regular', password='test')
+        Customer.objects.create(
+            name='provider', city='server', phone=0, cp=48003, provider=True)
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['customers'].count(), 1)
+        self.assertEqual(resp.context['customers'][0].name, 'Test')
+        self.assertEqual(Customer.objects.count(), 3)
+
     def test_items_belong_to_the_order(self):
-        """Dsiplay all the items that are owned by an order."""
+        """Display all the items that are owned by an order."""
         self.client.login(username='regular', password='test')
         user = User.objects.first()
         c = Customer.objects.first()
@@ -4232,7 +4283,8 @@ class ActionsPostMethodCreate(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#ticket')
         self.assertEqual(data['template'], 'includes/ticket.html')
-        vars = ('items', )
+        vars = ('items', 'total', 'order', 'customers', 'js_action_delete',
+                'js_data_pk')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         orderitem = OrderItem.objects.first()

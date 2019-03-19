@@ -583,22 +583,34 @@ def order_express_view(request, pk):
 
     if request.method == 'POST':
         cp = request.POST.get('cp', None)
-        customer = request.POST.get('Customer', None)
+        customer_pk = request.POST.get('customer', None)
         if cp:
             c = Customer.objects.get_or_create(
                 name='express', city='server', phone=0, cp=cp,
                 notes='AnnonymousUserAutmaticallyCreated')
             order.customer = c[0]
             order.save()
+        elif customer_pk:
+            c = get_object_or_404(Customer, pk=customer_pk)
+            order.customer = c
+            order.ref_name = 'Venta express con arreglo'
+            order.save()
+        else:
+            raise Http404('Something went wrong with the request.')
 
+    # Redirect regular orders
     if order.customer.name != 'express':
         return redirect(reverse('order_view', args=[order.pk]))
+
+    customers = Customer.objects.exclude(name='express')
+    customers = customers.exclude(provider=True)
     items = OrderItem.objects.filter(reference=order)
     available_items = Item.objects.all()[:10]
     already_invoiced = Invoice.objects.filter(reference=order)
     cur_user = request.user
     now = datetime.now()
     view_settings = {'order': order,
+                     'customers': customers,
                      'user': cur_user,
                      'now': now,
                      'item_types': settings.ITEM_TYPE[1:],
@@ -1218,6 +1230,10 @@ class Actions(View):
                 Order, pk=self.request.POST.get('order-pk', None)
                 )
 
+            # Get the customers for dropdown
+            customers = Customer.objects.exclude(name='express')
+            customers = customers.exclude(provider=True)
+
             # Now create OrderItem
             price = self.request.POST.get('custom-price', None)
             qty = self.request.POST.get('item-qty', 1)
@@ -1243,6 +1259,7 @@ class Actions(View):
             context = {'items': items,
                        'total': total,
                        'order': order,
+                       'customers': customers,
 
                        # CRUD Actions
                        # 'js_action_edit': 'order-express-item-edit',

@@ -32,6 +32,8 @@
             {{order.customer.cp}}
           {%endif%}
         </button>
+      <button class="mr-1 mt-1 btn btn-outline-success" data-toggle="collapse" data-target="#convert">
+        <i class="fa fa-exchange"></i><br>Convertir
       </button>
       <button class="mr-1 mt-1 btn btn-outline-success {%if total.total != 0%}js-crud-add{%endif%}" data-action="ticket-to-invoice" data-pk="{{order.pk}}" {%if total.total == 0%}disabled{%endif%}>
         <i class="fa fa-vote-yea"></i><br>Facturar
@@ -45,6 +47,21 @@
         </div>
         <button class="btn btn-outline-success" type="submit">
           {%if order.customer.cp == 0%}Añadir CP{%else%}Cambiar CP{%endif%}
+        </button>
+      </form>
+    </div>
+    <div class="collapse" id="convert">
+      <form class="mt-2" action="{%url 'order_express' order.pk%}" method="post">
+        {%csrf_token%}
+        <div class="form-group">
+          <select class="form-control" name="customer">
+            {%for customer in customers%}
+              <option value="{{customer.pk}}">{{customer.name}}</option>
+            {%endfor%}
+          </select>
+        </div>
+        <button class="btn btn-outline-success" type="submit">
+          Convertir en pedido regular
         </button>
       </form>
     </div>
