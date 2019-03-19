@@ -22,21 +22,49 @@
       <strong>Total:</strong>&nbsp;{{order.total}}€
     </div>
     <div class="d-flex justify-content-between">
-      {%if order.customer.cp == 0%}
-      <button class="mr-1 mt-1 btn btn-outline-success" data-action="{{js_action_edit}}" disabled>
-        Añadir CP
+
+        <button class="mr-1 mt-1 btn btn-outline-success" data-toggle="collapse" data-target="#add-cp">
+          {%if order.customer.cp == 0%}
+            <i class="fa fa-map-marker-plus"></i><br>
+            Añadir CP
+          {%else%}
+            <i class="far fa-map-marker-smile"></i><br>
+            {{order.customer.cp}}
+          {%endif%}
+        </button>
+      <button class="mr-1 mt-1 btn btn-outline-success" data-toggle="collapse" data-target="#convert">
+        <i class="fa fa-exchange"></i><br>Convertir
       </button>
-      {%else%}
-        Facturando a:<br>
-        CP: {{order.customer.cp}}
-      {%endif%}
       <button class="mr-1 mt-1 btn btn-outline-success {%if total.total != 0%}js-crud-add{%endif%}" data-action="ticket-to-invoice" data-pk="{{order.pk}}" {%if total.total == 0%}disabled{%endif%}>
-        Facturar
+        <i class="fa fa-vote-yea"></i><br>Facturar
       </button>
     </div>
-    {%if order.customer.cp == 0%}
-      <small>Recuerda, es importante saber de donde es la gente.</small>
-    {%endif%}
+    <div class="collapse" id="add-cp">
+      <form class="mt-2" action="{%url 'order_express' order.pk%}" method="post">
+        {%csrf_token%}
+        <div class="form-group">
+          <input class="form-control" type="number" name="cp" value={{order.customer.cp}}>
+        </div>
+        <button class="btn btn-outline-success" type="submit">
+          {%if order.customer.cp == 0%}Añadir CP{%else%}Cambiar CP{%endif%}
+        </button>
+      </form>
+    </div>
+    <div class="collapse" id="convert">
+      <form class="mt-2" action="{%url 'order_express' order.pk%}" method="post">
+        {%csrf_token%}
+        <div class="form-group">
+          <select class="form-control" name="customer">
+            {%for customer in customers%}
+              <option value="{{customer.pk}}">{{customer.name}}</option>
+            {%endfor%}
+          </select>
+        </div>
+        <button class="btn btn-outline-success" type="submit">
+          Convertir en pedido regular
+        </button>
+      </form>
+    </div>
   {%endif%}
 {%else%}
   <div class="justify-content-center text-center">
