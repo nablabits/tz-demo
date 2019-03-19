@@ -324,7 +324,7 @@ def orderlist(request, orderby):
     pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
     pending = pending.filter(invoice__isnull=True).order_by('inbox_date')
 
-    # Active & delivered orders show some attr at glance
+    # Active, delivered & pending orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
                              Count('comment', distinct=True),
                              timing=(Sum('orderitem__sewing') +
@@ -336,6 +336,12 @@ def orderlist(request, orderby):
                                    timing=(Sum('orderitem__sewing') +
                                            Sum('orderitem__iron') +
                                            Sum('orderitem__crop')))
+
+    pending = pending.annotate(Count('orderitem', distinct=True),
+                               Count('comment', distinct=True),
+                               timing=(Sum('orderitem__sewing') +
+                                       Sum('orderitem__iron') +
+                                       Sum('orderitem__crop')))
 
     # Total pending amount
     items = OrderItem.objects.filter(reference__delivery__gte=date(2019, 1, 1))
