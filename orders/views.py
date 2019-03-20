@@ -965,7 +965,7 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Edit times on pqueue
+        # Edit times on pqueue (GET)
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
@@ -976,6 +976,8 @@ class Actions(View):
                        'pk': item.pk,
                        'action': 'pqueue-add-time',
                        'submit_btn': 'Guardar',
+                       '2nd_sbt_value': 'save-and-archive',
+                       '2nd_sbt_btn': 'Guardar y completar',
                        'custom_form': 'includes/custom_forms/add_times.html',
                        }
             template = 'includes/regular_form.html'
@@ -1508,6 +1510,14 @@ class Actions(View):
             item = OrderItem.objects.select_related('reference').get(pk=pk)
             form = AddTimesForm(request.POST, instance=item)
             if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#pqueue-list-tablet'
+                template = 'includes/pqueue_tablet.html'
+                sbt_2nd = request.POST.get('2nd_sbt_action', None)
+                if sbt_2nd == 'save-and-archive':
+                    pqueue_item = get_object_or_404(PQueue, pk=item.pk)
+                    pqueue_item.complete()
                 pqueue = PQueue.objects.select_related('item__reference')
                 pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
                 pqueue_completed = pqueue.filter(score__lt=0)
@@ -1515,10 +1525,6 @@ class Actions(View):
                 context = {'active': pqueue_active,
                            'completed': pqueue_completed,
                            }
-                form.save()
-                data['form_is_valid'] = True
-                data['html_id'] = '#pqueue-list-tablet'
-                template = 'includes/pqueue_tablet.html'
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,

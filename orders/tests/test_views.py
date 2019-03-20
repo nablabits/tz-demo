@@ -3470,7 +3470,7 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         vars = ('item', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
-                'custom_form')
+                '2nd_sbt_value', '2nd_sbt_btn', 'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
@@ -4811,6 +4811,39 @@ class ActionsPostMethodEdit(TestCase):
         mod_item = OrderItem.objects.get(pk=item.pk)
         for i in (mod_item.sewing, mod_item.crop, mod_item.iron):
             self.assertEqual(i, timedelta(0, 2))
+
+    def test_pqueue_raises_404_when_pquee_does_not_exist(self):
+        """Test the get_object_or_404."""
+        item = OrderItem.objects.first()
+        for i in (item.sewing, item.crop, item.iron):
+            self.assertEqual(i, timedelta(0))
+        resp = self.client.post(reverse('actions'),
+                                {'iron': '2', 'crop': '2', 'sewing': '2',
+                                 'pk': item.pk,
+                                 '2nd_sbt_action': 'save-and-archive',
+                                 'action': 'pqueue-add-time',
+                                 'test': True
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_pqueue_adds_time_and_completes(self):
+        """Test the correct 2-in-1 action."""
+        item = OrderItem.objects.first()
+        PQueue.objects.create(item=item)
+        for i in (item.sewing, item.crop, item.iron):
+            self.assertEqual(i, timedelta(0))
+        self.client.post(reverse('actions'),
+                         {'iron': '2', 'crop': '2', 'sewing': '2',
+                          'pk': item.pk,
+                          '2nd_sbt_action': 'save-and-archive',
+                          'action': 'pqueue-add-time',
+                          'test': True
+                          })
+        mod_item = OrderItem.objects.get(pk=item.pk)
+        for i in (mod_item.sewing, mod_item.crop, mod_item.iron):
+            self.assertEqual(i, timedelta(0, 2))
+        archived = PQueue.objects.get(pk=item.pk)
+        self.assertTrue(archived.score < 0)
 
     def test_pqueue_add_time_rejected_form(self):
         """Test invalid forms."""
