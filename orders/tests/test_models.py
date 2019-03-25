@@ -170,6 +170,35 @@ class TestOrders(TestCase):
 
         Item.objects.create(name='test', fabrics=10, price=30)
 
+    def test_confirmed_default_true(self):
+        """Confirmed field should be bool and true by default."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today())
+        self.assertIsInstance(order.confirmed, bool)
+        self.assertTrue(order.confirmed)
+
+    def test_trapuzarrak_orders_are_always_confirmed(self):
+        """Trapuzarrak are not allowed to be unconfirmed."""
+        user = User.objects.first()
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        order = Order.objects.create(
+            user=user, delivery=date.today(), customer=tz, ref_name='Tz Order',
+            confirmed=False, )
+
+        # New created TZ orders should be confirmed
+        self.assertTrue(order.confirmed)
+
+        # Changing to tz customer should change also the confirmation status
+        order.customer = Customer.objects.first()
+        order.confirmed = False
+        order.save()
+        self.assertFalse(Order.objects.get(pk=order.pk).confirmed)
+        order.customer = tz
+        order.save()
+        self.assertTrue(Order.objects.get(pk=order.pk).confirmed)
+
     def test_budget_and_prepaid_can_be_null(self):
         """Test the emptyness of fields and default value."""
         user = User.objects.first()
