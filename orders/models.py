@@ -113,7 +113,7 @@ class Order(models.Model):
 
     def __str__(self):
         """Object's representation."""
-        return '%s %s %s' % (self.inbox_date.date(),
+        return '%s %s %s' % (self.pk,
                              self.customer, self.ref_name)
 
     @property
