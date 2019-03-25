@@ -2605,7 +2605,9 @@ class OrderViewTests(TestCase):
         order = Order.objects.first()
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEquals(resp.context['user'].username, order.user.username)
-        self.assertEquals(resp.context['title'], 'TrapuZarrak · Ver Pedido')
+        self.assertEquals(resp.context['title'],
+                          'Pedido %s: %s, %s' %
+                          (order.pk, order.customer.name, order.ref_name))
         self.assertEquals(resp.context['btn_title_add'], 'Añadir prenda')
         self.assertEquals(resp.context['js_action_add'], 'order-item-add')
         self.assertEquals(resp.context['js_action_edit'], 'order-item-edit')

@@ -556,6 +556,7 @@ def order_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
+    title = (order.pk, order.customer.name, order.ref_name)
     view_settings = {'order': order,
                      'items': items,
                      'comments': comments,
@@ -563,7 +564,7 @@ def order_view(request, pk):
                      'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
-                     'title': 'TrapuZarrak · Ver Pedido',
+                     'title': 'Pedido %s: %s, %s' % title,
 
                      # CRUD Actions
                      'btn_title_add': 'Añadir prenda',
