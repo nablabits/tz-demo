@@ -73,10 +73,12 @@ $(function () {
 
   var saveActionForm = function (e) {
     e.preventDefault()
-    var form = $(this)
+    var form = $('#send-form')
+    var formData = form.serializeArray()
+    formData.push({ name: $(this).attr('name'), value: $(this).attr('value') })
     $.ajax({
       url: form.attr('action'),
-      data: form.serialize(),
+      data: formData,
       type: form.attr('method'),
       dataType: 'json',
       beforeSend: function () {
@@ -200,7 +202,7 @@ $(function () {
   $('#root').on('submit', '.js-item-selector-add', itemSelectorAdd)
 
   // actions (POST)
-  $('#action-modal').on('submit', '.js-send-form', saveActionForm)
+  $('#action-modal').on('click', '#send-form button', saveActionForm)
   $('#order-status').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)

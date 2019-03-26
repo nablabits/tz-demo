@@ -1521,7 +1521,7 @@ class Actions(View):
                 data['form_is_valid'] = True
                 data['html_id'] = '#pqueue-list-tablet'
                 template = 'includes/pqueue_tablet.html'
-                sbt_2nd = request.POST.get('2nd_sbt_action', None)
+                sbt_2nd = request.POST.get('sbt_action', None)
                 if sbt_2nd == 'save-and-archive':
                     pqueue_item = get_object_or_404(PQueue, pk=item.pk)
                     pqueue_item.complete()
