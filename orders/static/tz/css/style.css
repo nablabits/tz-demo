@@ -133,3 +133,11 @@ th{
   overflow-y: scroll;
   height: 80vh;
 }
+
+#unconfirmed-toggle{cursor: pointer;}
+
+.bg-bar0{background-color: #4B8F98;}  /*sales, green600*/
+.bg-bar1{background-color: #4fabb7;}  /*future confirmed lime600*/
+.bg-bar2{background-color: #82c0d8;}  /*unconfirmed, cyan700*/
+.bg-bar3{background-color: #ab80f8;}  /*produced tz, DeepPurple500*/
+.bg-bar4{background-color: #bfa3f2;}  /*future tz, yellow200*/
