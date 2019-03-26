@@ -1,5 +1,15 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v69, Mar 26
+  * **Nuevo:** ahora los pedidos pueden estar a la espera de confirmación.
+  * **Mejora:** se ha recolocado el botón de volver a lista de pedidos.
+  * **Mejora:** ahora se pueden guardar y completar tiempos en un solo *clik*
+    en la cola de producción.
+  * **Mejora:** la vista principal ahora muestra el progreso del año, es un
+    marcador en directo.
+  * **Bug:** los pedidos de tz ya no se pueden facturar.
+  * **Bug:** las prendas de stock no necesitan tiempos.
+
 ### v68, Mar 19
   * **Nuevo:** Ahora las ventas express se pueden convertir en pedidos regulares
   para añadirles arreglos.
