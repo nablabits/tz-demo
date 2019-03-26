@@ -1002,6 +1002,15 @@ class TestInvoice(TestCase):
         self.assertIsInstance(invoice.issued_on, datetime)
         self.assertEqual(invoice.issued_on.date(), date.today())
 
+    def test_tz_cannot_be_invoiced(self):
+        """Ensure that tz can't be invoiced."""
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
+        with self.assertRaises(ValueError):
+            Invoice.objects.create(reference=tz_order)
+
     def test_invoice_no_default_1(self):
         """When there're no invoices yet, the first one is 1."""
         invoice = Invoice.objects.create(reference=Order.objects.first())

@@ -119,7 +119,6 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save method."""
-
         # ensure trapuzarrak is always Confirmed
         if self.customer.name.lower() == 'trapuzarrak':
             self.confirmed = True
@@ -522,6 +521,10 @@ class Invoice(models.Model):
 
     def save(self, *args, **kwargs):
         """Override the save method."""
+        # Ensure tz has no invoices
+        if self.reference.customer.name.lower() == 'trapuzarrak':
+            raise ValueError('TZ can\'t be invoiced')
+
         """Ensure that the invoices are consecutive starting at 1 while keeping
         their original value (if any)."""
         if not self.invoice_no:
