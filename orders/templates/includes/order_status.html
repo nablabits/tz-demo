@@ -36,6 +36,7 @@
       <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '6' %}active{% endif %}" data-pk="{{order.pk}}" data-status="6" id="status-outbox">{{order.STATUS.5.1}}</button>
       <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '7' %}active{% endif %}" data-pk="{{order.pk}}" data-status="7" id="status-delivered">{{order.STATUS.6.1}}</button>
     </div>
+    {%if order.customer.name != 'trapuzarrak'%}
     {%if order.status == '7'%}
       <button type="button" class="btn btn-outline-success js-crud-add" data-action="ticket-to-invoice" data-pk="{{order.pk}}">
         <i class="fa fa-euro"></i> Facturar
@@ -45,6 +46,7 @@
         <i class="fa fa-euro"></i> Facturar
       </button>
       <small>Solo los pedidos entregados<br> se pueden facturar.</small>
+    {%endif%}
     {%endif%}
   </div>
 {%endif%}

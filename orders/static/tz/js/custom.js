@@ -47,4 +47,10 @@ $(document).ready(function () {
   $('.js-view-list-item').click(openItem)
   loadChangelog()
   $('#item_objects_list').on('submit', '.js-filter-view', filterItems)
+
+  // Change toggle on click
+  $('#unconfirmed-toggle').click(function () {
+    $('#unconfirmed-toggle > i').toggleClass('fa-toggle-off')
+    $('#unconfirmed-toggle > i').toggleClass('fa-toggle-on')
+  })
 })

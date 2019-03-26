@@ -2,9 +2,29 @@
 {% block orderview %}
 <section id="order_view" data-pk="{{ order.pk }}">
   <div class="container pt-4">
+    <div class="fixed-top mt-5">
+      <a href="{% url 'orderlist' orderby='date' %}">
+        <button class="btn btn-info border-dark ml-5 mt-5" type="button">
+          <i class="fa fa-arrow-alt-left mr-2"></i>Vuelve a lista de pedidos
+        </button>
+      </a>
+    </div>
     <div class="row mb-4">
-      <div class="d-flex-column mr-auto">
-        <h3 class="font-weight-bold">Pedido no.{{ order.pk }}</h3>
+      <div class="d-flex-column mr-auto border rounded p-2">
+        <div class="d-flex align-items-center">
+          <h3 class="font-weight-bold">Pedido no.{{ order.pk }}</h3>
+          {%if order.confirmed%}
+          <div class="alert alert-success ml-5" role="alert">
+            <i class="fa fa-check text-success mr-2"></i>
+            <strong>Confirmado</strong>
+          </div>
+          {%else%}
+          <div class="alert alert-warning ml-5" role="alert">
+            <i class="far fa-user-clock text-warning mr-2"></i>
+            <strong>Confirmación pendiente</strong>
+          </div>
+          {%endif%}
+        </div>
         <h5 class="mr-auto">Creado el: {{order.inbox_date | date:"j/n/Y"}}</h5>
         <h5 class="mr-auto">Entrega el: {{order.delivery | date:"j/n/Y"}}</h5>
         <h5 class="mr-auto">Prioridad: {{order.get_priority_display}}</h5>
@@ -52,11 +72,6 @@
     {% include 'includes/comment_list.html' %}
     </div>
 
-    <a href="{% url 'orderlist' orderby='date' %}">
-    <button class="fixed-bottom btn btn-info border-dark ml-5 mb-3" type="button">
-      <i class="fa fa-arrow-alt-left mr-2"></i>Vuelve a lista de pedidos
-    </button>
-    </a>
 
   </div>
 </section>

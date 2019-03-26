@@ -69,8 +69,7 @@ class ModelTest(TestCase):
     def test_order_creation(self):
         """Test the order creation."""
         order = Order.objects.first()
-        today = date.today()
-        order_str = str(today) + ' Customer Test example'
+        order_str = str(order.pk) + ' Customer Test example'
         self.assertTrue(isinstance(order, Order))
         self.assertEqual(order.__str__(), order_str)
         self.assertTrue(order.overdue)
@@ -134,7 +133,7 @@ class ModelTest(TestCase):
         comment = Comment.objects.all()[0]
         today = date.today()
         comment_str = ('El ' + str(today) + ', user comentó en ' +
-                       str(today) + ' Customer Test example')
+                       str(comment.reference.pk) + ' Customer Test example')
         self.assertTrue(isinstance(comment, Comment))
         self.assertEqual(comment.__str__(), comment_str)
 
@@ -170,6 +169,35 @@ class TestOrders(TestCase):
                                 cp='48100')
 
         Item.objects.create(name='test', fabrics=10, price=30)
+
+    def test_confirmed_default_true(self):
+        """Confirmed field should be bool and true by default."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today())
+        self.assertIsInstance(order.confirmed, bool)
+        self.assertTrue(order.confirmed)
+
+    def test_trapuzarrak_orders_are_always_confirmed(self):
+        """Trapuzarrak are not allowed to be unconfirmed."""
+        user = User.objects.first()
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        order = Order.objects.create(
+            user=user, delivery=date.today(), customer=tz, ref_name='Tz Order',
+            confirmed=False, )
+
+        # New created TZ orders should be confirmed
+        self.assertTrue(order.confirmed)
+
+        # Changing to tz customer should change also the confirmation status
+        order.customer = Customer.objects.first()
+        order.confirmed = False
+        order.save()
+        self.assertFalse(Order.objects.get(pk=order.pk).confirmed)
+        order.customer = tz
+        order.save()
+        self.assertTrue(Order.objects.get(pk=order.pk).confirmed)
 
     def test_budget_and_prepaid_can_be_null(self):
         """Test the emptyness of fields and default value."""
@@ -973,6 +1001,15 @@ class TestInvoice(TestCase):
         invoice = Invoice.objects.create(reference=Order.objects.first())
         self.assertIsInstance(invoice.issued_on, datetime)
         self.assertEqual(invoice.issued_on.date(), date.today())
+
+    def test_tz_cannot_be_invoiced(self):
+        """Ensure that tz can't be invoiced."""
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
+        with self.assertRaises(ValueError):
+            Invoice.objects.create(reference=tz_order)
 
     def test_invoice_no_default_1(self):
         """When there're no invoices yet, the first one is 1."""

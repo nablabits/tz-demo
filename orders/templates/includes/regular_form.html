@@ -1,6 +1,6 @@
 {% load widget_tweaks %}
 
-<form method="post" action="{% url 'actions' %}" class="js-send-form">
+<form method="post" action="{% url 'actions' %}" id="send-form">
   {% csrf_token %}
   <div class="modal-header">
     <h4 class="modal-title">{{modal_title}}</h4>
@@ -39,7 +39,15 @@
         {{ hidden_field }}
       {% endfor %}
     </div>
-    <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>
-    <button type="submit" class="btn btn-outline-success" id="submit">{{submit_btn}}</button>
+    <button type="button" class="btn btn-outline-info" data-dismiss="modal">
+      <i class="fas fa-times mr-1"></i>Cerrar
+    </button>
+    <button type="submit" class="btn btn-outline-success" name="sbt_action" value="default">
+      <i class="fas fa-check mr-1"></i>{{submit_btn}}
+    </button>
+    {%if 2nd_sbt_value%}
+    <button type="submit" class="btn btn-outline-success" name="sbt_action" value="{{2nd_sbt_value}}">
+      <i class="fa fa-check-double mr-1"></i>{{2nd_sbt_btn}}</button>
+    {%endif%}
   </div>
 </form>

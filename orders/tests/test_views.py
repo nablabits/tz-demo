@@ -116,177 +116,266 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['goal'], elapsed.days * settings.GOAL)
 
-    def test_production_excludes_items_in_2018_orders(self):
-        """Inbox date should be >2018."""
+    def test_aggregates_sales_filters_current_year_invoices(self):
+        """Only current year invoices are computed."""
         for order in Order.objects.all():
-            order.status = '6'
-            order.save()
+            Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 30)
-        old, new = Order.objects.all()[:2]
-        offset = date.today() - date(2018, 12, 31)
-        old.inbox_date = timezone.now() - timedelta(days=offset.days)
-        old.save()
+        self.assertEqual(resp.context['aggregates'][0], 30)
+        out_range = Invoice.objects.first()
+        out_range.issued_on = out_range.issued_on - timedelta(days=365)
+        out_range.save()
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 20)
+        self.assertEqual(resp.context['aggregates'][0], 20)
 
-    def test_production_excludes_stock_items(self):
-        """Stocked items are excluded."""
+    def test_aggregates_year_items_filter_this_year_deliveries(self):
+        """This is a common filter for confirmed, unconfirmed and tz."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
+        out_range = Order.objects.first()
+        out_range.delivery = date(2017, 1, 1)
+        out_range.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 20)
+
+    def test_aggregates_year_items_filter_out_invoiced_orders(self):
+        """This is a common filter for confirmed, unconfirmed and tz."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
+        invoiced = Order.objects.first()
+        Invoice.objects.create(reference=invoiced)
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 20)
+
+    def test_aggregates_year_items_filter_out_quick_customer(self):
+        """This is a common filter for confirmed, unconfirmed and tz."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
+        express = Order.objects.first()
+        express.ref_name = 'QuIcK'
+        express.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 20)
+
+    def test_aggregates_year_items_filter_out_cancelled_orders(self):
+        """This is a common filter for confirmed, unconfirmed and tz."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
+        cancelled = Order.objects.first()
+        cancelled.status = 8
+        cancelled.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 20)
+
+    def test_aggregates_confirmed_filter_out_unconfirmed_orders(self):
+        """Confirmed is confirmed."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 20)
+
+    def test_aggregates_confirmed_filter_out_tz_orders(self):
+        """Confirmed should exclude tz orders."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 20)
+
+    def test_aggregates_unconfirmed_filter_out_confirmed_orders(self):
+        """Unconfirmed is unconfirmed."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][2], 0)
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][2], 10)
+
+    def test_aggregates_unconfirmed_filter_out_tz_orders(self):
+        """Confirmed should exclude tz orders."""
         for order in Order.objects.all():
-            order.status = '6'
+            order.confirmed = False
             order.save()
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 30)
-        excluded = OrderItem.objects.first()
-        excluded.stock = True
-        excluded.save()
+        self.assertEqual(resp.context['aggregates'][2], 30)
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 20)
+        self.assertEqual(resp.context['aggregates'][2], 20)
 
-    def test_forecast_in_multiplies_qty_by_price(self):
-        """Total is the qty by the price."""
+    def test_aggregates_produced_tz_filter_in_tz_orders_with_status_7(self):
+        """Produced tz should filter in delivered tz orders."""
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['forecast'], 30)
-        item = OrderItem.objects.first()
-        item.qty = 5
-        item.price = 20
-        item.save()
+        self.assertEqual(resp.context['aggregates'][3], 0)
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.status = 7
+        tz_order.save()
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['forecast'], 120)
+        self.assertEqual(resp.context['aggregates'][3], 10)
 
-    def test_production_excludes_status_different_than_6_7(self):
-        """Only 6 & 7 statuses are allowed."""
+    def test_aggregates_future_tz_filter_in_tz_orders_without_status_7(self):
+        """Future tz should filter in undelivered tz orders."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][4], 0)
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        status = 6
         for order in Order.objects.all():
-            order.status = '6'
+            order.customer = tz
+            order.status = status
             order.save()
+            status += 1
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 30)
-        i = 1
-        # statuses 1, 2 & 3
-        for order in Order.objects.all():
-            order.status = i
-            order.save()
-            i += 1
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 0)
+        self.assertEqual(resp.context['aggregates'][4], 10)
 
-        # statuses 4, 5 & 6
-        for order in Order.objects.all():
-            order.status = i
-            order.save()
-            i += 1
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 10)
-
-        # statuses 7 & 8
-        for order in Order.objects.all()[:2]:
-            order.status = i
-            order.save()
-            i += 1
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 20)  # Keeps the last 10
-
-    def test_production_multiplies_qty_by_price(self):
-        """Total is the qty by the price."""
-        order = Order.objects.first()
-        order.status = '6'
-        order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 10)
-        item = OrderItem.objects.filter(reference=order).first()
-        item.qty = 5
-        item.price = 20
-        item.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 100)
-
-    def test_avoid_none_type_aggregate(self):
-        """Empty querysets return NoneType and that can't be substracted."""
+    def test_aggregates_confirmed_multiplies_price_by_qty(self):
+        """Test the correct product."""
         for item in OrderItem.objects.all():
-            item.delete()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['production'], 0)
-        self.assertEqual(resp.context['forecast'], 0)
-
-    def test_offset(self):
-        """Test the offset var."""
-        elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['offset'], (goal, goal - 30))
-
-    def test_under_goal_boolean(self):
-        """Test under_goal bool value."""
-        elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL
-        resp = self.client.get(reverse('main'))
-        self.assertTrue(resp.context['under_goal'])
-        order = Order.objects.first()
-        order.status = 6
-        order.save()
-        item = OrderItem.objects.filter(reference=order).first()
-        item.qty = 40
-        item.price = goal * 0.03
-        item.save()
-        resp = self.client.get(reverse('main'))
-        self.assertFalse(resp.context['under_goal'])
-
-    def test_production_and_forecast_bars(self):
-        """Test production and forecast bars."""
-        elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL
-        order = Order.objects.first()
-        order.status = 6
-        order.save()
-        for item in OrderItem.objects.all():
-            item.price = goal / 2
-            item.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['bar'][0], 25)
-        self.assertEqual(resp.context['bar'][1], 50)  # Only forecast
-
-    def test_production_and_forecast_bars_dont_run_over_100(self):
-        """Test production and forecast bars."""
-        elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL
-        order = Order.objects.first()
-        order.status = 6
-        order.save()
-        for item in OrderItem.objects.all():
-            item.price = goal / 2
             item.qty = 3
             item.save()
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['bar'][0], 75)
-        self.assertEqual(resp.context['bar'][1], 25)  # it's actually 150
+        self.assertEqual(resp.context['aggregates'][1], 90)
 
-    def test_bar_colors(self):
-        """Test the bar color."""
+    def test_aggregates_unconfirmed_multiplies_price_by_qty(self):
+        """Test the correct product."""
+        for item in OrderItem.objects.all():
+            item.qty = 3
+            item.save()
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][2], 30)
+
+    def test_aggregates_produced_tz_multiplies_price_by_qty(self):
+        """Test the correct product."""
+        for item in OrderItem.objects.all():
+            item.qty = 3
+            item.save()
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.status = 7
+        tz_order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][3], 30)
+
+    def test_aggregates_future_tz_multiplies_price_by_qty(self):
+        """Test the correct product."""
+        for item in OrderItem.objects.all():
+            item.qty = 3
+            item.save()
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][4], 30)
+
+    def test_aggregates_avoid_none_type(self):
+        """Empty queries return NoneType and that can't be summed."""
+        for item in OrderItem.objects.all():
+            item.delete()
+        resp = self.client.get(reverse('main'))
+        for aggregate in resp.context['aggregates']:
+            self.assertEqual(aggregate, 0)
+
+    def test_aggregates_sales_return_float(self):
+        """Check the correct type."""
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+        resp = self.client.get(reverse('main'))
+        self.assertIsInstance(resp.context['aggregates'][0], float)
+
+    def test_aggregates_confirmed_returns_float(self):
+        """Check the correct type."""
+        resp = self.client.get(reverse('main'))
+        self.assertIsInstance(resp.context['aggregates'][1], float)
+
+    def test_aggregates_unconfirmed_returns_float(self):
+        """Check the correct type."""
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('main'))
+        self.assertIsInstance(resp.context['aggregates'][2], float)
+
+    def test_aggregates_produced_tz_returns_float(self):
+        """Check the correct type."""
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.status = 7
+        tz_order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertIsInstance(resp.context['aggregates'][3], float)
+
+    def test_aggregates_future_tz_returns_float(self):
+        """Check the correct type."""
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
+        resp = self.client.get(reverse('main'))
+        self.assertIsInstance(resp.context['aggregates'][4], float)
+
+    def test_bar(self):
+        """Test the correct amounts for bar."""
+        # Create two more orders to have all the elements
+        for i in range(2):
+            order = Order.objects.create(
+                user=User.objects.first(),
+                customer=Customer.objects.first(),
+                delivery=date.today(), ref_name='Test', )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        sold, confirmed, unconfirmed, tz_done, tz_future = Order.objects.all()
+
+        # Fetch the goal
         elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL
-        order = Order.objects.first()
-        order.status = 6
-        order.save()
+        goal = elapsed.days * settings.GOAL * 1.5
 
-        # Danger
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['bar'][2], 'danger')
+        # Set qtys to have a decent number of 'em
+        qty = 10 * elapsed.days
+        for item in OrderItem.objects.all():
+            item.qty = qty
+            item.save()
+            qty += elapsed.days
 
-        # Warning
-        item = OrderItem.objects.filter(reference=order).first()
-        item.qty = 30
-        item.price = goal * 0.03
-        item.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['bar'][2], 'warning')
+        # Set sold obj
+        Invoice.objects.create(reference=sold)
 
-        # Success
-        item = OrderItem.objects.filter(reference=order).first()
-        item.qty = 40
-        item.price = goal * 0.03
-        item.save()
+        # Set unconfirmed order
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+
+        # Set tz done order
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_done.customer = tz
+        tz_done.status = 7
+        tz_done.save()
+
+        # Set tz future order
+        tz_future.customer = tz
+        tz_future.save()
+
+        # Finally, test it
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['bar'][2], 'success')
+        agg = 0  # The aggregate iterator
+        for amount in resp.context['bar']:
+            self.assertEqual(
+                amount, resp.context['aggregates'][agg] * 100 // goal)
+            agg += 1
 
     def test_active_count_box(self):
         """Test the active box."""
@@ -298,7 +387,7 @@ class MainViewTests(TestCase):
         order.save()
         resp = self.client.get(reverse('main'))
         self.assertEqual(
-            resp.context['active_msg'], 'Aunque hay 1 a la espera')
+            resp.context['active_msg'], 'Aunque hay 1 para entregar')
 
     def test_pending_orders_count(self):
         """This var appears on view settings."""
@@ -343,13 +432,6 @@ class MainViewTests(TestCase):
             order.save()
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['outdated'], 2)
-
-    def test_year(self):
-        """Test the vars on year box."""
-        for order in Order.objects.all():
-            Invoice.objects.create(reference=order)
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['year'], 30)
 
     def test_balance_box_excludes_card_and_transfer(self):
         """Only cash invoices are summed."""
@@ -999,6 +1081,17 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist', args=['date']))
         self.assertEqual(len(resp.context['pending']), 2)
 
+    def test_pending_excludes_confirmed_orders(self):
+        """Pending orders are always confirmed."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(len(resp.context['pending']), 3)
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(len(resp.context['pending']), 2)
+
     def test_pending_orders(self):
         """Test the proper query for pending orders."""
         self.client.login(username='regular', password='test')
@@ -1219,6 +1312,21 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist', args=['date']))
         self.assertEquals(resp.context['pending_total'], 60)
 
+    def test_pending_total_excludes_unconfirmed_orders(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 90)
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 60)
+
     def test_pending_total(self):
         """Test the proper sum of budgets."""
         self.client.login(username='regular', password='test')
@@ -1304,6 +1412,21 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['active_calendar'][0].ref_name, 'active')
+
+    def test_confirmed_count(self):
+        """Count the confirmed orders."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['confirmed'], 3)
+
+    def test_unconfirmed_count(self):
+        """Count the confirmed orders."""
+        self.client.login(username='regular', password='test')
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['unconfirmed'], 1)
 
     def test_active_calendar_includes_tz_orders(self):
         """Active orders do not include tz, but active_calendar does so."""
@@ -2605,7 +2728,9 @@ class OrderViewTests(TestCase):
         order = Order.objects.first()
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEquals(resp.context['user'].username, order.user.username)
-        self.assertEquals(resp.context['title'], 'TrapuZarrak · Ver Pedido')
+        self.assertEquals(resp.context['title'],
+                          'Pedido %s: %s, %s' %
+                          (order.pk, order.customer.name, order.ref_name))
         self.assertEquals(resp.context['btn_title_add'], 'Añadir prenda')
         self.assertEquals(resp.context['js_action_add'], 'order-item-add')
         self.assertEquals(resp.context['js_action_edit'], 'order-item-edit')
@@ -3470,7 +3595,7 @@ class ActionsGetMethod(TestCase):
         template = data['template']
         context = data['context']
         vars = ('item', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
-                'custom_form')
+                '2nd_sbt_value', '2nd_sbt_btn', 'custom_form')
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
@@ -4811,6 +4936,39 @@ class ActionsPostMethodEdit(TestCase):
         mod_item = OrderItem.objects.get(pk=item.pk)
         for i in (mod_item.sewing, mod_item.crop, mod_item.iron):
             self.assertEqual(i, timedelta(0, 2))
+
+    def test_pqueue_raises_404_when_pquee_does_not_exist(self):
+        """Test the get_object_or_404."""
+        item = OrderItem.objects.first()
+        for i in (item.sewing, item.crop, item.iron):
+            self.assertEqual(i, timedelta(0))
+        resp = self.client.post(reverse('actions'),
+                                {'iron': '2', 'crop': '2', 'sewing': '2',
+                                 'pk': item.pk,
+                                 'sbt_action': 'save-and-archive',
+                                 'action': 'pqueue-add-time',
+                                 'test': True
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_pqueue_adds_time_and_completes(self):
+        """Test the correct 2-in-1 action."""
+        item = OrderItem.objects.first()
+        PQueue.objects.create(item=item)
+        for i in (item.sewing, item.crop, item.iron):
+            self.assertEqual(i, timedelta(0))
+        self.client.post(reverse('actions'),
+                         {'iron': '2', 'crop': '2', 'sewing': '2',
+                          'pk': item.pk,
+                          'sbt_action': 'save-and-archive',
+                          'action': 'pqueue-add-time',
+                          'test': True
+                          })
+        mod_item = OrderItem.objects.get(pk=item.pk)
+        for i in (mod_item.sewing, mod_item.crop, mod_item.iron):
+            self.assertEqual(i, timedelta(0, 2))
+        archived = PQueue.objects.get(pk=item.pk)
+        self.assertTrue(archived.score < 0)
 
     def test_pqueue_add_time_rejected_form(self):
         """Test invalid forms."""

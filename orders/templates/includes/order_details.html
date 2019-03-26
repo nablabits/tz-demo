@@ -82,7 +82,7 @@
             </td>
             <td>{{item.subtotal}}€</td>
             <td>
-              {%if not item.element.foreing%}
+              {%if not item.stock and not item.element.foreing%}
                 {% if item.time_quality == 0 %}
                   <i class="far fa-frown" ></i> Sin tiempos aún (0/3)
                 {% elif item.time_quality == 1 %}
@@ -93,7 +93,7 @@
                   <i class="far fa-star fa-fw" ></i> Genial (3/3)
                 {% endif %}
               {%else%}
-                <i class="far fa-info fa-fw" ></i> Las prendas externas no necesitan tiempos
+                <i class="far fa-info fa-fw" ></i> Las prendas externas o de stock<br> no necesitan tiempos
               {% endif %}
             </td>
             <td>{% include 'includes/action_buttons.html' %}</td>
@@ -107,7 +107,7 @@
                 No se ha dado descripción para esta prenda.
               {%endif%}
             </td>
-            {%if not item.element.foreing%}
+            {%if not item.stock and not item.element.foreing%}
             <td colspan="2">
               <strong>Tiempos:</strong><br>
               <strong>Corte: </strong>{{item.crop}};<br>
