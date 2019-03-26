@@ -33,26 +33,25 @@
       </div>
       <div class="col-3">
         <div class="d-flex justify-content-end">
-          <a type="button" class="btn btn-sm btn-outline-success mr-2" href="{% url 'order_view' pk=order.pk %}">
-            <i class="fa fa-eye"></i> Ver
-          </a>
-          {% if order.status != '8' %}
-            {%if order.invoiced%}
-              <button type="button" class="btn btn-sm btn-success">Facturado</button>
-            {%else%}
-              <button class="btn btn-sm btn-outline-danger">
-                {{order.pending}}€
-              </button>
+          {% if order.customer.name != 'trapuzarrak' %}
+            {% if order.status != '8' %}
+              {%if order.invoiced%}
+                <button type="button" class="btn btn-sm btn-success">Facturado</button>
+              {%else%}
+                <button class="btn btn-sm btn-outline-danger">
+                  {{order.pending}}€
+                </button>
+              {% endif %}
+            {% else %}
+              <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
+                {% csrf_token %}
+                <input type="hidden" name="order" value="{{order.pk}}">
+                <input type="hidden" name="status" value="1">
+                <button type="submit" class="btn btn-sm btn-outline-success">
+                  <i class="fa fa-history"></i> Reactivar
+                </button>
+              </form>
             {% endif %}
-          {% else %}
-            <form class="" action="{% url 'orderlist' orderby='date' %}" method="post">
-              {% csrf_token %}
-              <input type="hidden" name="order" value="{{order.pk}}">
-              <input type="hidden" name="status" value="1">
-              <button type="submit" class="btn btn-sm btn-outline-success">
-                <i class="fa fa-history"></i> Reactivar
-              </button>
-            </form>
           {% endif %}
         </div>
       </div>
