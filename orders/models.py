@@ -85,6 +85,7 @@ class Order(models.Model):
     status = models.CharField(max_length=1, choices=STATUS, default='1')
     priority = models.CharField(
         'Prioridad', max_length=1, choices=PRIORITY, default='2')
+    confirmed = models.BooleanField('Confirmado', default=True)
 
     # Measures
     waist = models.DecimalField('Cintura', max_digits=5, decimal_places=2,
@@ -113,8 +114,17 @@ class Order(models.Model):
 
     def __str__(self):
         """Object's representation."""
-        return '%s %s %s' % (self.inbox_date.date(),
+        return '%s %s %s' % (self.pk,
                              self.customer, self.ref_name)
+
+    def save(self, *args, **kwargs):
+        """Override save method."""
+
+        # ensure trapuzarrak is always Confirmed
+        if self.customer.name.lower() == 'trapuzarrak':
+            self.confirmed = True
+
+        super().save(*args, **kwargs)
 
     @property
     def overdue(self):

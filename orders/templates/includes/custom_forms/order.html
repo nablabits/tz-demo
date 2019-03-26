@@ -57,3 +57,8 @@
   {{ form.others.label_tag }}
   {% render_field form.others class="form-control" %}
 </div>
+
+<div class="form-check">
+  {% render_field form.confirmed class="form-check-input" %}
+  <label for="id_confirmed" class="form-check-label"> Pedido Confirmado</label>
+</div>

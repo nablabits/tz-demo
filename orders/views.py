@@ -35,55 +35,64 @@ def main(request):
     elapsed = date.today() - date(2018, 12, 31)
     goal = elapsed.days * settings.GOAL
 
-    # Goal box, production & forecast
+    # GoalBox, Avoid naive dates
     offset = date.today() - date(2018, 12, 31)
-    start = timezone.now() - offset  # Avoid naive dates
-    production = OrderItem.objects.filter(reference__inbox_date__gte=start)
-    production = production.exclude(stock=True)
-    forecast_in = production.aggregate(total=Sum(
-        F('price') * F('qty'), output_field=DecimalField()))
-    production = production.filter(reference__status__in=[6, 7])
-    production = production.aggregate(total=Sum(
-        F('price') * F('qty'), output_field=DecimalField()))
+    start = timezone.now() - offset
 
-    # Goal box, avoid NoneType aggregate
-    if not forecast_in['total']:
-        forecast_in['total'] = 0
-    if not production['total']:
-        production['total'] = 0
-    forecast = int(forecast_in['total'] - production['total'])
+    # GoalBox, this year unsold items in queue
+    year_items = OrderItem.objects.filter(reference__delivery__gte=start)
+    year_items = year_items.filter(reference__invoice__isnull=True)
+    year_items = year_items.exclude(reference__ref_name__iexact='quick')
+    year_items = year_items.exclude(reference__status=8)
 
-    # Goal box, offset
-    offset = (abs(goal - production['total']),
-              abs(goal - forecast_in['total']), )
-    under_goal = False
-    if goal > production['total']:
-        under_goal = True
+    # GoalBox, solid incomes: already sold or in confirmed orders
+    sales = Invoice.objects.filter(issued_on__year=date.today().year)
+    sales = sales.aggregate(total=Sum('amount'))
+    confirmed = year_items.filter(reference__confirmed=True)
+    confirmed = confirmed.exclude(
+        reference__customer__name__iexact='trapuzarrak')
 
-    # Goal Box, bar
-    total_size = goal * 2
-    production_bar = int(production['total'] * 100 / total_size)
-    forecast_bar = int(forecast * 100 / total_size)
-    if forecast_bar + production_bar >= 100:
-        forecast_bar = 100 - production_bar
-    color = 'warning'
-    if production_bar < 30:
-        color = 'danger'
-    if production_bar >= 50:
-        color = 'success'
-    bar = (production_bar, forecast_bar, color)
+    # GoalBox, smoke incomes: unconfirmed, produced tz & future tz
+    unconfirmed = year_items.exclude(reference__confirmed=True)
+    unconfirmed = unconfirmed.exclude(
+        reference__customer__name__iexact='trapuzarrak')
+    tz_items = year_items.filter(
+        reference__customer__name__iexact='trapuzarrak')
+    produced_tz = tz_items.filter(reference__status=7)
+    future_tz = tz_items.exclude(reference__status__in=[7, 8])
+
+    # GoalBox, get aggregations for above queries
+    queries = (confirmed, unconfirmed, produced_tz, future_tz, )
+    aggregates = list()
+    for query in queries:
+        aggregate = query.aggregate(
+            total=Sum(F('price') * F('qty'), output_field=DecimalField()))
+        if not aggregate['total']:  # avoid NoneType aggregate
+            aggregate = 0
+        else:
+            aggregate = float(aggregate['total'])
+        aggregates.append(aggregate)
+
+    # GoalBox, summary amounts and bar
+    if not sales['total']:  # avoid NoneType aggregate
+        aggregates.insert(0, 0)
+    else:
+        aggregates.insert(0, float(sales['total']))  # Amounts list
+    total_size = goal * 1.5  # Bar size 1.5
+    bar = [amount * 100 // total_size for amount in aggregates]
 
     # Active Box
     active = Order.active.count()
     active_msg = False
     waiting = Order.active.filter(status='6').count()
     if waiting:
-        active_msg = 'Aunque hay %s a la espera' % waiting
+        active_msg = 'Aunque hay %s para entregar' % waiting
 
     # Pending box
     pending = Order.pending_orders.all()
     if pending:
-        pending_amount = OrderItem.active.aggregate(
+        active_confirmed = OrderItem.active.filter(reference__confirmed=True)
+        pending_amount = active_confirmed.aggregate(
             total=Sum(F('price') * F('qty'), output_field=DecimalField()))
         prepaid = pending.aggregate(total=Sum('prepaid'))
         if not pending_amount['total']:
@@ -102,11 +111,6 @@ def main(request):
     outdated = Order.outdated.count()
     if not outdated:
         outdated = False
-
-    # Year sales Box
-    year = Invoice.objects.filter(
-        issued_on__year=timezone.now().date().year)
-    year = year.aggregate(total=Sum('amount'))
 
     # Balance box (copied from invoiceslist view)
     expenses = Expense.objects.filter(pay_method='C').aggregate(
@@ -165,17 +169,13 @@ def main(request):
     now = datetime.now()
 
     view_settings = {'goal': goal,
-                     'forecast': forecast,
-                     'offset': offset,
-                     'under_goal': under_goal,
-                     'production': production['total'],
                      'bar': bar,
+                     'aggregates': aggregates,
                      'active': active,
                      'active_msg': active_msg,
                      'pending': Order.pending_orders.count(),
                      'pending_msg': pending_msg,
                      'outdated': outdated,
-                     'year': year['total'],
                      'month': month['total'],
                      'week': week['total'],
                      'balance_msg': balance_msg,
@@ -323,6 +323,7 @@ def orderlist(request, orderby):
     cancelled = orders.filter(status=8).order_by('-inbox_date')[:10]
     pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
     pending = pending.filter(invoice__isnull=True).order_by('inbox_date')
+    pending = pending.exclude(confirmed=False)
 
     # Active, delivered & pending orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
@@ -349,6 +350,7 @@ def orderlist(request, orderby):
     items = items.exclude(reference__ref_name__iexact='quick')
     items = items.exclude(reference__customer__name__iexact='Trapuzarrak')
     items = items.filter(reference__invoice__isnull=True)
+    items = items.exclude(reference__confirmed=False)
     items = items.aggregate(
         total=Sum(F('price') * F('qty'), output_field=DecimalField()))
     prepaid = pending.aggregate(total=Sum('prepaid'))
@@ -366,6 +368,8 @@ def orderlist(request, orderby):
 
     # calendar view entries
     active_calendar = Order.objects.exclude(status__in=[7, 8])
+    confirmed = active_calendar.filter(confirmed=True).count()
+    unconfirmed = active_calendar.filter(confirmed=False).count()
 
     # Finally, set the sorting method on view
     if orderby == 'date':
@@ -384,6 +388,8 @@ def orderlist(request, orderby):
     now = datetime.now()
 
     view_settings = {'active': active,
+                     'confirmed': confirmed,
+                     'unconfirmed': unconfirmed,
                      'delivered': delivered,
                      'user': cur_user,
                      'now': now,
@@ -556,6 +562,7 @@ def order_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
+    title = (order.pk, order.customer.name, order.ref_name)
     view_settings = {'order': order,
                      'items': items,
                      'comments': comments,
@@ -563,7 +570,7 @@ def order_view(request, pk):
                      'user': cur_user,
                      'now': now,
                      'version': settings.VERSION,
-                     'title': 'TrapuZarrak · Ver Pedido',
+                     'title': 'Pedido %s: %s, %s' % title,
 
                      # CRUD Actions
                      'btn_title_add': 'Añadir prenda',

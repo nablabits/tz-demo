@@ -25,7 +25,7 @@ class OrderForm(forms.ModelForm):
         model = Order
         fields = ('customer', 'ref_name', 'delivery', 'priority',
                   'waist', 'chest', 'hip', 'lenght', 'others',
-                  'budget', 'prepaid')
+                  'budget', 'prepaid', 'confirmed', )
 
     def __init__(self, *args, **kwargs):
         """Override default settings."""
