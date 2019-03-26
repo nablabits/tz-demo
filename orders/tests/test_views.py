@@ -1081,6 +1081,17 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist', args=['date']))
         self.assertEqual(len(resp.context['pending']), 2)
 
+    def test_pending_excludes_confirmed_orders(self):
+        """Pending orders are always confirmed."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(len(resp.context['pending']), 3)
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(len(resp.context['pending']), 2)
+
     def test_pending_orders(self):
         """Test the proper query for pending orders."""
         self.client.login(username='regular', password='test')
@@ -1301,6 +1312,21 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist', args=['date']))
         self.assertEquals(resp.context['pending_total'], 60)
 
+    def test_pending_total_excludes_unconfirmed_orders(self):
+        """Test the proper sum of budgets."""
+        self.client.login(username='regular', password='test')
+        for order in Order.objects.all():
+            for i in range(3):
+                OrderItem.objects.create(
+                    reference=order, element=Item.objects.last())
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 90)
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['pending_total'], 60)
+
     def test_pending_total(self):
         """Test the proper sum of budgets."""
         self.client.login(username='regular', password='test')
@@ -1386,6 +1412,21 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['active_calendar'][0].ref_name, 'active')
+
+    def test_confirmed_count(self):
+        """Count the confirmed orders."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['confirmed'], 3)
+
+    def test_unconfirmed_count(self):
+        """Count the confirmed orders."""
+        self.client.login(username='regular', password='test')
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEquals(resp.context['unconfirmed'], 1)
 
     def test_active_calendar_includes_tz_orders(self):
         """Active orders do not include tz, but active_calendar does so."""

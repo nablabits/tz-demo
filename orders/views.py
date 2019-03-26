@@ -323,6 +323,7 @@ def orderlist(request, orderby):
     cancelled = orders.filter(status=8).order_by('-inbox_date')[:10]
     pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
     pending = pending.filter(invoice__isnull=True).order_by('inbox_date')
+    pending = pending.exclude(confirmed=False)
 
     # Active, delivered & pending orders show some attr at glance
     active = active.annotate(Count('orderitem', distinct=True),
@@ -349,6 +350,7 @@ def orderlist(request, orderby):
     items = items.exclude(reference__ref_name__iexact='quick')
     items = items.exclude(reference__customer__name__iexact='Trapuzarrak')
     items = items.filter(reference__invoice__isnull=True)
+    items = items.exclude(reference__confirmed=False)
     items = items.aggregate(
         total=Sum(F('price') * F('qty'), output_field=DecimalField()))
     prepaid = pending.aggregate(total=Sum('prepaid'))
@@ -366,6 +368,8 @@ def orderlist(request, orderby):
 
     # calendar view entries
     active_calendar = Order.objects.exclude(status__in=[7, 8])
+    confirmed = active_calendar.filter(confirmed=True).count()
+    unconfirmed = active_calendar.filter(confirmed=False).count()
 
     # Finally, set the sorting method on view
     if orderby == 'date':
@@ -384,6 +388,8 @@ def orderlist(request, orderby):
     now = datetime.now()
 
     view_settings = {'active': active,
+                     'confirmed': confirmed,
+                     'unconfirmed': unconfirmed,
                      'delivered': delivered,
                      'user': cur_user,
                      'now': now,
