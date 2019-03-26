@@ -4945,7 +4945,7 @@ class ActionsPostMethodEdit(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'iron': '2', 'crop': '2', 'sewing': '2',
                                  'pk': item.pk,
-                                 '2nd_sbt_action': 'save-and-archive',
+                                 'sbt_action': 'save-and-archive',
                                  'action': 'pqueue-add-time',
                                  'test': True
                                  })
@@ -4960,7 +4960,7 @@ class ActionsPostMethodEdit(TestCase):
         self.client.post(reverse('actions'),
                          {'iron': '2', 'crop': '2', 'sewing': '2',
                           'pk': item.pk,
-                          '2nd_sbt_action': 'save-and-archive',
+                          'sbt_action': 'save-and-archive',
                           'action': 'pqueue-add-time',
                           'test': True
                           })
