@@ -10,8 +10,21 @@
       </a>
     </div>
     <div class="row mb-4">
-      <div class="d-flex-column mr-auto">
-        <h3 class="font-weight-bold">Pedido no.{{ order.pk }}</h3>
+      <div class="d-flex-column mr-auto border rounded p-2">
+        <div class="d-flex align-items-center">
+          <h3 class="font-weight-bold">Pedido no.{{ order.pk }}</h3>
+          {%if order.confirmed%}
+          <div class="alert alert-success ml-5" role="alert">
+            <i class="fa fa-check text-success mr-2"></i>
+            <strong>Confirmado</strong>
+          </div>
+          {%else%}
+          <div class="alert alert-warning ml-5" role="alert">
+            <i class="far fa-user-clock text-warning mr-2"></i>
+            <strong>Confirmación pendiente</strong>
+          </div>
+          {%endif%}
+        </div>
         <h5 class="mr-auto">Creado el: {{order.inbox_date | date:"j/n/Y"}}</h5>
         <h5 class="mr-auto">Entrega el: {{order.delivery | date:"j/n/Y"}}</h5>
         <h5 class="mr-auto">Prioridad: {{order.get_priority_display}}</h5>
