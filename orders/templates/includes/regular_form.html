@@ -1,6 +1,6 @@
 {% load widget_tweaks %}
 
-<form method="post" action="{% url 'actions' %}" class="js-send-form">
+<form method="post" action="{% url 'actions' %}" id="send-form">
   {% csrf_token %}
   <div class="modal-header">
     <h4 class="modal-title">{{modal_title}}</h4>
@@ -39,9 +39,6 @@
         {{ hidden_field }}
       {% endfor %}
     </div>
-    {%if 2nd_sbt_value%}
-    <input type="hidden" name="2nd_sbt_action" value="{{2nd_sbt_value}}">
-    {%endif%}
     <button type="button" class="btn btn-outline-info" data-dismiss="modal">
       <i class="fas fa-times mr-1"></i>Cerrar
     </button>
