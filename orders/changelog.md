@@ -1,5 +1,10 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v70 Mar 27
+  * **Bug:** la barra de progreso en la página de inicio no se correspondía con
+    la realidad.
+  * **Mejora:** La lista de pedidos ahora muestra el número de pedido.
+
 ### v69, Mar 26
   * **Nuevo:** ahora los pedidos pueden estar a la espera de confirmación.
   * **Mejora:** se ha recolocado el botón de volver a lista de pedidos.
