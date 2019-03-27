@@ -252,13 +252,15 @@
         </div>
         {% endif %}
         {% for order in pending %}
-        <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
-          {% if order.status == '7' %}
-            {% include 'includes/order_entry_element_delivered.html' %}
-          {% else %}
-            {% include 'includes/order_entry_element.html' %}
-          {% endif %}
-        </div>
+          {%if order.pending != 0 %}
+            <div class="d-flex flex-column" id="order-entry-{{order.pk}}">
+              {% if order.status == '7' %}
+                {% include 'includes/order_entry_element_delivered.html' %}
+              {% else %}
+                {% include 'includes/order_entry_element.html' %}
+              {% endif %}
+            </div>
+          {%endif%}
         {% endfor %}
       </div>
     </div>
