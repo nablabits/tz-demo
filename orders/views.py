@@ -321,7 +321,7 @@ def orderlist(request, orderby):
     active = orders.exclude(status__in=[7, 8])
     cancelled = orders.filter(status=8).order_by('-inbox_date')[:10]
     pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
-    pending = pending.filter(invoice__isnull=True).order_by('inbox_date')
+    pending = pending.filter(invoice__isnull=True).order_by('delivery')
     pending = pending.exclude(confirmed=False)
 
     # Active, delivered & pending orders show some attr at glance
