@@ -1,5 +1,5 @@
 {% load widget_tweaks %}
-<form method="post" action="{% url 'actions' %}" class="js-send-form">
+<form method="post" action="{% url 'actions' %}" id="send-form">
   {% csrf_token %}
   <div class="modal-header">
     <h4 class="modal-title">{{modal_title}}</h4>
@@ -13,7 +13,6 @@
   <input type="hidden" name="pk" value="{{pk}}">
   <input type="hidden" id="js-action" name="action" value="{{action}}">
   <div class="modal-footer">
-    <button type="button" class="btn btn-danger" data-dismiss="modal">Cerrar</button>
     <button type="submit" class="btn btn-outline-success">{{submit_btn}}</button>
   </div>
 </form>
