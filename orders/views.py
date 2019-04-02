@@ -78,7 +78,7 @@ def main(request):
         aggregates.insert(0, 0)
     else:
         aggregates.insert(0, float(sales['total']))  # Amounts list
-    bar = [round(amount * 200 / (3 * goal), 2) for amount in aggregates]
+    bar = [round(amount * 100 / (2 * goal), 2) for amount in aggregates]
 
     # Active Box
     active = Order.active.count()

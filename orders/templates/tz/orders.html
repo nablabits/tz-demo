@@ -44,10 +44,17 @@
             <small class="ml-2 pb-2" data-toggle="collapse" data-target="#legend" role="button" style="cursor: pointer;">Leyenda</small>
         </div>
         <div class="d-flex align-items-center">
-          <div class="d-flex align-items-center" data-toggle="collapse" data-target=".js-unconfirmed" id="unconfirmed-toggle">
-            <i class="far fa-toggle-off"></i>
-            <h5 class="px-2 my-0">No confirmados</h5>
-          </div>
+          {%if unconfirmed != 0%}
+            <div class="d-flex align-items-center" data-toggle="collapse" data-target=".js-unconfirmed" id="unconfirmed-toggle">
+              <i class="far fa-toggle-off"></i>
+              <h5 class="px-2 my-0">No confirmados</h5>
+            </div>
+          {%else%}
+            <div class="alert alert-success" role="alert">
+              <i class="fa fa-check text-success mr-2"></i>
+              Todo está confirmado
+            </div>
+          {%endif%}
           <h5 class="px-2 my-0">Ordenados por:</h5>
           <div class="dropdown show">
             <button class="btn btn-sm btn-outline-success dropdown-toggle" type="button" data-toggle="dropdown">
@@ -72,6 +79,7 @@
             <span class="px-2"><i class="far fa-clock"></i> Horas añadidas</span>
             <span class="px-2"><i class="far fa-exclamation-triangle text-danger"></i> Fuera de fecha</span>
             <span class="px-2"><i class="far fa-user-clock text-warning"></i> Pendiente confirmación</span>
+            <span class="px-2"><i class="far fa-empty-set text-info"></i>Sin prendas</span>
           </div>
           <div class="d-flex">
             <span class="px-2"><strong>Entregas:</strong></span>
@@ -107,6 +115,9 @@
                         {%endif%}
                         {%if not order.confirmed%}
                           <i class="far fa-user-clock text-warning mt-2"></i>
+                        {%endif%}
+                        {%if order.has_no_items%}
+                          <i class="far fa-empty-set text-info mt-2"></i>
                         {%endif%}
                       </div>
                     </div>
@@ -144,6 +155,9 @@
                       {%if not order.confirmed%}
                         <i class="far fa-user-clock text-warning mt-2"></i>
                       {%endif%}
+                      {%if order.has_no_items%}
+                        <i class="far fa-empty-set text-info mt-2"></i>
+                      {%endif%}
                     </div>
                   </div>
                   <div class="progress" style="height: 5px;">
@@ -171,6 +185,9 @@
                     <div class="d-flex flex-column ml-auto">
                       {%if not order.confirmed%}
                         <i class="far fa-user-clock text-warning mt-2"></i>
+                      {%endif%}
+                      {%if order.has_no_items%}
+                        <i class="far fa-empty-set text-info mt-2"></i>
                       {%endif%}
                     </div>
                   </div>
@@ -200,6 +217,9 @@
                     <div class="d-flex flex-column ml-auto">
                       {%if not order.confirmed%}
                         <i class="far fa-user-clock text-warning mt-2"></i>
+                      {%endif%}
+                      {%if order.has_no_items%}
+                        <i class="far fa-empty-set text-info mt-2"></i>
                       {%endif%}
                     </div>
                   </div>

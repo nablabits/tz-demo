@@ -4,9 +4,9 @@
   {% csrf_token %}
   <div class="modal-header">
     <h4 class="modal-title">{{modal_title}}</h4>
-    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <a type="button" class="close" data-dismiss="modal" aria-label="Close">
       <span aria-hidden="true"><i class="fa fa-times"></i></span>
-    </button>
+    </a>
   </div>
   <div class="modal-body">
   {% if custom_form %}
@@ -39,9 +39,6 @@
         {{ hidden_field }}
       {% endfor %}
     </div>
-    <button type="button" class="btn btn-outline-info" data-dismiss="modal">
-      <i class="fas fa-times mr-1"></i>Cerrar
-    </button>
     <button type="submit" class="btn btn-outline-success" name="sbt_action" value="default">
       <i class="fas fa-check mr-1"></i>{{submit_btn}}
     </button>

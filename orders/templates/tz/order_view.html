@@ -2,7 +2,7 @@
 {% block orderview %}
 <section id="order_view" data-pk="{{ order.pk }}">
   <div class="container pt-4">
-    <div class="fixed-top mt-5">
+    <div class="back_to_orders">
       <a href="{% url 'orderlist' orderby='date' %}">
         <button class="btn btn-info border-dark ml-5 mt-5" type="button">
           <i class="fa fa-arrow-alt-left mr-2"></i>Vuelve a lista de pedidos
