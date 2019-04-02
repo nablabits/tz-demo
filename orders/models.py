@@ -194,6 +194,15 @@ class Order(models.Model):
             tracked = tracked + item.time_quality
         return (tracked, len(items) * 3)
 
+    @property
+    def has_no_items(self):
+        """Determine if the order has no items."""
+        items = OrderItem.objects.filter(reference=self)
+        if not items:
+            return True
+        else:
+            return False
+
 
 class Item(models.Model):
     """Hold the different types of items (clothes) and the fabrics needed."""
