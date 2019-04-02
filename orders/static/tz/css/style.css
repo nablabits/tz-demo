@@ -31,7 +31,7 @@ th{
   font-size: 2.3em;
 }
 .back_to_orders{
-  position: absolute;
+  position: fixed;
   left: 10px;
   top: 20px;
 }
