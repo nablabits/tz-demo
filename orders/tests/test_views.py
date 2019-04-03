@@ -343,7 +343,7 @@ class MainViewTests(TestCase):
 
         # Fetch the goal
         elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL * 1.5
+        goal = elapsed.days * settings.GOAL
 
         # Set qtys to have a decent number of 'em
         qty = 10 * elapsed.days
@@ -374,7 +374,8 @@ class MainViewTests(TestCase):
         agg = 0  # The aggregate iterator
         for amount in resp.context['bar']:
             self.assertEqual(
-                amount, resp.context['aggregates'][agg] * 100 // goal)
+                amount,
+                round(resp.context['aggregates'][agg] * 100 / (2 * goal), 2))
             agg += 1
 
     def test_active_count_box(self):
@@ -1099,11 +1100,11 @@ class OrderListTests(TestCase):
         self.assertEqual(len(resp.context['pending']), 3)
 
     def test_pending_orders_sorting_method(self):
-        """Sort the list by first inboxed first."""
+        """Sort the list by first delivered first."""
         self.client.login(username='regular', password='test')
         newer, older, excluded = Order.objects.all()
 
-        older.inbox_date = older.inbox_date - timedelta(days=1)
+        older.delivery = older.delivery - timedelta(days=1)
         older.save()
 
         excluded.status = '8'
@@ -4933,7 +4934,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/orderitems_list.html')
-        self.assertEqual(data['html_id'], '#order-details')
+        self.assertEqual(data['html_id'], '#orderitems-list')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         # Test if the fields were modified
@@ -5130,7 +5131,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/orderitems_list.html')
-        self.assertEqual(data['html_id'], '#order-details')
+        self.assertEqual(data['html_id'], '#orderitems-list')
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_delete_order_express_deletes_order(self):
