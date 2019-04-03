@@ -808,13 +808,11 @@ class Actions(View):
         # Send item to order (GET)
         elif action == 'send-to-order':
             custom_form = 'includes/custom_forms/send_to_order.html'
-            order_dropdown = Order.objects.exclude(ref_name__iexact='Quick')
-            order_dropdown = order_dropdown.exclude(status__in=[7, 8])
             item = get_object_or_404(Item, pk=pk)
-            context = {'orders': order_dropdown,
-                       'modal_title': 'Añadir prenda a pedido',
+            context = {'modal_title': 'Añadir prenda a pedido',
                        'pk': pk,
                        'item': item,
+                       'order_pk': self.request.GET.get('aditionalpk', None),
                        'action': 'send-to-order',
                        'submit_btn': 'Añadir a pedido',
                        'custom_form': custom_form,
@@ -823,7 +821,7 @@ class Actions(View):
 
         # Send to order express (GET)
         elif action == 'send-to-order-express':
-            custom_form = 'includes/custom_forms/send_to_order_express.html'
+            custom_form = 'includes/custom_forms/send_to_order.html'
             item = get_object_or_404(Item, pk=pk)
             context = {'modal_title': 'Enviar prenda a ticket',
                        'pk': pk,
@@ -1215,20 +1213,45 @@ class Actions(View):
         elif action == 'send-to-order':
             item = get_object_or_404(Item,
                                      pk=self.request.POST.get('pk', None))
-            order = get_object_or_404(Order,
-                                      pk=self.request.POST.get('order', None))
+            order = get_object_or_404(
+                Order, pk=self.request.POST.get('order-pk', None))
 
-            # Test isStock
-            if self.request.POST.get('isStock', None) == '1':
+            # Test isStock (convert to bool)
+            is_stock = self.request.POST.get('isStock', None)
+            if is_stock:
                 is_stock = True
-            elif self.request.POST.get('isStock', None) == '0':
-                is_stock = False
             else:
-                raise Http404('No info given about stock')
-            OrderItem.objects.create(element=item, reference=order, fit=False,
-                                     stock=is_stock)
-            data['redirect'] = (reverse('order_view', args=[order.pk]))
+                is_stock = False
+
+            # Now create OrderItem
+            price = self.request.POST.get('custom-price', None)
+            qty = self.request.POST.get('item-qty', 1)
+            if price is '0':
+                price = None
+            OrderItem.objects.create(
+                element=item, reference=order, qty=qty, price=price,
+                stock=is_stock, fit=False)
+
+            # Set default price (if case)
+            set_price = self.request.POST.get('set-default-price', None)
+            if set_price:
+                item.price = price
+                item.full_clean()
+                item.save()
+
+            # Context for the view
+            items = OrderItem.objects.filter(reference=order)
             data['form_is_valid'] = True
+            data['html_id'] = '#orderitems-list'
+            context = {'items': items,
+                       'order': order,
+
+                       # CRUD Actions
+                       'js_action_edit': 'order-item-edit',
+                       'js_action_delete': 'order-item-delete',
+                       'js_data_pk': order.pk,
+                       }
+            template = 'includes/orderitems_list.html'
 
         # Send item to order express (POST)
         elif action == 'send-to-order-express':
@@ -1270,7 +1293,6 @@ class Actions(View):
                        'customers': customers,
 
                        # CRUD Actions
-                       # 'js_action_edit': 'order-express-item-edit',
                        'js_action_delete': 'order-express-item-delete',
                        'js_data_pk': '0',
                        }
@@ -1489,10 +1511,10 @@ class Actions(View):
                            'js_action_delete': 'order-item-delete',
                            'js_data_pk': order.pk,
                            }
-                template = 'includes/order_details.html'
+                template = 'includes/orderitems_list.html'
                 form.save()
                 data['form_is_valid'] = True
-                data['html_id'] = '#order-details'
+                data['html_id'] = '#orderitems-list'
             else:
                 custom_form = 'includes/custom_forms/order_item.html'
                 context = {'form': form,
@@ -1601,7 +1623,7 @@ class Actions(View):
             items = OrderItem.objects.filter(reference=order)
             item.delete()
             data['form_is_valid'] = True
-            data['html_id'] = '#order-details'
+            data['html_id'] = '#orderitems-list'
             context = {'items': items,
                        'order': order,
                        'btn_title_add': 'Añadir prenda',
@@ -1610,7 +1632,7 @@ class Actions(View):
                        'js_action_delete': 'order-item-delete',
                        'js_data_pk': order.pk,
                        }
-            template = 'includes/order_details.html'
+            template = 'includes/orderitems_list.html'
 
         # Delete order express (POST)
         elif action == 'order-express-delete':
@@ -1814,12 +1836,11 @@ def item_selector(request):
     # Fix context settings
     context = {'item_types': settings.ITEM_TYPE[1:],
                'item_classes': settings.ITEM_CLASSES,
-               'js_action_send_to': 'send-to-order',
                'js_action_edit': 'object-item-edit',
                'js_action_delete': 'object-item-delete'
                }
 
-    # Process form
+    # Process form when addding items on the fly
     if request.method == 'POST':
         form = ItemForm(request.POST)
         if form.is_valid():
@@ -1827,13 +1848,22 @@ def item_selector(request):
         else:
             context['errors'] = form.errors
 
-    # On express orders we should provide the order id to attach items to it
+    # In orders we should provide the order id to attach items to it
     order_pk = request.GET.get('aditionalpk', None)
     if not order_pk:
         order_pk = request.POST.get('aditionalpk', None)
     if order_pk:
-        context['order'] = get_object_or_404(Order, pk=order_pk)
-        context['js_action_send_to'] = 'send-to-order-express'
+        # get rid of edit and delete in this views
+        context['js_action_edit'] = False
+        context['js_action_delete'] = False
+
+        # Now divert depending the kind of order
+        order = get_object_or_404(Order, pk=order_pk)
+        context['order'] = order
+        if order.customer.name == 'express':
+            context['js_action_send_to'] = 'send-to-order-express'
+        else:
+            context['js_action_send_to'] = 'send-to-order'
 
     items = Item.objects.all()
 
@@ -1862,7 +1892,8 @@ def item_selector(request):
         items = items.filter(size=by_size)
         context['data_size'] = by_size
 
-    context['available_items'] = items[:11]
+    context['available_items'] = items[:5]
+    context['total_items'] = items.count()
 
     template = 'includes/item_selector.html'
     data = {'html': render_to_string(template, context, request=request),
