@@ -6,7 +6,7 @@
       <button class="btn btn-outline-success mr-2 js-crud-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
         <i class="fal fa-edit"></i> Editar pedido
       </button>
-      <button type="button" class="btn btn-sm btn-outline-success mr-2 js-crud-add" data-action="{{js_action_add}}"  data-pk="{{js_data_pk}}">
+      <button type="button" class="btn btn-sm btn-outline-success mr-2" data-toggle="collapse" data-target="#item-selector-wrapper">
         <i class="fal fa-tshirt"></i> {{btn_title_add}}
       </button>
       <button type="button" class="btn btn-sm btn-outline-success js-crud-edit" data-action="order-edit-add-prepaid"  data-pk="{{order.pk}}">
@@ -28,115 +28,18 @@
         <p class="ml-2">{{order.others | linebreaksbr}}</p>
       </div>
     {%endif%}
-    <h4><i class="far fa-tshirt fa-fw"></i><strong> Prendas:</strong></h4>
-    {%if order.invoiced%}
-      {%for item in items%}
-        <div class="d-flex mx-3">
-          <div class="">
-            {{item.qty}} x {%include 'includes/item_string.html'%}, {{item.price}}€
-          </div>
-          <div class="ml-auto">
-            {{item.subtotal}}€
-          </div>
-        </div>
-      {%endfor%}
-      <div class="d-flex justify-content-end m-3">
-        <div class="d-flex flex-column">
-          <h4 class="text-right"><strong>Total del pedido:</strong> {{order.total}}€</h4>
-          <h5 class="text-right"><strong>Prepagado: </strong> -{{order.prepaid}}€</h5>
-        </div>
+    <div class="collapse border rounded m-2 mb-4 shadow" id="item-selector-wrapper">
+      <div class="d-flex justify-content-between px-2 py-1 mb-1 border-bottom custom_bg_3">
+        <h3><i class="fal fa-tshirt"></i></h3>
+        <h3>Selector de prendas</h3>
+        <button type="button" class="close" data-toggle="collapse" data-target="#item-selector-wrapper">
+          <i class="far fa-times mr-1"></i>
+        </button>
       </div>
-    {%else%}
-      {% if items %}
-        <table class="table">
-        <thead>
-          <tr>
-            <th scope="col">
-              Prenda<i class="far fa-question-circle px-1" style="cursor:pointer;" data-toggle="collapse" data-target="#item-help"></i>
-            </th>
-            <th scope="col">Precio</th>
-            <th scope="col">Tiempos</th>
-            <th scope="col">Acciones</th>
-          </tr>
-          {% include 'includes/info_items.html' %}
-        </thead>
-        <tbody>
-          {% for item in items %}
-          <tr class="item-list" data-toggle="collapse" data-target="#time-detail-{{item.pk}}">
-            <td scope="row" class="d-flex align-items-center">
-                {{item.qty}} x {%include 'includes/item_string.html'%} {{item.price}}€
-                <span class="ml-2">
-                  {%if item.description%}
-                  <i class="far fa-sticky-note"></i>
-                  {%endif%}
-                  {%if item.element.foreing%}
-                  <i class="far fa-sign-in-alt"></i>
-                  {%endif%}
-                  {%if item.fit%}
-                  <i class="far fa-cut"></i>
-                  {%endif%}
-                  {%if item.stock%}
-                  <i class="far fa-history"></i>
-                  {%endif%}
-                </span>
-            </td>
-            <td>{{item.subtotal}}€</td>
-            <td>
-              {%if not item.stock and not item.element.foreing%}
-                {% if item.time_quality == 0 %}
-                  <i class="far fa-frown" ></i> Sin tiempos aún (0/3)
-                {% elif item.time_quality == 1 %}
-                  <i class="far fa-smile-wink fa-fw" ></i> Ánimo (1/3)
-                {% elif item.time_quality == 2 %}
-                  <i class="far fa-thumbs-up fa-fw" ></i> Bien (2/3)
-                {% else %}
-                  <i class="far fa-star fa-fw" ></i> Genial (3/3)
-                {% endif %}
-              {%else%}
-                <i class="far fa-info fa-fw" ></i> Las prendas externas o de stock<br> no necesitan tiempos
-              {% endif %}
-            </td>
-            <td>{% include 'includes/action_buttons.html' %}</td>
-          </tr>
-          <tr class="collapse" id="time-detail-{{item.pk}}">
-            <td class="pl-3" colspan="2">
-              <strong>Descripción:</strong><br>
-              {%if item.description%}
-                {{item.description}}
-              {%else%}
-                No se ha dado descripción para esta prenda.
-              {%endif%}
-            </td>
-            {%if not item.stock and not item.element.foreing%}
-            <td colspan="2">
-              <strong>Tiempos:</strong><br>
-              <strong>Corte: </strong>{{item.crop}};<br>
-              <strong>Confección: </strong>{{item.sewing}};<br>
-              <strong>Planchado:</strong>{{item.iron}}
-            </td>
-            {%endif%}
-            <td></td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        </table>
-        <div class="d-flex justify-content-end mt-2">
-          <div class="d-flex flex-column">
-            <h5 class="text-right px-1"><strong>Prepagado: </strong> -{{order.prepaid}}€</h5>
-            <h5 class="text-right px-1 pb-1" style="border-bottom: 1px solid lightgrey;"><strong>Total del pedido:</strong> {{order.total}}€</h5>
-            <h4><strong>Total pendiente: </strong>{{order.pending}}€</h4>
-            {%if order.pending > 0%}
-            <small class="text-right">A devolver a cliente.</small>
-            {%endif%}
-          </div>
-        </div>
-      {% else %}
-        <div class="d-flex">
-          <div class="alert alert-info" role="alert">
-            <i class="fa fa-info mr-2"></i> No se ha añadido ninguna prenda
-          </div>
-        </div>
-      {% endif %}
-    {%endif%}
+      <div class="p-2" id="item-selector"></div>
+    </div>
+    <div id="orderitems-list">
+      {%include 'includes/orderitems_list.html'%}
+    </div>
   </div>
 </div>

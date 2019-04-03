@@ -30,6 +30,11 @@ th{
 .intro_text{
   font-size: 2.3em;
 }
+.back_to_orders{
+  position: fixed;
+  left: 10px;
+  top: 20px;
+}
 .box_link:hover{
   text-decoration: none;
   color: #449B84;

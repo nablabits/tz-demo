@@ -203,7 +203,7 @@ $(function () {
 
   // actions (POST)
   $('#action-modal').on('click', '#send-form button', saveActionForm)
-  $('#order-status').on('click', '.js-order-status', updateStatus)
+  $('#root').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
 
