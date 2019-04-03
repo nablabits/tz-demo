@@ -5221,7 +5221,6 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['item_types'], settings.ITEM_TYPE[1:])
         self.assertEqual(resp.context['item_classes'], settings.ITEM_CLASSES)
-        self.assertEqual(resp.context['js_action_send_to'], 'send-to-order')
         self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
         self.assertEqual(
             resp.context['js_action_delete'], 'object-item-delete')
@@ -5272,7 +5271,7 @@ class ItemSelectorTests(TestCase):
                                  })
         self.assertEqual(resp.context['order'], order)
         self.assertEqual(
-            resp.context['js_action_send_to'], 'send-to-order-express')
+            resp.context['js_action_send_to'], 'send-to-order')
 
     def test_item_selector_gets_order(self):
         """Test the correct pickup of order on order view."""
@@ -5280,6 +5279,28 @@ class ItemSelectorTests(TestCase):
         resp = self.client.get(
             reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
         self.assertEqual(resp.context['order'], order)
+        self.assertEqual(
+            resp.context['js_action_send_to'], 'send-to-order')
+
+    def test_item_selector_get_rid_of_buttons_in_orders(self):
+        """Buttons should disappear in send to order."""
+        order = Order.objects.first()
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
+        self.assertFalse(resp.context['js_action_edit'])
+        self.assertFalse(resp.context['js_action_delete'])
+
+    def test_item_selector_diverts_depending_kind_of_order(self):
+        """The js action changes depending the kind of order."""
+        order = Order.objects.first()
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
+        self.assertEqual(resp.context['js_action_send_to'], 'send-to-order')
+        e = Customer.objects.create(name='express', phone=0, cp=0)
+        order.customer = e
+        order.save()
+        resp = self.client.get(
+            reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
         self.assertEqual(
             resp.context['js_action_send_to'], 'send-to-order-express')
 
@@ -5400,12 +5421,19 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(resp.context['available_items'].count(), 1)
         self.assertEqual(resp.context['data_size'], '0')
 
-    def test_item_selector_limits_to_11(self):
+    def test_item_selector_limits_to_5(self):
         """Test the limiting results."""
         for i in range(10):
             Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
         resp = self.client.get(reverse('item-selector'), {'test': True})
-        self.assertEqual(resp.context['available_items'].count(), 11)
+        self.assertEqual(resp.context['available_items'].count(), 5)
+
+    def test_item_counts(self):
+        """Test the total amount of items."""
+        for i in range(10):
+            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+        resp = self.client.get(reverse('item-selector'), {'test': True})
+        self.assertEqual(resp.context['total_items'], 14)
 
     def test_template_used(self):
         """Test the proper template."""

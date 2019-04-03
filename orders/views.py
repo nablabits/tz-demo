@@ -1814,12 +1814,11 @@ def item_selector(request):
     # Fix context settings
     context = {'item_types': settings.ITEM_TYPE[1:],
                'item_classes': settings.ITEM_CLASSES,
-               'js_action_send_to': 'send-to-order',
                'js_action_edit': 'object-item-edit',
                'js_action_delete': 'object-item-delete'
                }
 
-    # Process form
+    # Process form when addding items on the fly
     if request.method == 'POST':
         form = ItemForm(request.POST)
         if form.is_valid():
@@ -1827,13 +1826,22 @@ def item_selector(request):
         else:
             context['errors'] = form.errors
 
-    # On express orders we should provide the order id to attach items to it
+    # In orders we should provide the order id to attach items to it
     order_pk = request.GET.get('aditionalpk', None)
     if not order_pk:
         order_pk = request.POST.get('aditionalpk', None)
     if order_pk:
-        context['order'] = get_object_or_404(Order, pk=order_pk)
-        context['js_action_send_to'] = 'send-to-order-express'
+        # get rid of edit and delete in this views
+        context['js_action_edit'] = False
+        context['js_action_delete'] = False
+
+        # Now divert depending the kind of order
+        order = get_object_or_404(Order, pk=order_pk)
+        context['order'] = order
+        if order.customer.name == 'express':
+            context['js_action_send_to'] = 'send-to-order-express'
+        else:
+            context['js_action_send_to'] = 'send-to-order'
 
     items = Item.objects.all()
 
@@ -1862,7 +1870,8 @@ def item_selector(request):
         items = items.filter(size=by_size)
         context['data_size'] = by_size
 
-    context['available_items'] = items[:11]
+    context['available_items'] = items[:5]
+    context['total_items'] = items.count()
 
     template = 'includes/item_selector.html'
     data = {'html': render_to_string(template, context, request=request),
