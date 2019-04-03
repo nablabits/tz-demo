@@ -1,5 +1,20 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v71 Apr 3
+  * **Nuevo:** Ahora las prendas se añaden desde el selector de prendas dentro
+    de la vista del pedido.
+  * **Mejora:** La barra de objetivo se ha comprimido para alojar toda la
+  previsión. Ahora el objetivo queda en el centro (en lugar de a 3/4 como antes).
+  * **Mejora:** Ahora el interruptor de pedidos no confirmados se oculta cuando
+    todo está confirmado.
+  * **Mejora:** los pedidos pendientes de pago ahora se ordenan por fecha de
+    entrega (antes era por fecha de entrada).
+  * **Mejora:** en la vista de pedidos ahora el titulo de cada pedido es el
+    cliente.
+  * **Mejora:** los pedidos con el 100% prepagado ya no se muestran en pendientes.
+  * **Bug:** Se han eliminado el error que añadía la prenda *Predeterminado*
+    y el que daba error al eliminar una prenda.
+
 ### v70 Mar 27
   * **Bug:** la barra de progreso en la página de inicio no se correspondía con
     la realidad.
