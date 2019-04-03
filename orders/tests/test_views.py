@@ -3374,8 +3374,8 @@ class ActionsGetMethod(TestCase):
         context = data['context']
         self.assertEqual(template, 'includes/regular_form.html')
         self.assertIsInstance(context, list)
-        vars = ('orders', 'modal_title', 'pk', 'item', 'action', 'submit_btn',
-                'custom_form')
+        vars = ('modal_title', 'pk', 'item', 'order_pk', 'action',
+                'submit_btn', 'custom_form', )
         self.assertTrue(self.context_vars(context, vars))
 
     def test_send_item_to_order_express(self):
@@ -4255,7 +4255,7 @@ class ActionsPostMethodCreate(TestCase):
         no_item = self.client.post(reverse('actions'),
                                    {'action': 'send-to-order',
                                     'pk': 5000,
-                                    'order': order.pk,
+                                    'order-pk': order.pk,
                                     'isfit': '0',
                                     'isStock': '1',
                                     'test': True,
@@ -4268,23 +4268,9 @@ class ActionsPostMethodCreate(TestCase):
         no_order = self.client.post(reverse('actions'),
                                     {'action': 'send-to-order',
                                      'pk': item.pk,
-                                     'order': 50000,
+                                     'order-pk': 50000,
                                      'isfit': '0',
                                      'isStock': '1',
-                                     'test': True,
-                                     })
-        self.assertEqual(no_order.status_code, 404)
-
-    def test_send_to_order_raises_error_invalid_isStock(self):
-        """If no valid isStock is given raise a 404."""
-        item = Item.objects.first()
-        order = Order.objects.first()
-        no_order = self.client.post(reverse('actions'),
-                                    {'action': 'send-to-order',
-                                     'pk': item.pk,
-                                     'order': order.pk,
-                                     'isfit': '0',
-                                     'isStock': 'invalid',
                                      'test': True,
                                      })
         self.assertEqual(no_order.status_code, 404)
@@ -4295,15 +4281,14 @@ class ActionsPostMethodCreate(TestCase):
         order = Order.objects.first()
         self.client.post(reverse('actions'), {'action': 'send-to-order',
                                               'pk': item.pk,
-                                              'order': order.pk,
+                                              'order-pk': order.pk,
                                               'isfit': '1',
-                                              'isStock': '1',
+                                              'isStock': True,
                                               'test': True,
                                               })
         order_item = OrderItem.objects.filter(element=item)
         order_item = order_item.filter(reference=order)
         self.assertEqual(len(order_item), 1)
-        self.assertFalse(order_item[0].fit)
         self.assertTrue(order_item[0].stock)
 
     def test_send_to_order_isfit_and_isStock_false(self):
@@ -4312,16 +4297,79 @@ class ActionsPostMethodCreate(TestCase):
         order = Order.objects.first()
         self.client.post(reverse('actions'), {'action': 'send-to-order',
                                               'pk': item.pk,
-                                              'order': order.pk,
-                                              'isfit': '0',
-                                              'isStock': '0',
+                                              'order-pk': order.pk,
                                               'test': True,
                                               })
-        order_item = OrderItem.objects.filter(element=item)
-        order_item = order_item.filter(reference=order)
+        order_item = OrderItem.objects.filter(
+            element=item).filter(reference=order)
         self.assertEqual(len(order_item), 1)
-        self.assertFalse(order_item[0].fit)
         self.assertFalse(order_item[0].stock)
+
+    def test_send_item_to_order_no_price_nor_qty(self):
+        """Should assign 1 item and default item's price."""
+        obj_item = Item.objects.first()
+        obj_item.price = 2000
+        obj_item.name = 'default price'
+        obj_item.save()
+        resp = self.client.post(reverse('actions'),
+                                {'order-pk': Order.objects.first().pk,
+                                 'action': 'send-to-order',
+                                 'pk': obj_item.pk,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        orderitem = OrderItem.objects.first()
+        self.assertEqual(orderitem.price, 2000)
+        self.assertEqual(orderitem.qty, 1)
+
+    def test_send_item_to_order_price_0(self):
+        """Should assign object item's default."""
+        obj_item = Item.objects.first()
+        obj_item.price = 2000
+        obj_item.name = 'default price'
+        obj_item.save()
+        resp = self.client.post(reverse('actions'),
+                                {'order-pk': Order.objects.first().pk,
+                                 'action': 'send-to-order',
+                                 'custom-price': 0,
+                                 'pk': obj_item.pk,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        orderitem = OrderItem.objects.first()
+        self.assertEqual(orderitem.price, 2000)
+
+    def test_send_item_to_order_set_default(self):
+        """When set-default-price is true set this price on Item object."""
+        obj_item = Item.objects.create(name='Test', fabrics=0, price=0)
+        self.assertEqual(obj_item.price, 0)
+        self.client.post(
+            reverse('actions'), {'order-pk': Order.objects.first().pk,
+                                 'action': 'send-to-order',
+                                 'set-default-price': True,
+                                 'custom-price': 100,
+                                 'pk': obj_item.pk,
+                                 'test': True})
+        obj_item = Item.objects.get(pk=obj_item.pk)
+        self.assertEqual(obj_item.price, 100)
+
+    def test_send_item_to_order_context_response(self):
+        """Test the correct insertion and response."""
+        resp = self.client.post(reverse('actions'),
+                                {'order-pk': Order.objects.first().pk,
+                                 'custom-price': 1000,
+                                 'item-qty': 3,
+                                 'action': 'send-to-order',
+                                 'pk': Item.objects.first().pk,
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['html_id'], '#orderitems-list')
+        self.assertEqual(data['template'], 'includes/orderitems_list.html')
+        vars = ('items', 'order', 'js_action_edit', 'js_action_delete',
+                'js_data_pk')
+        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_send_item_to_order_express_raises_404_with_item(self):
         """Raise a 404 execption when trying to pick up an invalid item."""
@@ -4884,7 +4932,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/order_details.html')
+        self.assertEqual(data['template'], 'includes/orderitems_list.html')
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
 
@@ -5081,7 +5129,7 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/order_details.html')
+        self.assertEqual(data['template'], 'includes/orderitems_list.html')
         self.assertEqual(data['html_id'], '#order-details')
         self.assertTrue(self.context_vars(data['context'], vars))
 

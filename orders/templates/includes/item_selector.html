@@ -168,7 +168,7 @@
 <h3 class="mt-4 pb-1 border-bottom">
   <i class="fa fa-list pr-2"></i>Lista de prendas encontradas
   <span class="badge badge-info mr-1">
-    {%if available_items|length > 10%}+10{%else%}{{available_items|length}}{%endif%}
+    {{total_items}}
   </span>
 </h3>
 
@@ -188,5 +188,10 @@
          <span class="ml-5">{%include 'includes/action_buttons.html'%}</span>
      </li>
     {%endfor%}
+    {%if total_items > 5%}
+      <li class="list-group-item d-flex align-items-center">
+      <i class="far fa-ellipsis-v-alt mr-2"></i> Y {{total_items|add:"-5"}} más.
+      </li>
+    {%endif%}
   </ul>
 </div>
