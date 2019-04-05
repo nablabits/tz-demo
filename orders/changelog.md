@@ -1,6 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v71 Apr 3
+### v72, Abr 5
+  * **Nuevo:** nueva barra de gastos para comparar con los ingresos.
+
+### v71, Abr 3
   * **Nuevo:** Ahora las prendas se añaden desde el selector de prendas dentro
     de la vista del pedido.
   * **Mejora:** La barra de objetivo se ha comprimido para alojar toda la
@@ -15,7 +18,7 @@
   * **Bug:** Se han eliminado el error que añadía la prenda *Predeterminado*
     y el que daba error al eliminar una prenda.
 
-### v70 Mar 27
+### v70, Mar 27
   * **Bug:** la barra de progreso en la página de inicio no se correspondía con
     la realidad.
   * **Mejora:** La lista de pedidos ahora muestra el número de pedido.
