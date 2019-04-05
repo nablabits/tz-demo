@@ -378,6 +378,44 @@ class MainViewTests(TestCase):
                 round(resp.context['aggregates'][agg] * 100 / (2 * goal), 2))
             agg += 1
 
+    def test_expenses_bar(self):
+        """Test the expenses bar."""
+        supplier = Customer.objects.create(
+            name='supplier', phone=0, cp=0, provider=True)
+
+        # Fetch the goal
+        elapsed = date.today() - date(2018, 12, 31)
+        goal = elapsed.days * settings.GOAL
+
+        for i in range(3):
+            Expense.objects.create(
+                issuer=supplier, invoice_no=0, issued_on=date.today(),
+                amount=100)
+        resp = self.client.get(reverse('main'))
+
+        self.assertEqual(
+            resp.context['exp_perc'], round(30000 / (2 * goal), 2))
+
+    def test_expenses_avoid_NoneType_error(self):
+        """Total should return 0 in None queries."""
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['exp_perc'], 0)
+
+    def test_se_diff(self):
+        """Test the correct value of difference."""
+        supplier = Customer.objects.create(
+            name='supplier', phone=0, cp=0, provider=True)
+
+        for i in range(3):
+            Expense.objects.create(
+                issuer=supplier, invoice_no=0, issued_on=date.today(),
+                amount=100)
+        for order in Order.objects.all():
+            Invoice.objects.create(reference=order)
+
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['se_diff'], -270)
+
     def test_active_count_box(self):
         """Test the active box."""
         resp = self.client.get(reverse('main'))
