@@ -80,6 +80,14 @@ def main(request):
         aggregates.insert(0, float(sales['total']))  # Amounts list
     bar = [round(amount * 100 / (2 * goal), 2) for amount in aggregates]
 
+    # GoalBox, expenses bar
+    expenses = Expense.objects.filter(
+        issued_on__year=2019).aggregate(total=Sum('amount'))
+    if not expenses['total']:
+        expenses['total'] = 0
+    exp_perc = round(float(expenses['total']) * 100 / (2 * goal), 2)
+    se_diff = round(aggregates[0] - float(expenses['total']), 2)
+
     # Active Box
     active = Order.active.count()
     active_msg = False
@@ -170,6 +178,8 @@ def main(request):
     view_settings = {'goal': goal,
                      'bar': bar,
                      'aggregates': aggregates,
+                     'exp_perc': exp_perc,
+                     'se_diff': se_diff,
                      'active': active,
                      'active_msg': active_msg,
                      'pending': Order.pending_orders.count(),
