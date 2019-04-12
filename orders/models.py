@@ -3,13 +3,15 @@
 Its intended use is for business related to tailor made clothes.
 """
 
+from datetime import date, timedelta
+
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.core.exceptions import (ObjectDoesNotExist, ValidationError, )
+
+from . import managers, settings
 from .utils import WeekColor
-from . import settings, managers
-from datetime import date, timedelta
 
 
 class Customer(models.Model):

@@ -1,9 +1,9 @@
 """Show all the models in the admin page."""
 
 from django.contrib import admin
-from .models import (
-    Customer, Comment, Order, Item, OrderItem, PQueue, Invoice, Expense,
-    BankMovement)
+
+from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
+                     Order, OrderItem, PQueue)
 
 
 @admin.register(Customer)

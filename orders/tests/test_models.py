@@ -1,13 +1,14 @@
 """Test the app models."""
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
-from django.test import TestCase
-from orders.models import (
-    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, BankMovement,
-    Expense, )
-from django.core.exceptions import ValidationError
-from django.db.utils import IntegrityError, DataError
+
 from django.contrib.auth.models import User
-from datetime import date, timedelta, time, datetime
+from django.core.exceptions import ValidationError
+from django.db.utils import DataError, IntegrityError
+from django.test import TestCase
+
+from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
+                           Item, Order, OrderItem, PQueue)
 
 
 class ModelTest(TestCase):
