@@ -730,14 +730,14 @@ class OrderListTests(TestCase):
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
         self.assertTrue(resp.context['active_stock'])
-        self.assertEquals(len(resp.context['delivered_stock']), 0)
+        self.assertEqual(len(resp.context['delivered_stock']), 0)
         for name in ('trapuzarrak', 'TraPuZarrak'):
             tz.name = name
             tz.save()
             resp = self.client.get(reverse('orderlist',
                                            kwargs={'orderby': 'date'}))
             self.assertTrue(resp.context['active_stock'])
-            self.assertEquals(len(resp.context['delivered_stock']), 0)
+            self.assertEqual(len(resp.context['delivered_stock']), 0)
 
     def test_tz_does_not_exist(self):
         """When tz doesn't exist tz orders should be empty."""
@@ -1296,7 +1296,7 @@ class OrderListTests(TestCase):
                 OrderItem.objects.create(
                     reference=order, element=Item.objects.last())
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 60)
+        self.assertEqual(resp.context['pending_total'], 60)
 
     def test_pending_total_excludes_cancelled_orders(self):
         """Test the proper sum of budgets."""
@@ -1309,7 +1309,7 @@ class OrderListTests(TestCase):
         cancelled.status = '8'
         cancelled.save()
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 60)
+        self.assertEqual(resp.context['pending_total'], 60)
 
     def test_pending_total_excludes_express_orders(self):
         """Test the proper sum of budgets."""
@@ -1322,7 +1322,7 @@ class OrderListTests(TestCase):
         express_order.ref_name = 'Quick'
         express_order.save()
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 60)
+        self.assertEqual(resp.context['pending_total'], 60)
 
     def test_pending_total_excludes_tz_orders(self):
         """Test the proper sum of budgets."""
@@ -1339,7 +1339,7 @@ class OrderListTests(TestCase):
         tz_order.customer = tz
         tz_order.save()
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 60)
+        self.assertEqual(resp.context['pending_total'], 60)
 
     def test_pending_total_excludes_invoiced_orders(self):
         """Test the proper sum of budgets."""
@@ -1350,7 +1350,7 @@ class OrderListTests(TestCase):
                     reference=order, element=Item.objects.last())
         Invoice.objects.create(reference=Order.objects.first())
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 60)
+        self.assertEqual(resp.context['pending_total'], 60)
 
     def test_pending_total_excludes_unconfirmed_orders(self):
         """Test the proper sum of budgets."""
@@ -1360,12 +1360,12 @@ class OrderListTests(TestCase):
                 OrderItem.objects.create(
                     reference=order, element=Item.objects.last())
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 90)
+        self.assertEqual(resp.context['pending_total'], 90)
         unconfirmed = Order.objects.first()
         unconfirmed.confirmed = False
         unconfirmed.save()
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 60)
+        self.assertEqual(resp.context['pending_total'], 60)
 
     def test_pending_total(self):
         """Test the proper sum of budgets."""
@@ -1375,7 +1375,7 @@ class OrderListTests(TestCase):
                 OrderItem.objects.create(
                     reference=order, element=Item.objects.last())
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['pending_total'], 90)
+        self.assertEqual(resp.context['pending_total'], 90)
 
     def test_pending_total_type_error_raising(self):
         """Avoid TypeError raising.
@@ -1393,7 +1393,7 @@ class OrderListTests(TestCase):
         the_one.save()
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
-        self.assertEquals(resp.context['pending_total'], 0)
+        self.assertEqual(resp.context['pending_total'], 0)
 
     def test_this_week_active(self):
         """Test the proper display of this week orders."""
@@ -1409,8 +1409,8 @@ class OrderListTests(TestCase):
         this = Order.objects.get(pk=this.pk)
         resp = self.client.get(reverse('orderlist',
                                        kwargs={'orderby': 'date'}))
-        self.assertEquals(len(resp.context['this_week_active']), 1)
-        self.assertEquals(resp.context['this_week_active'][0], this)
+        self.assertEqual(len(resp.context['this_week_active']), 1)
+        self.assertEqual(resp.context['this_week_active'][0], this)
 
     def test_this_week_active_excludes_delivered_and_cancelled(self):
         """This week entries should exclude statuses 7&8."""
@@ -1457,7 +1457,7 @@ class OrderListTests(TestCase):
         """Count the confirmed orders."""
         self.client.login(username='regular', password='test')
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['confirmed'], 3)
+        self.assertEqual(resp.context['confirmed'], 3)
 
     def test_unconfirmed_count(self):
         """Count the confirmed orders."""
@@ -1466,7 +1466,7 @@ class OrderListTests(TestCase):
         unconfirmed.confirmed = False
         unconfirmed.save()
         resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEquals(resp.context['unconfirmed'], 1)
+        self.assertEqual(resp.context['unconfirmed'], 1)
 
     def test_active_calendar_includes_tz_orders(self):
         """Active orders do not include tz, but active_calendar does so."""
@@ -2738,7 +2738,7 @@ class OrderViewTests(TestCase):
             Comment.objects.create(reference=order, comment='Test', user=user)
 
         resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertEquals(resp.context['comments'].count(), 3)
+        self.assertEqual(resp.context['comments'].count(), 3)
         self.assertTrue(
             resp.context['comments'][0].creation >
             resp.context['comments'][1].creation)
@@ -2750,7 +2750,7 @@ class OrderViewTests(TestCase):
         for i in range(3):
             OrderItem.objects.create(reference=order, element=item)
         resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertEquals(resp.context['items'].count(), 3)
+        self.assertEqual(resp.context['items'].count(), 3)
 
     def test_closed_orders(self):
         """Closed status."""
@@ -2767,16 +2767,16 @@ class OrderViewTests(TestCase):
         """Test the remaining variables."""
         order = Order.objects.first()
         resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertEquals(resp.context['user'].username, order.user.username)
-        self.assertEquals(resp.context['title'],
+        self.assertEqual(resp.context['user'].username, order.user.username)
+        self.assertEqual(resp.context['title'],
                           'Pedido %s: %s, %s' %
                           (order.pk, order.customer.name, order.ref_name))
-        self.assertEquals(resp.context['btn_title_add'], 'Añadir prenda')
-        self.assertEquals(resp.context['js_action_add'], 'order-item-add')
-        self.assertEquals(resp.context['js_action_edit'], 'order-item-edit')
-        self.assertEquals(
+        self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
+        self.assertEqual(resp.context['js_action_add'], 'order-item-add')
+        self.assertEqual(resp.context['js_action_edit'], 'order-item-edit')
+        self.assertEqual(
             resp.context['js_action_delete'], 'order-item-delete')
-        self.assertEquals(resp.context['js_data_pk'], order.pk)
+        self.assertEqual(resp.context['js_data_pk'], order.pk)
 
 
 class StandardViewsTest(TestCase):
@@ -3040,7 +3040,7 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['js_action_delete'],
                          'object-item-delete')
         self.assertEqual(resp.context['js_data_pk'], '0')
-        self.assertEquals(resp.context['version'], settings.VERSION)
+        self.assertEqual(resp.context['version'], settings.VERSION)
 
     def test_mark_down_view(self):
         """Test the proper work of view."""
@@ -3116,7 +3116,7 @@ class SearchBoxTest(TestCase):
                                                  'search-obj': 'string'})
 
         with self.assertRaises(ValueError):
-            self.client.post(reverse('search'), {'search-on': None,
+            self.client.post(reverse('search'), {'search-on':  '',
                                                  'search-obj': 'string'})
 
     def test_search_box_on_orders(self):
@@ -3129,11 +3129,11 @@ class SearchBoxTest(TestCase):
         vars = ('query_result', 'model')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
-        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertEqual(data['template'], 'includes/search_results.html')
         self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEquals(data['model'], 'orders')
-        self.assertEquals(data['query_result'], 1)
-        self.assertEquals(data['query_result_name'], 'example11')
+        self.assertEqual(data['model'], 'orders')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], 'example11')
 
     def test_search_on_orders_by_pk(self):
         """Test search orders by pk."""
@@ -3145,9 +3145,9 @@ class SearchBoxTest(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
-        self.assertEquals(data['template'], 'includes/search_results.html')
-        self.assertEquals(data['query_result'], 1)
-        self.assertEquals(data['query_result_name'], order.ref_name)
+        self.assertEqual(data['template'], 'includes/search_results.html')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], order.ref_name)
 
     def test_search_box_on_customers_str(self):
         """Test search customers by name."""
@@ -3159,11 +3159,11 @@ class SearchBoxTest(TestCase):
         vars = ('query_result', 'model')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
-        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertEqual(data['template'], 'includes/search_results.html')
         self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEquals(data['model'], 'customers')
-        self.assertEquals(data['query_result'], 1)
-        self.assertEquals(data['query_result_name'], 'Customer1')
+        self.assertEqual(data['model'], 'customers')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], 'Customer1')
 
     def test_search_box_on_customers_int(self):
         """Test search customers by phone."""
@@ -3175,11 +3175,11 @@ class SearchBoxTest(TestCase):
         vars = ('query_result', 'model')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
-        self.assertEquals(data['template'], 'includes/search_results.html')
+        self.assertEqual(data['template'], 'includes/search_results.html')
         self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEquals(data['model'], 'customers')
-        self.assertEquals(data['query_result'], 1)
-        self.assertEquals(data['query_result_name'], 'Customer5')
+        self.assertEqual(data['model'], 'customers')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], 'Customer5')
 
     def test_search_box_case_insensitive(self):
         """Search should return the same resuslts regardless the case."""
@@ -3193,7 +3193,7 @@ class SearchBoxTest(TestCase):
                                   'test': True})
         data1 = json.loads(str(resp1.content, 'utf-8'))
         data2 = json.loads(str(resp2.content, 'utf-8'))
-        self.assertEquals(data1['query_result_name'],
+        self.assertEqual(data1['query_result_name'],
                           data2['query_result_name'])
 
     def test_search_on_items_no_order_pk(self):
@@ -3216,10 +3216,10 @@ class SearchBoxTest(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEquals(data['template'], 'includes/search_results.html')
-        self.assertEquals(data['query_result'], 1)
-        self.assertEquals(data['model'], 'items')
-        self.assertEquals(data['query_result_name'], item.name)
+        self.assertEqual(data['template'], 'includes/search_results.html')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['model'], 'items')
+        self.assertEqual(data['query_result_name'], item.name)
 
 
 class ActionsGetMethod(TestCase):
@@ -3324,14 +3324,14 @@ class ActionsGetMethod(TestCase):
 
     def test_add_order(self):
         """Return code 200 on order-add action."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'order-add',
                                                     'test': True})
         self.assertEqual(resp.status_code, 200)
 
     def test_add_order_context(self):
         """Test context dictionaries and template."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'order-add',
                                                     'test': True})
         self.assertIsInstance(resp.content, bytes)
@@ -3347,7 +3347,7 @@ class ActionsGetMethod(TestCase):
     def test_order_express(self):
         """Test the correct process of express orders."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': None,
+                               {'pk': 'None',
                                 'action': 'order-express-add',
                                 'test': True})
         self.assertEqual(resp.status_code, 200)
@@ -3362,14 +3362,14 @@ class ActionsGetMethod(TestCase):
 
     def test_add_customer(self):
         """Return code 200 on customer-add action."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'customer-add',
                                                     'test': True})
         self.assertEqual(resp.status_code, 200)
 
     def test_add_customer_context(self):
         """Test context dictionaries and template."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'customer-add',
                                                     'test': True})
         self.assertIsInstance(resp.content, bytes)
@@ -3750,7 +3750,7 @@ class ActionsGetMethod(TestCase):
     def test_logout(self):
         """Test context dictionaries and template."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': None, 'action': 'logout', 'test': True})
+                               {'pk': 'None', 'action': 'logout', 'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -4035,7 +4035,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'email': 'johndoe@example.com',
                                  'CIF': '123456789F',
                                  'cp': '12345',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'action': 'customer-new',
                                  'test': True
                                  })
@@ -4055,7 +4055,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'email': 'johndoe@example.com',
                                  'CIF': '123456789F',
                                  'cp': '12345',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'action': 'customer-new',
                                  'test': True
                                  })
@@ -4416,7 +4416,7 @@ class ActionsPostMethodCreate(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'item-pk': 5000,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 404)
 
@@ -4426,7 +4426,7 @@ class ActionsPostMethodCreate(TestCase):
                                 {'item-pk': Item.objects.first().pk,
                                  'order-pk': 2000,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 404)
 
@@ -4440,7 +4440,7 @@ class ActionsPostMethodCreate(TestCase):
                                 {'item-pk': Item.objects.first().pk,
                                  'order-pk': Order.objects.first().pk,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 200)
         orderitem = OrderItem.objects.first()
@@ -4460,7 +4460,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'order-pk': Order.objects.first().pk,
                                  'action': 'send-to-order-express',
                                  'custom-price': 0,
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 200)
         orderitem = OrderItem.objects.first()
@@ -4476,7 +4476,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'action': 'send-to-order-express',
                                  'set-default-price': True,
                                  'custom-price': 100,
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         obj_item = Item.objects.get(pk=obj_item.pk)
         self.assertEqual(obj_item.price, 100)
@@ -4489,7 +4489,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'custom-price': 1000,
                                  'item-qty': 3,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp, JsonResponse)
@@ -5279,7 +5279,7 @@ class ActionsPostMethodEdit(TestCase):
 
     def test_logout_succesfull(self):
         """Test the proper logout from app."""
-        resp = self.client.post(reverse('actions'), {'pk': None,
+        resp = self.client.post(reverse('actions'), {'pk':  '0',
                                                      'action': 'logout',
                                                      'test': True})
         self.assertEqual(resp.status_code, 302)
