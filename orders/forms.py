@@ -1,8 +1,9 @@
 """Form models used in the app."""
 
 from django import forms
-from .models import Customer, Order, Item, OrderItem, Comment, Invoice
 from django.core.exceptions import ValidationError
+
+from .models import Comment, Customer, Invoice, Item, Order, OrderItem
 
 
 class CustomerForm(forms.ModelForm):

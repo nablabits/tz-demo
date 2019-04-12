@@ -1,9 +1,11 @@
 """Test utilities."""
 
-from orders.utils import WeekColor
-from django.test import TestCase
 from datetime import date, timedelta
+
+from django.test import TestCase
+
 from orders import settings
+from orders.utils import WeekColor
 
 
 class WeekColorTest(TestCase):

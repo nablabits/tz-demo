@@ -1,19 +1,20 @@
 """The main test suite for views. backend."""
 
-from django.test import TestCase, Client
+import json
+from datetime import date, time, timedelta
+from random import randint
+
 from django.contrib.auth.models import User
-from orders.models import (
-    Customer, Order, OrderItem, Comment, Item, PQueue, Invoice, BankMovement,
-    Expense)
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.core import mail
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import JsonResponse
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
-from datetime import date, timedelta, time
-from random import randint
+
 from orders import settings
-import json
+from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
+                           Item, Order, OrderItem, PQueue)
 
 
 class NotLoggedInTest(TestCase):

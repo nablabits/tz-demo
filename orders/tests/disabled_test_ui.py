@@ -1,16 +1,18 @@
 """Test the user interface using Selenium."""
 
-from django.contrib.staticfiles.testing import LiveServerTestCase
-from selenium.webdriver.support.ui import WebDriverWait, Select
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.webdriver import WebDriver
-from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
-from django.contrib.auth.models import User
-from orders.models import Customer, Order
+import re
 from datetime import date
 from random import randint
-import re
+
+from django.contrib.auth.models import User
+from django.contrib.staticfiles.testing import LiveServerTestCase
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import Select, WebDriverWait
+
+from orders.models import Customer, Order
 
 
 class CreationTest(LiveServerTestCase):

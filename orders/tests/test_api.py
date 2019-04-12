@@ -1,12 +1,14 @@
-from django.contrib.auth.models import User
-from requests.auth import HTTPBasicAuth
-from rest_framework.test import APITestCase, APIClient
-from django.test import TestCase
-from rest_framework.authtoken.models import Token
-from django.urls import reverse
-from orders.models import (
-    Customer, Order, Item, OrderItem, Invoice, Expense, BankMovement)
 from datetime import date
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+from requests.auth import HTTPBasicAuth
+from rest_framework.authtoken.models import Token
+from rest_framework.test import APIClient, APITestCase
+
+from orders.models import (BankMovement, Customer, Expense, Invoice, Item,
+                           Order, OrderItem)
 
 
 class ReadOnlyTests(APITestCase):

@@ -1,7 +1,8 @@
 """Define custom managers fro the models."""
 
-from django.db import models
 from datetime import date
+
+from django.db import models
 
 
 # First, Order managers

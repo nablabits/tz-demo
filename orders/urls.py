@@ -3,10 +3,10 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
-from django.urls import path, re_path, include
-from . import views
 
+from . import views
 
 # API urls generator
 router = DefaultRouter()

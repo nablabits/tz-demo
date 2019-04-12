@@ -1,5 +1,6 @@
 """Define serializers for the models to create an API view for jupyter."""
 from rest_framework import serializers
+
 from . import models
 
 
