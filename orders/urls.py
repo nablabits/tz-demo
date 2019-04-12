@@ -48,8 +48,8 @@ urlpatterns = [
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),
 
     # Loging related urls
-    path('accounts/login/', auth_views.login, name='login'),
-    path('accounts/logout/', auth_views.logout, name='logout'),
+    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
 
     # The API url
     path('API/', include(router.urls)),
