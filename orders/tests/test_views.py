@@ -3116,7 +3116,7 @@ class SearchBoxTest(TestCase):
                                                  'search-obj': 'string'})
 
         with self.assertRaises(ValueError):
-            self.client.post(reverse('search'), {'search-on': None,
+            self.client.post(reverse('search'), {'search-on':  '',
                                                  'search-obj': 'string'})
 
     def test_search_box_on_orders(self):
@@ -3324,14 +3324,14 @@ class ActionsGetMethod(TestCase):
 
     def test_add_order(self):
         """Return code 200 on order-add action."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'order-add',
                                                     'test': True})
         self.assertEqual(resp.status_code, 200)
 
     def test_add_order_context(self):
         """Test context dictionaries and template."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'order-add',
                                                     'test': True})
         self.assertIsInstance(resp.content, bytes)
@@ -3347,7 +3347,7 @@ class ActionsGetMethod(TestCase):
     def test_order_express(self):
         """Test the correct process of express orders."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': None,
+                               {'pk': 'None',
                                 'action': 'order-express-add',
                                 'test': True})
         self.assertEqual(resp.status_code, 200)
@@ -3362,14 +3362,14 @@ class ActionsGetMethod(TestCase):
 
     def test_add_customer(self):
         """Return code 200 on customer-add action."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'customer-add',
                                                     'test': True})
         self.assertEqual(resp.status_code, 200)
 
     def test_add_customer_context(self):
         """Test context dictionaries and template."""
-        resp = self.client.get(reverse('actions'), {'pk': None,
+        resp = self.client.get(reverse('actions'), {'pk': 'None',
                                                     'action': 'customer-add',
                                                     'test': True})
         self.assertIsInstance(resp.content, bytes)
@@ -3750,7 +3750,7 @@ class ActionsGetMethod(TestCase):
     def test_logout(self):
         """Test context dictionaries and template."""
         resp = self.client.get(reverse('actions'),
-                               {'pk': None, 'action': 'logout', 'test': True})
+                               {'pk': 'None', 'action': 'logout', 'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -4035,7 +4035,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'email': 'johndoe@example.com',
                                  'CIF': '123456789F',
                                  'cp': '12345',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'action': 'customer-new',
                                  'test': True
                                  })
@@ -4055,7 +4055,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'email': 'johndoe@example.com',
                                  'CIF': '123456789F',
                                  'cp': '12345',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'action': 'customer-new',
                                  'test': True
                                  })
@@ -4416,7 +4416,7 @@ class ActionsPostMethodCreate(TestCase):
         resp = self.client.post(reverse('actions'),
                                 {'item-pk': 5000,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 404)
 
@@ -4426,7 +4426,7 @@ class ActionsPostMethodCreate(TestCase):
                                 {'item-pk': Item.objects.first().pk,
                                  'order-pk': 2000,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 404)
 
@@ -4440,7 +4440,7 @@ class ActionsPostMethodCreate(TestCase):
                                 {'item-pk': Item.objects.first().pk,
                                  'order-pk': Order.objects.first().pk,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 200)
         orderitem = OrderItem.objects.first()
@@ -4460,7 +4460,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'order-pk': Order.objects.first().pk,
                                  'action': 'send-to-order-express',
                                  'custom-price': 0,
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 200)
         orderitem = OrderItem.objects.first()
@@ -4476,7 +4476,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'action': 'send-to-order-express',
                                  'set-default-price': True,
                                  'custom-price': 100,
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         obj_item = Item.objects.get(pk=obj_item.pk)
         self.assertEqual(obj_item.price, 100)
@@ -4489,7 +4489,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'custom-price': 1000,
                                  'item-qty': 3,
                                  'action': 'send-to-order-express',
-                                 'pk': None,
+                                 'pk': 'None',
                                  'test': True})
         self.assertEqual(resp.status_code, 200)
         self.assertIsInstance(resp, JsonResponse)
@@ -5279,7 +5279,7 @@ class ActionsPostMethodEdit(TestCase):
 
     def test_logout_succesfull(self):
         """Test the proper logout from app."""
-        resp = self.client.post(reverse('actions'), {'pk': None,
+        resp = self.client.post(reverse('actions'), {'pk':  '0',
                                                      'action': 'logout',
                                                      'test': True})
         self.assertEqual(resp.status_code, 302)
