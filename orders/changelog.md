@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v73(beta), may 1
+  * **Nuevo:** nueva vista kanban (en proceso de testeo aun).
+  * **Mejora:** Actualización del framework.
+
 ### v72, Abr 5
   * **Nuevo:** nueva barra de gastos para comparar con los ingresos.
 
