@@ -373,6 +373,53 @@ class TestOrders(TestCase):
         self.assertEqual(order.times[0], 2)
         self.assertEqual(order.times[1], 3)
 
+    def test_kanban_jumps(self):
+        """Test the correct jump within kanban stages."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        self.assertEqual(order.status, '1')
+
+        # switch to queued
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '2')
+
+        # switch to in progress
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '3')
+
+        # switch to waiting
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '6')
+
+        # switch to delivered
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '7')
+
+        # switch back to in_progress
+        order.status = '6'
+        order.save()
+        order.kanban_backward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '3')
+
+        # switch back to queued
+        order.kanban_backward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '2')
+
+        # switch back to queued
+        order.kanban_backward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '1')
+
 
 class TestObjectItems(TestCase):
     """Test the Item model."""
