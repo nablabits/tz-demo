@@ -1759,6 +1759,60 @@ class Actions(View):
         return JsonResponse(data)
 
 
+class OrdersCRUD(View):
+    """Process all the CRUD actions on order model.
+
+    This is the new version for AJAX calls since Actions class became really
+    huge to be clear. Eventually each model will have their CRUD AJAX Actions
+    to work with.
+    """
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        data = dict()
+        pk = self.request.POST.get('pk', None)
+        action = self.request.POST.get('action', None)
+        template, context = False, False
+
+        if not pk or not action:
+            raise HttpResponseServerError('No pk or no action were given')
+
+        # Edit date (POST)
+        if action == 'edit-date':
+            order = get_object_or_404(Order, pk=pk)
+            form = EditDateForm(request.POST, instance=order)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                context = CommonContexts.kanban()
+                template = 'includes/kanban_columns.html'
+                data['html_id'] = '#kanban-columns'
+            else:
+                data['form_is_valid'] = False
+                data['error'] = form.errors
+
+        elif action == 'kanban-jump':
+            order = get_object_or_404(Order, pk=pk)
+            dir = request.POST.get('direction', None)
+            if not dir:
+                raise HttpResponseServerError('No direction was especified')
+            if dir == 'back':
+                order.kanban_backward()
+            elif dir == 'next':
+                order.kanban_forward()
+            else:
+                raise HttpResponseServerError('Unknown direction')
+            context = CommonContexts.kanban()
+            template = 'includes/kanban_columns.html'
+            data['html_id'] = '#kanban-columns'
+            data['form_is_valid'] = True
+
+        if template and context:
+            data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
+
+
 def changelog(request):
     """Display the changelog."""
     if request.method != 'GET':
