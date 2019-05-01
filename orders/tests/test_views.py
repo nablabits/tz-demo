@@ -2213,6 +2213,11 @@ class InvoicesListTest(TestCase):
         self.assertTemplateUsed(resp, 'tz/invoices.html')
 
 
+class KanbanTests(TestCase):
+    """Test the kanban main view."""
+    pass
+
+
 class PQueueManagerTests(TestCase):
     """Test the pqueue manager view."""
 
@@ -5503,6 +5508,11 @@ class ActionsPostMethodEdit(TestCase):
                                                      'test': True})
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, reverse('login'))
+
+
+class OrdersCRUDTests(TestCase):
+    """Test the AJAX methods."""
+    pass
 
 
 class ItemSelectorTests(TestCase):
