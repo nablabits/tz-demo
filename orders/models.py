@@ -130,7 +130,11 @@ class Order(models.Model):
     @property
     def overdue(self):
         """Set the overdue property."""
-        return date.today() > self.delivery
+        if self.status != '7':
+            overdue = date.today() > self.delivery
+        else:
+            overdue = False
+        return overdue
 
     @property
     def total(self):

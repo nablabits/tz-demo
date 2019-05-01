@@ -292,6 +292,17 @@ class TestOrders(TestCase):
             user=user, customer=c, ref_name='test', delivery=date(2017, 1, 1))
         self.assertTrue(order.overdue)
 
+    def test_overdue_has_no_effect_on_delivered_orders(self):
+        """Delivered orders can't be overdued."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date(2017, 1, 1))
+        order.status = '7'
+        order.save()
+        order = Order.objects.get(pk=order.pk)
+        self.assertFalse(order.overdue)
+
     def test_total_amount(self):
         """Test the correct sum of all items."""
         user = User.objects.first()
