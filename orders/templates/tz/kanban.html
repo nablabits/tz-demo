@@ -1,0 +1,15 @@
+{% extends "tz/base.html" %}
+{% block kanban %}
+{% load humanize %}
+<div class="d-flex align-items-center mt-1">
+  <h2><i class="fal fa-columns mr-2"></i>Vista kanban</h2>
+  <a href="{% url 'orderlist' orderby='date' %}">
+    <button class="btn btn-outline-success mx-2" type="button">
+      <i class="fal fa-calendar-star mr-2"></i>Vista por semanas
+    </button>
+  </a>
+</div>
+<div class="row mx-2 mt-2" id="kanban-columns">
+  {%include 'includes/kanban_columns.html'%}
+</div>
+{% endblock %}

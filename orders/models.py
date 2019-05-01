@@ -130,7 +130,11 @@ class Order(models.Model):
     @property
     def overdue(self):
         """Set the overdue property."""
-        return date.today() > self.delivery
+        if self.status != '7':
+            overdue = date.today() > self.delivery
+        else:
+            overdue = False
+        return overdue
 
     @property
     def total(self):
@@ -204,6 +208,31 @@ class Order(models.Model):
             return True
         else:
             return False
+
+    def kanban_forward(self):
+        """Jump to the next kanban stage."""
+        if self.status == '1':
+            self.status = '2'
+        elif self.status == '2':
+            self.status = '3'
+        elif self.status in ['3', '4', '5']:
+            self.status = '6'
+        elif self.status == '6':
+            self.status = '7'
+            self.delivery = date.today()
+
+        self.save()
+
+    def kanban_backward(self):
+        """Jump back to previous kanban stage."""
+        if self.status == '2':
+            self.status = '1'
+        elif self.status in ['3', '4', '5']:
+            self.status = '2'
+        elif self.status == '6':
+            self.status = '3'
+
+        self.save()
 
 
 class Item(models.Model):

@@ -75,7 +75,7 @@
 
         <div class="col-lg-3 col-md-12 text-center px-1">
           <div class="d-flex flex-column border rounded custom_bg_2 mb-1 py-4 px-2">
-            <a class="box_link" href="{% url 'orderlist' orderby='date' %}">
+            <a class="box_link" href="{% url 'kanban' %}">
               <h3 class="box_link_h"><i class="far fa-star pr-2"></i><br>{{active}} Activos</h3>
               {%if active_msg%}
               <h6 class="box_link_h">{{active_msg}}</h6>
@@ -110,7 +110,7 @@
           <div class="row mb-1">
             <div class="col px-1">
               <div class="d-flex flex-column border rounded custom_bg_4 mb-1 py-4 px-2">
-                <a class="box_link" href="{% url 'orderlist' orderby='date' %}">
+                <a class="box_link" href="{% url 'kanban' %}">
                   <h3 class="box_link_h"><i class="far fa-hand-holding-usd pr-2"></i><br>{{pending}} Pendientes</h3>
                   <h6 class="box_link_h">{{pending_msg|safe}}</h6>
                 </a>
@@ -129,7 +129,7 @@
             </div>
             <div class="col px-1">
               <div class="d-flex flex-column border rounded custom_bg_6 mb-1 py-4 px-2">
-                <a class="box_link" href="{% url 'orderlist' orderby='date' %}">
+                <a class="box_link" href="{% url 'kanban' %}">
                   {%if outdated%}
                     <h3 class="box_link_h"><i class="far fa-exclamation-triangle"></i><br>{{outdated}} vencidos</h3>
                     <h6 class="box_link_h">Que ya deberíamos haber entregado</h6>

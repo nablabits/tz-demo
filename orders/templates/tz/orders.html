@@ -1,8 +1,15 @@
 {% extends "tz/base.html" %}
 {% block orders %}
 {% load humanize %}
-{% include 'includes/search_box.html' %}
-<div class="container mt-4" id="order-list">
+<div class="d-flex align-items-center mt-1">
+  <h2><i class="fal fa-calendar-star mr-2"></i>Vista por semanas</h2>
+  <a href="{% url 'kanban' %}">
+    <button class="btn btn-outline-success mx-2" type="button">
+      <i class="fa fa-columns mr-2"></i>Vista kanban
+    </button>
+  </a>
+</div>
+<div class="container-fluid mt-4" id="order-list">
     <ul class="nav nav-tabs" id="ordersTab" role="tablist">
       <li class="nav-item">
         <a class="nav-link active" data-toggle="tab" href="#active-orders" role="tab" id="active-orders-tab">

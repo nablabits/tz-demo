@@ -4,6 +4,7 @@ import json
 from datetime import date, time, timedelta
 from random import randint
 
+from django import forms
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -15,6 +16,224 @@ from django.utils import timezone
 from orders import settings
 from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
                            Item, Order, OrderItem, PQueue)
+from orders.views import CommonContexts
+
+
+class CommonContextKanbanTests(TestCase):
+    """Test the common vars for both AJAX and regular views."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        u = User.objects.create_user(
+            username='user', is_staff=True, is_superuser=True,)
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+
+    def test_icebox_items_have_status_1(self):
+        """Test the icebox items."""
+        first = Order.objects.first()
+        first.status = '2'
+        first.save()
+
+        icebox = CommonContexts.kanban()['icebox']
+        self.assertEqual(icebox.count(), 4)
+        for o in icebox:
+            self.assertTrue(o.status == '1')
+
+    def test_icebox_items_are_ordered_by_date(self):
+        """Test the icebox items."""
+        n = 1
+        for o in Order.objects.all():
+            delay = timedelta(days=n)
+            o.delivery = o.delivery + delay
+            o.save()
+            n += 1
+
+        icebox = CommonContexts.kanban()['icebox']
+        idx = 1
+        for o in icebox:
+            if idx < icebox.count():
+                self.assertTrue(o.delivery < icebox[idx].delivery)
+                idx += 1
+
+    def test_queued_items_have_status_2(self):
+        """Test the queued items."""
+        for o in Order.objects.all()[:3]:
+            o.status = '2'
+            o.save()
+
+        queued = CommonContexts.kanban()['queued']
+        self.assertEqual(queued.count(), 3)
+        for o in queued:
+            self.assertTrue(o.status == '2')
+
+    def test_queued_items_are_ordered_by_date(self):
+        """Test the queued items."""
+        n = 1
+        for o in Order.objects.all():
+            delay = timedelta(days=n)
+            o.status = '2'
+            o.delivery = o.delivery + delay
+            o.save()
+            n += 1
+
+        queued = CommonContexts.kanban()['queued']
+        idx = 1
+        for o in queued:
+            if idx < queued.count():
+                self.assertTrue(o.delivery < queued[idx].delivery)
+                idx += 1
+
+    def test_in_progress_items_have_status_3_4_5(self):
+        """Test in_progress items."""
+        n = 3
+        for o in Order.objects.all()[:3]:
+            o.status = n
+            o.save()
+            n += 1
+
+        ip = CommonContexts.kanban()['in_progress']
+        self.assertEqual(ip.count(), 3)
+        for o in ip:
+            self.assertTrue(o.status in ['3', '4', '5', ])
+
+    def test_in_progress_items_are_ordered_by_date(self):
+        """Test the queued items."""
+        n = 1
+        for o in Order.objects.all():
+            delay = timedelta(days=n)
+            o.status = '3'
+            o.delivery = o.delivery + delay
+            o.save()
+            n += 1
+
+        ip = CommonContexts.kanban()['in_progress']
+        idx = 1
+        for o in ip:
+            if idx < ip.count():
+                self.assertTrue(o.delivery < ip[idx].delivery)
+                idx += 1
+
+    def test_waiting_items_have_status_6(self):
+        """Test the waiting items."""
+        for o in Order.objects.all()[:3]:
+            o.status = '6'
+            o.save()
+
+        waiting = CommonContexts.kanban()['waiting']
+        self.assertEqual(waiting.count(), 3)
+        for o in waiting:
+            self.assertTrue(o.status == '6')
+
+    def test_waiting_items_are_ordered_by_date(self):
+        """Test the waiting items."""
+        n = 1
+        for o in Order.objects.all():
+            delay = timedelta(days=n)
+            o.status = '6'
+            o.delivery = o.delivery + delay
+            o.save()
+            n += 1
+
+        waiting = CommonContexts.kanban()['waiting']
+        idx = 1
+        for o in waiting:
+            if idx < waiting.count():
+                self.assertTrue(o.delivery < waiting[idx].delivery)
+                idx += 1
+
+    def test_done_items_have_status_7(self):
+        """Test the done items."""
+        for o in Order.objects.all()[:3]:
+            o.status = '7'
+            o.save()
+
+        done = CommonContexts.kanban()['done']
+        self.assertEqual(done.count(), 3)
+        for o in done:
+            self.assertTrue(o.status == '7')
+
+    def test_done_items_are_ordered_by_date(self):
+        """Test the done items."""
+        n = 1
+        for o in Order.objects.all():
+            delay = timedelta(days=n)
+            o.status = '7'
+            o.delivery = o.delivery + delay
+            o.save()
+            n += 1
+
+        done = CommonContexts.kanban()['done']
+        idx = 1
+        for o in done:
+            if idx < done.count():
+                self.assertTrue(o.delivery < done[idx].delivery)
+                idx += 1
+
+    def test_amounts_is_a_list(self):
+        """Test the type of amounts key."""
+        self.assertIsInstance(CommonContexts.kanban()['amounts'], list)
+
+    def test_icebox_amounts(self):
+        """Test the aggregates for icebox orders."""
+        # 30*0+30*1+30*2+30*3+30*4 = 300
+        self.assertEqual(CommonContexts.kanban()['amounts'][0], 300)
+
+    def test_queued_amounts(self):
+        """Test the aggregates for queued orders."""
+        for o in Order.objects.all()[1:4]:
+            o.status = '2'
+            o.save()
+
+        # 30*1+30*2+30*3=180
+        self.assertEqual(CommonContexts.kanban()['amounts'][1], 180)
+
+    def test_in_progress_amounts(self):
+        """Test the aggregates for queued orders."""
+        n = 3
+        for o in Order.objects.all()[1:4]:
+            o.status = str(n)
+            o.save()
+            n += 1
+
+        # 30*1+30*2+30*3=180
+        self.assertEqual(CommonContexts.kanban()['amounts'][2], 180)
+
+    def test_waiting_amounts(self):
+        """Test the aggregates for queued orders."""
+        for o in Order.objects.all()[1:4]:
+            o.status = '6'
+            o.save()
+
+        # 30*1+30*2+30*3=180
+        self.assertEqual(CommonContexts.kanban()['amounts'][3], 180)
+
+    def test_done_amounts(self):
+        """Test the aggregates for queued orders."""
+        for o in Order.objects.all()[1:4]:
+            o.status = '7'
+            o.save()
+
+        # 30*1+30*2+30*3=180
+        self.assertEqual(CommonContexts.kanban()['amounts'][4], 180)
+
+    def test_update_date_is_a_form_instance(self):
+        """Test the type of update date key."""
+        self.assertIsInstance(
+            CommonContexts.kanban()['update_date'], forms.ModelForm)
 
 
 class NotLoggedInTest(TestCase):
@@ -1992,6 +2211,11 @@ class InvoicesListTest(TestCase):
         Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('invoiceslist'))
         self.assertTemplateUsed(resp, 'tz/invoices.html')
+
+
+class KanbanTests(TestCase):
+    """Test the kanban main view."""
+    pass
 
 
 class PQueueManagerTests(TestCase):
@@ -5284,6 +5508,11 @@ class ActionsPostMethodEdit(TestCase):
                                                      'test': True})
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, reverse('login'))
+
+
+class OrdersCRUDTests(TestCase):
+    """Test the AJAX methods."""
+    pass
 
 
 class ItemSelectorTests(TestCase):
