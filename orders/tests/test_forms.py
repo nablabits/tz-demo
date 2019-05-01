@@ -1,10 +1,12 @@
 """Test the form models."""
 
-from django.test import TestCase
-from django.contrib.auth.models import User
-from orders.models import Customer, Order
-from orders.forms import CustomerForm, OrderForm, ItemForm
 from datetime import date
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+
+from orders.forms import CustomerForm, ItemForm, OrderForm
+from orders.models import Customer, Order
 
 
 class CustomerFormTest(TestCase):

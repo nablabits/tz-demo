@@ -104,6 +104,59 @@ $(function () {
     })
   }
 
+  var saveForm = function (e) {
+    // the new method to process AJAX for each model
+    e.preventDefault()
+    var form = $(this)
+    var formData = form.serializeArray()
+    $.ajax({
+      url: form.attr('action'),
+      data: formData,
+      type: form.attr('method'),
+      dataType: 'json',
+      beforeSend: function () {
+        $('js-submit', this).addClass('d-none')
+        $('js-bg-working', this).removeClass('d-none')
+      },
+      success: function (data) {
+        if (data.form_is_valid) {
+          $('#action-modal #bg-working').addClass('d-none')
+          $('#action-modal #check-success').removeClass('d-none')
+          if (data.reload) {
+            location.reload()
+          } else if (data.redirect) {
+            window.location.replace(data.redirect)
+          } else {
+            $(data.html_id).html(data.html)
+          }
+        } else {
+          $('js-errors', this).html(data.errors)
+        }
+      }
+    })
+  }
+
+  var kanbanJump = function () {
+    // Move within kanban statuses
+    var pk = $(this).attr('data-pk')
+    var direction = $(this).attr('data-direction')
+    $.ajax({
+      url: '/orders-CRUD/',
+      data: $.param({
+        'pk': pk, 'direction': direction, 'action': 'kanban-jump'
+      }),
+      type: 'post',
+      dataType: 'json',
+      success: function (data) {
+        if (data.form_is_valid) {
+          $(data.html_id).html(data.html)
+        } else {
+          $('#js-errors').html(data.error)
+        }
+      }
+    })
+  }
+
   var searchAction = function () {
     var form = $(this)
     $.ajax({
@@ -142,7 +195,6 @@ $(function () {
         }
       }
     })
-    // return false
   }
 
   var itemSelector = function () {
@@ -206,6 +258,10 @@ $(function () {
   $('#root').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
+
+  // actions new CRUD process (POST)
+  $('#root').on('submit', '.js-crud-form', saveForm)
+  $('#root').on('click', '.js-kanban-jump', kanbanJump)
 
   // Pqueue actions
   $('#root').on('click', '.js-queue', queueAction)

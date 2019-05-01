@@ -1,6 +1,7 @@
 """Some utilities to use in the app."""
-from . import settings
 from datetime import date
+
+from . import settings
 
 
 class WeekColor(object):

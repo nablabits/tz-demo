@@ -3,10 +3,10 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
+from django.urls import include, path, re_path
 from rest_framework.routers import DefaultRouter
-from django.urls import path, re_path, include
-from . import views
 
+from . import views
 
 # API urls generator
 router = DefaultRouter()
@@ -26,6 +26,7 @@ urlpatterns = [
     # List related urls
     re_path(r'^orders&orderby=(?P<orderby>\D+)/',
             views.orderlist, name='orderlist'),
+    path('kanban', views.kanban, name='kanban'),
     path('customers', views.customerlist, name='customerlist'),
     path('items', views.itemslist, name='itemslist'),
     path('pqueue/manager', views.pqueue_manager, name='pqueue_manager'),
@@ -43,13 +44,14 @@ urlpatterns = [
 
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),
+    path('orders-CRUD/', views.OrdersCRUD.as_view(), name='orders-CRUD'),
     path('changelog/', views.changelog, name='changelog'),
     path('item-selector/', views.item_selector, name='item-selector'),
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),
 
     # Loging related urls
-    path('accounts/login/', auth_views.login, name='login'),
-    path('accounts/logout/', auth_views.logout, name='logout'),
+    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
+    path('accounts/logout/', auth_views.LogoutView.as_view(), name='logout'),
 
     # The API url
     path('API/', include(router.urls)),

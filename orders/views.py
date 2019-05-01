@@ -1,30 +1,71 @@
 """Define all the views for the app."""
 
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import logout
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.core.exceptions import ValidationError, ObjectDoesNotExist
-from django.core.mail import EmailMultiAlternatives
-from django.http import JsonResponse, Http404, HttpResponseServerError
-from rest_framework import viewsets
-from django.shortcuts import render, redirect, get_object_or_404
-from django.template.loader import render_to_string
-from django.utils import timezone
-from django.urls import reverse
-from django.views import View
-from django.db.models import Count, Sum, F, Q, DecimalField
-from django.db.utils import IntegrityError
-from .models import (
-    Comment, Customer, Order, OrderItem, Item, PQueue, Invoice, BankMovement,
-    Expense)
-from .forms import (
-    CustomerForm, OrderForm, CommentForm, ItemForm, OrderItemForm,
-    EditDateForm, AddTimesForm, InvoiceForm)
-from . import serializers
-from . import settings
-from datetime import datetime, date
+from datetime import date, datetime
 from random import randint
+
 import markdown2
+from django.contrib.auth import logout
+from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ObjectDoesNotExist, ValidationError
+from django.core.mail import EmailMultiAlternatives
+from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
+from django.db.models import Count, DecimalField, F, Q, Sum
+from django.db.utils import IntegrityError
+from django.http import Http404, HttpResponseServerError, JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.urls import reverse
+from django.utils import timezone
+from django.views import View
+from rest_framework import viewsets
+
+from . import serializers, settings
+from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
+                    InvoiceForm, ItemForm, OrderForm, OrderItemForm)
+from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
+                     Order, OrderItem, PQueue)
+
+
+class CommonContexts:
+    """Define common queries for both AJAX and regular views.
+
+    On performing AJAX calls is ususal to reuse the same queries and vars used
+    in regular views, since only a part of the view is changed instead of
+    reloading.
+    """
+
+    @staticmethod
+    def kanban():
+        """Get a dict with all the needed vars for the view."""
+        icebox = Order.objects.filter(status='1').order_by('delivery')
+        queued = Order.objects.filter(status='2').order_by('delivery')
+        in_progress = Order.objects.filter(
+            status__in=['3', '4', '5', ]).order_by('delivery')
+        waiting = Order.objects.filter(status='6').order_by('delivery')
+        done = Order.pending_orders.filter(
+            status='7').order_by('delivery')
+
+        # Get the amounts for each column
+        amounts = list()
+        col1 = OrderItem.active.filter(reference__status='1')
+        col2 = OrderItem.active.filter(reference__status='2')
+        col3 = OrderItem.active.filter(
+            reference__status__in=['3', '4', '5', ])
+        col4 = OrderItem.active.filter(reference__status='6')
+        col5 = OrderItem.active.filter(reference__status='7')
+        for col in (col1, col2, col3, col4, col5):
+            col = col.aggregate(
+                total=Sum(F('price') * F('qty'), output_field=DecimalField()))
+            amounts.append(col['total'])
+        vars = {'icebox': icebox,
+                'queued': queued,
+                'in_progress': in_progress,
+                'waiting': waiting,
+                'done': done,
+                'update_date': EditDateForm(),
+                'amounts': amounts
+                }
+        return vars
 
 
 # Root View
@@ -550,6 +591,18 @@ def invoiceslist(request):
                      }
 
     return render(request, 'tz/invoices.html', view_settings)
+
+
+@login_required
+def kanban(request):
+    """Display a kanban view for orders."""
+    view_settings = CommonContexts.kanban()
+    view_settings['cur_user'] = request.user
+    view_settings['now'] = datetime.now()
+    view_settings['version'] = settings.VERSION
+    view_settings['title'] = 'TrapuZarrak · Vista Kanban'
+
+    return render(request, 'tz/kanban.html', view_settings)
 
 
 # Object views
@@ -1701,6 +1754,60 @@ class Actions(View):
                 data['context'] = add_to_context
 
         # Now render_to_string the html for JSON response
+        if template and context:
+            data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
+
+
+class OrdersCRUD(View):
+    """Process all the CRUD actions on order model.
+
+    This is the new version for AJAX calls since Actions class became really
+    huge to be clear. Eventually each model will have their CRUD AJAX Actions
+    to work with.
+    """
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        data = dict()
+        pk = self.request.POST.get('pk', None)
+        action = self.request.POST.get('action', None)
+        template, context = False, False
+
+        if not pk or not action:
+            raise HttpResponseServerError('No pk or no action were given')
+
+        # Edit date (POST)
+        if action == 'edit-date':
+            order = get_object_or_404(Order, pk=pk)
+            form = EditDateForm(request.POST, instance=order)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                context = CommonContexts.kanban()
+                template = 'includes/kanban_columns.html'
+                data['html_id'] = '#kanban-columns'
+            else:
+                data['form_is_valid'] = False
+                data['error'] = form.errors
+
+        elif action == 'kanban-jump':
+            order = get_object_or_404(Order, pk=pk)
+            dir = request.POST.get('direction', None)
+            if not dir:
+                raise HttpResponseServerError('No direction was especified')
+            if dir == 'back':
+                order.kanban_backward()
+            elif dir == 'next':
+                order.kanban_forward()
+            else:
+                raise HttpResponseServerError('Unknown direction')
+            context = CommonContexts.kanban()
+            template = 'includes/kanban_columns.html'
+            data['html_id'] = '#kanban-columns'
+            data['form_is_valid'] = True
+
         if template and context:
             data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)

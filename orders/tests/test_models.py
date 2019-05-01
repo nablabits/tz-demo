@@ -1,13 +1,14 @@
 """Test the app models."""
+from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
-from django.test import TestCase
-from orders.models import (
-    Customer, Order, Comment, Item, OrderItem, PQueue, Invoice, BankMovement,
-    Expense, )
-from django.core.exceptions import ValidationError
-from django.db.utils import IntegrityError, DataError
+
 from django.contrib.auth.models import User
-from datetime import date, timedelta, time, datetime
+from django.core.exceptions import ValidationError
+from django.db.utils import DataError, IntegrityError
+from django.test import TestCase
+
+from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
+                           Item, Order, OrderItem, PQueue)
 
 
 class ModelTest(TestCase):
@@ -291,6 +292,17 @@ class TestOrders(TestCase):
             user=user, customer=c, ref_name='test', delivery=date(2017, 1, 1))
         self.assertTrue(order.overdue)
 
+    def test_overdue_has_no_effect_on_delivered_orders(self):
+        """Delivered orders can't be overdued."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date(2017, 1, 1))
+        order.status = '7'
+        order.save()
+        order = Order.objects.get(pk=order.pk)
+        self.assertFalse(order.overdue)
+
     def test_total_amount(self):
         """Test the correct sum of all items."""
         user = User.objects.first()
@@ -371,6 +383,70 @@ class TestOrders(TestCase):
         stocked.save()
         self.assertEqual(order.times[0], 2)
         self.assertEqual(order.times[1], 3)
+
+    def test_has_no_items(self):
+        """Test the order has no items."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        self.assertTrue(order.has_no_items)
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(0))
+        order = Order.objects.get(pk=order.pk)
+        self.assertFalse(order.has_no_items)
+
+    def test_kanban_jumps(self):
+        """Test the correct jump within kanban stages."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        self.assertEqual(order.status, '1')
+
+        # switch to queued
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '2')
+
+        # switch to in progress
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '3')
+
+        # switch to waiting
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '6')
+
+        # switch to delivered
+        order.kanban_forward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '7')
+
+        # switch back to in_progress
+        order.status = '6'
+        order.save()
+        order.kanban_backward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '3')
+
+        # switch back to queued
+        order.kanban_backward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '2')
+
+        # switch back to queued
+        order.kanban_backward()
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '1')
 
 
 class TestObjectItems(TestCase):
@@ -723,13 +799,13 @@ class TestPQueue(TestCase):
         PQueue.objects.create(item=item2)  # To the bottom (1001)
         pqueue = PQueue.objects.create(item=item3)  # To the bottom (1002)
         queue = PQueue.objects.all()
-        self.assertEquals((queue[0].score, queue[1].score, queue[2].score),
+        self.assertEqual((queue[0].score, queue[1].score, queue[2].score),
                           (1000, 1001, 1002))
 
         pqueue.score = 100
         pqueue.save()
         queue = PQueue.objects.all()
-        self.assertEquals((queue[0].score, queue[1].score, queue[2].score),
+        self.assertEqual((queue[0].score, queue[1].score, queue[2].score),
                           (100, 1000, 1001))
 
     def test_stock_items_cannot_be_added(self):
