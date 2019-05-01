@@ -26,6 +26,48 @@ from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue)
 
 
+class CommonContexts:
+    """Define common queries for both AJAX and regular views.
+
+    On performing AJAX calls is ususal to reuse the same queries and vars used
+    in regular views, since only a part of the view is changed instead of
+    reloading.
+    """
+
+    @staticmethod
+    def kanban():
+        """Get a dict with all the needed vars for the view."""
+        icebox = Order.objects.filter(status='1').order_by('delivery')
+        queued = Order.objects.filter(status='2').order_by('delivery')
+        in_progress = Order.objects.filter(
+            status__in=['3', '4', '5', ]).order_by('delivery')
+        waiting = Order.objects.filter(status='6').order_by('delivery')
+        done = Order.pending_orders.filter(
+            status='7').order_by('delivery')
+
+        # Get the amounts for each column
+        amounts = list()
+        col1 = OrderItem.active.filter(reference__status='1')
+        col2 = OrderItem.active.filter(reference__status='2')
+        col3 = OrderItem.active.filter(
+            reference__status__in=['3', '4', '5', ])
+        col4 = OrderItem.active.filter(reference__status='6')
+        col5 = OrderItem.active.filter(reference__status='7')
+        for col in (col1, col2, col3, col4, col5):
+            col = col.aggregate(
+                total=Sum(F('price') * F('qty'), output_field=DecimalField()))
+            amounts.append(col['total'])
+        vars = {'icebox': icebox,
+                'queued': queued,
+                'in_progress': in_progress,
+                'waiting': waiting,
+                'done': done,
+                'update_date': EditDateForm(),
+                'amounts': amounts
+                }
+        return vars
+
+
 # Root View
 @login_required()
 def main(request):
