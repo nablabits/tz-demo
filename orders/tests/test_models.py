@@ -373,6 +373,23 @@ class TestOrders(TestCase):
         self.assertEqual(order.times[0], 2)
         self.assertEqual(order.times[1], 3)
 
+    def test_has_no_items(self):
+        """Test the order has no items."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        self.assertTrue(order.has_no_items)
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(0))
+        order = Order.objects.get(pk=order.pk)
+        self.assertFalse(order.has_no_items)
+
     def test_kanban_jumps(self):
         """Test the correct jump within kanban stages."""
         order = Order.objects.create(user=User.objects.all()[0],
