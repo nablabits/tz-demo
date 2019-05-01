@@ -593,6 +593,18 @@ def invoiceslist(request):
     return render(request, 'tz/invoices.html', view_settings)
 
 
+@login_required
+def kanban(request):
+    """Display a kanban view for orders."""
+    view_settings = CommonContexts.kanban()
+    view_settings['cur_user'] = request.user
+    view_settings['now'] = datetime.now()
+    view_settings['version'] = settings.VERSION
+    view_settings['title'] = 'TrapuZarrak · Vista Kanban'
+
+    return render(request, 'tz/kanban.html', view_settings)
+
+
 # Object views
 @login_required
 def order_view(request, pk):

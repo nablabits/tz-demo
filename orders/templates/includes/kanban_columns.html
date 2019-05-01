@@ -1,0 +1,99 @@
+<div class="col rounded week-view-table pt-2 pb-5">
+  <div class="d-flex flex-column border-bottom pb-2">
+    <div class="d-flex align-items-center">
+      <h5>
+        <strong>Icebox</strong>
+        <span class="ml-1 badge badge-info">{{icebox.count}}</span>
+        <span><i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-icebox" style="cursor:pointer;"></i></span>
+      </h5>
+      <h5 class="ml-auto pr-1">{{amounts.0}}€</h5>
+    </div>
+    <div class="collapse" id="info-icebox">
+      <p class="m-0 p-0">Pedidos sin inicio definido</p>
+    </div>
+    </div>
+  {% for order in icebox %}
+    {%include 'includes/kanban_element.html'%}
+  {% endfor %}
+</div>
+<div class="col rounded week-view-table pt-2 pb-5">
+  <div class="d-flex flex-column border-bottom pb-2">
+    <div class="d-flex align-items-center">
+      <h5>
+        <strong>En cola</strong>
+        <span class="ml-1 badge badge-info">{{queued.count}}</span>
+        <span>
+          <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-queued" style="cursor:pointer;"></i>
+        </span>
+      </h5>
+      <h5 class="ml-auto pr-1">{{amounts.1}}€</h5>
+    </div>
+    <div class="collapse" id="info-queued">
+      <p class="m-0 p-0">Pedidos con inicio próximo</p>
+    </div>
+  </div>
+  {% for order in queued %}
+    {%include 'includes/kanban_element.html'%}
+  {% endfor %}
+</div>
+<div class="col rounded week-view-table pt-2 pb-5">
+  <div class="d-flex flex-column border-bottom pb-2">
+    <div class="d-flex align-items-center">
+      <h5>
+        <strong>En proceso</strong>
+        <span class="ml-1 badge badge-info">{{in_progress.count}}</span>
+        <span>
+          <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-in-progress" style="cursor:pointer;"></i>
+        </span>
+      </h5>
+      <h5 class="ml-auto pr-1">{{amounts.2}}€</h5>
+    </div>
+    <div class="collapse" id="info-in-progress">
+      <p class="m-0 p-0">Pedidos en preparación (corte, confección o planchado)</p>
+    </div>
+  </div>
+  {% for order in in_progress %}
+    {%include 'includes/kanban_element.html'%}
+  {% endfor %}
+</div>
+<div class="col rounded week-view-table pt-2 pb-5">
+  <div class="d-flex flex-column border-bottom pb-2">
+    <div class="d-flex align-items-center">
+      <h5>
+        <strong>En Espera</strong>
+        <span class="ml-1 badge badge-info">{{waiting.count}}</span>
+        <span>
+          <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-waiting" style="cursor:pointer;"></i>
+        </span>
+      </h5>
+      <h5 class="ml-auto pr-1">{{amounts.3}}€</h5>
+    </div>
+    <div class="collapse" id="info-waiting">
+      <p class="m-0 p-0">Pedidos acabados a la espera de ser recogidos</p>
+    </div>
+  </div>
+  {% for order in waiting %}
+    {%include 'includes/kanban_element.html'%}
+  {% endfor %}
+</div>
+<div class="col rounded week-view-table pt-2 pb-5">
+  <div class="d-flex flex-column border-bottom pb-2">
+    <div class="d-flex align-items-center">
+      <h5>
+        <strong>Entregados</strong>
+        <span class="ml-1 badge badge-info">{{done.count}}</span>
+        <span>
+          <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-done" style="cursor:pointer;"></i>
+        </span>
+      </h5>
+      <h5 class="ml-auto pr-1">{{amounts.4}}€</h5>
+    </div>
+    <div class="collapse" id="info-done">
+      <p class="m-0 p-0">Pedidos entregados con pago pendiente</p>
+    </div>
+  </div>
+    {% for order in done %}
+      {%include 'includes/kanban_element.html'%}
+    {% endfor %}
+
+</div>

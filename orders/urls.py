@@ -26,6 +26,7 @@ urlpatterns = [
     # List related urls
     re_path(r'^orders&orderby=(?P<orderby>\D+)/',
             views.orderlist, name='orderlist'),
+    path('kanban', views.kanban, name='kanban'),
     path('customers', views.customerlist, name='customerlist'),
     path('items', views.itemslist, name='itemslist'),
     path('pqueue/manager', views.pqueue_manager, name='pqueue_manager'),
@@ -43,6 +44,7 @@ urlpatterns = [
 
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),
+    path('orders-CRUD/', views.OrdersCRUD.as_view(), name='orders-CRUD'),
     path('changelog/', views.changelog, name='changelog'),
     path('item-selector/', views.item_selector, name='item-selector'),
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),

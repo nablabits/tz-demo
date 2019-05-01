@@ -1,0 +1,58 @@
+{% load humanize %}
+{% load widget_tweaks %}
+<div class="d-flex flex-column colorized_border rounded p-1 my-1" {%if order.color%}style="border-left: 10px solid {{order.color}}"{%endif%}>
+  <div class="d-flex ml-1">
+    <a href="{% url 'order_view' pk=order.pk %}">
+      <strong>{{order.pk}}. {{order.customer.name}}</strong> &middot; {{order.ref_name}}
+    </a>
+  </div>
+  <div class="d-flex align-items-center ml-1">
+    {%if order.status not in '67'%}<div data-toggle="collapse" data-target="#date-change-{{order.pk}}" style="cursor: pointer;">{%endif%}
+      <span class="mr-2">{{order.delivery|date:'M, d'}}</span>
+      {%if order.overdue and order.status in '12345'%}<i class="fas fa-exclamation-triangle text-danger"></i>{%endif%}
+    {%if order.status not in '67'%}</div>{%endif%}
+    {%if not order.confirmed%}<i class="far fa-user-clock text-warning mt-2"></i>{%endif%}
+    {%if order.has_no_items%}<i class="far fa-empty-set text-info mt-2"></i>{%endif%}
+
+    <div class="d-flex ml-auto">
+      {% if order.status in '23456' %}
+        <i class="fal fa-arrow-alt-left px-1 js-kanban-jump" data-pk="{{order.pk}}" data-direction="back" style="cursor: pointer;"></i>
+      {%endif%}
+      {% if order.status in '123456' %}
+        <i class="fal fa-arrow-alt-right px-1 js-kanban-jump" data-pk="{{order.pk}}" data-direction="next" style="cursor: pointer;"></i>
+      {%endif%}
+    </div>
+  </div>
+  {%if order.status not in '67'%}
+  <div class="collapse" id="date-change-{{order.pk}}">
+    {% load widget_tweaks %}
+    <form class="js-crud-form" method="post" action="{% url 'orders-CRUD' %}" id="form-date-{{order.pk}}">
+      {% csrf_token %}
+      <div class="form-row align-items-center">
+        <div class="col-auto">
+          <input type="date" class="form-control form-control-sm" name="{{ update_date.delivery.name }}" id="{{ update_date.delivery.id_for_label }}" value="{{ update_date.delivery.value|stringformat:'s' }}">
+          <input type="hidden" name="pk" value="{{order.pk}}">
+          <input type="hidden" id="js-action" name="action" value="edit-date">
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-sm btn-outline-success js-submit">
+            <i class="fas fa-check mr-1"></i>Actualizar
+          </button>
+          <button class="btn btn-sm btn-outline-danger" data-toggle="collapse" data-target="#date-change-{{order.pk}}">
+            <i class="fas fa-times mr-1"></i>Cerrar
+          </button>
+        </div>
+        <div class="col-auto d-none js-bg-working">
+          <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
+        </div>
+      </div>
+      <div class="d-flex js-errors"></div>
+    </form>
+  </div>
+  {%endif%}
+  {%if order.status in '345'%}
+  <div class="progress mt-1" style="height: 5px; width: 100%;">
+    <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>
+  </div>
+  {%endif%}
+</div>
