@@ -115,13 +115,11 @@ $(function () {
       type: form.attr('method'),
       dataType: 'json',
       beforeSend: function () {
-        $('js-submit', this).addClass('d-none')
-        $('js-bg-working', this).removeClass('d-none')
+        form.find('.js-submit').addClass('d-none')
+        form.find('.js-bg-working').removeClass('d-none')
       },
       success: function (data) {
         if (data.form_is_valid) {
-          $('#action-modal #bg-working').addClass('d-none')
-          $('#action-modal #check-success').removeClass('d-none')
           if (data.reload) {
             location.reload()
           } else if (data.redirect) {
