@@ -1,6 +1,8 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v73(beta), may 1
+### v73.beta1
+  * **Mejora:** añadido un *spinner* mienras se procesan los cambios de fecha.
+### v73.beta, may 1
   * **Nuevo:** nueva vista kanban (en proceso de testeo aun).
   * **Mejora:** Actualización del framework.
 
