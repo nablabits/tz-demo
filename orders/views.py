@@ -1766,6 +1766,7 @@ class OrdersCRUD(View):
     huge to be clear. Eventually each model will have their CRUD AJAX Actions
     to work with.
     """
+
     def get(self, request):
         pass
 
