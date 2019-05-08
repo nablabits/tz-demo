@@ -2215,7 +2215,53 @@ class InvoicesListTest(TestCase):
 
 class KanbanTests(TestCase):
     """Test the kanban main view."""
-    pass
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        u = User.objects.create_user(
+            username='user', is_staff=True, is_superuser=True, password='test')
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+
+        cls.client = Client()
+
+    def setUp(self):
+        """Auto login for tests."""
+        self.client.login(username='user', password='test')
+
+    def test_kanban_returns_200(self):
+        """Test the proper status return."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/kanban.html')
+
+    def test_kanban_outputs_current_user(self):
+        """Test the correct var."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.context['cur_user'].username, 'user')
+
+    def test_kanban_outputs_current_vesion(self):
+        """Test the correct var."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.context['version'], settings.VERSION)
+
+    def test_kanban_outputs_correct_title(self):
+        """Test the correct var."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Vista Kanban')
 
 
 class PQueueManagerTests(TestCase):
