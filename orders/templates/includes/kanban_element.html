@@ -32,7 +32,7 @@
         <div class="col-auto">
           <input type="date" class="form-control form-control-sm" name="{{ update_date.delivery.name }}" id="{{ update_date.delivery.id_for_label }}" value="{{ update_date.delivery.value|stringformat:'s' }}">
           <input type="hidden" name="pk" value="{{order.pk}}">
-          <input type="hidden" id="js-action" name="action" value="edit-date">
+          <input type="hidden" id="js-action-{{order.pk}}" name="action" value="edit-date">
         </div>
         <div class="col-auto">
           <button type="submit" class="btn btn-sm btn-outline-success js-submit">
