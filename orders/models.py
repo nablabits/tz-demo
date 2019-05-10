@@ -220,6 +220,8 @@ class Order(models.Model):
         elif self.status == '6':
             self.status = '7'
             self.delivery = date.today()
+        else:
+            raise ValueError('The status %s does not allow to jump forward.')
 
         self.save()
 
@@ -231,6 +233,8 @@ class Order(models.Model):
             self.status = '2'
         elif self.status == '6':
             self.status = '3'
+        else:
+            raise ValueError('The status %s does not allow to jump backward.')
 
         self.save()
 
