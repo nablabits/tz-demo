@@ -448,6 +448,32 @@ class TestOrders(TestCase):
         order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '1')
 
+    def test_kanban_jump_forward_raises_error(self):
+        """Status 7 & 8 should raise an exeption."""
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today(),
+                                 )
+        for s in ('7', '8'):
+            o.status = s
+            o.save()
+            with self.assertRaises(ValueError):
+                o.kanban_forward()
+
+    def test_kanban_jump_backward_raises_error(self):
+        """Status 1, 7 & 8 should raise an exeption."""
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today(),
+                                 )
+        for s in ('1', '7', '8'):
+            o.status = s
+            o.save()
+            with self.assertRaises(ValueError):
+                o.kanban_backward()
+
 
 class TestObjectItems(TestCase):
     """Test the Item model."""
