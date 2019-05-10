@@ -23,6 +23,9 @@
       {%endif%}
     </div>
   </div>
+  <div class="col-auto d-none" id="bg-working-{{order.pk}}">
+    <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
+  </div>
   {%if order.status not in '67'%}
   <div class="collapse" id="date-change-{{order.pk}}">
     {% load widget_tweaks %}
