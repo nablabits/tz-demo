@@ -2215,7 +2215,53 @@ class InvoicesListTest(TestCase):
 
 class KanbanTests(TestCase):
     """Test the kanban main view."""
-    pass
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        u = User.objects.create_user(
+            username='user', is_staff=True, is_superuser=True, password='test')
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+
+        cls.client = Client()
+
+    def setUp(self):
+        """Auto login for tests."""
+        self.client.login(username='user', password='test')
+
+    def test_kanban_returns_200(self):
+        """Test the proper status return."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/kanban.html')
+
+    def test_kanban_outputs_current_user(self):
+        """Test the correct var."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.context['cur_user'].username, 'user')
+
+    def test_kanban_outputs_current_vesion(self):
+        """Test the correct var."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.context['version'], settings.VERSION)
+
+    def test_kanban_outputs_correct_title(self):
+        """Test the correct var."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Vista Kanban')
 
 
 class PQueueManagerTests(TestCase):
@@ -5512,7 +5558,243 @@ class ActionsPostMethodEdit(TestCase):
 
 class OrdersCRUDTests(TestCase):
     """Test the AJAX methods."""
-    pass
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        u = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+        # Load client
+        self.client = Client()
+
+        # Log the user in
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+    def test_data_should_be_a_dict(self):
+        """Data for AJAX request should be a dict."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'edit-date',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_no_pk_raises_500(self):
+        """PK is mandatory."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'action': 'edit-date',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No pk was given.')
+
+    def test_no_action_raises_500(self):
+        """Action is mandatory."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': Order.objects.first().pk,
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No action was given.')
+
+    def test_edit_date_raises_404(self):
+        """When order is not found  404 should be raised."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': 5000,
+                                 'action': 'edit-date',
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_edit_date_valid_form_returns_true_form_is_valid(self):
+        """Successful processed orders should return form_is_valid."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'edit-date',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+
+    def test_edit_date_valid_form_context_is_kanban_common(self):
+        """Just test the existence."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'edit-date',
+                                 'test': True,
+                                 })
+        common_vars = ('icebox', 'queued', 'in_progress', 'waiting', 'done',
+                       'update_date', 'amounts')
+        for var in common_vars:
+            self.assertTrue(var in resp.context)
+
+    def test_edit_date_valid_form_template(self):
+        """Test the correct teplate."""
+        self.client.post(
+            reverse('orders-CRUD'),
+            {'delivery': date(2017, 1, 1),
+             'pk': Order.objects.first().pk,
+             'action': 'edit-date',
+             'test': True,
+             })
+        self.assertTemplateUsed('includes/kanban_columns.html')
+
+    def test_edit_date_html_id(self):
+        """Successful processed orders html id."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'edit-date',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['html_id'], '#kanban-columns')
+
+    def test_edit_date_form_is_not_valid(self):
+        """Unsuccessful processed oders should return false."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': 'void',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'edit-date',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+
+    def test_edit_date_form_is_not_valid_errors(self):
+        """Test the errors var."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': 'void',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'edit-date',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['error']['delivery'], ['Enter a valid date.', ])
+
+    def test_kanban_jump_raises_404(self):
+        """When order is not found  404 should be raised."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'direction': 'next',
+                                 'pk': 5000,
+                                 'action': 'kanban-jump',
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_kanban_jump_not_dir_returns_500(self):
+        """Direction is mandatory."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'pk': Order.objects.first().pk,
+                                 'action': 'kanban-jump',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No direction was especified.')
+
+    def test_kanban_jump_backwards(self):
+        """Test the action."""
+        o = Order.objects.first()
+        o.status = '3'
+        o.save()
+        self.client.post(reverse('orders-CRUD'),
+                         {'direction': 'back',
+                          'pk': Order.objects.first().pk,
+                          'action': 'kanban-jump',
+                          })
+        o = Order.objects.get(pk=o.pk)
+        self.assertEqual(o.status, '2')
+
+    def test_kanban_jump_forward(self):
+        """Test the action."""
+        o = Order.objects.first()
+        o.status = '3'
+        o.save()
+        self.client.post(reverse('orders-CRUD'),
+                         {'direction': 'next',
+                          'pk': Order.objects.first().pk,
+                          'action': 'kanban-jump',
+                          })
+        o = Order.objects.get(pk=o.pk)
+        self.assertEqual(o.status, '6')
+
+    def test_kanban_jump_unknown_dir(self):
+        """Test when no direction is given."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'direction': 'void',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'kanban-jump',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'Unknown direction.')
+
+    def test_kanban_jump_context_is_kanban_common(self):
+        """Just test the existence."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'direction': 'next',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'kanban-jump',
+                                 'test': True,
+                                 })
+        common_vars = ('icebox', 'queued', 'in_progress', 'waiting', 'done',
+                       'update_date', 'amounts')
+        for var in common_vars:
+            self.assertTrue(var in resp.context)
+
+    def test_kanban_jump_template(self):
+        """Test the correct template used."""
+        self.client.post(reverse('orders-CRUD'),
+                         {'direction': 'next',
+                          'pk': Order.objects.first().pk,
+                          'action': 'kanban-jump',
+                          'test': True,
+                          })
+        self.assertTemplateUsed('includes/kanban_columns.html')
+
+    def test_kanban_jump_html_id(self):
+        """Successful processed orders html id."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'direction': 'next',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'kanban-jump',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['html_id'], '#kanban-columns')
+
+    def test_kanban_jump_form_is_valid(self):
+        """Successful processed orders html id."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'direction': 'next',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'kanban-jump',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+
+    def test_unknown_action_raises_500(self):
+        """Action should exist."""
+        resp = self.client.post(reverse('orders-CRUD'),
+                                {'delivery': date(2017, 1, 1),
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'void',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'The action was not found.')
 
 
 class ItemSelectorTests(TestCase):
