@@ -401,6 +401,18 @@ class TestOrders(TestCase):
         order = Order.objects.get(pk=order.pk)
         self.assertFalse(order.has_no_items)
 
+    def test_has_comments(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today(),
+                                 )
+        self.assertFalse(o.has_comments)
+        Comment.objects.create(
+            user=User.objects.all()[0], reference=o, comment='Test')
+        o = Order.objects.get(pk=o.pk)
+        self.assertTrue(o.has_comments)
+
     def test_kanban_jumps(self):
         """Test the correct jump within kanban stages."""
         order = Order.objects.create(user=User.objects.all()[0],
@@ -447,6 +459,32 @@ class TestOrders(TestCase):
         order.kanban_backward()
         order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '1')
+
+    def test_kanban_jump_forward_raises_error(self):
+        """Status 7 & 8 should raise an exeption."""
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today(),
+                                 )
+        for s in ('7', '8'):
+            o.status = s
+            o.save()
+            with self.assertRaises(ValueError):
+                o.kanban_forward()
+
+    def test_kanban_jump_backward_raises_error(self):
+        """Status 1, 7 & 8 should raise an exeption."""
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today(),
+                                 )
+        for s in ('1', '7', '8'):
+            o.status = s
+            o.save()
+            with self.assertRaises(ValueError):
+                o.kanban_backward()
 
 
 class TestObjectItems(TestCase):

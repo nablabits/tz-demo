@@ -138,6 +138,12 @@ $(function () {
     // Move within kanban statuses
     var pk = $(this).attr('data-pk')
     var direction = $(this).attr('data-direction')
+
+    // Show spinner and hide arrows to avoid problems
+    var spinner = '#bg-working-' + pk
+    $(spinner).removeClass('d-none')
+    $('.js-kanban-jump').addClass('d-none')
+
     $.ajax({
       url: '/orders-CRUD/',
       data: $.param({

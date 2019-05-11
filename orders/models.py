@@ -209,6 +209,11 @@ class Order(models.Model):
         else:
             return False
 
+    @property
+    def has_comments(self):
+        """Determine if the order has comments."""
+        return Comment.objects.filter(reference=self)
+
     def kanban_forward(self):
         """Jump to the next kanban stage."""
         if self.status == '1':
@@ -220,6 +225,8 @@ class Order(models.Model):
         elif self.status == '6':
             self.status = '7'
             self.delivery = date.today()
+        else:
+            raise ValueError('The status %s does not allow to jump forward.')
 
         self.save()
 
@@ -231,6 +238,8 @@ class Order(models.Model):
             self.status = '2'
         elif self.status == '6':
             self.status = '3'
+        else:
+            raise ValueError('The status %s does not allow to jump backward.')
 
         self.save()
 

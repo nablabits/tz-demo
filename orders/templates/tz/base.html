@@ -35,7 +35,7 @@
               <i class="far fa-dolly pr-1"></i>Pedidos
             </a>
             <div class="dropdown-menu" aria-labelledby="orders-dropdown">
-              <a class="dropdown-item" href="{% url 'orderlist' orderby='date' %}"><i class="fal fa-list fa-fw"></i> Lista de pedidos</a>
+              <a class="dropdown-item" href="{% url 'kanban' %}"><i class="fal fa-list fa-fw"></i> Lista de pedidos</a>
               <a class="dropdown-item" href="{% url 'itemslist' %}"><i class="fal fa-tshirt fa-fw"></i> Editor de prendas</a>
               <a class="dropdown-item" href="{% url 'pqueue_manager' %}"><i class="fal fa-fw fa-clipboard-list-check"></i> Cola de producción</a>
               <a class="dropdown-item js-crud-add" href="#" data-action="order-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nuevo pedido</a>
