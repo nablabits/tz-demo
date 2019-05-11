@@ -1591,10 +1591,6 @@ class Actions(View):
                 template = 'includes/regular_form.html'
                 data['form_is_valid'] = False
 
-        # Edit items on express orders (POST)
-        elif action == 'order-express-item-edit':
-            pass
-
         # Add times from pqueue (POST)
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
