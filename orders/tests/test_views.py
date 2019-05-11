@@ -5797,6 +5797,159 @@ class OrdersCRUDTests(TestCase):
             resp.content.decode("utf-8"), 'The action was not found.')
 
 
+class CommentsCRUD(TestCase):
+    """Test the AJAX methods."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        u = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+        # Load client
+        self.client = Client()
+
+        # Log the user in
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+    def test_data_should_be_a_dict(self):
+        """Data for AJAX request should be a dict."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': 'test',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'add-comment',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_no_pk_raises_500(self):
+        """PK is mandatory."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': 'test',
+                                 'action': 'add-comment',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No pk was given.')
+
+    def test_no_action_raises_500(self):
+        """Action is mandatory."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': 'test',
+                                 'pk': Order.objects.first().pk,
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No action was given.')
+
+    def test_add_comment_raises_404(self):
+        """When order is not found  404 should be raised."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': 'test',
+                                 'pk': 5000,
+                                 'action': 'add-comment',
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_add_comment_saves_new_comment(self):
+        """Test the proper save of new comments."""
+        order = Order.objects.first()
+        self.client.post(reverse('comments-CRUD'), {'comment': 'test',
+                                                    'pk': order.pk,
+                                                    'action': 'add-comment',
+                                                    })
+        c = Comment.objects.get(comment='test')
+        self.assertEqual(c.user.username, 'regular')
+        self.assertEqual(c.reference, order)
+
+    def test_add_comment_valid_form_returns_true_form_is_valid(self):
+        """Successful processed orders should return form_is_valid."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': 'test',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'add-comment',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+
+    def test_add_comment_valid_form_context_is_kanban_common(self):
+        """Just test the existence."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': 'test',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'add-comment',
+                                 'test': True,
+                                 })
+        common_vars = ('icebox', 'queued', 'in_progress', 'waiting', 'done',
+                       'update_date', 'amounts')
+        for var in common_vars:
+            self.assertTrue(var in resp.context)
+
+    def test_add_comment_valid_form_template(self):
+        """Test the correct teplate."""
+        self.client.post(
+            reverse('comments-CRUD'), {'comment': 'test',
+                                       'pk': Order.objects.first().pk,
+                                       'action': 'add-comment',
+                                       'test': True,
+                                       })
+        self.assertTemplateUsed('includes/kanban_columns.html')
+
+    def test_add_comment_html_id(self):
+        """Successful processed orders html id."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': 'test',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'add-comment',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(data['html_id'], '#kanban-columns')
+
+    def test_add_comment_not_valid_form_returns_false_form_is_valid(self):
+        """Unsuccessful processed orders should return form_is_valid false."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': '',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'add-comment',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+
+    def test_edit_date_form_is_not_valid_errors(self):
+        """Test the errors var."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': '',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'add-comment',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(
+            data['error']['comment'], ['This field is required.', ])
+
+    def test_unknown_action_raises_500(self):
+        """Action should exist."""
+        resp = self.client.post(reverse('comments-CRUD'),
+                                {'comment': '',
+                                 'pk': Order.objects.first().pk,
+                                 'action': 'void',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'The action was not found.')
+
+
 class ItemSelectorTests(TestCase):
     """Test the item selector AJAX view."""
 

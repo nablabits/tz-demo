@@ -1,20 +1,28 @@
 {% load humanize %}
 {% load widget_tweaks %}
-<div class="d-flex flex-column colorized_border rounded p-1 my-1" {%if order.color%}style="border-left: 10px solid {{order.color}}"{%endif%}>
+<div class="d-flex flex-column colorized_border rounded p-1 my-1 js-kanban" {%if order.color%}style="border-left: 10px solid {{order.color}}"{%endif%}>
   <div class="d-flex ml-1">
     <a href="{% url 'order_view' pk=order.pk %}">
       <strong>{{order.pk}}. {{order.customer.name}}</strong> &middot; {{order.ref_name}}
     </a>
   </div>
   <div class="d-flex align-items-center ml-1">
-    {%if order.status not in '67'%}<div data-toggle="collapse" data-target="#date-change-{{order.pk}}" style="cursor: pointer;">{%endif%}
+    {%if order.status not in '67'%}
+    <div data-toggle="collapse" data-target="#date-change-{{order.pk}}" style="cursor: pointer;">
       <span class="mr-2">{{order.delivery|date:'M, d'}}</span>
-      {%if order.overdue and order.status in '12345'%}<i class="fas fa-exclamation-triangle text-danger"></i>{%endif%}
-    {%if order.status not in '67'%}</div>{%endif%}
+      <i class="fas fa-pencil text-muted d-none"></i>
+      {%if order.overdue and order.status in '12345'%}<i class="fas fa-exclamation-triangle text-danger"></i>
+      {%endif%}
+    </div>{%endif%}
     {%if not order.confirmed%}<i class="far fa-user-clock text-warning mt-2"></i>{%endif%}
     {%if order.has_no_items%}<i class="far fa-empty-set text-info mt-2"></i>{%endif%}
 
     <div class="d-flex ml-auto">
+      {% if order.has_comments %}
+      <i class="fas fa-comments text-muted px-1" data-toggle="collapse" data-target="#comments-{{order.pk}}" style="cursor: pointer;"></i>
+      {%else%}
+      <i class="fal fa-comment-plus px-1 text-muted d-none" data-toggle="collapse" data-target="#comments-{{order.pk}}" style="cursor: pointer;"></i>
+      {%endif%}
       {% if order.status in '23456' %}
         <i class="fal fa-arrow-alt-left px-1 js-kanban-jump" data-pk="{{order.pk}}" data-direction="back" style="cursor: pointer;"></i>
       {%endif%}
@@ -26,10 +34,12 @@
   <div class="col-auto d-none" id="bg-working-{{order.pk}}">
     <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
   </div>
+
+  <!-- Change date collapse -->
   {%if order.status not in '67'%}
-  <div class="collapse" id="date-change-{{order.pk}}">
-    {% load widget_tweaks %}
-    <form class="js-crud-form" method="post" action="{% url 'orders-CRUD' %}" id="form-date-{{order.pk}}">
+  <div class="collapse my-2" id="date-change-{{order.pk}}">
+    <strong><i class="fal fa-hourglass-start px-1"></i>Editar entrega:</strong>
+    <form class="js-crud-form mt-1" method="post" action="{% url 'orders-CRUD' %}" id="form-date-{{order.pk}}">
       {% csrf_token %}
       <div class="form-row align-items-center">
         <div class="col-auto">
@@ -41,9 +51,6 @@
           <button type="submit" class="btn btn-sm btn-outline-success js-submit">
             <i class="fas fa-check mr-1"></i>Actualizar
           </button>
-          <button class="btn btn-sm btn-outline-danger" data-toggle="collapse" data-target="#date-change-{{order.pk}}">
-            <i class="fas fa-times mr-1"></i>Cerrar
-          </button>
         </div>
         <div class="col-auto d-none js-bg-working">
           <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
@@ -53,6 +60,35 @@
     </form>
   </div>
   {%endif%}
+
+  <!-- Comments collapse -->
+  <div class="collapse mt-1" id="comments-{{order.pk}}">
+    {%if order.has_comments%}
+    <strong><i class="fal fa-comment-smile px-1"></i>Comentarios:</strong>
+    <ul>
+      {% for comment in order.has_comments %}
+      <li>{{comment.comment}}</li>
+      {%endfor%}
+    </ul>
+    {%endif%}
+    <strong><i class="fal fa-comment-smile px-1"></i>Añadir comentario:</strong>
+    <form class="js-crud-form" method="post" action="{% url 'comments-CRUD' %}" id="comment-{{order.pk}}">
+      {% csrf_token %}
+      <textarea name="comment" rows="3" class="form-control" required id="id_comment"></textarea>
+      <input type="hidden" name="pk" value="{{order.pk}}">
+      <input type="hidden" id="js-action-{{order.pk}}" name="action" value="add-comment">
+      <div class="d-flex justify-content-end my-2">
+        <button type="submit" class="btn btn-sm btn-outline-success mr-2 js-submit">
+          <i class="fas fa-check mr-1"></i>Añadir
+        </button>
+      </div>
+      <div class="col-auto d-none js-bg-working">
+        <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
+      </div>
+      <div class="d-flex js-errors"></div>
+    </form>
+  </div>
+
   {%if order.status in '345'%}
   <div class="progress mt-1" style="height: 5px; width: 100%;">
     <div class="progress-bar progress-bar-striped bg-success" style="width: {{order.progress}}%;"></div>

@@ -53,4 +53,10 @@ $(document).ready(function () {
     $('#unconfirmed-toggle > i').toggleClass('fa-toggle-off')
     $('#unconfirmed-toggle > i').toggleClass('fa-toggle-on')
   })
+
+  // Hover efects in kanban
+  $('.js-kanban').hover(function () {
+    $(this).find('.fa-pencil').toggleClass('d-none')
+    $(this).find('.fa-comment-plus').toggleClass('d-none')
+  })
 })

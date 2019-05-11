@@ -1795,6 +1795,7 @@ class OrdersCRUD(View):
             template = 'includes/kanban_columns.html'
             context = CommonContexts.kanban()
 
+        # Kanban Jump (POST)
         elif action == 'kanban-jump':
             order = get_object_or_404(Order, pk=pk)
             dir = request.POST.get('direction', None)
@@ -1814,10 +1815,70 @@ class OrdersCRUD(View):
         else:
             return HttpResponseServerError('The action was not found.')
 
-        if not template:
+        if not template:   # pragma: no cover
             return HttpResponseServerError('No template was especified.')
 
-        if not context:
+        if not context:   # pragma: no cover
+            return HttpResponseServerError('No context variables found.')
+
+        data['html'] = render_to_string(template, context, request=request)
+
+        # When testing, display as a regular view in order to test variables
+        if test:
+            return render(
+                request, 'includes/kanban_columns.html', context=context)
+        else:
+            return JsonResponse(data)
+
+
+class CommentsCRUD(View):
+    """Process all the CRUD actions on order model.
+
+    This is the new version for AJAX calls since Actions class became really
+    huge to be clear. Eventually each model will have their CRUD AJAX Actions
+    to work with.
+    """
+
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        data = dict()
+        pk = self.request.POST.get('pk', None)
+        action = self.request.POST.get('action', None)
+        test = self.request.POST.get('test', None)
+        template, context = False, False
+
+        if not pk:
+            return HttpResponseServerError('No pk was given.')
+
+        if not action:
+            return HttpResponseServerError('No action was given.')
+
+        if action == 'add-comment':
+            order = get_object_or_404(Order, pk=pk)
+            form = CommentForm(request.POST)
+            if form.is_valid():
+                c = form.save(commit=False)
+                c.user = request.user
+                c.reference = order
+                c.save()
+                data['form_is_valid'] = True
+                template = 'includes/kanban_columns.html'
+                data['html_id'] = '#kanban-columns'
+            else:
+                data['form_is_valid'] = False
+                data['error'] = form.errors
+
+            template = 'includes/kanban_columns.html'
+            context = CommonContexts.kanban()
+        else:
+            return HttpResponseServerError('The action was not found.')
+
+        if not template:   # pragma: no cover
+            return HttpResponseServerError('No template was especified.')
+
+        if not context:   # pragma: no cover
             return HttpResponseServerError('No context variables found.')
 
         data['html'] = render_to_string(template, context, request=request)
