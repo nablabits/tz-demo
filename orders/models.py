@@ -209,6 +209,11 @@ class Order(models.Model):
         else:
             return False
 
+    @property
+    def has_comments(self):
+        """Determine if the order has comments."""
+        return Comment.objects.filter(reference=self)
+
     def kanban_forward(self):
         """Jump to the next kanban stage."""
         if self.status == '1':

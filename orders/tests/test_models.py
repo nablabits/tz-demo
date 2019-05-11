@@ -401,6 +401,18 @@ class TestOrders(TestCase):
         order = Order.objects.get(pk=order.pk)
         self.assertFalse(order.has_no_items)
 
+    def test_has_comments(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today(),
+                                 )
+        self.assertFalse(o.has_comments)
+        Comment.objects.create(
+            user=User.objects.all()[0], reference=o, comment='Test')
+        o = Order.objects.get(pk=o.pk)
+        self.assertTrue(o.has_comments)
+
     def test_kanban_jumps(self):
         """Test the correct jump within kanban stages."""
         order = Order.objects.create(user=User.objects.all()[0],
