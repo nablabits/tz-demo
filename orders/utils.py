@@ -7,6 +7,8 @@ from . import settings
 class WeekColor(object):
     """Generate a color depending the delivery's week."""
 
+    # NOTE: this should be an Order @property
+
     def __init__(self, delivery):
         """Start the object."""
         if not isinstance(delivery, date):
