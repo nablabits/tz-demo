@@ -3,7 +3,7 @@
 from django.contrib import admin
 
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
-                     Order, OrderItem, PQueue)
+                     Order, OrderItem, PQueue, Timetable, )
 
 
 @admin.register(Customer)
@@ -72,6 +72,15 @@ class BankMovementAdmin(admin.ModelAdmin):
     """Beautify the order item admin view."""
 
     list_display = ('action_date', 'amount', 'notes', )
+
+
+@admin.register(Timetable)
+class TimetableAdmin(admin.ModelAdmin):
+    """Beautify the Timetable admin view."""
+
+    date_hierarchy = 'start'
+    list_display = ('user', 'start', 'end', 'hours', )
+    list_filter = ('user', )
 
 
 admin.site.register(Comment)
