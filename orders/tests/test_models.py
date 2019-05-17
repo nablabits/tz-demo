@@ -6,9 +6,10 @@ from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.utils import DataError, IntegrityError
 from django.test import TestCase
+from django.utils import timezone
 
 from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
-                           Item, Order, OrderItem, PQueue)
+                           Item, Order, OrderItem, PQueue, Timetable, )
 
 
 class ModelTest(TestCase):
@@ -1429,6 +1430,158 @@ class TestBankMovement(TestCase):
         bms = BankMovement.objects.all()
         for i in range(4):
             self.assertTrue(bms[i].action_date > bms[i+1].action_date)
+
+
+class TestTimetable(TestCase):
+    """Test the timetable method."""
+
+    def setUp(self):
+        """Create the necessary objects."""
+        self.user = User.objects.create_user(
+            username='regular', password='test')
+
+    def test_user_is_a_fk_field(self):
+        """A user can have several times."""
+        d = timedelta(hours=3)
+        start = timezone.now()
+        for i in range(3):
+            end = start + d
+            Timetable.objects.create(start=start, user=self.user, end=end)
+            start = end + d
+        self.assertEqual(Timetable.objects.filter(user=self.user).count(), 3)
+
+    def test_start_and_end_are_datetime_fields(self):
+        """Test the correct type."""
+        end = timezone.now() + timedelta(hours=3)
+        t = Timetable.objects.create(user=self.user, end=end)
+        self.assertIsInstance(t.start, datetime)
+        self.assertIsInstance(t.end, datetime)
+
+    def test_end_can_be_null(self):
+        """Test wether end can be null."""
+        t = Timetable.objects.create(user=self.user)
+        self.assertEqual(t.end, None)
+
+    def test_hours_is_duration_field(self):
+        """Test the correct type."""
+        end = timezone.now() + timedelta(hours=3, minutes=22)
+        t = Timetable.objects.create(user=self.user, end=end)
+        self.assertIsInstance(t.hours, timedelta)
+
+    def test_hours_can_be_null(self):
+        """Test wether end can be null."""
+        t = Timetable.objects.create(user=self.user)
+        self.assertEqual(t.hours, None)
+
+    def test_avoid_open_timetables(self):
+        """When there are already timetables open."""
+        Timetable.objects.create(user=self.user)
+        with self.assertRaises(RuntimeError):
+            Timetable.objects.create(user=self.user)
+
+    def test_avoid_open_timetables_esclude_other_users(self):
+        """When there are already timetables open."""
+        Timetable.objects.create(user=self.user)
+        u = User.objects.create_user(username='alt', password='test')
+        self.assertTrue(Timetable.objects.create(user=u))
+
+    def test_auto_fill_hours(self):
+        """When end is provided, autofill hours."""
+        end = timezone.now() + timedelta(hours=3, minutes=22)
+        t = Timetable.objects.create(user=self.user, end=end)
+        self.assertEqual(t.hours, timedelta(hours=3.5))
+
+    def test_auto_fill_end(self):
+        """When end is provided, autofill hours."""
+        end = timezone.now() + timedelta(hours=3, minutes=30)
+        t = Timetable.objects.create(
+            user=self.user, hours=timedelta(hours=3.5))
+        self.assertEqual(t.end.hour, end.hour)
+        self.assertEqual(t.end.minute, end.minute)
+
+    def test_clean_overlapping(self):
+        """An entry can't start when there are open entries."""
+        end = timezone.now() + timedelta(hours=3, minutes=22)
+        Timetable.objects.create(user=self.user, end=end)
+        overlapped = end - timedelta(hours=1)
+        t = Timetable(user=self.user, start=overlapped)
+        msg = 'Entry is overlapping an existing entry'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
+
+    def test_clean_overlapping_excludes_other_users(self):
+        """An entry can't start when there are open entries."""
+        u = User.objects.create_user(username='alt', password='test')
+        end = timezone.now() + timedelta(hours=3, minutes=22)
+        Timetable.objects.create(user=self.user, end=end)
+        overlapped = end - timedelta(hours=1)
+        t = Timetable(user=u, start=overlapped)
+        self.assertEqual(t.clean(), None)
+
+    def test_clean_overlapping_excludes_current_entry(self):
+        """An entry can't start when there are open entries."""
+        end = timezone.now() + timedelta(hours=3, minutes=22)
+        t = Timetable.objects.create(user=self.user, end=end)
+        overlapped = end - timedelta(hours=1)
+        t.start = overlapped
+        t.end = None  # to avoid validation simultaneous validation
+        self.assertEqual(t.clean(), None)
+
+    def test_clean_avoid_end_and_hours_simultaneously(self):
+        """End and hours cannot be added at the same time."""
+        delta = timedelta(hours=5)
+        end = timezone.now() + timedelta(hours=3)
+        t = Timetable(user=self.user, end=end, hours=delta)
+        msg = ('Can\'t be added end date and hours simultaneously')
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
+
+    def test_clean_15_hours_limit(self):
+        """The max length for entries is 15h."""
+        end = timezone.now() + timedelta(hours=15.5)
+        t = Timetable(user=self.user, end=end)
+        msg = 'Entry lasts more than 15h'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
+
+    def test_clean_start_after_end(self):
+        """We can't start after we end."""
+        end = timezone.now() - timedelta(hours=3)
+        t = Timetable(user=self.user, end=end)
+        msg = 'Entry cannot start after the end'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
+
+    def test_fisrt_segment_on_auto_hours(self):
+        """Test the 15' margin for lower segment."""
+        end = timezone.now() + timedelta(hours=3, minutes=14)
+        t = Timetable.objects.create(user=self.user, end=end)
+        self.assertEqual(t.hours, timedelta(hours=3))
+
+    def test_second_segment_on_auto_hours(self):
+        """Test the 30' margin for the mid segment."""
+        end = timezone.now() + timedelta(hours=3, minutes=15)
+        t = Timetable.objects.create(user=self.user, end=end)
+        self.assertEqual(t.hours, timedelta(hours=3.5))
+        t.end = end + timedelta(minutes=29)
+        t.save()
+        t = Timetable.objects.get(pk=t.pk)
+        self.assertEqual(t.hours, timedelta(hours=3.5))
+
+    def test_last_segment_on_auto_hours(self):
+        """Test the 15' margin for upper segment."""
+        end = timezone.now() + timedelta(hours=3, minutes=45)
+        t = Timetable.objects.create(user=self.user, end=end)
+        self.assertEqual(t.hours, timedelta(hours=4))
+
+    def test_get_end(self):
+        """Test the correct output."""
+        end = timezone.now() + timedelta(hours=3, minutes=30)
+        t = Timetable.objects.create(
+            user=self.user, hours=timedelta(hours=3.5))
+        self.assertEqual(t.end.hour, end.hour)
+        self.assertEqual(t.end.minute, end.minute)
+
 
 #
 #

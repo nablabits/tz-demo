@@ -3,8 +3,9 @@
 Its intended use is for business related to tailor made clothes.
 """
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 
+from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
@@ -643,6 +644,93 @@ class BankMovement(models.Model):
         """Meta options."""
 
         ordering = ['-action_date']
+
+
+class Timetable(models.Model):
+    """Store the workers timetable.
+
+    End and hours attr can be null when workers are at workplace.
+    """
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    start = models.DateTimeField('entrada', default=timezone.now)
+    end = models.DateTimeField('salida', blank=True, null=True)
+    hours = models.DurationField('horas', blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        """Override the save method.
+
+        Avoid opening new timetables when there are timetables already opened.
+
+        When end or hours are provided auto-fill the remaining field.
+        """
+        # avoid saving a new timetable object when there are timetables open
+        t = Timetable.objects.filter(
+            end__isnull=True).filter(user=self.user)
+        if t:
+            raise RuntimeError('Cannot open a timetable when other ' +
+                               'timetables are open')
+
+        if self.end and not self.hours:
+            self.hours = self.get_hours()
+        elif self.hours and not self.end:
+            self.end = self.get_end()
+        else:
+            pass
+
+        super().save(*args, **kwargs)
+
+    def clean(self):
+        """Clean up the model.
+
+        Avoid overlapping, +15h lengths & check simultaneous end and hours.
+        """
+        # Avoid overlapping
+        test_date = self.start.date()
+        e = Timetable.objects.filter(start__date=test_date)
+        e = e.filter(user=self.user)
+        if self.pk:
+            e = e.exclude(pk=self.pk)
+        for entry in e:
+            if entry.end > self.start:
+                raise ValidationError(
+                    {'start': _('Entry is overlapping an existing entry'), }
+                    )
+
+        # Avoid end & hours being added simultaneously
+        if self.end and self.hours:
+            raise ValidationError(
+                {'end': _('Can\'t be added end date and hours simultaneously')}
+            )
+
+        if self.end:
+            # Avoid +15h lengths
+            if (self.end - self.start).total_seconds() > 54000:
+                raise ValidationError(
+                    {'end': _('Entry lasts more than 15h'), }
+                )
+
+            # Avoid end before start
+            if self.start > self.end:
+                raise ValidationError(
+                    {'start': _('Entry cannot start after the end'), }
+                )
+
+    def get_hours(self):
+        """Calculate the hours having start and end timestamps."""
+        elapsed = round((self.end - self.start).total_seconds() / 3600, 2)
+        segment = elapsed - int(elapsed)
+        if segment < 0.25:
+            hours = timedelta(hours=int(elapsed))
+        elif segment >= 0.75:
+            hours = timedelta(hours=int(elapsed) + 1)
+        else:
+            hours = timedelta(hours=int(elapsed) + 0.5)
+        return hours
+
+    def get_end(self):
+        """Calculate end timestamp having start and hours."""
+        return self.start + self.hours
 #
 #
 #
