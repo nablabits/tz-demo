@@ -1,5 +1,8 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v74, May 17
+  **Nuevo:** nuevo modelo para registrar las horas laborales.
+
 ### v73, May 11
   * **Nuevo:** ahora se pueden añadir comentarios exprés desde la vista kanban.
   * **Mejora:** añadido un *spinner* mienras se procesan los cambios de status.
