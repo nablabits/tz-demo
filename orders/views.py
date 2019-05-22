@@ -56,6 +56,8 @@ class CommonContexts:
         for col in (col1, col2, col3, col4, col5):
             col = col.aggregate(
                 total=Sum(F('price') * F('qty'), output_field=DecimalField()))
+            if not col['total']:
+                col['total'] = 0
             amounts.append(col['total'])
         vars = {'icebox': icebox,
                 'queued': queued,
