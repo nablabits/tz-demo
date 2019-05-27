@@ -21,9 +21,10 @@ from rest_framework import viewsets
 
 from . import serializers, settings
 from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
-                    InvoiceForm, ItemForm, OrderForm, OrderItemForm)
+                    InvoiceForm, ItemForm, OrderForm, OrderItemForm,
+                    TimetableCloseForm, )
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
-                     Order, OrderItem, PQueue)
+                     Order, OrderItem, PQueue, Timetable, )
 
 
 class CommonContexts:
@@ -70,6 +71,25 @@ class CommonContexts:
         return vars
 
 
+def timetable_required(function):
+    """Prevent users without valid timetable to load pages."""
+    def _inner(request, *args, **kwargs):
+        u = request.user
+        active = Timetable.objects.filter(user=u).filter(end__isnull=True)
+        if not active:
+            Timetable.objects.create(user=u)
+            return function(request, *args, **kwargs)
+        else:
+            elp = (timezone.now() - active[0].start).total_seconds()
+            void = (elp > 54000 or
+                    timezone.now().date() != active[0].start.date())
+            if void:
+                return redirect('add_hours')
+            else:
+                return function(request, *args, **kwargs)
+    return _inner
+
+
 # Add hours
 @login_required
 def add_hours(request):
@@ -106,7 +126,8 @@ def add_hours(request):
 
 
 # Root View
-@login_required()
+@login_required
+@timetable_required
 def main(request):
     """Create the home page view."""
     # Goal box, goal
@@ -346,6 +367,7 @@ def search(request):
 
 # List views
 @login_required
+@timetable_required
 def orderlist(request, orderby):
     """Display all orders in a view.
 
@@ -502,6 +524,7 @@ def orderlist(request, orderby):
 
 
 @login_required
+@timetable_required
 def customerlist(request):
     """Display all customers or search'em."""
     customers = Customer.objects.all().exclude(name__iexact='express')
@@ -542,6 +565,7 @@ def customerlist(request):
 
 
 @login_required
+@timetable_required
 def itemslist(request):
     """Show the different item objects."""
     cur_user = request.user
@@ -567,6 +591,7 @@ def itemslist(request):
 
 
 @login_required
+@timetable_required
 def invoiceslist(request):
     """List all the invoices."""
     today = Invoice.objects.filter(issued_on__date=timezone.now().date())
@@ -631,6 +656,7 @@ def invoiceslist(request):
 
 
 @login_required
+@timetable_required
 def kanban(request):
     """Display a kanban view for orders."""
     view_settings = CommonContexts.kanban()
@@ -644,6 +670,7 @@ def kanban(request):
 
 # Object views
 @login_required
+@timetable_required
 def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
@@ -683,6 +710,7 @@ def order_view(request, pk):
 
 
 @login_required
+@timetable_required
 def order_express_view(request, pk):
     """Create a new quick checkout."""
     order = get_object_or_404(Order, pk=pk)
@@ -738,6 +766,7 @@ def order_express_view(request, pk):
 
 
 @login_required
+@timetable_required
 def customer_view(request, pk):
     """Display details for an especific customer."""
     customer = get_object_or_404(Customer, pk=pk)
@@ -768,6 +797,7 @@ def customer_view(request, pk):
 
 
 @login_required
+@timetable_required
 def pqueue_manager(request):
     """Display the production queue and edit it."""
     available = OrderItem.objects.exclude(reference__status__in=[7, 8])
@@ -796,6 +826,7 @@ def pqueue_manager(request):
 
 
 @login_required
+@timetable_required
 def pqueue_tablet(request):
     """Tablet view of pqueue."""
     pqueue = PQueue.objects.select_related('item__reference')
@@ -1153,11 +1184,6 @@ class Actions(View):
             order = Order.objects.get(pk=pk)
             context = {'items': items, 'order': order, }
             template = 'includes/invoiced_ticket.html'
-
-        # logout
-        elif action == 'logout':
-            context = dict()
-            template = 'registration/logout.html'
 
         else:
             raise NameError('Action was not recogniced', action)
@@ -1764,11 +1790,6 @@ class Actions(View):
             customer.delete()
             data['redirect'] = (reverse('customerlist'))
             data['form_is_valid'] = True
-
-        # logout (POST)
-        elif action == 'logout':
-            logout(request)
-            return redirect('login')
 
         else:
             raise NameError('Action was not recogniced', action)
