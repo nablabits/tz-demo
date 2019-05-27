@@ -1,5 +1,8 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v75, May27
+  **Nuevo:** *frontend* para apuntar las horas diarias.
+
 ### v74, May 17
   **Nuevo:** nuevo modelo para registrar las horas laborales.
 
