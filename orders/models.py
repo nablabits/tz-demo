@@ -3,7 +3,7 @@
 Its intended use is for business related to tailor made clothes.
 """
 
-from datetime import date, timedelta, datetime
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
@@ -660,17 +660,8 @@ class Timetable(models.Model):
     def save(self, *args, **kwargs):
         """Override the save method.
 
-        Avoid opening new timetables when there are timetables already opened.
-
         When end or hours are provided auto-fill the remaining field.
         """
-        # avoid saving a new timetable object when there are timetables open
-        t = Timetable.objects.filter(
-            end__isnull=True).filter(user=self.user)
-        if t:
-            raise RuntimeError('Cannot open a timetable when other ' +
-                               'timetables are open')
-
         if self.end and not self.hours:
             self.hours = self.get_hours()
         elif self.hours and not self.end:
@@ -685,6 +676,16 @@ class Timetable(models.Model):
 
         Avoid overlapping, +15h lengths & check simultaneous end and hours.
         """
+        # avoid saving a new timetable object when there are timetables open
+        t = Timetable.objects.filter(
+            end__isnull=True).filter(user=self.user)
+        if self.pk:
+            t = t.exclude(pk=self.pk)
+        if t:
+            raise ValidationError(
+                {'start': _('Cannot open a timetable when other ' +
+                            'timetables are open')})
+
         # Avoid overlapping
         test_date = self.start.date()
         e = Timetable.objects.filter(start__date=test_date)
@@ -697,11 +698,23 @@ class Timetable(models.Model):
                     {'start': _('Entry is overlapping an existing entry'), }
                     )
 
+        # Prevent start in the future
+        if self.start > timezone.now() + timedelta(hours=1):
+            raise ValidationError(
+                {'start': _('Entry is starting in the future'), }
+                )
+
         # Avoid end & hours being added simultaneously
         if self.end and self.hours:
             raise ValidationError(
                 {'end': _('Can\'t be added end date and hours simultaneously')}
             )
+
+        if self.hours:
+            if self.hours > timedelta(hours=15):
+                raise ValidationError(
+                    {'hours': _('Entry lasts more than 15h'), }
+                )
 
         if self.end:
             # Avoid +15h lengths
@@ -731,6 +744,9 @@ class Timetable(models.Model):
     def get_end(self):
         """Calculate end timestamp having start and hours."""
         return self.start + self.hours
+
+    class Meta:
+        ordering = ('start',)
 #
 #
 #

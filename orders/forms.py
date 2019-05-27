@@ -3,7 +3,8 @@
 from django import forms
 from django.core.exceptions import ValidationError
 
-from .models import Comment, Customer, Invoice, Item, Order, OrderItem
+from .models import (Comment, Customer, Invoice, Item, Order, OrderItem,
+                     Timetable, )
 
 
 class CustomerForm(forms.ModelForm):
@@ -125,3 +126,12 @@ class EditDateForm(forms.ModelForm):
 
         model = Order
         fields = ('delivery', )
+
+
+class TimetableCloseForm(forms.ModelForm):
+    """Close an open timetable."""
+
+    class Meta:
+        """Meta for quick design."""
+        model = Timetable
+        fields = ('hours', 'user')
