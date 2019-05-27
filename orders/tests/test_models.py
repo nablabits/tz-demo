@@ -1473,18 +1473,6 @@ class TestTimetable(TestCase):
         t = Timetable.objects.create(user=self.user)
         self.assertEqual(t.hours, None)
 
-    def test_avoid_open_timetables(self):
-        """When there are already timetables open."""
-        Timetable.objects.create(user=self.user)
-        with self.assertRaises(RuntimeError):
-            Timetable.objects.create(user=self.user)
-
-    def test_avoid_open_timetables_esclude_other_users(self):
-        """When there are already timetables open."""
-        Timetable.objects.create(user=self.user)
-        u = User.objects.create_user(username='alt', password='test')
-        self.assertTrue(Timetable.objects.create(user=u))
-
     def test_auto_fill_hours(self):
         """When end is provided, autofill hours."""
         end = timezone.now() + timedelta(hours=3, minutes=22)
@@ -1498,6 +1486,27 @@ class TestTimetable(TestCase):
             user=self.user, hours=timedelta(hours=3.5))
         self.assertEqual(t.end.hour, end.hour)
         self.assertEqual(t.end.minute, end.minute)
+
+    def test_clean_avoid_open_timetables(self):
+        """When there are already timetables open."""
+        Timetable.objects.create(user=self.user)
+        t = Timetable(user=self.user)
+        msg = 'Cannot open a timetable when other timetables are open'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
+
+    def test_clean_avoid_open_timetables_exclude_other_users(self):
+        """When there are already timetables open."""
+        Timetable.objects.create(user=self.user)
+        u = User.objects.create_user(username='alt', password='test')
+        t = Timetable(user=u)
+        self.assertEqual(t.clean(), None)
+
+    def test_clean_avoid_open_timetables_exclude_current_entry(self):
+        """When there are already timetables open."""
+        t = Timetable.objects.create(user=self.user)
+        t.start = t.start - timedelta(hours=2)
+        self.assertEqual(t.clean(), None)
 
     def test_clean_overlapping(self):
         """An entry can't start when there are open entries."""
@@ -1514,7 +1523,7 @@ class TestTimetable(TestCase):
         u = User.objects.create_user(username='alt', password='test')
         end = timezone.now() + timedelta(hours=3, minutes=22)
         Timetable.objects.create(user=self.user, end=end)
-        overlapped = end - timedelta(hours=1)
+        overlapped = end - timedelta(hours=3)
         t = Timetable(user=u, start=overlapped)
         self.assertEqual(t.clean(), None)
 
@@ -1522,10 +1531,18 @@ class TestTimetable(TestCase):
         """An entry can't start when there are open entries."""
         end = timezone.now() + timedelta(hours=3, minutes=22)
         t = Timetable.objects.create(user=self.user, end=end)
-        overlapped = end - timedelta(hours=1)
+        overlapped = end - timedelta(hours=3)
         t.start = overlapped
         t.end = None  # to avoid validation simultaneous validation
         self.assertEqual(t.clean(), None)
+
+    def test_clean_prevents_starting_in_the_future(self):
+        """There's a threshold of 1h."""
+        u = User.objects.create_user(username='alt', password='test')
+        t = Timetable(user=u, start=timezone.now() + timedelta(hours=2))
+        msg = 'Entry is starting in the future'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
 
     def test_clean_avoid_end_and_hours_simultaneously(self):
         """End and hours cannot be added at the same time."""
