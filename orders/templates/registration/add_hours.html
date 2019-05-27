@@ -1,0 +1,78 @@
+{% load static %}
+{% load widget_tweaks %}
+{% load humanize %}
+<!doctype html>
+<html>
+  <head>
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="{% static 'tz/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-LRlmVvLKVApDVGuspQFnRQJjkv0P7/YFrw84YYQtmYG4nK8c+M+NlmYDCv0rKWpG" crossorigin="anonymous">
+    <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
+  </head>
+  <body id="root">
+    <div class="container mt-5">
+      <div class="row justify-content-center">
+        <div class="card">
+          {%if on_time%}
+          <div class="card-header">
+            <strong>Sesión iniciada:</strong> {{active.start.date|naturalday}} a las {{active.start.time}}
+          </div>
+          <div class="card-body">
+            <h3 class="card-title text-center">
+              <i class="fal fa-chess-clock fa-2x"></i></br>
+              Genial!</br>Ya casi has acabado por hoy.
+            </h3>
+            <p class="card-text">Solo te queda añadir las horas.</p>
+          {%else%}
+            <div class="card-header">
+              <strong>Sesión iniciada:</strong> {{active.start.date|naturalday}} a las {{active.start.time}}
+            </div>
+            <div class="card-body">
+              <h3 class="card-title text-center">
+                <i class="fal fa-rabbit-fast fa-2x"></i></br>
+                Vaya,</br>El último día tenías prisa, eh!
+              </h3>
+              <p class="card-text">Dime, cuántas horas estuviste?</p>
+            {%endif%}
+            <form class="" action="{%url 'add_hours'%}" method="post">
+              {% csrf_token %}
+              <div class="form-group">
+                {% render_field form.hours class="form-control" placeholder="5:30:00" %}
+                <small class="text-danger">{{form.hours.errors}}</small>
+              </div>
+              <input type="hidden" name="user" value="{{cur_user.pk}}">
+              {%if not on_time%}
+                <input type="hidden" name="keep-open" value="True">
+              {%endif%}
+              {{ form.non_field_errors }}
+              <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-outline-success">
+                  <i class="fas fa-check mr-1"></i>Añadir horas
+                </button>
+              </div>
+            </form>
+          </div>
+          {%if on_time%}
+          <div class="card-footer">
+            <p class="card-text">Aunque siempre puedes seguir trabajando, claro</p>
+            <div class="d-flex justify-content-center">
+              <a href="{%url 'main'%}">
+                <button class="btn btn-outline-danger">
+                  <i class="fas fa-times mr-1"></i>Volver a la faena
+                </button>
+              </a>
+            </div>
+          </div>
+          {%else%}
+          <div class="card-footer">
+            <p class="card-text text-center"><i class="fas fa-info-circle mr-1"></i>Si no quieres seguir viendo este mensaje,</br> cierra la sesión antes de irte la próxima vez.</p>
+            </div>
+          </div>
+          {%endif%}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
