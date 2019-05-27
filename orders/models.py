@@ -731,6 +731,9 @@ class Timetable(models.Model):
     def get_end(self):
         """Calculate end timestamp having start and hours."""
         return self.start + self.hours
+
+    class Meta:
+        ordering = ('start',)
 #
 #
 #
