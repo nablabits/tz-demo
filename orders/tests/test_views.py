@@ -236,6 +236,97 @@ class CommonContextKanbanTests(TestCase):
             CommonContexts.kanban()['update_date'], forms.ModelForm)
 
 
+class AddHoursTests(TestCase):
+    """Test the add hours page."""
+
+    def setUp(self):
+        """Set up the test suite."""
+        u = User.objects.create_user(username='regular', password='test')
+        Timetable.objects.create(user=u)
+        self.client = Client()
+        self.client.login(username='regular', password='test')
+
+    def test_not_valid_timetable_should_redirect_to_main_view(self):
+        """When user has no timetable open can't add hours."""
+        # first close the active timetable
+        u = User.objects.first()
+        active = Timetable.objects.filter(end__isnull=True).get(user=u)
+        active.hours = timedelta(hours=5)
+        active.save()
+        # Other users' open times should not affect
+        alt = User.objects.create_user(username='alt', password='test')
+        Timetable.objects.create(user=alt)
+        resp = self.client.get(reverse('add_hours'))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_initial_vars(self):
+        """Test the initial vars values."""
+        resp = self.client.get(reverse('add_hours'))
+        self.assertEqual(resp.context['cur_user'], User.objects.first())
+        self.assertEqual(resp.context['version'], settings.VERSION)
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Añadir horas')
+
+    def test_form_is_TimetableCloseForm(self):
+        """Test the correct form loaded."""
+        resp = self.client.get(reverse('add_hours'))
+        self.assertTrue(resp.context['form'].fields['hours'])
+        self.assertTrue(resp.context['form'].fields['user'])
+
+    def test_current_day_loads_on_time_var(self):
+        """Test the var on_time."""
+        resp = self.client.get(reverse('add_hours'))
+        self.assertTrue(resp.context['on_time'])
+        t = Timetable.objects.first()
+        t.start = t.start - timedelta(days=1)
+        t.save()
+        resp = self.client.get(reverse('add_hours'))
+        with self.assertRaises(KeyError):
+            resp.context['on_time']
+
+    def test_form_is_valid_saves_object(self):
+        """Test a valid POST method."""
+        self.client.post(
+            reverse('add_hours'), {'user': User.objects.first().pk,
+                                   'hours': timedelta(hours=5), })
+        self.assertEqual(Timetable.objects.first().hours, timedelta(hours=5))
+
+    def test_form_is_valid_keeps_open_the_app(self):
+        """When keep open is checked redirect to main view."""
+        resp = self.client.post(
+            reverse('add_hours'), {'user': User.objects.first().pk,
+                                   'hours': timedelta(hours=5),
+                                   'keep-open': True, })
+        self.assertRedirects(resp, reverse('main'))
+
+    def test_form_is_valid_redirects_to_login(self):
+        """When keep open is not checked logout and redirect to login."""
+        resp = self.client.post(
+            reverse('add_hours'), {'user': User.objects.first().pk,
+                                   'hours': timedelta(hours=5), })
+        self.assertRedirects(resp, reverse('login'))
+
+    def test_form_is_not_valid_returns_to_view_again(self):
+        """When keep open is checked redirect to main view."""
+        resp = self.client.post(
+            reverse('add_hours'), {'user': User.objects.first().pk,
+                                   'hours': 'void', })
+        self.assertFormError(resp, 'form', 'hours', 'Enter a valid duration.')
+        self.assertTemplateUsed(resp, 'registration/add_hours.html')
+
+        resp = self.client.post(
+            reverse('add_hours'), {'user': 'void',
+                                   'hours': timedelta(hours=5), })
+        err = ('Select a valid choice. That choice is not one of the ' +
+               'available choices.')
+        self.assertFormError(resp, 'form', 'user', err)
+        self.assertTemplateUsed(resp, 'registration/add_hours.html')
+
+    def test_get_method_loads_correct_template(self):
+        """Test the template used on get method."""
+        resp = self.client.get(reverse('add_hours'))
+        self.assertTemplateUsed(resp, 'registration/add_hours.html')
+
+
 class NotLoggedInTest(TestCase):
     """Not logged in users should go to a login page.
 

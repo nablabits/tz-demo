@@ -51,7 +51,7 @@
             </div>
           </li>
           <li class="nav-item">
-            <a class="nav-link js-logout" href="#" data-action="logout" data-pk="0">{{user}}<i class="far fa-sign-out-alt pl-2"></i></a>
+            <a class="nav-link" href="{%url 'add_hours' %}"><i class="far fa-user pr-2"></i>{{user}}</a>
           </li>
           <li class="nav-item">
             <button class="btn btn-sm btn-success nav-link" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-cogs"></i> tz app {{version}}</button>

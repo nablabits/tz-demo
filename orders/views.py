@@ -70,6 +70,41 @@ class CommonContexts:
         return vars
 
 
+# Add hours
+@login_required
+def add_hours(request):
+    """Close an open work session."""
+    # prevent reaching this page without valid timetable open
+    try:
+        active = Timetable.objects.filter(
+            end__isnull=True).get(user=request.user)
+    except ObjectDoesNotExist:
+        return redirect('main')
+
+    view_settings = {'cur_user': request.user,
+                     'now': datetime.now(),
+                     'version': settings.VERSION,
+                     'title': 'TrapuZarrak · Añadir horas',
+                     'active': active, }
+
+    if request.method == 'GET':
+        view_settings['form'] = TimetableCloseForm()
+        if active.start.date() == date.today():
+            view_settings['on_time'] = True
+    else:
+        form = TimetableCloseForm(request.POST, instance=active)
+        if form.is_valid():
+            form.save()
+            if request.POST.get('keep-open', None):
+                return redirect('main')
+            else:
+                logout(request)
+                return redirect('login')
+        else:
+            view_settings['form'] = form
+    return render(request, 'registration/add_hours.html', view_settings)
+
+
 # Root View
 @login_required()
 def main(request):
