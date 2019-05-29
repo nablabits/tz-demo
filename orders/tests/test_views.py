@@ -442,14 +442,14 @@ class MainViewTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('main'))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/main.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('main'))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
@@ -1033,14 +1033,14 @@ class OrderListTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('orderlist', args=['date']))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/orders.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('orderlist', args=['date']))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
@@ -2481,14 +2481,14 @@ class KanbanTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('kanban'))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/kanban.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('kanban'))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
@@ -2575,14 +2575,14 @@ class PQueueManagerTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('pqueue_manager'))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('pqueue_manager'))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
@@ -2796,18 +2796,17 @@ class PQueueTabletTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('pqueue_tablet'))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('pqueue_tablet'))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
 
     def test_view_exists(self):
         """First test the existence of pqueue tablet view."""
@@ -3342,14 +3341,16 @@ class OrderViewTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            order = Order.objects.first()
+            resp = self.client.get(reverse('order_view', args=[order.pk]))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/order_view.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            order = Order.objects.first()
+            resp = self.client.get(reverse('order_view', args=[order.pk]))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
@@ -3544,15 +3545,17 @@ class StandardViewsTest(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date_and_still_valid(self):
+    def test_cst_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
         self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            customer = Customer.objects.first()
+            resp = self.client.get(
+                reverse('customer_view', args=[customer.pk]))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/customer_view.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
@@ -3585,20 +3588,24 @@ class StandardViewsTest(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date_and_still_valid(self):
+    def test_cview_timetable_required_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
         self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            customer = Customer.objects.first()
+            resp = self.client.get(
+                reverse('customer_view', args=[customer.pk]))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/customer_view.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            customer = Customer.objects.first()
+            resp = self.client.get(
+                reverse('customer_view', args=[customer.pk]))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
@@ -3834,14 +3841,14 @@ class ItemsListTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('itemslist'))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertTemplateUsed(resp, 'tz/list_view.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
+            resp = self.client.get(reverse('itemslist'))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
@@ -3987,7 +3994,7 @@ class SearchBoxTest(TestCase):
         data1 = json.loads(str(resp1.content, 'utf-8'))
         data2 = json.loads(str(resp2.content, 'utf-8'))
         self.assertEqual(data1['query_result_name'],
-                          data2['query_result_name'])
+                         data2['query_result_name'])
 
     def test_search_on_items_no_order_pk(self):
         """Test the correct raise of 404."""
