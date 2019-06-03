@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v76, Jun 3
+  **Nuevo:** ahora se puede hacer *logout* desde la cola de produccion en la tablet.
+  **Bug:** ya no pueden añadir por error horas por debajo de 15 minutos.
+
 ### v75, May27
   **Nuevo:** *frontend* para apuntar las horas diarias.
 

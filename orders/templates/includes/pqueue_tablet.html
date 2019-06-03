@@ -1,5 +1,12 @@
 <div class="d-flex flex-column mt-5">
-  <h3 class="pqueue-text">Cola de producción</h3>
+  <div class="d-flex justify-content-between mb-5">
+    <a href="{%url 'add_hours'%}">
+      <h3 class="pqueue-text">Cola de producción</h3>
+      <button class="btn-lg btn btn-outline-success" data-action="tb-complete" data-pk="{{item.pk}}">
+        <i class="far fa-sign-out-alt pl-1"></i>Acabar jornada
+      </button>
+    </a>
+  </div>
 
   <!-- Active queue -->
   {% if active %}
@@ -42,7 +49,7 @@
             <div class="d-flex ml-auto mt-2">
               <button class="mr-2 btn-lg btn btn-outline-success js-crud-edit" data-action="pqueue-add-time" data-pk="{{item.item.pk}}"><i class="fa fa-clock"></i> Añadir tiempos</button>
               <button class="mr-2 btn-lg btn btn-outline-success js-crud-add" data-action="order-add-comment" data-pk="{{item.item.reference.pk}}"><i class="fa fa-comment"></i> Comentar</button>
-              <button class="mr-1 btn-lg btn btn-sm btn-outline-success js-queue" data-action="tb-complete" data-pk="{{item.pk}}">
+              <button class="mr-1 btn-lg btn btn-outline-success js-queue" data-action="tb-complete" data-pk="{{item.pk}}">
                 <i class="far fa-check pl-1"></i> Completar
               </button>
             </div>

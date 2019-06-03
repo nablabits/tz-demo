@@ -58,7 +58,7 @@
           <div class="card-footer">
             <p class="card-text">Aunque siempre puedes seguir trabajando, claro</p>
             <div class="d-flex justify-content-center">
-              <a href="{%url 'main'%}">
+              {% if cur_user.username == 'txaro'%}<a href="{%url 'pqueue_tablet'%}">{%else%}<a href="{%url 'main'%}">{%endif%}
                 <button class="btn btn-outline-danger">
                   <i class="fas fa-times mr-1"></i>Volver a la faena
                 </button>

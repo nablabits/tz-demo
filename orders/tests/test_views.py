@@ -436,11 +436,16 @@ class MainViewTests(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('main'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/main.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -448,16 +453,6 @@ class MainViewTests(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/main.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_view_exists(self):
         """Test the view exists and template used."""
@@ -1032,12 +1027,16 @@ class OrderListTests(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
         self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('orderlist', args=['date']))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/orders.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -1045,17 +1044,6 @@ class OrderListTests(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        self.client.login(username='regular', password='test')
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14)), )
-        resp = self.client.get(reverse('orderlist', args=['date']))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/orders.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_order_list(self):
         """First test the existence of order list."""
@@ -2197,12 +2185,16 @@ class InvoicesListTest(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
         self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('invoiceslist'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/invoices.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -2210,17 +2202,6 @@ class InvoicesListTest(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        self.client.login(username='regular', password='test')
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        resp = self.client.get(reverse('invoiceslist'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/invoices.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_invoices_today_displays_today_invoices(self):
         """Test display today's invoices and their total amount."""
@@ -2494,11 +2475,16 @@ class KanbanTests(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('kanban'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/kanban.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -2506,16 +2492,6 @@ class KanbanTests(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        resp = self.client.get(reverse('kanban'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/kanban.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_kanban_returns_200(self):
         """Test the proper status return."""
@@ -2593,11 +2569,16 @@ class PQueueManagerTests(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('pqueue_manager'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -2605,16 +2586,6 @@ class PQueueManagerTests(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_view_exists(self):
         """First test the existence of pqueue view."""
@@ -2819,11 +2790,16 @@ class PQueueTabletTests(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('pqueue_tablet'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -2831,17 +2807,6 @@ class PQueueTabletTests(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        resp = self.client.get(reverse('pqueue_tablet'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
-        self.assertEquals(Timetable.objects.count(), 1)
-
 
     def test_view_exists(self):
         """First test the existence of pqueue tablet view."""
@@ -3370,11 +3335,17 @@ class OrderViewTests(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            order = Order.objects.first()
+            resp = self.client.get(reverse('order_view', args=[order.pk]))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/order_view.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -3383,17 +3354,6 @@ class OrderViewTests(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        order = Order.objects.first()
-        resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/order_view.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_pk_out_of_range_raises_404(self):
         """Raise a 404 when no order is matched."""
@@ -3585,28 +3545,25 @@ class StandardViewsTest(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_cst_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            customer = Customer.objects.first()
+            resp = self.client.get(
+                reverse('customer_view', args=[customer.pk]))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/customer_view.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('customerlist'))
+            resp = self.client.get(reverse('invoiceslist'))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14)), )
-        resp = self.client.get(reverse('customerlist'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/list_view.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_cst_view_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
@@ -3631,30 +3588,27 @@ class StandardViewsTest(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_cst_view_timetable_required_is_void_change_date(self):
+    def test_cview_timetable_required_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            customer = Customer.objects.first()
+            resp = self.client.get(
+                reverse('customer_view', args=[customer.pk]))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/customer_view.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
+            customer = Customer.objects.first()
             resp = self.client.get(
-                reverse('customer_view', args=[Customer.objects.first().pk]))
+                reverse('customer_view', args=[customer.pk]))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_cst_view_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        customer = Customer.objects.first()
-        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/customer_view.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
     def test_customer_list(self):
         """Test the main features on customer list."""
@@ -3881,11 +3835,16 @@ class ItemsListTests(TestCase):
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_timetable_required_is_void_change_date(self):
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
         """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
-            print('S', end='')  # S for skip
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('itemslist'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/list_view.html')
+            self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
@@ -3893,16 +3852,6 @@ class ItemsListTests(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_still_valid(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=14.5)), )
-        resp = self.client.get(reverse('itemslist'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/list_view.html')
-        self.assertEquals(Timetable.objects.count(), 1)
 
 
 class SearchBoxTest(TestCase):
@@ -4045,7 +3994,7 @@ class SearchBoxTest(TestCase):
         data1 = json.loads(str(resp1.content, 'utf-8'))
         data2 = json.loads(str(resp2.content, 'utf-8'))
         self.assertEqual(data1['query_result_name'],
-                          data2['query_result_name'])
+                         data2['query_result_name'])
 
     def test_search_on_items_no_order_pk(self):
         """Test the correct raise of 404."""
