@@ -710,11 +710,16 @@ class Timetable(models.Model):
                 {'end': _('Can\'t be added end date and hours simultaneously')}
             )
 
+        # Prevent less than 15 min and more than 15h registers
         if self.hours:
             if self.hours > timedelta(hours=15):
                 raise ValidationError(
                     {'hours': _('Entry lasts more than 15h'), }
                 )
+
+            if self.hours < timedelta(minutes=15):
+                raise ValidationError(
+                    {'hours': _('Sessions less than 15\' are forbidden.')})
 
         if self.end:
             # Avoid +15h lengths
