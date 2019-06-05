@@ -1561,6 +1561,19 @@ class TestTimetable(TestCase):
         with self.assertRaisesMessage(ValidationError, msg):
             t.clean()
 
+    def test_clean_more_than_15h_in_a_day_is_forbidden(self):
+        """Several entries cannot add up more than 15h."""
+        Timetable.objects.create(
+            user=self.user, start=timezone.now() - timedelta(hours=2),
+            hours=timedelta(hours=1))
+        Timetable.objects.create(
+            user=self.user, start=timezone.now() - timedelta(minutes=59),
+            hours=timedelta(minutes=35))
+        t = Timetable(user=self.user, hours=timedelta(hours=14))
+        msg = 'You are trying to track more than 15h today.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
+
     def test_clean_prevent_15_min_sessions(self):
         """The least length for the session is 15 min."""
         u = User.objects.create_user(username='alt', password='test')

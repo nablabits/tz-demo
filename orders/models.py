@@ -712,9 +712,18 @@ class Timetable(models.Model):
 
         # Prevent less than 15 min and more than 15h registers
         if self.hours:
-            if self.hours > timedelta(hours=15):
+            u_lim = timedelta(hours=15)  # upper limit
+            if self.hours > u_lim:
                 raise ValidationError(
                     {'hours': _('Entry lasts more than 15h'), }
+                )
+
+            e = e.aggregate(tracked=models.Sum(
+                'hours', output_field=models.DurationField()))
+            if e['tracked'] and self.hours + e['tracked'] > u_lim:
+                raise ValidationError(
+                    {'hours':
+                     _('You are trying to track more than 15h today.'), }
                 )
 
             if self.hours < timedelta(minutes=15):
