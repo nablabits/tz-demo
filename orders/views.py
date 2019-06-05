@@ -558,7 +558,6 @@ def customerlist(request):
                      'js_data_pk': '0',
 
                      'include_template': 'includes/customer_list.html',
-                     'footer': True,
                      }
 
     return render(request, 'tz/list_view.html', view_settings)
@@ -791,7 +790,6 @@ def customer_view(request, pk):
                      'now': now,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Ver cliente',
-                     'footer': True,
                      }
     return render(request, 'tz/customer_view.html', view_settings)
 
