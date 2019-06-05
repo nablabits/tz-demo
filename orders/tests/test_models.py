@@ -1536,14 +1536,6 @@ class TestTimetable(TestCase):
         t.end = None  # to avoid validation simultaneous validation
         self.assertEqual(t.clean(), None)
 
-    def test_clean_prevent_15_min_sessions(self):
-        """The least length for the session is 15 min."""
-        u = User.objects.create_user(username='alt', password='test')
-        t = Timetable(user=u, hours=timedelta(minutes=14))
-        msg = 'Sessions less than 15\' are forbidden.'
-        with self.assertRaisesMessage(ValidationError, msg):
-            t.clean()
-
     def test_clean_prevents_starting_in_the_future(self):
         """There's a threshold of 1h."""
         u = User.objects.create_user(username='alt', password='test')
@@ -1566,6 +1558,14 @@ class TestTimetable(TestCase):
         end = timezone.now() + timedelta(hours=15.5)
         t = Timetable(user=self.user, end=end)
         msg = 'Entry lasts more than 15h'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
+
+    def test_clean_prevent_15_min_sessions(self):
+        """The least length for the session is 15 min."""
+        u = User.objects.create_user(username='alt', password='test')
+        t = Timetable(user=u, hours=timedelta(minutes=14))
+        msg = 'Sessions less than 15\' are forbidden.'
         with self.assertRaisesMessage(ValidationError, msg):
             t.clean()
 
