@@ -1473,6 +1473,15 @@ class TestTimetable(TestCase):
         t = Timetable.objects.create(user=self.user)
         self.assertEqual(t.hours, None)
 
+    def test_active_return_active_timetables(self):
+        """Test the proper custom manager."""
+        u2 = User.objects.create_user(username='u2', password='test')
+        Timetable.objects.create(
+            user=self.user, end=timezone.now() + timedelta(hours=3))
+        Timetable.objects.create(user=self.user)
+        Timetable.objects.create(user=u2)
+        self.assertEqual(Timetable.active.count(), 2)
+
     def test_auto_fill_hours(self):
         """When end is provided, autofill hours."""
         end = timezone.now() + timedelta(hours=3, minutes=22)
