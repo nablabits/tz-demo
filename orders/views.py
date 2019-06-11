@@ -266,6 +266,7 @@ def main(request):
     top5 = top5.order_by('-total')[:5]
 
     cur_user = request.user
+    session = Timetable.active.get(user=request.user)
 
     # Query last comments on active orders
     comments = Comment.objects.exclude(user=cur_user)
@@ -290,6 +291,7 @@ def main(request):
                      'top5': top5,
                      'comments': comments,
                      'user': cur_user,
+                     'session': session,
                      'now': now,
                      'version': settings.VERSION,
                      'search_on': 'orders',

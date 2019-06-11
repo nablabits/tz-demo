@@ -657,6 +657,10 @@ class Timetable(models.Model):
     end = models.DateTimeField('salida', blank=True, null=True)
     hours = models.DurationField('horas', blank=True, null=True)
 
+    # Custom managers
+    objects = models.Manager()
+    active = managers.ActiveTimetable()
+
     def save(self, *args, **kwargs):
         """Override the save method.
 

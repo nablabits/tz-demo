@@ -56,3 +56,11 @@ class ActiveItems(models.Manager):
         items = items.exclude(reference__ref_name__iexact='quick')
         items = items.exclude(reference__customer__name__iexact='Trapuzarrak')
         return items.filter(reference__invoice__isnull=True)
+
+
+class ActiveTimetable(models.Manager):
+    """Get the current active timetable for a user."""
+
+    def get_queryset(self):
+        """Return the queryset."""
+        return super().get_queryset().filter(end__isnull=True)
