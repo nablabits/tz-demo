@@ -96,8 +96,7 @@ def add_hours(request):
     """Close an open work session."""
     # prevent reaching this page without valid timetable open
     try:
-        active = Timetable.objects.filter(
-            end__isnull=True).get(user=request.user)
+        active = Timetable.active.get(user=request.user)
     except ObjectDoesNotExist:
         return redirect('main')
 
@@ -497,6 +496,7 @@ def orderlist(request, orderby):
 
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
 
     view_settings = {'active': active,
                      'confirmed': confirmed,
@@ -504,6 +504,7 @@ def orderlist(request, orderby):
                      'delivered': delivered,
                      'user': cur_user,
                      'now': now,
+                     'session': session,
                      'version': settings.VERSION,
                      'active_stock': tz_active,
                      'active_calendar': active_calendar,
@@ -544,10 +545,12 @@ def customerlist(request):
 
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
 
     view_settings = {'customers': customers,
                      'user': cur_user,
                      'now': now,
+                     'session': session,
                      'version': settings.VERSION,
                      'search_on': 'customers',
                      'placeholder': 'Buscar cliente',
@@ -571,9 +574,11 @@ def itemslist(request):
     """Show the different item objects."""
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
 
     view_settings = {'user': cur_user,
                      'now': now,
+                     'session': session,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Prendas',
                      'h3': 'Todas las prendas',
@@ -634,11 +639,14 @@ def invoiceslist(request):
         all_time_cash['total_cash'] = 0
     balance = all_time_deposit['total_cash'] - all_time_cash['total_cash']
     balance = balance + expenses['total_cash']
+
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
 
     view_settings = {'user': cur_user,
                      'now': now,
+                     'session': session,
                      'today': today,
                      'week': week,
                      'month': month,
@@ -663,6 +671,7 @@ def kanban(request):
     view_settings = CommonContexts.kanban()
     view_settings['cur_user'] = request.user
     view_settings['now'] = datetime.now()
+    view_settings['session'] = Timetable.active.get(user=request.user)
     view_settings['version'] = settings.VERSION
     view_settings['title'] = 'TrapuZarrak · Vista Kanban'
 
@@ -689,6 +698,8 @@ def order_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
+
     title = (order.pk, order.customer.name, order.ref_name)
     view_settings = {'order': order,
                      'items': items,
@@ -696,6 +707,7 @@ def order_view(request, pk):
                      'closed': closed,
                      'user': cur_user,
                      'now': now,
+                     'session': session,
                      'version': settings.VERSION,
                      'title': 'Pedido %s: %s, %s' % title,
 
@@ -742,12 +754,16 @@ def order_express_view(request, pk):
     items = OrderItem.objects.filter(reference=order)
     available_items = Item.objects.all()[:10]
     already_invoiced = Invoice.objects.filter(reference=order)
+
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
+
     view_settings = {'order': order,
                      'customers': customers,
                      'user': cur_user,
                      'now': now,
+                     'session': session,
                      'item_types': settings.ITEM_TYPE[1:],
                      'items': items,
                      'available_items': available_items,
@@ -782,6 +798,8 @@ def customer_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
+
     view_settings = {'customer': customer,
                      'orders_active': active,
                      'orders_delivered': delivered,
@@ -790,6 +808,7 @@ def customer_view(request, pk):
                      'orders_made': orders.count(),
                      'user': cur_user,
                      'now': now,
+                     'session': session,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Ver cliente',
                      }
@@ -811,14 +830,18 @@ def pqueue_manager(request):
     pqueue_completed = pqueue.filter(score__lt=0)
     pqueue_active = pqueue.filter(score__gt=0)
     i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
+
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
+
     view_settings = {'available': available,
                      'active': pqueue_active,
                      'completed': pqueue_completed,
                      'i_relax': i_relax,
                      'user': cur_user,
                      'now': now,
+                     'session': session,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Cola de producción',
                      }
@@ -834,13 +857,17 @@ def pqueue_tablet(request):
     pqueue_completed = pqueue.filter(score__lt=0)
     pqueue_active = pqueue.filter(score__gt=0)
     i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
+
     cur_user = request.user
     now = datetime.now()
+    session = Timetable.active.get(user=request.user)
+
     view_settings = {'active': pqueue_active,
                      'completed': pqueue_completed,
                      'i_relax': i_relax,
                      'user': cur_user,
                      'now': now,
+                     'session': session,
                      'version': settings.VERSION,
                      'title': ('TrapuZarrak · Cola de producción' +
                                '(vista tablet)'),
