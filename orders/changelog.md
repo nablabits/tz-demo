@@ -1,5 +1,10 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v77, Jun 11
+  **Nuevo:** Barra de *status* para comprobar la hora de inicio de sesión.
+  **Mejora:** Algunos mensajes se han traducido al español.
+  **Bug:** ahora la hora de cierre se muestra correctamente.
+
 ### v76, Jun 3
   **Nuevo:** ahora se puede hacer *logout* desde la cola de produccion en la tablet.
   **Bug:** ya no pueden añadir por error horas por debajo de 15 minutos.
