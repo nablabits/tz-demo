@@ -1,6 +1,8 @@
 {% load static %}
 {% load widget_tweaks %}
 {% load humanize %}
+{% load tz %}
+{% load i18n %}
 <!doctype html>
 <html>
   <head>
@@ -17,7 +19,9 @@
         <div class="card">
           {%if on_time%}
           <div class="card-header">
-            <strong>Sesión iniciada:</strong> {{active.start.date|naturalday}} a las {{active.start.time}}
+            <strong>Sesión iniciada:</strong>
+            {% language 'es' %}{{active.start | naturaltime}}{% endlanguage %}
+            &nbsp;&nbsp;( {{active.start | time}} )
           </div>
           <div class="card-body">
             <h3 class="card-title text-center">
@@ -27,7 +31,9 @@
             <p class="card-text">Solo te queda añadir las horas.</p>
           {%else%}
             <div class="card-header">
-              <strong>Sesión iniciada:</strong> {{active.start.date|naturalday}} a las {{active.start.time}}
+              <strong>Sesión iniciada:</strong>
+              {% language 'es' %}{{active.start | naturaltime}}{% endlanguage %}
+              &nbsp;&nbsp;( {{active.start | time}} )
             </div>
             <div class="card-body">
               <h3 class="card-title text-center">
