@@ -1,4 +1,7 @@
 {% load static %}
+{% load tz %}
+{% load humanize %}
+{% load i18n %}
 <!doctype html>
 <html>
   <head>
@@ -100,13 +103,19 @@
         </div>
       </div>
 
-      {% if footer %}
-      <footer class="d-block d-sm-none">
-        <div class="fixed-bottom">
-          <button class="m-3 add_new"><i class="fa fa-plus fa-2x"></i></button>
-        </div>
+      <footer class="bg-light fixed-bottom py-2 px-2 border-top border-secondary">
+        <span class="px-3">
+          <i class="far fa-user pr-2"></i>Usuaria: {{user.username}}
+        </span>
+        <span class="px-3">
+          <i class="far fa-chess-clock pr-2"></i>Inicio:
+            {% language 'es' %}
+            {{session.start | naturaltime}}&nbsp;&nbsp;( {{session.start | time}}h )
+            {% endlanguage %}
+        </span>
+
+
       </footer>
-      {% endif %}
     <script src="{% static 'tz/js/jquery-3.2.1.min.js' %}"></script>
     <script src="{% static 'tz/js/popper.min.js' %}"></script>
     <script src="{% static 'tz/js/bootstrap.min.js' %}"></script>

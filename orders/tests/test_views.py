@@ -250,7 +250,7 @@ class AddHoursTests(TestCase):
         """When user has no timetable open can't add hours."""
         # first close the active timetable
         u = User.objects.first()
-        active = Timetable.objects.filter(end__isnull=True).get(user=u)
+        active = Timetable.active.get(user=u)
         active.hours = timedelta(hours=5)
         active.save()
         # Other users' open times should not affect
@@ -3654,7 +3654,6 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.context['js_data_pk'], '0')
         self.assertEqual(resp.context['include_template'],
                          'includes/customer_list.html')
-        self.assertTrue(resp.context['footer'])
 
     def test_customer_list_paginator(self):
         """Test paginator functionality on customer list."""

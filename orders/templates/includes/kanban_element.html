@@ -1,4 +1,6 @@
 {% load humanize %}
+{% load i18n %}
+{% language 'es' %}
 {% load widget_tweaks %}
 <div class="d-flex flex-column colorized_border rounded p-1 my-1 js-kanban" {%if order.color%}style="border-left: 10px solid {{order.color}}"{%endif%}>
   <div class="d-flex ml-1">
@@ -9,7 +11,7 @@
   <div class="d-flex align-items-center ml-1">
     {%if order.status not in '67'%}
     <div data-toggle="collapse" data-target="#date-change-{{order.pk}}" style="cursor: pointer;">
-      <span class="mr-2">{{order.delivery|date:'M, d'}}</span>
+      <span class="mr-2">{{order.delivery|naturalday:'M j'}}</span>
       <i class="fas fa-pencil text-muted d-none"></i>
       {%if order.overdue and order.status in '12345'%}<i class="fas fa-exclamation-triangle text-danger"></i>
       {%endif%}
@@ -95,3 +97,4 @@
   </div>
   {%endif%}
 </div>
+{%endlanguage%}
