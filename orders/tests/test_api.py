@@ -1,14 +1,12 @@
 from datetime import date
 
 from django.contrib.auth.models import User
-from django.test import TestCase
 from django.urls import reverse
-from requests.auth import HTTPBasicAuth
 from rest_framework.authtoken.models import Token
-from rest_framework.test import APIClient, APITestCase
+from rest_framework.test import APITestCase
 
 from orders.models import (BankMovement, Customer, Expense, Invoice, Item,
-                           Order, OrderItem)
+                           Order, OrderItem, Timetable)
 
 
 class ReadOnlyTests(APITestCase):
@@ -36,7 +34,7 @@ class ReadOnlyTests(APITestCase):
         endpoints = (
             'api-root', 'order-list', 'customer-list', 'item-list',
             'orderitem-list', 'invoice-list', 'expense-list',
-            'bankmovement-list'
+            'bankmovement-list', 'timetable-list',
         )
         for endpoint in endpoints:
             resp = self.client.get(reverse(endpoint))
@@ -54,7 +52,7 @@ class ReadOnlyTests(APITestCase):
         resp = self.client.get(reverse('api-root'))
         self.assertEqual(resp.status_code, 200)
         keys = ('customer', 'order', 'item', 'order_item', 'invoice',
-                'expense', 'bank_movement', )
+                'expense', 'bank_movement', 'timetable', )
         for key in keys:
             self.assertTrue(key in resp.data.keys())
 
@@ -148,6 +146,17 @@ class ReadOnlyTests(APITestCase):
 
         # Finally ensure that all the fields are included
         for field in ('action_date', 'amount', 'notes', ):
+            self.assertTrue(field in resp.data[0].keys())
+
+    def test_timetable_api(self):
+        """Test the correct content for timetable API."""
+        Timetable.objects.create(user=User.objects.first())
+        resp = self.client.get(reverse('timetable-list'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.data[0]['user'], 1)
+
+        # Finally ensure that all the fields are included
+        for field in ('user', 'start', 'end', 'hours', ):
             self.assertTrue(field in resp.data[0].keys())
 
 

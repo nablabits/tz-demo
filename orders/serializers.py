@@ -58,3 +58,11 @@ class BankMovementSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.BankMovement
         fields = '__all__'
+
+
+class TimetableSerializer(serializers.ModelSerializer):
+    """Define the serializer for the order item model."""
+
+    class Meta:
+        model = models.Timetable
+        fields = '__all__'
