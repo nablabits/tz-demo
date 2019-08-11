@@ -678,6 +678,10 @@ class Invoice(models.Model):
         else:
             self.amount = total['amount']
 
+        # Archive todoist project (if any)
+        order = Order.objects.get(pk=self.pk)
+        order.archive()
+
         super().save(*args, **kwargs)
 
     class Meta():

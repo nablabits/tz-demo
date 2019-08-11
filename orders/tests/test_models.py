@@ -1269,6 +1269,7 @@ class TestPQueue(TestCase):
         self.assertEqual(item.score, 1000)
 
 
+@tag('todoist')
 class TestInvoice(TestCase):
     """Test the invoice model."""
 
@@ -1400,6 +1401,18 @@ class TestInvoice(TestCase):
             reference=order, element=Item.objects.first(), price=-110)
         invoice = Invoice.objects.create(reference=order)
         self.assertEqual(invoice.amount, 0)
+
+    def test_invoicing_archives_todoist(self):
+        order = Order.objects.first()
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.first(), price=100)
+        order.create_todoist()
+        Invoice.objects.create(reference=order)
+        order = Order.objects.get(pk=order.pk)
+        self.assertTrue(order.is_archived())
+        project = order.t_api.projects.get_by_id(order.t_pid)
+        project.delete()
+        order.t_api.commit()
 
 
 class TestExpense(TestCase):
