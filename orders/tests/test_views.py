@@ -3394,17 +3394,6 @@ class OrderViewTests(TestCase):
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEqual(resp.context['items'].count(), 3)
 
-    def test_closed_orders(self):
-        """Closed status."""
-        order = Order.objects.first()
-        resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertFalse(resp.context['closed'])
-        order.status = 7
-        order.prepaid = order.budget
-        order.save()
-        resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertTrue(resp.context['closed'])
-
     def test_context_variables(self):
         """Test the remaining variables."""
         order = Order.objects.first()

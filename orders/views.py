@@ -691,11 +691,6 @@ def order_view(request, pk):
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
 
-    if order.status == '7' and order.budget == order.prepaid:
-        closed = True
-    else:
-        closed = False
-
     cur_user = request.user
     now = datetime.now()
     session = Timetable.active.get(user=request.user)
@@ -704,7 +699,6 @@ def order_view(request, pk):
     view_settings = {'order': order,
                      'items': items,
                      'comments': comments,
-                     'closed': closed,
                      'user': cur_user,
                      'now': now,
                      'session': session,
