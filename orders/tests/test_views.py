@@ -9,7 +9,7 @@ from django.contrib.auth.models import User
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import JsonResponse
-from django.test import Client, TestCase
+from django.test import Client, TestCase, tag
 from django.urls import reverse
 from django.utils import timezone
 
@@ -3296,6 +3296,7 @@ class PQueueActionsTests(TestCase):
         self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
 
 
+@tag('todoist')
 class OrderViewTests(TestCase):
     """Test the order view."""
 
@@ -3372,6 +3373,104 @@ class OrderViewTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, url)
 
+    def test_errors_is_default_false(self):
+        order = Order.objects.first()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertFalse(resp.context['errors'])
+
+    def test_post_add_project(self):
+        order = Order.objects.first()
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'add-project', })
+        order.t_sync()
+        self.assertTrue(order.t_api)
+        self.assertTrue(order.t_pid)
+        self.assertFalse(resp.context['errors'])
+
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'add-project', })
+        errors = [('Couldn\'t create project on todoist, did it ' +
+                  'already exist?'), ]
+        self.assertEqual(resp.context['errors'], errors)
+
+        project = order.t_api.projects.get_by_id(order.t_pid)
+        project.delete()
+        order.t_api.commit()
+
+    def test_post_archive_project(self):
+        order = Order.objects.first()
+
+        # Try to archive without creation
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'archive-project', })
+        errors = [('Couldn\'t archive project, maybe it was ' +
+                   'already archived or just didn\'t exist'), ]
+        self.assertEqual(resp.context['errors'], errors)
+        order.create_todoist()
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'archive-project', })
+        order.t_sync()
+        self.assertTrue(order.is_archived())
+        self.assertFalse(resp.context['errors'])
+
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'archive-project', })
+        self.assertEqual(resp.context['errors'], errors)
+
+        project = order.t_api.projects.get_by_id(order.t_pid)
+        project.delete()
+        order.t_api.commit()
+
+    def test_post_unarchive_project(self):
+        order = Order.objects.first()
+
+        # Try to unarchive without creation
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'unarchive-project', })
+        errors = [('Couldn\'t unarchive project, maybe it was ' +
+                  'already unarchived or just didn\'t exist'), ]
+        self.assertEqual(resp.context['errors'], errors)
+
+        # now create it & try to unarchive without archive
+        order.create_todoist()
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'unarchive-project', })
+        self.assertEqual(resp.context['errors'], errors)
+        order.t_sync()
+
+        # finally archive it and unarchive it
+        order.archive()
+        order.t_sync()
+        self.assertTrue(order.is_archived())
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'unarchive-project', })
+        self.assertFalse(resp.context['errors'])
+        order.t_sync()
+        self.assertFalse(order.is_archived())
+
+        project = order.t_api.projects.get_by_id(order.t_pid)
+        project.delete()
+        order.t_api.commit()
+
+    def test_post_deliver(self):
+        order = Order.objects.first()
+        order.delivery = date.today() + timedelta(days=5)
+        order.save()
+        self.client.post(reverse('order_view', args=[order.pk]),
+                         {'action': 'deliver-order', })
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.status, '7')
+        self.assertEqual(order.delivery, date.today())
+
+    def test_post_invalid_action_raises_500(self):
+        """A valid action is required."""
+        order = Order.objects.first()
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'void', })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'Action was not recognized')
+
     def test_show_comments(self):
         """Display the correct comments."""
         order = Order.objects.first()
@@ -3394,26 +3493,21 @@ class OrderViewTests(TestCase):
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEqual(resp.context['items'].count(), 3)
 
-    def test_closed_orders(self):
-        """Closed status."""
-        order = Order.objects.first()
-        resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertFalse(resp.context['closed'])
-        order.status = 7
-        order.prepaid = order.budget
-        order.save()
-        resp = self.client.get(reverse('order_view', args=[order.pk]))
-        self.assertTrue(resp.context['closed'])
-
     def test_context_variables(self):
         """Test the remaining variables."""
         order = Order.objects.first()
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEqual(resp.context['user'].username, order.user.username)
+        self.assertEqual(
+            resp.context['session'], Timetable.active.get(user=order.user))
+        self.assertFalse(resp.context['tasks'])
+        self.assertFalse(resp.context['archived'])
+        self.assertFalse(resp.context['project_id'])
+        self.assertEqual(resp.context['version'], settings.VERSION)
         self.assertEqual(resp.context['title'],
                          'Pedido %s: %s, %s' %
                          (order.pk, order.customer.name, order.ref_name))
-        self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
+        self.assertEqual(resp.context['btn_title_add'], 'Añadir prendas')
         self.assertEqual(resp.context['js_action_add'], 'order-item-add')
         self.assertEqual(resp.context['js_action_edit'], 'order-item-edit')
         self.assertEqual(
@@ -5191,8 +5285,8 @@ class ActionsPostMethodCreate(TestCase):
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#orderitems-list')
-        self.assertEqual(data['template'], 'includes/orderitems_list.html')
+        self.assertEqual(data['html_id'], '#quick-list')
+        self.assertEqual(data['template'], 'includes/item_quick_list.html')
         vars = ('items', 'order', 'js_action_edit', 'js_action_delete',
                 'js_data_pk')
         self.assertTrue(self.context_vars(data['context'], vars))
@@ -5758,8 +5852,8 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/orderitems_list.html')
-        self.assertEqual(data['html_id'], '#orderitems-list')
+        self.assertEqual(data['template'], 'includes/item_quick_list.html')
+        self.assertEqual(data['html_id'], '#quick-list')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         # Test if the fields were modified
@@ -5955,8 +6049,8 @@ class ActionsPostMethodEdit(TestCase):
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/orderitems_list.html')
-        self.assertEqual(data['html_id'], '#orderitems-list')
+        self.assertEqual(data['template'], 'includes/item_quick_list.html')
+        self.assertEqual(data['html_id'], '#quick-list')
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_delete_order_express_deletes_order(self):

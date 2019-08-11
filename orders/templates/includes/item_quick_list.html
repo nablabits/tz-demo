@@ -1,0 +1,20 @@
+<div class="card">
+  <div class="card-header">
+    <h5 class="mb-0"><strong>Prendas ya añadidas</strong></h5>
+    <small>Aquí aparecen las prendas que ya has añadido al pedido.<br>
+      Cuando acabes haz click en listo</small>
+  </div>
+  <div class="card-body">
+    {% for item in items %}
+    <div class="d-flex">
+      <span class="py-1 mr-2">{{item.qty}} x {%include 'includes/item_string.html'%}</span>
+      <span class="ml-auto py-1">{%include 'includes/action_buttons.html'%}</span>
+    </div>
+    {%endfor%}
+    <a href="{%url 'order_view' order.pk %}">
+      <button type="button" class="btn btn-outline-success mr-2" >
+        <i class="fal fa-check"></i> Listo
+      </button>
+    </a>
+  </div>
+</div>

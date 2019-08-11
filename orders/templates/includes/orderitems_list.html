@@ -10,12 +10,6 @@
       </div>
     </div>
   {%endfor%}
-  <div class="d-flex justify-content-end m-3">
-    <div class="d-flex flex-column">
-      <h4 class="text-right"><strong>Total del pedido:</strong> {{order.total}}€</h4>
-      <h5 class="text-right"><strong>Prepagado: </strong> -{{order.prepaid}}€</h5>
-    </div>
-  </div>
 {%else%}
   {% if items %}
     <table class="table">
@@ -26,7 +20,6 @@
         </th>
         <th scope="col">Precio</th>
         <th scope="col">Tiempos</th>
-        <th scope="col">Acciones</th>
       </tr>
       {% include 'includes/info_items.html' %}
     </thead>
@@ -63,14 +56,12 @@
               <i class="far fa-star fa-fw" ></i> Genial (3/3)
             {% endif %}
           {%else%}
-            <i class="far fa-info fa-fw" ></i> Las prendas externas o de stock<br> no necesitan tiempos
+            <i class="far fa-info fa-fw" ></i> Las prendas externas o de stock no necesitan tiempos
           {% endif %}
         </td>
-        <td>{% include 'includes/action_buttons.html' %}</td>
       </tr>
       <tr class="collapse" id="time-detail-{{item.pk}}">
         <td class="pl-3" colspan="2">
-          <strong>Descripción:</strong><br>
           {%if item.description%}
             {{item.description}}
           {%else%}
@@ -78,10 +69,9 @@
           {%endif%}
         </td>
         {%if not item.stock and not item.element.foreing%}
-        <td colspan="2">
-          <strong>Tiempos:</strong><br>
-          <strong>Corte: </strong>{{item.crop}};<br>
-          <strong>Confección: </strong>{{item.sewing}};<br>
+        <td>
+          <strong>Corte: </strong>{{item.crop}};
+          <strong>Confección: </strong>{{item.sewing}};
           <strong>Planchado:</strong>{{item.iron}}
         </td>
         {%endif%}
@@ -90,16 +80,6 @@
       {% endfor %}
     </tbody>
     </table>
-    <div class="d-flex justify-content-end mt-2">
-      <div class="d-flex flex-column">
-        <h5 class="text-right px-1"><strong>Prepagado: </strong> -{{order.prepaid}}€</h5>
-        <h5 class="text-right px-1 pb-1" style="border-bottom: 1px solid lightgrey;"><strong>Total del pedido:</strong> {{order.total}}€</h5>
-        <h4><strong>Total pendiente: </strong>{{order.pending}}€</h4>
-        {%if order.pending > 0%}
-        <small class="text-right">A devolver a cliente.</small>
-        {%endif%}
-      </div>
-    </div>
   {% else %}
     <div class="d-flex">
       <div class="alert alert-info" role="alert">

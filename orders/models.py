@@ -13,6 +13,9 @@ from django.utils.translation import gettext_lazy as _
 
 from . import managers, settings
 from .utils import WeekColor
+from decouple import config
+
+from todoist.api import TodoistAPI
 
 
 class Customer(models.Model):
@@ -79,7 +82,6 @@ class Order(models.Model):
         ('2', 'Normal'),
         ('3', 'Baja')
     )
-
     inbox_date = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True)
@@ -215,6 +217,12 @@ class Order(models.Model):
         """Determine if the order has comments."""
         return Comment.objects.filter(reference=self)
 
+    def deliver(self):
+        """Deliver the order and update the date."""
+        self.status = 7
+        self.delivery = date.today()
+        return self.save()
+
     def kanban_forward(self):
         """Jump to the next kanban stage."""
         if self.status == '1':
@@ -243,6 +251,86 @@ class Order(models.Model):
             raise ValueError('The status %s does not allow to jump backward.')
 
         self.save()
+
+    def t_sync(self):
+        """Syncronize with todoist server."""
+        try:
+            self.t_api
+        except AttributeError:
+            self.t_api = TodoistAPI(config('TODOIST_API_TOKEN'))
+        self.t_api.sync()
+        name = '%s.%s' % (self.pk, self.customer.name)
+        self.t_pid = False
+        for p in self.t_api.projects.all():
+            if p['name'] == name:
+                self.t_pid = p['id']
+
+    def sync_required(function):
+        """Require sycronization decorator.
+
+        Usually the order data is loaded at once on the details page, this
+        decorator lets perform a sync from todoist just once (on load).
+        """
+        def _inner(self, *args, **kwargs):
+            try:
+                self.t_api
+            except AttributeError:
+                self.t_sync()
+            return function(self, *args, **kwargs)
+        return _inner
+
+    @sync_required
+    def create_todoist(self):
+        """Create a todoist project for the order."""
+        if self.t_pid:
+            return False
+        else:
+            name = '%s.%s' % (self.pk, self.customer.name)
+            self.t_api.projects.add(name=name, parent_id=config('APP_ID'))
+            self.t_api.commit()
+            return True
+
+    @sync_required
+    def tasks(self):
+        """Connect to todoist to get the tasks for the order."""
+        if self.t_pid:
+            tasks = list()
+            for task in self.t_api.items.all():
+                if task['project_id'] == self.t_pid:
+                    tasks.append(task)
+            return tasks
+        else:
+            return False
+
+    @sync_required
+    def is_archived(self):
+        """Determine if the project is already archived."""
+        if self.t_pid:
+            p = self.t_api.projects.get_by_id(self.t_pid)
+            return p['is_archived']
+        else:
+            return False
+
+    @sync_required
+    def archive(self):
+        """Archive the project on todoist."""
+        if self.is_archived() or not self.t_pid:
+            return False
+        else:
+            project = self.t_api.projects.get_by_id(self.t_pid)
+            project.archive()
+            return self.t_api.commit()
+
+    @sync_required
+    def unarchive(self):
+        """Unarchive the project on todoist."""
+        if self.is_archived():
+            project = self.t_api.projects.get_by_id(self.t_pid)
+            project.unarchive()
+            project.move(parent_id=config('APP_ID'))
+            return self.t_api.commit()
+        else:
+            return False
 
 
 class Item(models.Model):
@@ -594,6 +682,10 @@ class Invoice(models.Model):
             raise ValidationError('The invoice has no items')
         else:
             self.amount = total['amount']
+
+        # Archive todoist project (if any)
+        order = Order.objects.get(pk=self.pk)
+        order.archive()
 
         super().save(*args, **kwargs)
 

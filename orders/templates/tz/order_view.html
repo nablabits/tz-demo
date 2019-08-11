@@ -1,78 +1,290 @@
 {% extends "tz/base.html" %}
 {% block orderview %}
+{% load humanize %}
+{% load i18n %}
+{% language 'es' %}
 <section id="order_view" data-pk="{{ order.pk }}">
-  <div class="container pt-4">
-    <div class="back_to_orders">
-      <a href="{% url 'kanban' %}">
-        <button class="btn btn-info border-dark ml-5 mt-5" type="button">
-          <i class="fa fa-arrow-alt-left mr-2"></i>Vuelve a lista de pedidos
-        </button>
-      </a>
-    </div>
-    <div class="row mb-4">
-      <div class="d-flex-column mr-auto border rounded p-2">
-        <div class="d-flex align-items-center">
-          <h3 class="font-weight-bold">Pedido no.{{ order.pk }}</h3>
-          {%if order.confirmed%}
-          <div class="alert alert-success ml-5" role="alert">
-            <i class="fa fa-check text-success mr-2"></i>
-            <strong>Confirmado</strong>
-          </div>
-          {%else%}
-          <div class="alert alert-warning ml-5" role="alert">
-            <i class="far fa-user-clock text-warning mr-2"></i>
-            <strong>Confirmación pendiente</strong>
-          </div>
-          {%endif%}
-        </div>
-        <h5 class="mr-auto">Creado el: {{order.inbox_date | date:"j/n/Y"}}</h5>
-        <h5 class="mr-auto">Entrega el: {{order.delivery | date:"j/n/Y"}}</h5>
-        <h5 class="mr-auto">Prioridad: {{order.get_priority_display}}</h5>
+  <div class="container-fluid mt-4 pb-3 border-bottom">
+    <div class="d-flex align-items-center">
+      <div class="d-flex mr-3 border rounded py-1 px-3 align-items-start">
+        <h4>
+          <strong>#{{order.pk}} </strong>{{order.customer}}
+        </h4>
+        <a href="{% url 'customer_view' pk=order.customer.pk %}" target="_blank">
+          <small><i class="fa fa-external-link pl-1"></i></small>
+        </a>
+        <h4 class="ml-4">{{order.ref_name}}</h4>
       </div>
+      <span class="py-1 px-2 border rounded mr-3">
+        <i class="fas fa-shopping-cart pr-2"></i>{{order.total}}€
+      </span>
+      <span class="py-1 px-2 border rounded mr-3">
+        <i class="fas fa-calendar-alt pr-2"></i>
+        {{order.delivery|naturalday:'M j'}}
+        {%if order.overdue and order.status in '12345'%}
+          <i class="fas fa-exclamation-triangle pl-2 text-danger"></i>
+        {%endif%}
+      </span>
+      {%if order.confirmed%}
+      <span class="text-success custom_bg_1 py-1 px-2 border rounded">
+        <i class="fa fa-check mr-2"></i><strong>Confirmado</strong>
+      </span>
+      {%else%}
+      <span class="text-danger py-1 px-2 border rounded">
+        <i class="fa fa-user-clock mr-2"></i><strong>Sin confirmar</strong>
+      </span>
+      {%endif%}
       {%if not order.invoiced%}
-        <div class="{% if order.status == '8' %}d-none{% else %}d-flex mb-auto{% endif %}">
-            <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fas fa-times"></i> Anular pedido</button>
+        <div class="d-flex ml-auto">
+          <button class="btn btn-outline-success mr-2 js-crud-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
+            <i class="fal fa-edit"></i> Editar pedido
+          </button>
+          <div class="{% if order.status == '8' %}d-none{% else %}d-flex mb-auto{% endif %}">
+              <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fas fa-times"></i> Anular pedido</button>
+          </div>
         </div>
       {%endif%}
-    </div>
-    {% if order.overdue and order.status not in '78' %}
-      <div class="d-flex">
-        <div class="alert alert-warning" role="alert">
-          <i class="fa fa-warning text-danger mr-2"></i>
-          <strong>Atención!</strong>
-          La entrega de este pedido se programó para el {{order.delivery | date:"j/n"}}
-          <a href="#">
-            <button class="ml-2 btn btn-warning js-crud-edit" data-action="order-edit-date" data-pk="{{order.pk}}"><i class="fa fa-history"></i> Actualizar</button>
-          </a>
-        </div>
-      </div>
-    {% endif %}
-
-    <!-- Header -->
-    <div class="d-flex mt-4 order_header">
-      <h4 class="mr-auto">
-          <strong>Cliente: </strong>
-          <a href="{% url 'customer_view' pk=order.customer.pk %}">{{order.customer}}</a>
-      </h4>
-      <h4><strong>Referencia:</strong> {{order.ref_name}}</h4>
     </div>
 
     <!-- Status element-->
     <div id="order-status">
     {% include 'includes/order_status.html' %}
     </div>
+  </div>
 
-    <!-- Order Details element-->
-    <div id="order-details">
-    {% include 'includes/order_details.html' %}
+  <div class="container-fluid mt-4">
+
+    {%if errors%}
+      {%for error in errors %}
+        <p class="text-danger">{{error}}</p>
+      {%endfor%}
+    {%endif%}
+
+    <!-- Tab selector -->
+    <ul class="nav nav-tabs" id="myTab" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link" id="main-tab" data-toggle="tab" href="#main" role="tab" aria-controls="main" aria-selected="true">
+          <i class="fal fa-info-circle pr-2"></i>Principal
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link active" id="items-tab" data-toggle="tab" href="#items" role="tab" aria-controls="items" aria-selected="false">
+          <i class="fal fa-tshirt pr-2"></i>Prendas
+          <span class="badge badge-primary ml-1">{{items.count}}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="comments-tab" data-toggle="tab" href="#comments" role="tab" aria-controls="comments" aria-selected="false">
+          <i class="fal fa-comments pr-2"></i>Comentarios
+          <span class="badge badge-primary ml-1">{{order.has_comments.count}}</span>
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="tasks-tab" data-toggle="tab" href="#tasks" role="tab" aria-controls="tasks" aria-selected="false">
+          <i class="fal fa-tasks pr-2"></i>Tareas
+          <span class="badge badge-primary ml-1">{{order.tasks|length}}</span>
+        </a>
+      </li>
+    </ul>
+
+    <!-- Tab content -->
+    <div class="tab-content" id="TabContent">
+
+      <div class="tab-pane fade" id="main" role="tabpanel" aria-labelledby="main-tab">
+        <div class="row mt-3">
+          <div class="col-lg-4 col-md-6">
+            <div class="card" id="main-card">
+              <div class="card-header">
+                <h5><i class="far fa-info pr-2"></i>Información principal</h5>
+              </div>
+              <div class="card-body">
+                <div class="d-flex flex-column">
+                  <div class="d-flex">
+                    <h5 class="mr-5"><i class="far fa-plus-circle pr-2"></i>Pedido creado el {{order.inbox_date|date:'j M Y'}}</h5>
+                    <h5><i class="far fa-flag pr-2"></i>Prioridad {{order.get_priority_display}}</h5>
+                  </div>
+                  <div class="d-flex mt-2 mb-4">
+                      <div class="mr-1 p-2 border rounded"><strong>Cintura:</strong> {{order.waist}}</div>
+                      <div class="mx-1 p-2 border rounded"><strong>Pecho:</strong> {{order.chest}}</div>
+                      <div class="mx-1 p-2 border rounded"><strong>Cadera:</strong> {{order.hip}}</div>
+                      <div class="ml-1 p-2 border rounded"><strong>Largo:</strong> {{order.lenght}}</div>
+                  </div>
+                  {%if order.others%}
+                    <div class="d-flex flex-column my-2">
+                      <h5><i class="far fa-sticky-note fa-fw"></i><strong> Observaciones:</strong></h5>
+                      <p class="ml-2">{{order.others | linebreaksbr}}</p>
+                    </div>
+                  {%endif%}
+                </div>
+
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-4 col-md-6">
+            <div class="card" id="payments-card">
+              <div class="card-header">
+                <h5><i class="far fa-hand-holding-usd pr-2"></i>Prepagos</h5>
+              </div>
+              <div class="card-body">
+                <div class="d-flex flex-column">
+                  <h5 class="">
+                    <i class="far fa-shopping-cart fa-fw mr-4"></i><strong>Total del pedido:</strong> {{order.total}}€
+                  </h5>
+                  <h5 class="border-bottom pb-2">
+                    <i class="far fa-coins fa-fw mr-4"></i><strong>Prepagado: </strong> {{order.prepaid}}€
+                  </h5>
+                  <h5 class="">
+                    <i class="far fa-cash-register fa-fw mr-4"></i><strong>Pendiente: </strong>{{order.pending}}€
+                  </h5>
+                  {%if order.customer.name != 'trapuzarrak'%}
+                    <div class="d-flex align-items-center mt-4">
+                      {%if order.status == '7'%}
+                        <button type="button" class="btn btn-outline-success js-crud-add" data-action="ticket-to-invoice" data-pk="{{order.pk}}">
+                          <i class="fa fa-euro"></i> Facturar
+                        </button>
+                      {%else%}
+                        <button type="button" class="btn btn-outline-success btn-disabled mr-2" disabled>
+                          <i class="fa fa-euro"></i> Facturar
+                        </button>
+                        <small>Solo los pedidos entregados se pueden facturar.</small>
+                      {%endif%}
+                    </div>
+                  {%endif%}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade show active" id="items" role="tabpanel" aria-labelledby="items-tab">
+        <div class="my-3">
+          <!-- Item Selector -->
+          <div class="collapse" id="item-selector-wrapper">
+            <div class="row">
+              <div class="col-8 pr-3">
+                <div class="border rounded shadow">
+                  <div class="d-flex justify-content-start align-items-baseline px-2 py-2 mb-1 border-bottom custom_bg_3">
+                    <h3><i class="fal fa-tshirt pr-2"></i></h3>
+                    <h3>Selector de prendas</h3>
+                    <span class="pl-2">Añade prendas desde aquí a la lista de la derecha.</span>
+                  </div>
+                  <div class="p-2" id="item-selector"></div>
+                </div>
+              </div>
+              <div class="col-4" id="quick-list">
+                {%include 'includes/item_quick_list.html'%}
+              </div>
+            </div>
+          </div>
+          <!-- Item list -->
+          <div class="collapse show" id="item-selector-wrapper">
+            <div class="row">
+              <div class="col-9" id="orderitems-list">
+                {%include 'includes/orderitems_list.html'%}
+              </div>
+              <div class="col">
+                <div class="mt-5 d-flex justify-content-center">
+                  <button type="button" class="btn btn-lg btn-outline-success mr-2" data-toggle="collapse" data-target="#item-selector-wrapper" id="item-selector-btn">
+                    <i class="fal fa-tshirt pr-1"></i>Añadir/editar prendas
+                  </button>
+                </div>
+                <div class="d-flex justify-content-center mt-2">
+                  <div class="w-50">
+                    <p class="text-center">
+                      <i class="fal fa-info pr-1"></i>
+                      Haz click en este botón para editar lo que ya hay o añadir prenas nuevas
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="comments" role="tabpanel" aria-labelledby="comments-tab">
+        <div id="comment-list">
+        {% include 'includes/comment_list.html' %}
+        </div>
+      </div>
+
+      <div class="tab-pane mb-2 pl-4 fade" id="tasks" role="tabpanel" aria-labelledby="tasks-tab">
+        {%if project_id%}
+          <div class="row">
+            <div class="col-lg-4">
+              {%if archived%}
+                <div class="alert alert-warning my-4" role="alert">
+                  <i class="fas fa-exclamation-circle mr-2"></i>
+                  <strong>Atencion! </strong>
+                  Este proyecto está archivado.
+                </div>
+              {%else%}
+                {% if tasks %}
+                  <h4 class="my-3"><strong>Tareas para este pedido:</strong></h4>
+                  <ul class="list-group mb-4 ml-2">
+                    {%for task in tasks%}
+                      <li class="list-group-item">
+                        {%if task.checked == 0%}<h4>{%else%}<h4 style="text-decoration: line-through;">{%endif%}
+                        <i class="fal fa-circle pr-4"></i>{{task.content}}</h4>
+                        {%if task.due%}
+                        <span>{{task.due.date|naturalday}}</span>
+                        {%endif%}
+                      </li>
+                    {%endfor%}
+                  </ul>
+                {%else%}
+                  <div class="alert alert-info mt-4" role="alert">
+                    <i class="fa fa-info-circle mr-2"></i>
+                    <strong>Oopps! </strong>
+                    Este pedido está creado en todoist pero parece que no tiene tareas aun.<br>
+                    <small>Si has creado alguna tarea recientemente y no aparece aquí, prueba a recargar la página (F5)</small>
+                  </div>
+                {%endif%}
+              {%endif%}
+              <div class="d-flex">
+                <a href="https://todoist.com/app/#project%2F{{project_id}}" target="_blank">
+                  <button type="button" class="btn btn-outline-success mr-2">
+                    <i class="fa fa-external-link"></i> Ver en todoist
+                  </button>
+                </a>
+                {%if archived%}
+                  <form method="post" action="{% url 'order_view' pk=order.pk %}">
+                  {%csrf_token%}
+                    <input type="hidden" name="action" value="unarchive-project">
+                    <button type="submit" class="btn btn-outline-success mr-2">
+                      <i class="far fa-archive"></i> Desarchivar
+                    </button>
+                  </form>
+                {%else%}
+                  <form method="post" action="{% url 'order_view' pk=order.pk %}">
+                  {%csrf_token%}
+                    <input type="hidden" name="action" value="archive-project">
+                    <button type="submit" class="btn btn-outline-success mr-2">
+                      <i class="far fa-archive"></i> Archivar
+                    </button>
+                  </form>
+                {%endif%}
+              </div>
+            </div>
+          </div>
+
+        {%else%}
+        <h4 class="my-3">Este pedido aún no tiene poyecto en todoist</h4>
+        <span>Haz click en el botón para crearlo</span>
+        <div class="d-flex mt-3">
+          <form method="post" action="{% url 'order_view' pk=order.pk %}">
+            {%csrf_token%}
+            <input type="hidden" name="action" value="add-project">
+            <button type="submit" class="btn btn-outline-success mr-2">
+              <i class="fa fa-layer-plus"></i> Crear proyecto
+            </button>
+          </form>
+        </div>
+        {%endif%}
+      </div>
     </div>
-
-    <!-- Order Comments element-->
-    <div id="comment-list">
-    {% include 'includes/comment_list.html' %}
-    </div>
-
-
   </div>
 </section>
+{%endlanguage%}
 {% endblock %}
