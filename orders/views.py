@@ -685,8 +685,30 @@ def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
 
+    # Redirect to express order
     if order.customer.name == 'express':
         return redirect(reverse('order_express', args=[order.pk]))
+
+    # Now, process the POST methods
+    errors = list()
+    if request.method == 'POST':
+        action = request.POST.get('action', None)
+        if action == 'add-project':
+            if not order.create_todoist():
+                errors.append('Couldn\'t create project on todoist, did it ' +
+                              'already exist?')
+        elif action == 'archive-project':
+            if not order.archive():
+                errors.append('Couldn\'t archive project, maybe it was ' +
+                              'already archived or just didn\'t exist')
+        elif action == 'unarchive-project':
+            if not order.unarchive():
+                errors.append('Couldn\'t unarchive project, maybe it was ' +
+                              'already unarchived or just didn\'t exist')
+        elif action == 'deliver-order':
+            order.deliver()
+        else:
+            return HttpResponseServerError('Action was not recognized')
 
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
@@ -695,6 +717,10 @@ def order_view(request, pk):
     now = datetime.now()
     session = Timetable.active.get(user=request.user)
 
+    # Todoist integration
+    tasks = order.tasks()
+    archived = order.is_archived()
+
     title = (order.pk, order.customer.name, order.ref_name)
     view_settings = {'order': order,
                      'items': items,
@@ -702,11 +728,15 @@ def order_view(request, pk):
                      'user': cur_user,
                      'now': now,
                      'session': session,
+                     'errors': errors,
+                     'tasks': tasks,
+                     'archived': archived,
+                     'project_id': order.t_pid,
                      'version': settings.VERSION,
                      'title': 'Pedido %s: %s, %s' % title,
 
                      # CRUD Actions
-                     'btn_title_add': 'Añadir prenda',
+                     'btn_title_add': 'Añadir prendas',
                      'js_action_add': 'order-item-add',
                      'js_action_edit': 'order-item-edit',
                      'js_action_delete': 'order-item-delete',
@@ -1389,7 +1419,7 @@ class Actions(View):
             # Context for the view
             items = OrderItem.objects.filter(reference=order)
             data['form_is_valid'] = True
-            data['html_id'] = '#orderitems-list'
+            data['html_id'] = '#quick-list'
             context = {'items': items,
                        'order': order,
 
@@ -1398,7 +1428,7 @@ class Actions(View):
                        'js_action_delete': 'order-item-delete',
                        'js_data_pk': order.pk,
                        }
-            template = 'includes/orderitems_list.html'
+            template = 'includes/item_quick_list.html'
 
         # Send item to order express (POST)
         elif action == 'send-to-order-express':
@@ -1658,10 +1688,10 @@ class Actions(View):
                            'js_action_delete': 'order-item-delete',
                            'js_data_pk': order.pk,
                            }
-                template = 'includes/orderitems_list.html'
+                template = 'includes/item_quick_list.html'
                 form.save()
                 data['form_is_valid'] = True
-                data['html_id'] = '#orderitems-list'
+                data['html_id'] = '#quick-list'
             else:
                 custom_form = 'includes/custom_forms/order_item.html'
                 context = {'form': form,
@@ -1766,7 +1796,7 @@ class Actions(View):
             items = OrderItem.objects.filter(reference=order)
             item.delete()
             data['form_is_valid'] = True
-            data['html_id'] = '#orderitems-list'
+            data['html_id'] = '#quick-list'
             context = {'items': items,
                        'order': order,
                        'btn_title_add': 'Añadir prenda',
@@ -1775,7 +1805,7 @@ class Actions(View):
                        'js_action_delete': 'order-item-delete',
                        'js_data_pk': order.pk,
                        }
-            template = 'includes/orderitems_list.html'
+            template = 'includes/item_quick_list.html'
 
         # Delete order express (POST)
         elif action == 'order-express-delete':
