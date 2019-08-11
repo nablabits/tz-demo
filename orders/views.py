@@ -184,7 +184,7 @@ def main(request):
     if not expenses['total']:
         expenses['total'] = 0
     exp_perc = round(float(expenses['total']) * 100 / (2 * goal), 2)
-    se_diff = round(aggregates[0] - float(expenses['total']), 2)
+    se_diff = expenses['total']
 
     # Active Box
     active = Order.active.count()
