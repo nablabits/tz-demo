@@ -319,6 +319,26 @@ class TestOrders(TestCase):
                 reference=order, element=Item.objects.last())
         self.assertEqual(order.total, 150)
 
+    def test_total_amount_before_taxes(self):
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date.today())
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        self.assertEqual(order.total_bt, round(150 / 1.21, 2))
+
+    def test_vat(self):
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date.today())
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        self.assertEqual(order.vat, round(150 * .21 / 1.21, 2))
+
     def test_pending_amount(self):
         """Test the correct pending amount."""
         user = User.objects.first()
@@ -979,6 +999,20 @@ class TestOrderItems(TestCase):
             qty=5, price=10
         )
         self.assertEqual(item.subtotal, 50)
+
+    def test_price_bt(self):
+        item = OrderItem.objects.create(
+            element=Item.objects.first(), reference=Order.objects.first(),
+            qty=5, price=10
+        )
+        self.assertEqual(item.price_bt, round(10 / 1.21, 2))
+
+    def test_subtotal_bt(self):
+        item = OrderItem.objects.create(
+            element=Item.objects.first(), reference=Order.objects.first(),
+            qty=5, price=10
+        )
+        self.assertEqual(item.subtotal_bt, round(50 / 1.21, 2))
 
 
 class TestPQueue(TestCase):

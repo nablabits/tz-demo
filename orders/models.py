@@ -152,6 +152,16 @@ class Order(models.Model):
             return total['total']
 
     @property
+    def total_bt(self):
+        """Get the total amount before taxes."""
+        return round(float(self.total) / 1.21, 2)
+
+    @property
+    def vat(self):
+        """Calculate the taxes amount."""
+        return round(float(self.total_bt) * .21, 2)
+
+    @property
     def pending(self):
         """Get the pending amount of the order."""
         return self.prepaid - self.total
@@ -476,6 +486,16 @@ class OrderItem(models.Model):
     def subtotal(self):
         """Display the subtotal amount."""
         return self.qty * self.price
+
+    @property
+    def price_bt(self):
+        """Display the price before taxes."""
+        return round(float(self.price) / 1.21, 2)
+
+    @property
+    def subtotal_bt(self):
+        """Display the subtotal amount without the taxes."""
+        return round(float(self.qty * self.price) / 1.21, 2)
 
 
 class Comment(models.Model):
