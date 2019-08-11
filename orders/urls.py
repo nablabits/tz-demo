@@ -17,6 +17,7 @@ router.register(r'order_item', views.OrderItemAPIList)
 router.register(r'invoice', views.InvoiceAPIList)
 router.register(r'expense', views.ExpenseAPIList)
 router.register(r'bank_movement', views.BankMovementAPIList)
+router.register(r'timetable', views.TimetableAPIList)
 
 urlpatterns = [
     # The root url

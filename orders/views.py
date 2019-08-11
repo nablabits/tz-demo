@@ -2256,6 +2256,12 @@ class BankMovementAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for bank movements."""
     queryset = BankMovement.objects.all()
     serializer_class = serializers.BankMovementSerializer
+
+
+class TimetableAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for timetabñes."""
+    queryset = Timetable.objects.all()
+    serializer_class = serializers.TimetableSerializer
 #
 #
 #
