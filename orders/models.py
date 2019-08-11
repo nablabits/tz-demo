@@ -82,7 +82,6 @@ class Order(models.Model):
         ('2', 'Normal'),
         ('3', 'Baja')
     )
-
     inbox_date = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True)
@@ -217,6 +216,12 @@ class Order(models.Model):
     def has_comments(self):
         """Determine if the order has comments."""
         return Comment.objects.filter(reference=self)
+
+    def deliver(self):
+        """Deliver the order and update the date."""
+        self.status = 7
+        self.delivery = date.today()
+        return self.save()
 
     def kanban_forward(self):
         """Jump to the next kanban stage."""

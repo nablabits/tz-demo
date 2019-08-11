@@ -418,6 +418,17 @@ class TestOrders(TestCase):
         o = Order.objects.get(pk=o.pk)
         self.assertTrue(o.has_comments)
 
+    def test_deliver(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today() - timedelta(days=2),
+                                 )
+        o.deliver()
+        order = Order.objects.get(pk=o.pk)
+        self.assertEqual(order.status, '7')
+        self.assertEqual(order.delivery, date.today())
+
     def test_kanban_jumps(self):
         """Test the correct jump within kanban stages."""
         order = Order.objects.create(user=User.objects.all()[0],
@@ -688,7 +699,6 @@ class TestTodoist(TestCase):
         # Finally, destroy the project in todoist
         project.delete()
         o.t_api.commit()
-
 
 
 class TestObjectItems(TestCase):
