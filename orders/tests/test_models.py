@@ -5,11 +5,15 @@ from decimal import Decimal, InvalidOperation
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.db.utils import DataError, IntegrityError
-from django.test import TestCase
+from django.test import TestCase, tag
 from django.utils import timezone
 
 from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
                            Item, Order, OrderItem, PQueue, Timetable, )
+
+from decouple import config
+
+from todoist.api import TodoistAPI
 
 
 class ModelTest(TestCase):
@@ -486,6 +490,205 @@ class TestOrders(TestCase):
             o.save()
             with self.assertRaises(ValueError):
                 o.kanban_backward()
+
+
+@tag('todoist')
+class TestTodoist(TestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        User.objects.create_user(username='user', is_staff=True,
+                                 is_superuser=True)
+
+        # Create a customer
+        Customer.objects.create(name='Todoist test customer',
+                                address='This computer',
+                                city='No city',
+                                phone='666666666',
+                                email='customer@example.com',
+                                CIF='5555G',
+                                notes='Default note',
+                                cp='48100')
+
+    def test_sync(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today() - timedelta(days=2),
+                                 )
+        # First ensure that attributes don't exist prior to sync
+        with self.assertRaises(AttributeError):
+            o.t_api
+        with self.assertRaises(AttributeError):
+            o.t_pid
+
+        # Now sync to create them
+        o.t_sync()
+        self.assertTrue(o.t_api)
+        self.assertIsInstance(o.t_api, TodoistAPI)
+        self.assertFalse(o.t_pid)
+
+        # Now create a project to check pid true
+        name = '%s.%s' % (o.pk, o.customer.name)
+        o.t_api.projects.add(name=name, parent_id=config('APP_ID'))
+        a = o.t_api.commit()
+        o.t_sync()
+        self.assertEqual(o.t_pid, a['temp_id_mapping'].popitem()[1])
+
+        # Finally, delete the project from todoist
+        project = o.t_api.projects.get_by_id(o.t_pid)
+        project.delete()
+        o.t_api.commit()
+
+    def test_create_todoist(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today() - timedelta(days=2),
+                                 )
+        # First ensure that attributes don't exist prior to sync
+        with self.assertRaises(AttributeError):
+            o.t_api
+        with self.assertRaises(AttributeError):
+            o.t_pid
+
+        # Create the project since it doesn't exist yet
+        self.assertTrue(o.create_todoist())
+
+        # Sync to reject project creation
+        o.t_sync()
+        self.assertFalse(o.create_todoist())
+
+        # Finally, delete the project from todoist
+        project = o.t_api.projects.get_by_id(o.t_pid)
+        project.delete()
+        o.t_api.commit()
+
+    def test_tasks(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today() - timedelta(days=2),
+                                 )
+        # First ensure that attributes don't exist prior to sync
+        with self.assertRaises(AttributeError):
+            o.t_api
+        with self.assertRaises(AttributeError):
+            o.t_pid
+
+        # Since the sync is performed by the decorator, there are no tasks yet
+        self.assertFalse(o.tasks())
+
+        # Create the project on todoist and sync
+        o.create_todoist()
+        o = Order.objects.get(pk=o.pk)
+        o.t_sync()
+
+        # create one task
+        o.t_api.items.add('Task1', project_id=o.t_pid)
+        o.t_api.commit()
+        o.t_sync()
+        self.assertTrue(o.tasks())
+
+        # Finally, delete the project from todoist
+        project = o.t_api.projects.get_by_id(o.t_pid)
+        project.delete()
+        o.t_api.commit()
+
+    def test_is_archived(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today() - timedelta(days=2),
+                                 )
+
+        # First ensure that attributes don't exist prior to sync
+        with self.assertRaises(AttributeError):
+            o.t_api
+        with self.assertRaises(AttributeError):
+            o.t_pid
+
+        # Since there's no project created, is_archived is False
+        self.assertFalse(o.is_archived())
+
+        # Create the project on todoist and sync
+        o.create_todoist()
+        o = Order.objects.get(pk=o.pk)
+        o.t_sync()
+
+        # Archive it and test
+        project = o.t_api.projects.get_by_id(o.t_pid)
+        project.archive()
+        o.t_api.commit()
+        self.assertTrue(o.is_archived())
+
+        # Finally, destroy the project in todoist
+        project.delete()
+        o.t_api.commit()
+
+    def test_archive(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today() - timedelta(days=2),
+                                 )
+
+        # First ensure that attributes don't exist prior to sync
+        with self.assertRaises(AttributeError):
+            o.t_api
+        with self.assertRaises(AttributeError):
+            o.t_pid
+
+        # Since there's no project created, archived returns false
+        self.assertFalse(o.archive())
+
+        # Create the project on todoist and sync
+        o.create_todoist()
+        o = Order.objects.get(pk=o.pk)
+
+        # Archive it and test
+        self.assertTrue(o.archive())
+        self.assertFalse(o.archive())
+
+        # Finally, destroy the project in todoist
+        project = o.t_api.projects.get_by_id(o.t_pid)
+        project.delete()
+        o.t_api.commit()
+
+    def test_unarchive(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today() - timedelta(days=2),
+                                 )
+
+        # First ensure that attributes don't exist prior to sync
+        with self.assertRaises(AttributeError):
+            o.t_api
+        with self.assertRaises(AttributeError):
+            o.t_pid
+
+        # Since there's no project created, archived returns false
+        self.assertFalse(o.unarchive())
+
+        # Create the project on todoist and sync
+        o.create_todoist()
+        o = Order.objects.get(pk=o.pk)
+
+        # Archive it and test
+        self.assertTrue(o.archive())
+        self.assertTrue(o.unarchive())
+
+        # Test that is correctly placed
+        project = o.t_api.projects.get_by_id(o.t_pid)
+        self.assertEqual(project['parent_id'], int(config('APP_ID')))
+
+        # Finally, destroy the project in todoist
+        project.delete()
+        o.t_api.commit()
+
 
 
 class TestObjectItems(TestCase):
