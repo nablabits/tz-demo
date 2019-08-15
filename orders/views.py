@@ -16,7 +16,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.generic import ListView
 from rest_framework import viewsets
 
 from . import serializers, settings
@@ -897,6 +899,28 @@ def pqueue_tablet(request):
                                '(vista tablet)'),
                      }
     return render(request, 'tz/pqueue_tablet.html', view_settings)
+
+
+# Generic views
+class TimetableList(ListView):
+    model = Timetable
+    template_name = 'tz/timetable_list.html'
+    context_object_name = 'timetables'
+
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def get_queryset(self):
+        """Customize the list of times by showing only user's ones."""
+        query = Timetable.objects.filter(user=self.request.user)
+        return query.order_by('-start')[:10]
+
+    def get_context_data(self, **kwargs):
+        """Add some extra variables to make the view consistent with base."""
+        context = super().get_context_data(**kwargs)
+        context['session'] = self.get_queryset()[0]
+        return context
 
 
 # Ajax powered views

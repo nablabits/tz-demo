@@ -43,6 +43,9 @@ urlpatterns = [
     re_path(r'^customer_view/(?P<pk>[0-9]+)$',
             views.customer_view, name='customer_view'),
 
+    # Generic views
+    path('timetables/', views.TimetableList.as_view(), name='timetables'),
+
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),
     path('orders-CRUD/', views.OrdersCRUD.as_view(), name='orders-CRUD'),
