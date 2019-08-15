@@ -150,10 +150,11 @@ class ReadOnlyTests(APITestCase):
 
     def test_timetable_api(self):
         """Test the correct content for timetable API."""
-        Timetable.objects.create(user=User.objects.first())
+        user = User.objects.first()
+        Timetable.objects.create(user=user)
         resp = self.client.get(reverse('timetable-list'))
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.data[0]['user'], 1)
+        self.assertEqual(resp.data[0]['user'], user.pk)
 
         # Finally ensure that all the fields are included
         for field in ('user', 'start', 'end', 'hours', ):

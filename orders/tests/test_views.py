@@ -764,7 +764,7 @@ class MainViewTests(TestCase):
             Invoice.objects.create(reference=order)
 
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['se_diff'], -270)
+        self.assertEqual(resp.context['se_diff'], 300)
 
     def test_active_count_box(self):
         """Test the active box."""
