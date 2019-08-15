@@ -16,7 +16,9 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.generic import ListView
 from rest_framework import viewsets
 
 from . import serializers, settings
@@ -184,7 +186,7 @@ def main(request):
     if not expenses['total']:
         expenses['total'] = 0
     exp_perc = round(float(expenses['total']) * 100 / (2 * goal), 2)
-    se_diff = round(aggregates[0] - float(expenses['total']), 2)
+    se_diff = expenses['total']
 
     # Active Box
     active = Order.active.count()
@@ -685,34 +687,58 @@ def order_view(request, pk):
     """Show all details for an specific order."""
     order = get_object_or_404(Order, pk=pk)
 
+    # Redirect to express order
     if order.customer.name == 'express':
         return redirect(reverse('order_express', args=[order.pk]))
 
+    # Now, process the POST methods
+    errors = list()
+    if request.method == 'POST':
+        action = request.POST.get('action', None)
+        if action == 'add-project':
+            if not order.create_todoist():
+                errors.append('Couldn\'t create project on todoist, did it ' +
+                              'already exist?')
+        elif action == 'archive-project':
+            if not order.archive():
+                errors.append('Couldn\'t archive project, maybe it was ' +
+                              'already archived or just didn\'t exist')
+        elif action == 'unarchive-project':
+            if not order.unarchive():
+                errors.append('Couldn\'t unarchive project, maybe it was ' +
+                              'already unarchived or just didn\'t exist')
+        elif action == 'deliver-order':
+            order.deliver()
+        else:
+            return HttpResponseServerError('Action was not recognized')
+
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
-
-    if order.status == '7' and order.budget == order.prepaid:
-        closed = True
-    else:
-        closed = False
 
     cur_user = request.user
     now = datetime.now()
     session = Timetable.active.get(user=request.user)
 
+    # Todoist integration
+    tasks = order.tasks()
+    archived = order.is_archived()
+
     title = (order.pk, order.customer.name, order.ref_name)
     view_settings = {'order': order,
                      'items': items,
                      'comments': comments,
-                     'closed': closed,
                      'user': cur_user,
                      'now': now,
                      'session': session,
+                     'errors': errors,
+                     'tasks': tasks,
+                     'archived': archived,
+                     'project_id': order.t_pid,
                      'version': settings.VERSION,
                      'title': 'Pedido %s: %s, %s' % title,
 
                      # CRUD Actions
-                     'btn_title_add': 'Añadir prenda',
+                     'btn_title_add': 'Añadir prendas',
                      'js_action_add': 'order-item-add',
                      'js_action_edit': 'order-item-edit',
                      'js_action_delete': 'order-item-delete',
@@ -873,6 +899,28 @@ def pqueue_tablet(request):
                                '(vista tablet)'),
                      }
     return render(request, 'tz/pqueue_tablet.html', view_settings)
+
+
+# Generic views
+class TimetableList(ListView):
+    model = Timetable
+    template_name = 'tz/timetable_list.html'
+    context_object_name = 'timetables'
+
+    @method_decorator(login_required)
+    def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
+
+    def get_queryset(self):
+        """Customize the list of times by showing only user's ones."""
+        query = Timetable.objects.filter(user=self.request.user)
+        return query.order_by('-start')[:10]
+
+    def get_context_data(self, **kwargs):
+        """Add some extra variables to make the view consistent with base."""
+        context = super().get_context_data(**kwargs)
+        context['session'] = self.get_queryset()[0]
+        return context
 
 
 # Ajax powered views
@@ -1395,7 +1443,7 @@ class Actions(View):
             # Context for the view
             items = OrderItem.objects.filter(reference=order)
             data['form_is_valid'] = True
-            data['html_id'] = '#orderitems-list'
+            data['html_id'] = '#quick-list'
             context = {'items': items,
                        'order': order,
 
@@ -1404,7 +1452,7 @@ class Actions(View):
                        'js_action_delete': 'order-item-delete',
                        'js_data_pk': order.pk,
                        }
-            template = 'includes/orderitems_list.html'
+            template = 'includes/item_quick_list.html'
 
         # Send item to order express (POST)
         elif action == 'send-to-order-express':
@@ -1664,10 +1712,10 @@ class Actions(View):
                            'js_action_delete': 'order-item-delete',
                            'js_data_pk': order.pk,
                            }
-                template = 'includes/orderitems_list.html'
+                template = 'includes/item_quick_list.html'
                 form.save()
                 data['form_is_valid'] = True
-                data['html_id'] = '#orderitems-list'
+                data['html_id'] = '#quick-list'
             else:
                 custom_form = 'includes/custom_forms/order_item.html'
                 context = {'form': form,
@@ -1772,7 +1820,7 @@ class Actions(View):
             items = OrderItem.objects.filter(reference=order)
             item.delete()
             data['form_is_valid'] = True
-            data['html_id'] = '#orderitems-list'
+            data['html_id'] = '#quick-list'
             context = {'items': items,
                        'order': order,
                        'btn_title_add': 'Añadir prenda',
@@ -1781,7 +1829,7 @@ class Actions(View):
                        'js_action_delete': 'order-item-delete',
                        'js_data_pk': order.pk,
                        }
-            template = 'includes/orderitems_list.html'
+            template = 'includes/item_quick_list.html'
 
         # Delete order express (POST)
         elif action == 'order-express-delete':
@@ -2232,6 +2280,12 @@ class BankMovementAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for bank movements."""
     queryset = BankMovement.objects.all()
     serializer_class = serializers.BankMovementSerializer
+
+
+class TimetableAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for timetabñes."""
+    queryset = Timetable.objects.all()
+    serializer_class = serializers.TimetableSerializer
 #
 #
 #

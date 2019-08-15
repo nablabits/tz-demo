@@ -7,9 +7,9 @@
   <head>
     <title>{{title}}</title>
     <link rel="stylesheet" href="{% static 'tz/css/bootstrap.min.css' %}">
-    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.6.3/css/all.css" integrity="sha384-LRlmVvLKVApDVGuspQFnRQJjkv0P7/YFrw84YYQtmYG4nK8c+M+NlmYDCv0rKWpG" crossorigin="anonymous">
     <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Oswald" rel="stylesheet">
+    <script src="https://kit.fontawesome.com/fc33d72d9c.js"></script>
     <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
   </head>
   <body id="root">
@@ -74,6 +74,7 @@
       {% block listview %}{% endblock %}
       {% block invoices %}{% endblock %}
       {% block pqueuetablet %}{% endblock %}
+      {% block timetable_list %}{% endblock %}
     </div>
 
     <!-- Action Modal -->
@@ -105,13 +106,18 @@
 
       <footer class="bg-light fixed-bottom py-2 px-2 border-top border-secondary">
         <span class="px-3">
-          <i class="far fa-user pr-2"></i>Usuaria: {{user.username}}
+          <i class="far fa-user pr-2"></i>Kaixo {{user.username}}!
         </span>
         <span class="px-3">
           <i class="far fa-chess-clock pr-2"></i>Inicio:
             {% language 'es' %}
             {{session.start | naturaltime}}&nbsp;&nbsp;( {{session.start | time}}h )
             {% endlanguage %}
+        </span>
+        <span class="px-3">
+          <a href="{% url 'timetables' %}">
+          <i class="far fa-eye pr-2"></i> Ver mis tiempos
+          </a>
         </span>
 
 

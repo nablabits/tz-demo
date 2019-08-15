@@ -1,19 +1,26 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v78
+  * **Nuevo:** Nueva vista detallada de pedido con integración con todoist.
+  * **Nuevo:** Nueva vista con los últimos horarios registrados.
+  * **Mejora:** La barra de gastos ahora muestra la cantidad gastada en lugar de
+    la diferencia.
+  * **Nuevo:** Nuevo API endpoint para los horarios.
+
 ### v77, Jun 11
-  **Nuevo:** Barra de *status* para comprobar la hora de inicio de sesión.
-  **Mejora:** Algunos mensajes se han traducido al español.
-  **Bug:** ahora la hora de cierre se muestra correctamente.
+  * **Nuevo:** Barra de *status* para comprobar la hora de inicio de sesión.
+  * **Mejora:** Algunos mensajes se han traducido al español.
+  * **Bug:** ahora la hora de cierre se muestra correctamente.
 
 ### v76, Jun 3
-  **Nuevo:** ahora se puede hacer *logout* desde la cola de produccion en la tablet.
-  **Bug:** ya no pueden añadir por error horas por debajo de 15 minutos.
+  * **Nuevo:** ahora se puede hacer *logout* desde la cola de produccion en la tablet.
+  *  **Bug:** ya no pueden añadir por error horas por debajo de 15 minutos.
 
 ### v75, May27
-  **Nuevo:** *frontend* para apuntar las horas diarias.
+  * **Nuevo:** *frontend* para apuntar las horas diarias.
 
 ### v74, May 17
-  **Nuevo:** nuevo modelo para registrar las horas laborales.
+  * **Nuevo:** nuevo modelo para registrar las horas laborales.
 
 ### v73, May 11
   * **Nuevo:** ahora se pueden añadir comentarios exprés desde la vista kanban.

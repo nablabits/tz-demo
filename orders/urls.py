@@ -17,6 +17,7 @@ router.register(r'order_item', views.OrderItemAPIList)
 router.register(r'invoice', views.InvoiceAPIList)
 router.register(r'expense', views.ExpenseAPIList)
 router.register(r'bank_movement', views.BankMovementAPIList)
+router.register(r'timetable', views.TimetableAPIList)
 
 urlpatterns = [
     # The root url
@@ -41,6 +42,9 @@ urlpatterns = [
             views.order_express_view, name='order_express'),
     re_path(r'^customer_view/(?P<pk>[0-9]+)$',
             views.customer_view, name='customer_view'),
+
+    # Generic views
+    path('timetables/', views.TimetableList.as_view(), name='timetables'),
 
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),

@@ -1,0 +1,44 @@
+{%extends 'tz/base.html'%}
+{%block timetable_list%}
+{% load humanize %}
+{% load i18n %}
+{% language 'es' %}
+<div class="container">
+  <h2>Kaixo {{timetables.0.user.username}}!</h2>
+  <p>Éstos son los últimos 10 tiempos que has registrado.</p>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th scope="col"><i class="far fa-calendar-alt pr-1"></i><strong>Dia</strong></th>
+        <th scope="col"><i class="far fa-stopwatch pr-1"></i><strong>Comienzo</strong></th>
+        <th scope="col"><i class="far fa-chess-clock-alt pr-1"></i><strong>Cierre</strong></th>
+        <th scope="col"><i class="fad fa-hourglass-end pr-1"></i><strong>Horas</strong></th>
+      </tr>
+    </thead>
+    <tbody>
+      {%for timetable in timetables%}
+      <tr>
+        <td scope="row">{{timetable.start|date:'D, d-m'}}</td>
+        <td>{{timetable.start|date:'P'}}</td>
+        <td>
+          {% if timetable.end %}
+          {{timetable.end|date:'P'}}
+          {%if timetable.start|date:'d' != timetable.end|date:'d'%}
+          <strong>(+1 día)</strong>
+          {%endif%}
+          {% else %}
+          <i class="fal fa-cog fa-spin mr-1"></i>En progreso...
+          {% endif %}
+        </td>
+        <td>
+          {% if timetable.hours %}
+            {{timetable.hours}}
+          {% endif %}
+        </td>
+      </tr>
+      {%endfor%}
+    </tbody>
+  </table>
+</div>
+{%endlanguage%}
+{%endblock%}
