@@ -63,16 +63,15 @@
         <p class="text-danger">{{error}}</p>
       {%endfor%}
     {%endif%}
-
     <!-- Tab selector -->
     <ul class="nav nav-tabs" id="myTab" role="tablist">
       <li class="nav-item">
-        <a class="nav-link" id="main-tab" data-toggle="tab" href="#main" role="tab" aria-controls="main" aria-selected="true">
+        <a class="nav-link {% if tab == 'main' %}active{% endif %}" id="main-tab" data-toggle="tab" href="#main" role="tab" aria-controls="main" aria-selected="true">
           <i class="fal fa-info-circle pr-2"></i>Principal
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link active" id="items-tab" data-toggle="tab" href="#items" role="tab" aria-controls="items" aria-selected="false">
+        <a class="nav-link {% if tab == 'items' %}active{% endif %}" id="items-tab" data-toggle="tab" href="#items" role="tab" aria-controls="items" aria-selected="false">
           <i class="fal fa-tshirt pr-2"></i>Prendas
           <span class="badge badge-primary ml-1">{{items.count}}</span>
         </a>
@@ -84,7 +83,7 @@
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" id="tasks-tab" data-toggle="tab" href="#tasks" role="tab" aria-controls="tasks" aria-selected="false">
+        <a class="nav-link {% if tab == 'tasks' %}active{% endif %}" id="tasks-tab" data-toggle="tab" href="#tasks" role="tab" aria-controls="tasks" aria-selected="false">
           <i class="fal fa-tasks pr-2"></i>Tareas
           <span class="badge badge-primary ml-1">{{order.tasks|length}}</span>
         </a>
@@ -94,7 +93,7 @@
     <!-- Tab content -->
     <div class="tab-content" id="TabContent">
 
-      <div class="tab-pane fade" id="main" role="tabpanel" aria-labelledby="main-tab">
+      <div class="tab-pane fade {% if tab == 'main' %}show active{% endif %}" id="main" role="tabpanel" aria-labelledby="main-tab">
         <div class="row mt-3">
           <div class="col-lg-4 col-md-6">
             <div class="card" id="main-card">
@@ -189,7 +188,7 @@
         </div>
       </div>
 
-      <div class="tab-pane fade show active" id="items" role="tabpanel" aria-labelledby="items-tab">
+      <div class="tab-pane fade {% if tab == 'items' %}show active{% endif %}" id="items" role="tabpanel" aria-labelledby="items-tab">
         <div class="my-3">
           <!-- Item Selector -->
           <div class="collapse" id="item-selector-wrapper">
@@ -241,7 +240,7 @@
         </div>
       </div>
 
-      <div class="tab-pane mb-2 pl-4 fade" id="tasks" role="tabpanel" aria-labelledby="tasks-tab">
+      <div class="tab-pane mb-2 pl-4 fade {% if tab == 'tasks' %}show active{% endif %}" id="tasks" role="tabpanel" aria-labelledby="tasks-tab">
         {%if project_id%}
           <div class="row">
             <div class="col-lg-4">
@@ -267,10 +266,11 @@
                   </ul>
                 {%else%}
                   <div class="alert alert-info mt-4" role="alert">
-                    <i class="fa fa-info-circle mr-2"></i>
-                    <strong>Oopps! </strong>
-                    Este pedido está creado en todoist pero parece que no tiene tareas aun.<br>
-                    <small>Si has creado alguna tarea recientemente y no aparece aquí, prueba a recargar la página (F5)</small>
+                    <h5 style="color: rgb(12, 84, 96);">
+                      <i class="fa fa-info-circle mr-2"></i>
+                      <strong>Oopps! </strong>Este pedido está creado en todoist pero parece que no tiene tareas aun.
+                    </h5>
+                    <p>Si has creado alguna tarea recientemente y no aparece aquí, haz clik en actualizar</p>
                   </div>
                 {%endif%}
               {%endif%}
@@ -297,6 +297,11 @@
                     </button>
                   </form>
                 {%endif%}
+                <a href="{% url 'order_view' pk=order.pk %}?tab=tasks">
+                  <button type="button" class="btn btn-outline-info mr-2">
+                    <i class="far fa-sync pr-1"></i> Actualizar
+                  </button>
+                </a>
               </div>
             </div>
           </div>
