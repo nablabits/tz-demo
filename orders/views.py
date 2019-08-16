@@ -691,6 +691,12 @@ def order_view(request, pk):
     if order.customer.name == 'express':
         return redirect(reverse('order_express', args=[order.pk]))
 
+    tab = request.GET.get('tab', None)
+    if not tab:
+        tab = 'items'  # active tab to show on reload, default
+    if tab not in ('main', 'tasks', 'items'):
+        return HttpResponseServerError('Tab not valid')
+
     # Now, process the POST methods
     errors = list()
     if request.method == 'POST':
@@ -699,18 +705,25 @@ def order_view(request, pk):
             if not order.create_todoist():
                 errors.append('Couldn\'t create project on todoist, did it ' +
                               'already exist?')
+            tab = 'tasks'
         elif action == 'archive-project':
             if not order.archive():
                 errors.append('Couldn\'t archive project, maybe it was ' +
                               'already archived or just didn\'t exist')
+            tab = 'tasks'
         elif action == 'unarchive-project':
             if not order.unarchive():
                 errors.append('Couldn\'t unarchive project, maybe it was ' +
                               'already unarchived or just didn\'t exist')
+            tab = 'tasks'
         elif action == 'deliver-order':
             order.deliver()
+            tab = 'main'
         else:
             return HttpResponseServerError('Action was not recognized')
+
+    # updated version of the order after POST method (if any)
+    order = get_object_or_404(Order, pk=pk)
 
     comments = Comment.objects.filter(reference=order).order_by('-creation')
     items = OrderItem.objects.filter(reference=order)
@@ -730,6 +743,7 @@ def order_view(request, pk):
                      'user': cur_user,
                      'now': now,
                      'session': session,
+                     'tab': tab,
                      'errors': errors,
                      'tasks': tasks,
                      'archived': archived,

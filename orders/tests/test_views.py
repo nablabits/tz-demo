@@ -3373,6 +3373,19 @@ class OrderViewTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, url)
 
+    def test_no_tab_get_arg_sets_items_as_default(self):
+        order = Order.objects.first()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertEqual(resp.context['tab'], 'items')
+
+    def test_tab_void_arg_raises_error(self):
+        order = Order.objects.first()
+        url = reverse('order_view', args=[order.pk]) + '?tab=void'
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'Tab not valid')
+
     def test_errors_is_default_false(self):
         order = Order.objects.first()
         resp = self.client.get(reverse('order_view', args=[order.pk]))
@@ -3386,6 +3399,7 @@ class OrderViewTests(TestCase):
         self.assertTrue(order.t_api)
         self.assertTrue(order.t_pid)
         self.assertFalse(resp.context['errors'])
+        self.assertEqual(resp.context['tab'], 'tasks')
 
         resp = self.client.post(reverse('order_view', args=[order.pk]),
                                 {'action': 'add-project', })
@@ -3412,6 +3426,7 @@ class OrderViewTests(TestCase):
         order.t_sync()
         self.assertTrue(order.is_archived())
         self.assertFalse(resp.context['errors'])
+        self.assertEqual(resp.context['tab'], 'tasks')
 
         resp = self.client.post(reverse('order_view', args=[order.pk]),
                                 {'action': 'archive-project', })
@@ -3445,6 +3460,7 @@ class OrderViewTests(TestCase):
         resp = self.client.post(reverse('order_view', args=[order.pk]),
                                 {'action': 'unarchive-project', })
         self.assertFalse(resp.context['errors'])
+        self.assertEqual(resp.context['tab'], 'tasks')
         order.t_sync()
         self.assertFalse(order.is_archived())
 
@@ -3456,11 +3472,12 @@ class OrderViewTests(TestCase):
         order = Order.objects.first()
         order.delivery = date.today() + timedelta(days=5)
         order.save()
-        self.client.post(reverse('order_view', args=[order.pk]),
-                         {'action': 'deliver-order', })
+        resp = self.client.post(reverse('order_view', args=[order.pk]),
+                                {'action': 'deliver-order', })
         order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '7')
         self.assertEqual(order.delivery, date.today())
+        self.assertEqual(resp.context['tab'], 'main')
 
     def test_post_invalid_action_raises_500(self):
         """A valid action is required."""
