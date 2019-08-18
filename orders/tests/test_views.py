@@ -387,6 +387,13 @@ class NotLoggedInTest(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
 
+    def test_not_logged_in_on_timetable_list(self):
+        """Test not logged in users should be redirected to login."""
+        login_url = '/accounts/login/?next=/timetables/'
+        resp = self.client.get(reverse('timetables'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+
 
 class MainViewTests(TestCase):
     """Test the homepage."""
@@ -3294,6 +3301,65 @@ class PQueueActionsTests(TestCase):
         self.assertEqual(data['error'], 'Couldn\'t clean the object')
         self.assertEqual(PQueue.objects.all().count(), 3)
         self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+
+
+class TimetableListTests(TestCase):
+    """Test the generic view for timetables."""
+
+    def setUp(self):
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        Timetable.objects.create(user=user, hours=timedelta(seconds=3600))
+
+        self.client.login(username='regular', password='test')
+
+    def test_template(self):
+        resp = self.client.get(reverse('timetables'))
+        self.assertTemplateUsed(resp, 'tz/timetable_list.html')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_context_main_var(self):
+        resp = self.client.get(reverse('timetables'))
+        self.assertTrue(resp.context['timetables'])
+
+    def test_view_only_shows_current_user_timetables(self):
+        user2 = User.objects.create_user(username='alt', password='test')
+        user2.save()
+        Timetable.objects.create(user=user2, hours=timedelta(seconds=3000))
+
+        self.assertEqual(Timetable.objects.count(), 2)
+        resp = self.client.get(reverse('timetables'))
+        self.assertEqual(len(resp.context['timetables']), 1)
+        self.assertEqual(
+            resp.context['timetables'][0].user.username, 'regular')
+
+    def test_view_only_shows_last_10_entries_descending_ordered(self):
+        start = timezone.now() - timedelta(days=15)
+        for _ in range(12):
+            Timetable.objects.create(
+                user=User.objects.first(),
+                start=start,
+                hours=timedelta(seconds=3600))
+            start += timedelta(days=1)
+        resp = self.client.get(reverse('timetables'))
+
+        timetables = resp.context['timetables']
+        self.assertTrue(len(timetables), 10)
+
+        for n, t in enumerate(timetables[:9]):
+            self.assertTrue(t.start > timetables[n + 1].start)
+
+    def test_session_var_is_last_timetable(self):
+        start = timezone.now() - timedelta(days=15)
+        for _ in range(5):
+            Timetable.objects.create(
+                user=User.objects.first(),
+                start=start,
+                hours=timedelta(seconds=3600))
+            start += timedelta(days=1)
+        resp = self.client.get(reverse('timetables'))
+        self.assertEqual(resp.context['session'], Timetable.objects.last())
 
 
 @tag('todoist')
