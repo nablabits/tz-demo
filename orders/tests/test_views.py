@@ -6594,6 +6594,128 @@ class OrdersCRUDTests(TestCase):
             resp.content.decode("utf-8"), 'The action was not found.')
 
 
+class OrderItemsCRUDTests(TestCase):
+    """Test the AJAX methods."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        u = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        Timetable.objects.create(user=u)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+        # Load client
+        self.client = Client()
+
+        # Log the user in
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+    def test_data_should_be_a_dict(self):
+        """Data for AJAX request should be a dict."""
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'edit-times',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_no_pk_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'action': 'edit-times', })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No pk was given.')
+
+    def test_no_action_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk, })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No action was given.')
+
+    def test_unknown_action_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'void',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'The action was not found.')
+
+    def test_void_item_retunrs_404(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': int(1e5),  # big enough
+                                 'action': 'edit-times',
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_form_is_edit_times_form(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'edit-times',
+                                 'test': True,
+                                 })
+        self.assertIsInstance(resp.context['form'], ItemTimesForm)
+
+    def test_edit_times_actually_edits_times(self):
+        item = OrderItem.objects.first()
+        self.assertEqual(item.crop, timedelta(0))
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': item.pk,
+                                 'action': 'edit-times',
+                                 'crop': timedelta(minutes=5),
+                                 'sewing': item.sewing,
+                                 'iron': item.iron,
+                                 'test': True,
+                                 })
+        item = OrderItem.objects.first()  # reload item
+        self.assertEqual(item.crop, timedelta(minutes=5))
+
+        # Now test the data var returned to AJAX
+        self.assertTrue(resp.context['data']['form_is_valid'])
+        self.assertEqual(resp.context['data']['html_id'], '#orderitems-list')
+        self.assertTemplateUsed(resp, 'includes/orderitems_list.html')
+
+    def test_edit_times_failed(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'edit-times',
+                                 'crop': timedelta(minutes=5),
+                                 'sewing': timedelta(minutes=5),
+                                 'iron': 'void',
+                                 'test': True,
+                                 })
+        error = dict(iron=['Enter a valid duration.', ])
+        self.assertFalse(resp.context['data']['form_is_valid'])
+        self.assertEqual(resp.context['data']['error'], error)
+
+    def test_view_returns_a_JSON_reponse(self):
+        item = OrderItem.objects.first()
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': item.pk,
+                                 'action': 'edit-times',
+                                 'crop': timedelta(minutes=5),
+                                 'sewing': item.sewing,
+                                 'iron': item.iron,
+                                 })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+
+
 class CommentsCRUD(TestCase):
     """Test the AJAX methods."""
 
