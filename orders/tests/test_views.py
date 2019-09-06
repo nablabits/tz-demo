@@ -8,7 +8,7 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404
 from django.test import Client, TestCase, tag
 from django.urls import reverse
 from django.utils import timezone
@@ -16,6 +16,7 @@ from django.utils import timezone
 from orders import settings
 from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
                            Item, Order, OrderItem, PQueue, Timetable)
+from orders.forms import ItemTimesForm
 from orders.views import CommonContexts
 
 
@@ -234,6 +235,108 @@ class CommonContextKanbanTests(TestCase):
         """Test the type of update date key."""
         self.assertIsInstance(
             CommonContexts.kanban()['update_date'], forms.ModelForm)
+
+
+class CommonContextOrderDetails(TestCase):
+    """Test the common vars for both AJAX and regular views.
+
+    Since they require a request object, we'll test through order view.
+    """
+
+    class Request:
+        """Create a dummy request to test the method."""
+        user = User.objects.first()
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        u = User.objects.create_user(
+            username='test user', is_staff=True, is_superuser=True,)
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        # Create a timetable so view doesn't throw an error
+        Timetable.objects.create(user=u)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+
+    def test_request_is_required(self):
+        msg = ('order_details() missing 1 required positional argument:' +
+               ' \'request\'')
+        with self.assertRaisesMessage(TypeError, msg):
+            CommonContexts.order_details(pk=1)
+
+    def test_pk_is_required(self):
+        msg = ('order_details() missing 1 required positional argument:' +
+               ' \'pk\'')
+        with self.assertRaisesMessage(TypeError, msg):
+            CommonContexts.order_details(request='dummy')
+
+    def test_void_pk_raises_404(self):
+        with self.assertRaises(Http404):
+            CommonContexts.order_details(request='dummy', pk=4e4)
+
+    def test_comments(self):
+        request = self.Request()
+        order = Order.objects.first()
+        Comment.objects.create(
+            user=request.user, reference=order, comment='test')
+        context = CommonContexts.order_details(request, order.pk)
+        self.assertEqual(context['comments'][0].comment, 'test')
+
+    def test_items(self):
+        request = self.Request()
+        order = Order.objects.first()
+        context = CommonContexts.order_details(request, order.pk)
+        self.assertEqual(context['items'].count(), 1)
+
+    def test_user(self):
+        request = self.Request()
+        order = Order.objects.first()
+        context = CommonContexts.order_details(request, order.pk)
+        self.assertEqual(context['user'].username, request.user.username)
+
+    def test_session(self):
+        request = self.Request()
+        order = Order.objects.first()
+        context = CommonContexts.order_details(request, order.pk)
+        self.assertIsInstance(context['session'], Timetable)
+        self.assertEqual(context['session'].user, request.user)
+
+    def test_title(self):
+        request = self.Request()
+        order = Order.objects.first()
+        context = CommonContexts.order_details(request, order.pk)
+        self.assertEqual(
+            context['title'],
+            f'Pedido {order.pk}: Customer Test, {order.ref_name}')
+
+    def test_item_times_form(self):
+        request = self.Request()
+        order = Order.objects.first()
+        context = CommonContexts.order_details(request, order.pk)
+        self.assertIsInstance(context['update_times'], ItemTimesForm)
+
+    def test_static_vars(self):
+        request = self.Request()
+        order = Order.objects.first()
+        context = CommonContexts.order_details(request, order.pk)
+        self.assertEqual(context['version'], settings.VERSION)
+        self.assertEqual(context['btn_title_add'], 'Añadir prendas')
+        self.assertEqual(context['js_action_add'], 'order-item-add')
+        self.assertEqual(context['js_action_edit'], 'order-item-edit')
+        self.assertEqual(context['js_action_delete'], 'order-item-delete')
+        self.assertEqual(context['js_data_pk'], order.pk)
 
 
 class AddHoursTests(TestCase):
@@ -3555,7 +3658,10 @@ class OrderViewTests(TestCase):
             resp.content.decode("utf-8"), 'Action was not recognized')
 
     def test_show_comments(self):
-        """Display the correct comments."""
+        """Display the correct comments.
+
+        Performed by CommonContexts, but left here anyway.
+        """
         order = Order.objects.first()
         user = User.objects.first()
         for i in range(3):
@@ -3568,7 +3674,10 @@ class OrderViewTests(TestCase):
             resp.context['comments'][1].creation)
 
     def test_show_items(self):
-        """Display the correct items."""
+        """Display the correct items.
+
+        Performed by CommonContexts, but left here anyway.
+        """
         order = Order.objects.first()
         item = Item.objects.create(name='Test', fabrics=5)
         for i in range(3):
@@ -3577,7 +3686,10 @@ class OrderViewTests(TestCase):
         self.assertEqual(resp.context['items'].count(), 3)
 
     def test_context_variables(self):
-        """Test the remaining variables."""
+        """Test the remaining variables.
+
+        Some of them performed by common contexts, but left here anyway.
+        """
         order = Order.objects.first()
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEqual(resp.context['user'].username, order.user.username)
@@ -6480,6 +6592,128 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(resp.status_code, 500)
         self.assertEqual(
             resp.content.decode("utf-8"), 'The action was not found.')
+
+
+class OrderItemsCRUDTests(TestCase):
+    """Test the AJAX methods."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        u = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        Timetable.objects.create(user=u)
+
+        # Create some orders with items
+        for n in range(5):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='test%s' % n,
+                delivery=date.today(), )
+            OrderItem.objects.create(reference=o, element=i, qty=n)
+        # Load client
+        self.client = Client()
+
+        # Log the user in
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+    def test_data_should_be_a_dict(self):
+        """Data for AJAX request should be a dict."""
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'edit-times',
+                                 })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_no_pk_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'action': 'edit-times', })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No pk was given.')
+
+    def test_no_action_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk, })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No action was given.')
+
+    def test_unknown_action_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'void',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'The action was not found.')
+
+    def test_void_item_retunrs_404(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': int(1e5),  # big enough
+                                 'action': 'edit-times',
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_form_is_edit_times_form(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'edit-times',
+                                 'test': True,
+                                 })
+        self.assertIsInstance(resp.context['form'], ItemTimesForm)
+
+    def test_edit_times_actually_edits_times(self):
+        item = OrderItem.objects.first()
+        self.assertEqual(item.crop, timedelta(0))
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': item.pk,
+                                 'action': 'edit-times',
+                                 'crop': timedelta(minutes=5),
+                                 'sewing': item.sewing,
+                                 'iron': item.iron,
+                                 'test': True,
+                                 })
+        item = OrderItem.objects.first()  # reload item
+        self.assertEqual(item.crop, timedelta(minutes=5))
+
+        # Now test the data var returned to AJAX
+        self.assertTrue(resp.context['data']['form_is_valid'])
+        self.assertEqual(resp.context['data']['html_id'], '#orderitems-list')
+        self.assertTemplateUsed(resp, 'includes/orderitems_list.html')
+
+    def test_edit_times_failed(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'edit-times',
+                                 'crop': timedelta(minutes=5),
+                                 'sewing': timedelta(minutes=5),
+                                 'iron': 'void',
+                                 'test': True,
+                                 })
+        error = dict(iron=['Enter a valid duration.', ])
+        self.assertFalse(resp.context['data']['form_is_valid'])
+        self.assertEqual(resp.context['data']['error'], error)
+
+    def test_view_returns_a_JSON_reponse(self):
+        item = OrderItem.objects.first()
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': item.pk,
+                                 'action': 'edit-times',
+                                 'crop': timedelta(minutes=5),
+                                 'sewing': item.sewing,
+                                 'iron': item.iron,
+                                 })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
 
 
 class CommentsCRUD(TestCase):

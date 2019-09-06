@@ -24,7 +24,7 @@ from rest_framework import viewsets
 from . import serializers, settings
 from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
                     InvoiceForm, ItemForm, OrderForm, OrderItemForm,
-                    TimetableCloseForm, )
+                    TimetableCloseForm, ItemTimesForm, )
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
@@ -69,6 +69,39 @@ class CommonContexts:
                 'done': done,
                 'update_date': EditDateForm(),
                 'amounts': amounts
+                }
+        return vars
+
+    @staticmethod
+    def order_details(request, pk):
+        """Get a dict with all the reused vars in the view."""
+        order = get_object_or_404(Order, pk=pk)  # pragma: no cover
+
+        comments = Comment.objects.filter(
+            reference=order).order_by('-creation')
+        items = OrderItem.objects.filter(reference=order)
+
+        cur_user = request.user
+        now = datetime.now()
+        session = Timetable.active.get(user=request.user)
+
+        title = (order.pk, order.customer.name, order.ref_name)
+        vars = {'order': order,
+                'items': items,
+                'update_times': ItemTimesForm(),
+                'comments': comments,
+                'user': cur_user,
+                'now': now,
+                'session': session,
+                'version': settings.VERSION,
+                'title': 'Pedido %s: %s, %s' % title,
+
+                # CRUD Actions
+                'btn_title_add': 'Añadir prendas',
+                'js_action_add': 'order-item-add',
+                'js_action_edit': 'order-item-edit',
+                'js_action_delete': 'order-item-delete',
+                'js_data_pk': order.pk,
                 }
         return vars
 
@@ -722,42 +755,19 @@ def order_view(request, pk):
         else:
             return HttpResponseServerError('Action was not recognized')
 
-    # updated version of the order after POST method (if any)
     order = get_object_or_404(Order, pk=pk)
 
-    comments = Comment.objects.filter(reference=order).order_by('-creation')
-    items = OrderItem.objects.filter(reference=order)
-
-    cur_user = request.user
-    now = datetime.now()
-    session = Timetable.active.get(user=request.user)
-
-    # Todoist integration
+    # Todoist integration, out from the common elements for performance.
     tasks = order.tasks()
     archived = order.is_archived()
 
-    title = (order.pk, order.customer.name, order.ref_name)
-    view_settings = {'order': order,
-                     'items': items,
-                     'comments': comments,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'tab': tab,
-                     'errors': errors,
-                     'tasks': tasks,
-                     'archived': archived,
-                     'project_id': order.t_pid,
-                     'version': settings.VERSION,
-                     'title': 'Pedido %s: %s, %s' % title,
-
-                     # CRUD Actions
-                     'btn_title_add': 'Añadir prendas',
-                     'js_action_add': 'order-item-add',
-                     'js_action_edit': 'order-item-edit',
-                     'js_action_delete': 'order-item-delete',
-                     'js_data_pk': order.pk,
-                     }
+    common_vars = CommonContexts.order_details(request=request, pk=pk)
+    curr_vars = {'tab': tab,
+                 'errors': errors,
+                 'tasks': tasks,
+                 'project_id': order.t_pid,
+                 'archived': archived, }
+    view_settings = {**common_vars, **curr_vars}
 
     return render(request, 'tz/order_view.html', view_settings)
 
@@ -1933,14 +1943,9 @@ class OrdersCRUD(View):
             if form.is_valid():
                 form.save()
                 data['form_is_valid'] = True
-                template = 'includes/kanban_columns.html'
-                data['html_id'] = '#kanban-columns'
             else:
                 data['form_is_valid'] = False
                 data['error'] = form.errors
-
-            template = 'includes/kanban_columns.html'
-            context = CommonContexts.kanban()
 
         # Kanban Jump (POST)
         elif action == 'kanban-jump':
@@ -1954,20 +1959,14 @@ class OrdersCRUD(View):
                 order.kanban_forward()
             else:
                 return HttpResponseServerError('Unknown direction.')
-            context = CommonContexts.kanban()
-            template = 'includes/kanban_columns.html'
-            data['html_id'] = '#kanban-columns'
             data['form_is_valid'] = True
 
         else:
             return HttpResponseServerError('The action was not found.')
 
-        if not template:   # pragma: no cover
-            return HttpResponseServerError('No template was especified.')
-
-        if not context:   # pragma: no cover
-            return HttpResponseServerError('No context variables found.')
-
+        template = 'includes/kanban_columns.html'
+        data['html_id'] = '#kanban-columns'
+        context = CommonContexts.kanban()
         data['html'] = render_to_string(template, context, request=request)
 
         # When testing, display as a regular view in order to test variables
@@ -1978,8 +1977,61 @@ class OrdersCRUD(View):
             return JsonResponse(data)
 
 
+class OrderItemsCRUD(View):
+    """Process all the CRUD actions on comment model.
+
+    This is the new version for AJAX calls since Actions class became really
+    huge to be clear. Eventually each model will have their CRUD AJAX Actions
+    to work with.
+    """
+
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        data = dict()
+        pk = self.request.POST.get('pk', None)
+        action = self.request.POST.get('action', None)
+        test = self.request.POST.get('test', None)
+        template, context = False, False
+
+        if not pk:
+            return HttpResponseServerError('No pk was given.')
+
+        if not action:
+            return HttpResponseServerError('No action was given.')
+
+        if action == 'edit-times':
+            item = get_object_or_404(OrderItem, pk=pk)
+            form = ItemTimesForm(request.POST, instance=item)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#orderitems-list'
+            else:
+                data['form_is_valid'] = False
+                data['error'] = form.errors
+
+            template = 'includes/orderitems_list.html'
+            context = CommonContexts.order_details(
+                request=request, pk=item.reference.pk)
+        else:
+            return HttpResponseServerError('The action was not found.')
+
+        data['html'] = render_to_string(template, context, request=request)
+
+        # When testing, display as a regular view in order to test variables
+        if test:
+            context['form'] = form
+            context['data'] = data
+            return render(
+                request, template, context=context)
+        else:
+            return JsonResponse(data)
+
+
 class CommentsCRUD(View):
-    """Process all the CRUD actions on order model.
+    """Process all the CRUD actions on comment model.
 
     This is the new version for AJAX calls since Actions class became really
     huge to be clear. Eventually each model will have their CRUD AJAX Actions
