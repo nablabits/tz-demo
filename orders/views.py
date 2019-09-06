@@ -24,7 +24,7 @@ from rest_framework import viewsets
 from . import serializers, settings
 from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
                     InvoiceForm, ItemForm, OrderForm, OrderItemForm,
-                    TimetableCloseForm, )
+                    TimetableCloseForm, ItemTimesForm, )
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
@@ -69,6 +69,39 @@ class CommonContexts:
                 'done': done,
                 'update_date': EditDateForm(),
                 'amounts': amounts
+                }
+        return vars
+
+    @staticmethod
+    def order_details(request, pk):
+        """Get a dict with all the reused vars in the view."""
+        order = get_object_or_404(Order, pk=pk)  # pragma: no cover
+
+        comments = Comment.objects.filter(
+            reference=order).order_by('-creation')
+        items = OrderItem.objects.filter(reference=order)
+
+        cur_user = request.user
+        now = datetime.now()
+        session = Timetable.active.get(user=request.user)
+
+        title = (order.pk, order.customer.name, order.ref_name)
+        vars = {'order': order,
+                'items': items,
+                'update_times': ItemTimesForm(),
+                'comments': comments,
+                'user': cur_user,
+                'now': now,
+                'session': session,
+                'version': settings.VERSION,
+                'title': 'Pedido %s: %s, %s' % title,
+
+                # CRUD Actions
+                'btn_title_add': 'Añadir prendas',
+                'js_action_add': 'order-item-add',
+                'js_action_edit': 'order-item-edit',
+                'js_action_delete': 'order-item-delete',
+                'js_data_pk': order.pk,
                 }
         return vars
 
@@ -722,42 +755,19 @@ def order_view(request, pk):
         else:
             return HttpResponseServerError('Action was not recognized')
 
-    # updated version of the order after POST method (if any)
     order = get_object_or_404(Order, pk=pk)
 
-    comments = Comment.objects.filter(reference=order).order_by('-creation')
-    items = OrderItem.objects.filter(reference=order)
-
-    cur_user = request.user
-    now = datetime.now()
-    session = Timetable.active.get(user=request.user)
-
-    # Todoist integration
+    # Todoist integration, out from the common elements for performance.
     tasks = order.tasks()
     archived = order.is_archived()
 
-    title = (order.pk, order.customer.name, order.ref_name)
-    view_settings = {'order': order,
-                     'items': items,
-                     'comments': comments,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'tab': tab,
-                     'errors': errors,
-                     'tasks': tasks,
-                     'archived': archived,
-                     'project_id': order.t_pid,
-                     'version': settings.VERSION,
-                     'title': 'Pedido %s: %s, %s' % title,
-
-                     # CRUD Actions
-                     'btn_title_add': 'Añadir prendas',
-                     'js_action_add': 'order-item-add',
-                     'js_action_edit': 'order-item-edit',
-                     'js_action_delete': 'order-item-delete',
-                     'js_data_pk': order.pk,
-                     }
+    common_vars = CommonContexts.order_details(request=request, pk=pk)
+    curr_vars = {'tab': tab,
+                 'errors': errors,
+                 'tasks': tasks,
+                 'project_id': order.t_pid,
+                 'archived': archived, }
+    view_settings = {**common_vars, **curr_vars}
 
     return render(request, 'tz/order_view.html', view_settings)
 
