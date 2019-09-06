@@ -1943,14 +1943,9 @@ class OrdersCRUD(View):
             if form.is_valid():
                 form.save()
                 data['form_is_valid'] = True
-                template = 'includes/kanban_columns.html'
-                data['html_id'] = '#kanban-columns'
             else:
                 data['form_is_valid'] = False
                 data['error'] = form.errors
-
-            template = 'includes/kanban_columns.html'
-            context = CommonContexts.kanban()
 
         # Kanban Jump (POST)
         elif action == 'kanban-jump':
@@ -1964,19 +1959,23 @@ class OrdersCRUD(View):
                 order.kanban_forward()
             else:
                 return HttpResponseServerError('Unknown direction.')
-            context = CommonContexts.kanban()
-            template = 'includes/kanban_columns.html'
-            data['html_id'] = '#kanban-columns'
             data['form_is_valid'] = True
 
         else:
             return HttpResponseServerError('The action was not found.')
 
-        if not template:   # pragma: no cover
-            return HttpResponseServerError('No template was especified.')
+        template = 'includes/kanban_columns.html'
+        data['html_id'] = '#kanban-columns'
+        context = CommonContexts.kanban()
+        data['html'] = render_to_string(template, context, request=request)
 
-        if not context:   # pragma: no cover
-            return HttpResponseServerError('No context variables found.')
+        # When testing, display as a regular view in order to test variables
+        if test:
+            return render(
+                request, 'includes/kanban_columns.html', context=context)
+        else:
+            return JsonResponse(data)
+
 
         data['html'] = render_to_string(template, context, request=request)
 
