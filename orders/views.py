@@ -22,9 +22,10 @@ from django.views.generic import ListView
 from rest_framework import viewsets
 
 from . import serializers, settings
+from .utils import prettify_times
 from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
                     InvoiceForm, ItemForm, OrderForm, OrderItemForm,
-                    TimetableCloseForm, )
+                    TimetableCloseForm, ItemTimesForm, )
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
@@ -38,15 +39,19 @@ class CommonContexts:
     """
 
     @staticmethod
-    def kanban():
+    def kanban(confirmed=True):
         """Get a dict with all the needed vars for the view."""
-        icebox = Order.objects.filter(status='1').order_by('delivery')
-        queued = Order.objects.filter(status='2').order_by('delivery')
-        in_progress = Order.objects.filter(
-            status__in=['3', '4', '5', ]).order_by('delivery')
-        waiting = Order.objects.filter(status='6').order_by('delivery')
+        icebox = Order.objects.filter(
+            status='1').filter(confirmed=confirmed).order_by('delivery')
+        queued = Order.objects.filter(
+            status='2').filter(confirmed=confirmed).order_by('delivery')
+        in_progress = Order.objects.filter(status__in=['3', '4', '5', ])
+        in_progress = in_progress.filter(
+            confirmed=confirmed).order_by('delivery')
+        waiting = Order.objects.filter(
+            status='6').filter(confirmed=confirmed).order_by('delivery')
         done = Order.pending_orders.filter(
-            status='7').order_by('delivery')
+            status='7').filter(confirmed=confirmed).order_by('delivery')
 
         # Get the amounts for each column
         amounts = list()
@@ -62,13 +67,63 @@ class CommonContexts:
             if not col['total']:
                 col['total'] = 0
             amounts.append(col['total'])
+
+        eti, etq = 0, 0
+        for order in icebox:
+            eti += sum(order.estimated_time)
+        for order in queued:
+            etq += sum(order.estimated_time)
+
+        est_times = [prettify_times(d) for d in (eti, etq)]
+
         vars = {'icebox': icebox,
                 'queued': queued,
                 'in_progress': in_progress,
                 'waiting': waiting,
                 'done': done,
+                'confirmed': confirmed,
                 'update_date': EditDateForm(),
-                'amounts': amounts
+                'amounts': amounts,
+                'est_times': est_times,
+                }
+        return vars
+
+    @staticmethod
+    def order_details(request, pk):
+        """Get a dict with all the reused vars in the view."""
+        order = get_object_or_404(Order, pk=pk)  # pragma: no cover
+
+        comments = Comment.objects.filter(
+            reference=order).order_by('-creation')
+        items = OrderItem.objects.filter(reference=order)
+
+        cur_user = request.user
+        now = datetime.now()
+        session = Timetable.active.get(user=request.user)
+
+        # Display estimated times
+        order_est = [prettify_times(d) for d in order.estimated_time]
+        order_est_total = prettify_times(sum(order.estimated_time))
+
+        title = (order.pk, order.customer.name, order.ref_name)
+        vars = {'order': order,
+                'items': items,
+                'order_est': order_est,
+                'order_est_total': order_est_total,
+                'update_times': ItemTimesForm(),
+                'comments': comments,
+                'user': cur_user,
+                'now': now,
+                'session': session,
+                'version': settings.VERSION,
+                'title': 'Pedido %s: %s, %s' % title,
+
+                # CRUD Actions
+                'btn_title_add': 'Añadir prendas',
+                'js_action_add': 'order-item-add',
+                'js_action_edit': 'order-item-edit',
+                'js_action_delete': 'order-item-delete',
+                'js_data_pk': order.pk,
                 }
         return vars
 
@@ -670,14 +725,17 @@ def invoiceslist(request):
 @timetable_required
 def kanban(request):
     """Display a kanban view for orders."""
-    view_settings = CommonContexts.kanban()
-    view_settings['cur_user'] = request.user
-    view_settings['now'] = datetime.now()
-    view_settings['session'] = Timetable.active.get(user=request.user)
-    view_settings['version'] = settings.VERSION
-    view_settings['title'] = 'TrapuZarrak · Vista Kanban'
+    if request.GET.get('unconfirmed', None):
+        context = CommonContexts.kanban(confirmed=False)
+    else:
+        context = CommonContexts.kanban()
+    context['cur_user'] = request.user
+    context['now'] = datetime.now()
+    context['session'] = Timetable.active.get(user=request.user)
+    context['version'] = settings.VERSION
+    context['title'] = 'TrapuZarrak · Vista Kanban'
 
-    return render(request, 'tz/kanban.html', view_settings)
+    return render(request, 'tz/kanban.html', context)
 
 
 # Object views
@@ -691,6 +749,12 @@ def order_view(request, pk):
     if order.customer.name == 'express':
         return redirect(reverse('order_express', args=[order.pk]))
 
+    tab = request.GET.get('tab', None)
+    if not tab:
+        tab = 'items'  # active tab to show on reload, default
+    if tab not in ('main', 'tasks', 'items'):
+        return HttpResponseServerError('Tab not valid')
+
     # Now, process the POST methods
     errors = list()
     if request.method == 'POST':
@@ -699,51 +763,36 @@ def order_view(request, pk):
             if not order.create_todoist():
                 errors.append('Couldn\'t create project on todoist, did it ' +
                               'already exist?')
+            tab = 'tasks'
         elif action == 'archive-project':
             if not order.archive():
                 errors.append('Couldn\'t archive project, maybe it was ' +
                               'already archived or just didn\'t exist')
+            tab = 'tasks'
         elif action == 'unarchive-project':
             if not order.unarchive():
                 errors.append('Couldn\'t unarchive project, maybe it was ' +
                               'already unarchived or just didn\'t exist')
+            tab = 'tasks'
         elif action == 'deliver-order':
             order.deliver()
+            tab = 'main'
         else:
             return HttpResponseServerError('Action was not recognized')
 
-    comments = Comment.objects.filter(reference=order).order_by('-creation')
-    items = OrderItem.objects.filter(reference=order)
+    order = get_object_or_404(Order, pk=pk)
 
-    cur_user = request.user
-    now = datetime.now()
-    session = Timetable.active.get(user=request.user)
-
-    # Todoist integration
+    # Todoist integration, out from the common elements for performance.
     tasks = order.tasks()
     archived = order.is_archived()
 
-    title = (order.pk, order.customer.name, order.ref_name)
-    view_settings = {'order': order,
-                     'items': items,
-                     'comments': comments,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'errors': errors,
-                     'tasks': tasks,
-                     'archived': archived,
-                     'project_id': order.t_pid,
-                     'version': settings.VERSION,
-                     'title': 'Pedido %s: %s, %s' % title,
-
-                     # CRUD Actions
-                     'btn_title_add': 'Añadir prendas',
-                     'js_action_add': 'order-item-add',
-                     'js_action_edit': 'order-item-edit',
-                     'js_action_delete': 'order-item-delete',
-                     'js_data_pk': order.pk,
-                     }
+    common_vars = CommonContexts.order_details(request=request, pk=pk)
+    curr_vars = {'tab': tab,
+                 'errors': errors,
+                 'tasks': tasks,
+                 'project_id': order.t_pid,
+                 'archived': archived, }
+    view_settings = {**common_vars, **curr_vars}
 
     return render(request, 'tz/order_view.html', view_settings)
 
@@ -1919,14 +1968,9 @@ class OrdersCRUD(View):
             if form.is_valid():
                 form.save()
                 data['form_is_valid'] = True
-                template = 'includes/kanban_columns.html'
-                data['html_id'] = '#kanban-columns'
             else:
                 data['form_is_valid'] = False
                 data['error'] = form.errors
-
-            template = 'includes/kanban_columns.html'
-            context = CommonContexts.kanban()
 
         # Kanban Jump (POST)
         elif action == 'kanban-jump':
@@ -1940,20 +1984,14 @@ class OrdersCRUD(View):
                 order.kanban_forward()
             else:
                 return HttpResponseServerError('Unknown direction.')
-            context = CommonContexts.kanban()
-            template = 'includes/kanban_columns.html'
-            data['html_id'] = '#kanban-columns'
             data['form_is_valid'] = True
 
         else:
             return HttpResponseServerError('The action was not found.')
 
-        if not template:   # pragma: no cover
-            return HttpResponseServerError('No template was especified.')
-
-        if not context:   # pragma: no cover
-            return HttpResponseServerError('No context variables found.')
-
+        template = 'includes/kanban_columns.html'
+        data['html_id'] = '#kanban-columns'
+        context = CommonContexts.kanban()
         data['html'] = render_to_string(template, context, request=request)
 
         # When testing, display as a regular view in order to test variables
@@ -1964,8 +2002,61 @@ class OrdersCRUD(View):
             return JsonResponse(data)
 
 
+class OrderItemsCRUD(View):
+    """Process all the CRUD actions on comment model.
+
+    This is the new version for AJAX calls since Actions class became really
+    huge to be clear. Eventually each model will have their CRUD AJAX Actions
+    to work with.
+    """
+
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        data = dict()
+        pk = self.request.POST.get('pk', None)
+        action = self.request.POST.get('action', None)
+        test = self.request.POST.get('test', None)
+        template, context = False, False
+
+        if not pk:
+            return HttpResponseServerError('No pk was given.')
+
+        if not action:
+            return HttpResponseServerError('No action was given.')
+
+        if action == 'edit-times':
+            item = get_object_or_404(OrderItem, pk=pk)
+            form = ItemTimesForm(request.POST, instance=item)
+            if form.is_valid():
+                form.save()
+                data['form_is_valid'] = True
+                data['html_id'] = '#orderitems-list'
+            else:
+                data['form_is_valid'] = False
+                data['error'] = form.errors
+
+            template = 'includes/orderitems_list.html'
+            context = CommonContexts.order_details(
+                request=request, pk=item.reference.pk)
+        else:
+            return HttpResponseServerError('The action was not found.')
+
+        data['html'] = render_to_string(template, context, request=request)
+
+        # When testing, display as a regular view in order to test variables
+        if test:
+            context['form'] = form
+            context['data'] = data
+            return render(
+                request, template, context=context)
+        else:
+            return JsonResponse(data)
+
+
 class CommentsCRUD(View):
-    """Process all the CRUD actions on order model.
+    """Process all the CRUD actions on comment model.
 
     This is the new version for AJAX calls since Actions class became really
     huge to be clear. Eventually each model will have their CRUD AJAX Actions

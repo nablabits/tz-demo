@@ -438,6 +438,37 @@ class TestOrders(TestCase):
         o = Order.objects.get(pk=o.pk)
         self.assertTrue(o.has_comments)
 
+    def test_order_estimated_time(self):
+        # Create previous orders
+        older = Order.objects.create(user=User.objects.first(),
+                                     customer=Customer.objects.first(),
+                                     ref_name='older',
+                                     delivery=date.today(),
+                                     )
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for item in items:
+            OrderItem.objects.create(
+                element=item, qty=10, reference=older,
+                crop=timedelta(seconds=10),
+                sewing=timedelta(seconds=20),
+                iron=timedelta(seconds=30), )
+
+        curr = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            ref_name='current',
+            delivery=date.today()
+        )
+
+        OrderItem.objects.create(element=items[0], qty=5, reference=curr)
+        OrderItem.objects.create(element=items[1], qty=7, reference=curr)
+
+        curr = Order.objects.get(pk=curr.pk)
+
+        self.assertEqual(curr.estimated_time, (5+7, 2*(5+7), 3*(5+7)))
+
     def test_deliver(self):
         o = Order.objects.create(user=User.objects.all()[0],
                                  customer=Customer.objects.all()[0],
@@ -820,6 +851,40 @@ class TestObjectItems(TestCase):
                                 size='0',
                                 fabrics=2.2)
 
+    def test_item_average_times(self):
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for n, item in enumerate(items):
+            OrderItem.objects.create(
+                element=item, qty=10 * n + 1, reference=Order.objects.first(),
+                crop=timedelta(seconds=10),
+                sewing=timedelta(seconds=20),
+                iron=timedelta(seconds=30), )
+
+        not_timed_order = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            ref_name='No time order',
+            delivery=date.today(), )
+
+        OrderItem.objects.create(element=items[0], reference=not_timed_order)
+
+        # reload the item list
+        items = [Item.objects.get(pk=item.pk) for item in items]
+
+        self.assertEqual(items[0].avg_crop, timedelta(seconds=10))
+        self.assertEqual(items[1].avg_crop, timedelta(seconds=10) / 11)
+        self.assertEqual(items[2].avg_crop, timedelta(seconds=10) / 21)
+
+        self.assertEqual(items[0].avg_sewing, timedelta(seconds=20))
+        self.assertEqual(items[1].avg_sewing, timedelta(seconds=20) / 11)
+        self.assertEqual(items[2].avg_sewing, timedelta(seconds=20) / 21)
+
+        self.assertEqual(items[0].avg_iron, timedelta(seconds=30))
+        self.assertEqual(items[1].avg_iron, timedelta(seconds=30) / 11)
+        self.assertEqual(items[2].avg_iron, timedelta(seconds=30) / 21)
+
 
 class TestOrderItems(TestCase):
     """Test the orderItem model."""
@@ -850,7 +915,7 @@ class TestOrderItems(TestCase):
         # Create item
         Item.objects.create(name='Test item', fabrics=5, price=10)
 
-    def test_delete_obj_item_is_porotected(self):
+    def test_delete_obj_item_is_protected(self):
         """Deleting the reference should be forbidden."""
         item = Item.objects.first()
         OrderItem.objects.create(
@@ -902,6 +967,18 @@ class TestOrderItems(TestCase):
         item = OrderItem.objects.create(
             element=object_item, reference=Order.objects.first(), )
         self.assertEqual(item.price, 200)
+
+    def test_orderitem_stock_items_have_no_times(self):
+        item = OrderItem.objects.create(
+            element=Item.objects.first(),
+            reference=Order.objects.first(),
+            crop=timedelta(5), sewing=timedelta(10), iron=timedelta(10),
+            stock=True
+        )
+
+        self.assertEqual(item.crop, timedelta(0))
+        self.assertEqual(item.sewing, timedelta(0))
+        self.assertEqual(item.iron, timedelta(0))
 
     def test_orderitem_stock_true_for_express_orders(self):
         """Express orders only contain stocked items."""
@@ -1014,6 +1091,52 @@ class TestOrderItems(TestCase):
         )
         self.assertEqual(item.subtotal_bt, round(50 / 1.21, 2))
 
+    def test_estimated_time(self):
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for n, item in enumerate(items):
+            OrderItem.objects.create(
+                element=item, qty=10 * n + 1, reference=Order.objects.first(),
+                crop=timedelta(seconds=10),
+                sewing=timedelta(seconds=20),
+                iron=timedelta(seconds=30), )
+
+        # Create an order
+        order = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            ref_name='Current',
+            delivery=date.today(), )
+
+        test_item = OrderItem.objects.create(
+            element=items[0], qty=5, reference=order)
+
+        self.assertEqual(test_item.estimated_time, (50, 100, 150))
+
+    def test_prettfied_est(self):
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for n, item in enumerate(items):
+            OrderItem.objects.create(
+                element=item, qty=10 * n + 1, reference=Order.objects.first(),
+                crop=timedelta(hours=10),
+                sewing=timedelta(hours=20),
+                iron=timedelta(hours=30), )
+
+        # Create an order
+        order = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            ref_name='Current',
+            delivery=date.today(), )
+
+        test_item = OrderItem.objects.create(
+            element=items[0], qty=5, reference=order)
+
+        self.assertEqual(test_item.prettified_est, ['2.0h', '4.0h', '6.0h'])
+
 
 class TestPQueue(TestCase):
     """Test the production queue model."""
@@ -1086,13 +1209,13 @@ class TestPQueue(TestCase):
         pqueue = PQueue.objects.create(item=item3)  # To the bottom (1002)
         queue = PQueue.objects.all()
         self.assertEqual((queue[0].score, queue[1].score, queue[2].score),
-                          (1000, 1001, 1002))
+                         (1000, 1001, 1002))
 
         pqueue.score = 100
         pqueue.save()
         queue = PQueue.objects.all()
         self.assertEqual((queue[0].score, queue[1].score, queue[2].score),
-                          (100, 1000, 1001))
+                         (100, 1000, 1001))
 
     def test_stock_items_cannot_be_added(self):
         """Stock items are already produced so can't be queued."""
