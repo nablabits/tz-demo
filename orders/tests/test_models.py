@@ -1209,13 +1209,13 @@ class TestPQueue(TestCase):
         pqueue = PQueue.objects.create(item=item3)  # To the bottom (1002)
         queue = PQueue.objects.all()
         self.assertEqual((queue[0].score, queue[1].score, queue[2].score),
-                          (1000, 1001, 1002))
+                         (1000, 1001, 1002))
 
         pqueue.score = 100
         pqueue.save()
         queue = PQueue.objects.all()
         self.assertEqual((queue[0].score, queue[1].score, queue[2].score),
-                          (100, 1000, 1001))
+                         (100, 1000, 1001))
 
     def test_stock_items_cannot_be_added(self):
         """Stock items are already produced so can't be queued."""

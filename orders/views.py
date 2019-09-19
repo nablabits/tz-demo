@@ -45,10 +45,13 @@ class CommonContexts:
             status='1').filter(confirmed=confirmed).order_by('delivery')
         queued = Order.objects.filter(
             status='2').filter(confirmed=confirmed).order_by('delivery')
-        in_progress = Order.objects.filter(
-            status__in=['3', '4', '5', ]).order_by('delivery')
-        waiting = Order.objects.filter(status='6').order_by('delivery')
-        done = Order.pending_orders.filter(status='7').order_by('delivery')
+        in_progress = Order.objects.filter(status__in=['3', '4', '5', ])
+        in_progress = in_progress.filter(
+            confirmed=confirmed).order_by('delivery')
+        waiting = Order.objects.filter(
+            status='6').filter(confirmed=confirmed).order_by('delivery')
+        done = Order.pending_orders.filter(
+            status='7').filter(confirmed=confirmed).order_by('delivery')
 
         # Get the amounts for each column
         amounts = list()
