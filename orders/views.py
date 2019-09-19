@@ -38,15 +38,16 @@ class CommonContexts:
     """
 
     @staticmethod
-    def kanban():
+    def kanban(confirmed=True):
         """Get a dict with all the needed vars for the view."""
-        icebox = Order.objects.filter(status='1').order_by('delivery')
-        queued = Order.objects.filter(status='2').order_by('delivery')
+        icebox = Order.objects.filter(
+            status='1').filter(confirmed=confirmed).order_by('delivery')
+        queued = Order.objects.filter(
+            status='2').filter(confirmed=confirmed).order_by('delivery')
         in_progress = Order.objects.filter(
             status__in=['3', '4', '5', ]).order_by('delivery')
         waiting = Order.objects.filter(status='6').order_by('delivery')
-        done = Order.pending_orders.filter(
-            status='7').order_by('delivery')
+        done = Order.pending_orders.filter(status='7').order_by('delivery')
 
         # Get the amounts for each column
         amounts = list()
@@ -703,14 +704,17 @@ def invoiceslist(request):
 @timetable_required
 def kanban(request):
     """Display a kanban view for orders."""
-    view_settings = CommonContexts.kanban()
-    view_settings['cur_user'] = request.user
-    view_settings['now'] = datetime.now()
-    view_settings['session'] = Timetable.active.get(user=request.user)
-    view_settings['version'] = settings.VERSION
-    view_settings['title'] = 'TrapuZarrak · Vista Kanban'
+    if request.GET.get('unconfirmed', None):
+        context = CommonContexts.kanban(confirmed=False)
+    else:
+        context = CommonContexts.kanban()
+    context['cur_user'] = request.user
+    context['now'] = datetime.now()
+    context['session'] = Timetable.active.get(user=request.user)
+    context['version'] = settings.VERSION
+    context['title'] = 'TrapuZarrak · Vista Kanban'
 
-    return render(request, 'tz/kanban.html', view_settings)
+    return render(request, 'tz/kanban.html', context)
 
 
 # Object views

@@ -15,6 +15,13 @@
   {% for order in icebox %}
     {%include 'includes/kanban_element.html'%}
   {% endfor %}
+  {% if not icebox %}
+  <div class="d-flex flex-column text-center mt-4">
+    <h3 class="text-muted">No hay pedidos aquí</h3>
+    <p class="text-muted">Bueno, que no cunda el pánico</p>
+    <i class="fad fa-hockey-mask fa-4x mt-2"></i>
+  </div>
+  {% endif %}
 </div>
 <div class="col rounded week-view-table pt-2 pb-5">
   <div class="d-flex flex-column border-bottom pb-2">
@@ -35,6 +42,13 @@
   {% for order in queued %}
     {%include 'includes/kanban_element.html'%}
   {% endfor %}
+  {% if not queued %}
+  <div class="d-flex flex-column text-center mt-4">
+    <h3 class="text-muted">No hay pedidos aquí</h3>
+    <p class="text-muted">Pero hemos encontrado esta bonita palmera</p>
+    <i class="fad fa-tree-palm fa-4x mt-2"></i>
+  </div>
+  {% endif %}
 </div>
 <div class="col rounded week-view-table pt-2 pb-5">
   <div class="d-flex flex-column border-bottom pb-2">
@@ -55,6 +69,13 @@
   {% for order in in_progress %}
     {%include 'includes/kanban_element.html'%}
   {% endfor %}
+  {% if not in_progress %}
+  <div class="d-flex flex-column text-center mt-4">
+    <h3 class="text-muted">No hay pedidos aquí</h3>
+    <p class="text-muted">Un cafetito y a llenar la lista, venga!</p>
+    <i class="fad fa-coffee-togo fa-4x mt-2"></i>
+  </div>
+  {% endif %}
 </div>
 <div class="col rounded week-view-table pt-2 pb-5">
   <div class="d-flex flex-column border-bottom pb-2">
@@ -75,6 +96,13 @@
   {% for order in waiting %}
     {%include 'includes/kanban_element.html'%}
   {% endfor %}
+  {% if not in_progress %}
+  <div class="d-flex flex-column text-center mt-4">
+    <h3 class="text-muted">No hay pedidos aquí</h3>
+    <p class="text-muted">Nos hemos ganado una partidita</p>
+    <i class="fad fa-table-tennis fa-4x mt-2"></i>
+  </div>
+  {% endif %}
 </div>
 <div class="col rounded week-view-table pt-2 pb-5">
   <div class="d-flex flex-column border-bottom pb-2">
@@ -95,5 +123,12 @@
     {% for order in done %}
       {%include 'includes/kanban_element.html'%}
     {% endfor %}
+    {% if not done %}
+    <div class="d-flex flex-column text-center mt-4">
+      <h3 class="text-muted">No hay pedidos aquí</h3>
+      <p class="text-muted">Todo el mundo feliz con sus tajes</p>
+      <i class="fad fa-user-astronaut fa-4x mt-2"></i>
+    </div>
+    {% endif %}
 
 </div>

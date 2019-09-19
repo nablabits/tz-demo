@@ -54,6 +54,25 @@ class CommonContextKanbanTests(TestCase):
         for o in icebox:
             self.assertTrue(o.status == '1')
 
+    def test_icebox_items_filter_confirmed_by_default(self):
+        first = Order.objects.first()
+        first.confirmed = False
+        first.save()
+
+        icebox = CommonContexts.kanban()['icebox']
+        self.assertEqual(icebox.count(), 4)
+        for o in icebox:
+            self.assertTrue(o.confirmed)
+
+    def test_icebox_items_filter_unconfirmed(self):
+        first = Order.objects.first()
+        first.confirmed = False
+        first.save()
+
+        icebox = CommonContexts.kanban(confirmed=False)['icebox']
+        self.assertEqual(icebox.count(), 1)
+        self.assertFalse(icebox[0].confirmed)
+
     def test_icebox_items_are_ordered_by_date(self):
         """Test the icebox items."""
         n = 1
@@ -80,6 +99,33 @@ class CommonContextKanbanTests(TestCase):
         self.assertEqual(queued.count(), 3)
         for o in queued:
             self.assertTrue(o.status == '2')
+
+    def test_queued_items_filter_confirmed_by_default(self):
+        orders = Order.objects.all()[:3]
+        for o in orders:
+            o.status = '2'
+            o.save()
+
+        orders[0].confirmed = False
+        orders[0].save()
+
+        queued = CommonContexts.kanban()['queued']
+        self.assertEqual(queued.count(), 2)
+        for o in queued:
+            self.assertTrue(o.confirmed)
+
+    def test_queued_items_filter_unconfirmed(self):
+        orders = Order.objects.all()[:3]
+        for o in orders:
+            o.status = '2'
+            o.save()
+
+        orders[0].confirmed = False
+        orders[0].save()
+
+        queued = CommonContexts.kanban(confirmed=False)['queued']
+        self.assertEqual(queued.count(), 1)
+        self.assertFalse(queued[0].confirmed)
 
     def test_queued_items_are_ordered_by_date(self):
         """Test the queued items."""
