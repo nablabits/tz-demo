@@ -22,6 +22,7 @@ from django.views.generic import ListView
 from rest_framework import viewsets
 
 from . import serializers, settings
+from .utils import prettify_times
 from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
                     InvoiceForm, ItemForm, OrderForm, OrderItemForm,
                     TimetableCloseForm, ItemTimesForm, )
@@ -38,15 +39,16 @@ class CommonContexts:
     """
 
     @staticmethod
-    def kanban():
+    def kanban(confirmed=True):
         """Get a dict with all the needed vars for the view."""
-        icebox = Order.objects.filter(status='1').order_by('delivery')
-        queued = Order.objects.filter(status='2').order_by('delivery')
+        icebox = Order.objects.filter(
+            status='1').filter(confirmed=confirmed).order_by('delivery')
+        queued = Order.objects.filter(
+            status='2').filter(confirmed=confirmed).order_by('delivery')
         in_progress = Order.objects.filter(
             status__in=['3', '4', '5', ]).order_by('delivery')
         waiting = Order.objects.filter(status='6').order_by('delivery')
-        done = Order.pending_orders.filter(
-            status='7').order_by('delivery')
+        done = Order.pending_orders.filter(status='7').order_by('delivery')
 
         # Get the amounts for each column
         amounts = list()
@@ -62,13 +64,24 @@ class CommonContexts:
             if not col['total']:
                 col['total'] = 0
             amounts.append(col['total'])
+
+        eti, etq = 0, 0
+        for order in icebox:
+            eti += sum(order.estimated_time)
+        for order in queued:
+            etq += sum(order.estimated_time)
+
+        est_times = [prettify_times(d) for d in (eti, etq)]
+
         vars = {'icebox': icebox,
                 'queued': queued,
                 'in_progress': in_progress,
                 'waiting': waiting,
                 'done': done,
+                'confirmed': confirmed,
                 'update_date': EditDateForm(),
-                'amounts': amounts
+                'amounts': amounts,
+                'est_times': est_times,
                 }
         return vars
 
@@ -85,9 +98,15 @@ class CommonContexts:
         now = datetime.now()
         session = Timetable.active.get(user=request.user)
 
+        # Display estimated times
+        order_est = [prettify_times(d) for d in order.estimated_time]
+        order_est_total = prettify_times(sum(order.estimated_time))
+
         title = (order.pk, order.customer.name, order.ref_name)
         vars = {'order': order,
                 'items': items,
+                'order_est': order_est,
+                'order_est_total': order_est_total,
                 'update_times': ItemTimesForm(),
                 'comments': comments,
                 'user': cur_user,
@@ -703,14 +722,17 @@ def invoiceslist(request):
 @timetable_required
 def kanban(request):
     """Display a kanban view for orders."""
-    view_settings = CommonContexts.kanban()
-    view_settings['cur_user'] = request.user
-    view_settings['now'] = datetime.now()
-    view_settings['session'] = Timetable.active.get(user=request.user)
-    view_settings['version'] = settings.VERSION
-    view_settings['title'] = 'TrapuZarrak · Vista Kanban'
+    if request.GET.get('unconfirmed', None):
+        context = CommonContexts.kanban(confirmed=False)
+    else:
+        context = CommonContexts.kanban()
+    context['cur_user'] = request.user
+    context['now'] = datetime.now()
+    context['session'] = Timetable.active.get(user=request.user)
+    context['version'] = settings.VERSION
+    context['title'] = 'TrapuZarrak · Vista Kanban'
 
-    return render(request, 'tz/kanban.html', view_settings)
+    return render(request, 'tz/kanban.html', context)
 
 
 # Object views

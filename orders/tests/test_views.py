@@ -54,6 +54,25 @@ class CommonContextKanbanTests(TestCase):
         for o in icebox:
             self.assertTrue(o.status == '1')
 
+    def test_icebox_items_filter_confirmed_by_default(self):
+        first = Order.objects.first()
+        first.confirmed = False
+        first.save()
+
+        icebox = CommonContexts.kanban()['icebox']
+        self.assertEqual(icebox.count(), 4)
+        for o in icebox:
+            self.assertTrue(o.confirmed)
+
+    def test_icebox_items_filter_unconfirmed(self):
+        first = Order.objects.first()
+        first.confirmed = False
+        first.save()
+
+        icebox = CommonContexts.kanban(confirmed=False)['icebox']
+        self.assertEqual(icebox.count(), 1)
+        self.assertFalse(icebox[0].confirmed)
+
     def test_icebox_items_are_ordered_by_date(self):
         """Test the icebox items."""
         n = 1
@@ -80,6 +99,33 @@ class CommonContextKanbanTests(TestCase):
         self.assertEqual(queued.count(), 3)
         for o in queued:
             self.assertTrue(o.status == '2')
+
+    def test_queued_items_filter_confirmed_by_default(self):
+        orders = Order.objects.all()[:3]
+        for o in orders:
+            o.status = '2'
+            o.save()
+
+        orders[0].confirmed = False
+        orders[0].save()
+
+        queued = CommonContexts.kanban()['queued']
+        self.assertEqual(queued.count(), 2)
+        for o in queued:
+            self.assertTrue(o.confirmed)
+
+    def test_queued_items_filter_unconfirmed(self):
+        orders = Order.objects.all()[:3]
+        for o in orders:
+            o.status = '2'
+            o.save()
+
+        orders[0].confirmed = False
+        orders[0].save()
+
+        queued = CommonContexts.kanban(confirmed=False)['queued']
+        self.assertEqual(queued.count(), 1)
+        self.assertFalse(queued[0].confirmed)
 
     def test_queued_items_are_ordered_by_date(self):
         """Test the queued items."""
@@ -245,14 +291,19 @@ class CommonContextOrderDetails(TestCase):
 
     class Request:
         """Create a dummy request to test the method."""
-        user = User.objects.first()
+
+        def __init__(self, user):
+            """Create the needed user."""
+            self.user = user
 
     @classmethod
     def setUpTestData(cls):
         """Create the necessary items on database at once."""
-        # Create a user
-        u = User.objects.create_user(
+        user = User.objects.create_user(
             username='test user', is_staff=True, is_superuser=True,)
+
+        # Instantiante the dummy request to use during the test suite
+        cls.request = cls.Request(user)
 
         # Create a customer
         c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
@@ -261,12 +312,12 @@ class CommonContextOrderDetails(TestCase):
         i = Item.objects.create(name='test', fabrics=10, price=30)
 
         # Create a timetable so view doesn't throw an error
-        Timetable.objects.create(user=u)
+        Timetable.objects.create(user=user)
 
         # Create some orders with items
         for n in range(5):
             o = Order.objects.create(
-                user=u, customer=c, ref_name='test%s' % n,
+                user=user, customer=c, ref_name='test%s' % n,
                 delivery=date.today(), )
             OrderItem.objects.create(reference=o, element=i, qty=n)
 
@@ -287,50 +338,68 @@ class CommonContextOrderDetails(TestCase):
             CommonContexts.order_details(request='dummy', pk=4e4)
 
     def test_comments(self):
-        request = self.Request()
+        # request = self.re
         order = Order.objects.first()
         Comment.objects.create(
-            user=request.user, reference=order, comment='test')
-        context = CommonContexts.order_details(request, order.pk)
+            user=self.request.user, reference=order, comment='test')
+        context = CommonContexts.order_details(self.request, order.pk)
         self.assertEqual(context['comments'][0].comment, 'test')
 
     def test_items(self):
-        request = self.Request()
         order = Order.objects.first()
-        context = CommonContexts.order_details(request, order.pk)
+        context = CommonContexts.order_details(self.request, order.pk)
         self.assertEqual(context['items'].count(), 1)
 
     def test_user(self):
-        request = self.Request()
         order = Order.objects.first()
-        context = CommonContexts.order_details(request, order.pk)
-        self.assertEqual(context['user'].username, request.user.username)
+        context = CommonContexts.order_details(self.request, order.pk)
+        self.assertEqual(context['user'].username, self.request.user.username)
 
     def test_session(self):
-        request = self.Request()
         order = Order.objects.first()
-        context = CommonContexts.order_details(request, order.pk)
+        context = CommonContexts.order_details(self.request, order.pk)
         self.assertIsInstance(context['session'], Timetable)
-        self.assertEqual(context['session'].user, request.user)
+        self.assertEqual(context['session'].user, self.request.user)
+
+    def test_estimated_times(self):
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for n, item in enumerate(items):
+            OrderItem.objects.create(
+                element=item, qty=10 * n + 1, reference=Order.objects.first(),
+                crop=timedelta(seconds=10),
+                sewing=timedelta(seconds=20),
+                iron=timedelta(seconds=30), )
+
+        # Create an order
+        order = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            ref_name='Current',
+            delivery=date.today(), )
+
+        OrderItem.objects.create(element=items[0], qty=5, reference=order)
+
+        context = CommonContexts.order_details(self.request, order.pk)
+        self.assertEqual(context['order_est'], ['50s', '~2m', '~2m'])
+        self.assertEqual(context['order_est_total'], '~5m')
 
     def test_title(self):
-        request = self.Request()
         order = Order.objects.first()
-        context = CommonContexts.order_details(request, order.pk)
+        context = CommonContexts.order_details(self.request, order.pk)
         self.assertEqual(
             context['title'],
             f'Pedido {order.pk}: Customer Test, {order.ref_name}')
 
     def test_item_times_form(self):
-        request = self.Request()
         order = Order.objects.first()
-        context = CommonContexts.order_details(request, order.pk)
+        context = CommonContexts.order_details(self.request, order.pk)
         self.assertIsInstance(context['update_times'], ItemTimesForm)
 
     def test_static_vars(self):
-        request = self.Request()
         order = Order.objects.first()
-        context = CommonContexts.order_details(request, order.pk)
+        context = CommonContexts.order_details(self.request, order.pk)
         self.assertEqual(context['version'], settings.VERSION)
         self.assertEqual(context['btn_title_add'], 'Añadir prendas')
         self.assertEqual(context['js_action_add'], 'order-item-add')

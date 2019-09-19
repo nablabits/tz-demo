@@ -35,3 +35,16 @@ class WeekColor(object):
             return settings.WEEK_COLORS['in_two']
         else:
             return False
+
+
+def prettify_times(duration):
+    """Convert the lengths in seconds into displayable strings."""
+    if duration > 60 * 60:  # we have hours (likely)
+        duration = duration / 3600
+        t_string = '{}h'.format(round(duration, 1))
+    elif duration > 60:  # we have minutes
+        duration = duration / 60
+        t_string = '~{}m'.format(int(round(duration, 0)))
+    else:
+        t_string = '{}s'.format(int(duration))
+    return t_string

@@ -1,4 +1,7 @@
-<h4><i class="far fa-tshirt fa-fw"></i><strong> Prendas añadidas:</strong></h4>
+<div class="d-flex align-items-start">
+  <h4><i class="far fa-tshirt fa-fw"></i><strong> Prendas añadidas:</strong></h4>
+  <p class="ml-auto">Tiempo estimado de producción: {{order_est_total}} ({{order_est.0}} / {{order_est.1}} / {{order_est.2}})</p>
+</div>
 {%if order.invoiced%}
   {%for item in items%}
     <div class="d-flex mx-3">
@@ -20,6 +23,7 @@
         </th>
         <th scope="col">Precio</th>
         <th scope="col">Tiempos</th>
+        <th scope="col">Estimación</th>
       </tr>
       {% include 'includes/info_items.html' %}
     </thead>
@@ -118,6 +122,11 @@
             </div>
           {%else%}
             <i class="far fa-info fa-fw pr-1"></i>Las prendas externas o de stock no necesitan tiempos
+          {% endif %}
+        </td>
+        <td>
+          {%if not item.stock and not item.element.foreing%}
+            {{item.prettified_est.0}} / {{item.prettified_est.1}} / {{item.prettified_est.2}};
           {% endif %}
         </td>
       </tr>

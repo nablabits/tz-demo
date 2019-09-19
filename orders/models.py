@@ -12,7 +12,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from . import managers, settings
-from .utils import WeekColor
+from .utils import WeekColor, prettify_times
 from decouple import config
 
 from todoist.api import TodoistAPI
@@ -227,6 +227,18 @@ class Order(models.Model):
         """Determine if the order has comments."""
         return Comment.objects.filter(reference=self)
 
+    @property
+    def estimated_time(self):
+        """Estimate the time in seconds to produce the order."""
+        items = OrderItem.objects.filter(reference=self)
+        tc, ts, ti = 0, 0, 0  # set initial times to 0
+        for item in items:
+            c, s, i = item.estimated_time
+            tc += c
+            ts += s
+            ti += i
+        return (tc, ts, ti)
+
     def deliver(self):
         """Deliver the order and update the date."""
         self.status = 7
@@ -404,6 +416,50 @@ class Item(models.Model):
         else:
             super().save(*args, **kwargs)
 
+    @property
+    def avg_crop(self):
+        """Average the time to crop the item."""
+        crop = OrderItem.objects.filter(element=self)
+        crop = crop.exclude(crop=timedelta(0))
+        crop = crop.aggregate(
+            total=models.Sum('crop'),
+            qtys=models.Sum('qty'), )
+
+        return crop['total'] / crop['qtys'] if crop['qtys'] else timedelta(0)
+
+    @property
+    def avg_sewing(self):
+        """Average the time to sew the item."""
+        t0 = timedelta(0)
+        sewing = OrderItem.objects.filter(element=self)
+        sewing = sewing.exclude(sewing=t0)
+        sewing = sewing.aggregate(
+            total=models.Sum('sewing'),
+            qtys=models.Sum('qty'), )
+
+        return sewing['total'] / sewing['qtys'] if sewing['qtys'] else t0
+
+    @property
+    def avg_iron(self):
+        """Average the time to iron the item."""
+        iron = OrderItem.objects.filter(element=self)
+        iron = iron.exclude(iron=timedelta(0))
+        iron = iron.aggregate(
+            total=models.Sum('iron'),
+            qtys=models.Sum('qty'), )
+
+        return iron['total'] / iron['qtys'] if iron['qtys'] else timedelta(0)
+
+    @property
+    def production(self):
+        """Sum the total production for this item."""
+        item = OrderItem.objects.filter(element=self)
+        item = item.exclude(element__foreing=True)
+        item = item.aggregate(total=models.Sum('qty'))
+        if not item['total']:
+            item['total'] = 0
+        return item['total']
+
     class Meta:
         ordering = ('name',)
 
@@ -463,6 +519,12 @@ class OrderItem(models.Model):
         if self.reference.ref_name == 'Quick':
             self.stock = True
 
+        # Ensure that stock items have no times
+        if self.stock:
+            self.crop = timedelta(0)
+            self.sewing = timedelta(0)
+            self.iron = timedelta(0)
+
         # Finally, ensure that foreign items are not Stock
         if self.element.foreing:
             self.stock = False
@@ -496,6 +558,21 @@ class OrderItem(models.Model):
     def subtotal_bt(self):
         """Display the subtotal amount without the taxes."""
         return round(float(self.qty * self.price) / 1.21, 2)
+
+    @property
+    def estimated_time(self):
+        """Return the estimated time in seconds to produce the item."""
+        item = Item.objects.get(pk=self.element.pk)
+        times = (
+            (item.avg_crop * self.qty).seconds,
+            (item.avg_sewing * self.qty).seconds,
+            (item.avg_iron * self.qty).seconds, )
+        return times
+
+    @property
+    def prettified_est(self):
+        """Return the displayable estimated times."""
+        return [prettify_times(d) for d in self.estimated_time]
 
 
 class Comment(models.Model):

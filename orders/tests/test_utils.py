@@ -5,7 +5,7 @@ from datetime import date, timedelta
 from django.test import TestCase
 
 from orders import settings
-from orders.utils import WeekColor
+from orders.utils import WeekColor, prettify_times
 
 
 class WeekColorTest(TestCase):
@@ -51,3 +51,18 @@ class WeekColorTest(TestCase):
         delivery = date.today() - timedelta(days=7)
         color = WeekColor(delivery).get()
         self.assertEqual(color, settings.WEEK_COLORS['this'])
+
+
+class PrettifyTimesTest(TestCase):
+
+    def test_hours(self):
+        s = prettify_times(5400)
+        self.assertEqual(s, '1.5h')
+
+    def test_minutes(self):
+        s = prettify_times(90)
+        self.assertEqual(s, '~2m')
+
+    def test_seconds(self):
+        s = prettify_times(50)
+        self.assertEqual(s, '50s')
