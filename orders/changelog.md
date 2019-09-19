@@ -1,6 +1,15 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v78
+### v79, Sept 19
+  * **Nuevo:** ahora tenemos una estimación del tiempo que nos va a llevar
+    producir cada pedido.
+  * **Nuevo:** ya se pueden editar los tiempos de trabajo directamente sobre las
+    prendas.
+  * **Nuevo:** los pedidos no confirmados se muestran aparte.
+  * **Bug:** ahora al abrir un proyecto en todoist la pagina recarga correctamente
+    la información.
+
+### v78, Ago 18
   * **Nuevo:** Nueva vista detallada de pedido con integración con todoist.
   * **Nuevo:** Nueva vista con los últimos horarios registrados.
   * **Mejora:** La barra de gastos ahora muestra la cantidad gastada en lugar de
