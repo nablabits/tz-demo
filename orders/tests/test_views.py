@@ -361,6 +361,30 @@ class CommonContextOrderDetails(TestCase):
         self.assertIsInstance(context['session'], Timetable)
         self.assertEqual(context['session'].user, self.request.user)
 
+    def test_estimated_times(self):
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for n, item in enumerate(items):
+            OrderItem.objects.create(
+                element=item, qty=10 * n + 1, reference=Order.objects.first(),
+                crop=timedelta(seconds=10),
+                sewing=timedelta(seconds=20),
+                iron=timedelta(seconds=30), )
+
+        # Create an order
+        order = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            ref_name='Current',
+            delivery=date.today(), )
+
+        OrderItem.objects.create(element=items[0], qty=5, reference=order)
+
+        context = CommonContexts.order_details(self.request, order.pk)
+        self.assertEqual(context['order_est'], ['50s', '~2m', '~2m'])
+        self.assertEqual(context['order_est_total'], '~5m')
+
     def test_title(self):
         order = Order.objects.first()
         context = CommonContexts.order_details(self.request, order.pk)

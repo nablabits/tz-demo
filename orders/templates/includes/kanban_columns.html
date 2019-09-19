@@ -6,12 +6,12 @@
         <span class="ml-1 badge badge-info">{{icebox.count}}</span>
         <span><i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-icebox" style="cursor:pointer;"></i></span>
       </h5>
-      <h5 class="ml-auto pr-1">{{amounts.0}}€</h5>
+      <h5 class="ml-auto pr-1">{{amounts.0}}€ / {{est_times.0}}</h5>
     </div>
     <div class="collapse" id="info-icebox">
       <p class="m-0 p-0">Pedidos sin inicio definido</p>
     </div>
-    </div>
+  </div>
   {% for order in icebox %}
     {%include 'includes/kanban_element.html'%}
   {% endfor %}
@@ -33,7 +33,7 @@
           <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-queued" style="cursor:pointer;"></i>
         </span>
       </h5>
-      <h5 class="ml-auto pr-1">{{amounts.1}}€</h5>
+      <h5 class="ml-auto pr-1">{{amounts.1}}€ / {{est_times.1}}</h5>
     </div>
     <div class="collapse" id="info-queued">
       <p class="m-0 p-0">Pedidos con inicio próximo</p>

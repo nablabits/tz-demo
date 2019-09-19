@@ -183,8 +183,34 @@
          {%if item.foreing%}
          <span class="mr-1"><i class="far fa-sign-in-alt"></i></span>
          {%endif%}
+         <span class="ml-3">{{item.production}}</span>
          <span class="ml-3">{{item.price}}€</span>
          <span class="ml-1 mr-5">({{item.fabrics}}m)</span>
+         {% if not item.foreing %}
+           {%if item.avg_crop or item.avg_sewing or item.avg_iron%}
+            <span class="ml-1 mr-5">
+              {% if item.avg_crop %}
+                {{item.avg_crop}}
+              {% else %}
+                Sin tiempos de corte
+              {% endif %}
+              &middot;
+              {% if item.avg_sewing %}
+                {{item.avg_sewing}}
+              {% else %}
+                Sin tiempos de costura
+              {% endif %}
+              &middot;
+              {% if item.avg_iron %}
+                {{item.avg_iron}}
+              {% else %}
+                Sin tiempos de planchado
+              {% endif %}
+            </span>
+           {% else %}
+            Sin datos
+           {% endif %}
+         {% endif %}
          <span class="ml-5">{%include 'includes/action_buttons.html'%}</span>
      </li>
     {%endfor%}

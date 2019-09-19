@@ -22,6 +22,7 @@ from django.views.generic import ListView
 from rest_framework import viewsets
 
 from . import serializers, settings
+from .utils import prettify_times
 from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
                     InvoiceForm, ItemForm, OrderForm, OrderItemForm,
                     TimetableCloseForm, ItemTimesForm, )
@@ -63,13 +64,24 @@ class CommonContexts:
             if not col['total']:
                 col['total'] = 0
             amounts.append(col['total'])
+
+        eti, etq = 0, 0
+        for order in icebox:
+            eti += sum(order.estimated_time)
+        for order in queued:
+            etq += sum(order.estimated_time)
+
+        est_times = [prettify_times(d) for d in (eti, etq)]
+
         vars = {'icebox': icebox,
                 'queued': queued,
                 'in_progress': in_progress,
                 'waiting': waiting,
                 'done': done,
+                'confirmed': confirmed,
                 'update_date': EditDateForm(),
-                'amounts': amounts
+                'amounts': amounts,
+                'est_times': est_times,
                 }
         return vars
 
@@ -86,9 +98,15 @@ class CommonContexts:
         now = datetime.now()
         session = Timetable.active.get(user=request.user)
 
+        # Display estimated times
+        order_est = [prettify_times(d) for d in order.estimated_time]
+        order_est_total = prettify_times(sum(order.estimated_time))
+
         title = (order.pk, order.customer.name, order.ref_name)
         vars = {'order': order,
                 'items': items,
+                'order_est': order_est,
+                'order_est_total': order_est_total,
                 'update_times': ItemTimesForm(),
                 'comments': comments,
                 'user': cur_user,
