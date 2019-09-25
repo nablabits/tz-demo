@@ -157,6 +157,34 @@ class CommonContextKanbanTests(TestCase):
         for o in ip:
             self.assertTrue(o.status in ['3', '4', '5', ])
 
+    def test_in_progress_shows_confirmed_by_default(self):
+        n = 3
+        for o in Order.objects.all()[:3]:
+            o.status = n
+            o.save()
+            n += 1
+
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+
+        ip = CommonContexts.kanban()['in_progress']
+        self.assertEqual(ip.count(), 2)
+
+    def test_in_progress_unconfirmed(self):
+        n = 3
+        for o in Order.objects.all()[:3]:
+            o.status = n
+            o.save()
+            n += 1
+
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+
+        ip = CommonContexts.kanban(confirmed=False)['in_progress']
+        self.assertEqual(ip.count(), 1)
+
     def test_in_progress_items_are_ordered_by_date(self):
         """Test the queued items."""
         n = 1
@@ -185,6 +213,30 @@ class CommonContextKanbanTests(TestCase):
         for o in waiting:
             self.assertTrue(o.status == '6')
 
+    def test_waiting_shows_confirmed_by_default(self):
+        for o in Order.objects.all()[:3]:
+            o.status = '6'
+            o.save()
+
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+
+        ip = CommonContexts.kanban()['waiting']
+        self.assertEqual(ip.count(), 2)
+
+    def test_waiting_unconfirmed(self):
+        for o in Order.objects.all()[:3]:
+            o.status = '6'
+            o.save()
+
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+
+        ip = CommonContexts.kanban(confirmed=False)['waiting']
+        self.assertEqual(ip.count(), 1)
+
     def test_waiting_items_are_ordered_by_date(self):
         """Test the waiting items."""
         n = 1
@@ -212,6 +264,32 @@ class CommonContextKanbanTests(TestCase):
         self.assertEqual(done.count(), 3)
         for o in done:
             self.assertTrue(o.status == '7')
+
+    def test_done_items_shows_confirmed_by_default(self):
+        """Test the done items."""
+        for o in Order.objects.all()[:3]:
+            o.status = '7'
+            o.save()
+
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+
+        done = CommonContexts.kanban()['done']
+        self.assertEqual(done.count(), 2)
+
+    def test_done_items_unconfirmed(self):
+        """Test the done items."""
+        for o in Order.objects.all()[:3]:
+            o.status = '7'
+            o.save()
+
+        unconfirmed = Order.objects.first()
+        unconfirmed.confirmed = False
+        unconfirmed.save()
+
+        done = CommonContexts.kanban(confirmed=False)['done']
+        self.assertEqual(done.count(), 1)
 
     def test_done_items_are_ordered_by_date(self):
         """Test the done items."""
@@ -281,6 +359,46 @@ class CommonContextKanbanTests(TestCase):
         """Test the type of update date key."""
         self.assertIsInstance(
             CommonContexts.kanban()['update_date'], forms.ModelForm)
+
+    def test_estimated_times_starts_at_zero(self):
+        self.assertEqual(CommonContexts.kanban()['est_times'], ['0s', '0s'])
+
+    def test_estimated_times_is_len_2(self):
+        self.assertEqual(len(CommonContexts.kanban()['est_times']), 2)
+
+    def test_estimated_times_in_icebox(self):
+        # add some times to already created orderitems (5)
+        for n, item in enumerate(OrderItem.objects.all()):
+            item.crop = timedelta(seconds=n+1)
+            item.sewing = timedelta(minutes=n+1)
+            item.iron = timedelta(hours=n+1)
+            item.save()
+
+        # expected result
+        sum_sec = 1+90+5400+3+180+10800+4+6+270+360+16200+21600
+        est = round(sum_sec / 3600, 1)
+
+        self.assertEqual(
+            CommonContexts.kanban()['est_times'][0], '{}h'.format(est))
+
+    def test_estimated_times_in_queued(self):
+        # add some times to already created orderitems (5)
+        for n, item in enumerate(OrderItem.objects.all()):
+            item.crop = timedelta(seconds=n+1)
+            item.sewing = timedelta(minutes=n+1)
+            item.iron = timedelta(hours=n+1)
+            item.save()
+
+        for order in Order.objects.all():
+            order.status = '2'
+            order.save()
+
+        # expected result
+        sum_sec = 1+90+5400+3+180+10800+4+6+270+360+16200+21600
+        est = round(sum_sec / 3600, 1)
+
+        self.assertEqual(
+            CommonContexts.kanban()['est_times'][1], '{}h'.format(est))
 
 
 class CommonContextOrderDetails(TestCase):
