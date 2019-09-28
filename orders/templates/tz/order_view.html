@@ -155,7 +155,11 @@
           <div class="col-lg-4 col-md-6">
             <div class="card" id="payments-card">
               <div class="card-header">
-                <h5><i class="far fa-hand-holding-usd pr-2"></i>Prepagos</h5>
+                <div class="d-flex justify-content-between">
+                  <h5><i class="far fa-hand-holding-usd pr-2"></i>Prepagos</h5>
+                  <button type="button" class="btn btn-sm btn-outline-success js-crud-edit" data-action="order-edit-add-prepaid" data-pk="{{order.pk}}">
+                    <i class="fal fa-coins"></i> Añadir prepago
+                </div>
               </div>
               <div class="card-body">
                 <div class="d-flex flex-column">

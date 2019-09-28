@@ -8,6 +8,7 @@
 {{ form.chest.as_hidden}}
 {{ form.hip.as_hidden }}
 {{ form.lenght.as_hidden }}
+{{ form.confirmed.as_hidden }}
 
 
 <div class="row">
@@ -18,21 +19,27 @@
     </div>
   </div>
   <div class="col">
+    {% if order.customer.email %}
     <div class="form-check">
       <input class="form-check-input" type="checkbox" name="send-mail" value="0" id="send-email" {%if email%}checked{%else%}disabled{%endif%}>
       <label class="form-check-label" for="send-email">
-        Enviar email
+        Enviar email a {{order.customer.email}}
       </label>
     </div>
+    {%endif%}
   </div>
 </div>
-{%if email%}
+<div class="d-flex my-1">
+
+</div>
+{%if order.prepaid != 0%}
 <div class="d-flex">
   <div class="alert alert-info" role="alert">
-    <i class="fa fa-info mr-2"></i> Se enviará el email a {{order.customer.email}}
+    <i class="fa fa-info mr-2"></i> <strong>Ei, ten cuidado,</strong> si añades un nuevo prepago anularás el anterior.
   </div>
 </div>
-{%else%}
+{%endif%}
+{%if not order.customer.email%}
 <div class="d-flex">
   <div class="alert alert-info" role="alert">
     <i class="fa fa-info mr-2"></i> Este cliente no tiene email, añade uno para poder enviarle comprobantes.

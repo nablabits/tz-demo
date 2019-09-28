@@ -19,6 +19,8 @@ from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
 from orders.forms import ItemTimesForm
 from orders.views import CommonContexts
 
+from decouple import config
+
 
 class CommonContextKanbanTests(TestCase):
     """Test the common vars for both AJAX and regular views."""
@@ -6017,6 +6019,7 @@ class ActionsPostMethodEdit(TestCase):
                          'Tu comprobante de depósito en Trapuzarrak')
         self.assertEqual(mail.outbox[0].from_email, settings.CONTACT_EMAIL)
         self.assertEqual(mail.outbox[0].to[0], order.customer.email)
+        self.assertEqual(mail.outbox[0].bcc[0], config('EMAIL_BCC'))
 
     def test_add_prepaid_invalid_returns_to_modal(self):
         """Test the correct mail sending."""
