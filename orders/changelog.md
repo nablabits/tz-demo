@@ -1,5 +1,13 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v80, Sept 29
+  * **Bug:** el botón de prepago ha vuelto del más allá y además ahora se envia
+  una copia oculta al mail de administración.
+  * **Bug:** al editar tiempos de prenda, la app recuerda los tiempos que ya
+  había introducidos.
+  * **Bug:** el *link* al cliente dentro del pedido ya vuelve a funcionar como
+  debe.
+
 ### v79, Sept 19
   * **Nuevo:** ahora tenemos una estimación del tiempo que nos va a llevar
     producir cada pedido.

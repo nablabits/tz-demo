@@ -96,17 +96,17 @@
                 <div class="form-row align-items-center">
                   <div class="col-auto">
                     {{update_times.crop.label_tag}}
-                    {% render_field update_times.crop class="form-control form-control-sm" %}
+                    <input type="text" name="crop" value="{{item.crop}}" class="form-control form-control-sm" required="" id="id_crop">
                     <input type="hidden" name="pk" value="{{item.pk}}">
                     <input type="hidden" id="js-action-{{item.pk}}" name="action" value="edit-times">
                   </div>
                   <div class="col-auto">
                     {{update_times.sewing.label_tag}}
-                    {% render_field update_times.sewing class="form-control form-control-sm" %}
+                    <input type="text" name="sewing" value="{{item.sewing}}" class="form-control form-control-sm" required="" id="id_sewing">
                   </div>
                   <div class="col-auto">
                     {{update_times.iron.label_tag}}
-                    {% render_field update_times.iron class="form-control form-control-sm" %}
+                    <input type="text" name="iron" value="{{item.iron}}" class="form-control form-control-sm" required="" id="id_iron">
                   </div>
                   <div class="col-auto">
                     <button type="submit" class="btn btn-sm btn-outline-success js-submit">

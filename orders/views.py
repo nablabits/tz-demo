@@ -29,6 +29,8 @@ from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
+from decouple import config
+
 
 class CommonContexts:
     """Define common queries for both AJAX and regular views.
@@ -1631,7 +1633,8 @@ class Actions(View):
                 if order.customer.email and self.request.POST.get('send-mail'):
                     subject = 'Tu comprobante de depósito en Trapuzarrak'
                     from_email = settings.CONTACT_EMAIL
-                    to = order.customer.email
+                    to = [order.customer.email, ]
+                    bcc = [config('EMAIL_BCC'), ]
                     txt = ('Kaixo %s:\n\n' +
                            'Oraitxe bertan %s€-ko aurre ordainketa egin ' +
                            'dozu eskaera baten kontuan.\n' +
@@ -1654,7 +1657,7 @@ class Actions(View):
                                         settings.CONTACT_EMAIL,
                                         settings.CONTACT_PHONE)
                     msg = EmailMultiAlternatives(
-                        subject, txt, from_email, [to])
+                        subject, txt, from_email, to=to, bcc=bcc)
                     msg.send()
 
                 data['form_is_valid'] = True
