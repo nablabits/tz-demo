@@ -11,7 +11,7 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, DecimalField, F, Q, Sum
 from django.db.utils import IntegrityError
-from django.http import Http404, HttpResponseServerError, JsonResponse
+from django.http import Http404, HttpResponseServerError, JsonResponse, FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -30,6 +30,7 @@ from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
 from decouple import config
+from pyx import canvas, text, document
 
 
 class CommonContexts:
@@ -147,6 +148,36 @@ def timetable_required(function):
             else:
                 return function(request, *args, **kwargs)
     return _inner
+
+
+def dummy_text_file_view(request):
+    """Test if a view can return files."""
+    order = Order.objects.last()
+    items = OrderItem.objects.filter(reference=order)
+
+    # Edit the content
+    text.set(cls=text.LatexRunner, texenc='utf-8')
+    text.preamble(r'\usepackage{ucs}')
+    text.preamble(r'\usepackage[utf8x]{inputenc}')
+    c = canvas.canvas()
+    line = 5
+    for item in items:
+        c.text(0.5, line, item.ticket_print,
+               [text.parbox(3), text.halign.left])
+        c.text(5.5, line, '{}eur'.format(item.price_bt), [text.halign.right])
+        c.text(7, line, '{}eur'.format(item.subtotal_bt), [text.halign.right])
+        line += 1
+    c.text(0, line, 'Trapuzarrak ({})'.format(order.pk))
+
+    # Finally write the file
+    name = './orders/tmp/ticket.pdf'
+    c.writePDFfile(name)
+
+    f = open(name, 'rb')
+    f.seek(0)
+    response = FileResponse(f, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="ticket.pdf"'
+    return response
 
 
 # Add hours

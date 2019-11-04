@@ -64,4 +64,7 @@ urlpatterns = [
     # The API url
     path('API/', include(router.urls)),
 
+    # Dummy text output_field
+    path('ticket/', views.dummy_text_file_view)
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

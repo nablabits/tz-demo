@@ -18,6 +18,7 @@ MarkupSafe==1.0
 psycopg2==2.7.5
 python-decouple==3.1
 pytz==2018.3
+PyX==0.15
 requests==2.21.0
 selenium==3.14.0
 sqlparse==0.3.0
