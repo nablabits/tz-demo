@@ -574,6 +574,16 @@ class OrderItem(models.Model):
         """Return the displayable estimated times."""
         return [prettify_times(d) for d in self.estimated_time]
 
+    @property
+    def ticket_print(self):
+        """Output the ticket print in single call."""
+        item = self.element
+        ticket_str = (
+            str(self.qty) + ' x ' + item.get_item_type_display() +
+            ' ' + item.name
+        )
+        return ticket_str
+
 
 class Comment(models.Model):
     """Store the comments related to the orders."""
