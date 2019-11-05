@@ -1,8 +1,8 @@
 """Define all the views for the app."""
 
+import io
 from datetime import date, datetime
 from random import randint
-from tempfile import NamedTemporaryFile
 
 import markdown2
 from django.contrib.auth import logout
@@ -31,7 +31,7 @@ from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
 from decouple import config
-from pyx import canvas, text, document
+from reportlab.pdfgen import canvas
 
 
 class CommonContexts:
@@ -151,36 +151,34 @@ def timetable_required(function):
     return _inner
 
 
-def dummy_text_file_view(request):
-    """Test if a view can return files."""
+def printableview(request):
+    """Instead of creating a doc, let's try a printable page."""
+    # Create a file-like buffer to receive PDF data.
+    buffer = io.BytesIO()
+
+    # Create the PDF object, using the buffer as its "file."
+    p = canvas.Canvas(buffer)
+
+    # Draw things on the PDF. Here's where the PDF generation happens.
+    # See the ReportLab documentation for the full list of functionality.
     order = Order.objects.last()
     items = OrderItem.objects.filter(reference=order)
-
-    # Edit the content
-    text.set(engine=text.LatexRunner, texenc='utf-8')
-    text.preamble(r'\usepackage{ucs}')
-    text.preamble(r'\usepackage[utf8x]{inputenc}')
-    c = canvas.canvas()
-    line = 5
+    line = 15
     for item in items:
-        c.text(0.5, line, item.ticket_print,
-               [text.parbox(3), text.halign.left])
-        c.text(5.5, line, '{}eur'.format(item.price_bt), [text.halign.right])
-        c.text(7, line, '{}eur'.format(item.subtotal_bt), [text.halign.right])
-        line += 1
-    c.text(0, line, 'Trapuzarrak ({})'.format(order.pk))
+        p.drawString(10, line, item.ticket_print, )
+        p.drawString(200, line, '{}eur'.format(item.price_bt), )
+        p.drawString(300, line, '{}eur'.format(item.subtotal_bt), )
+        line += 15
+    p.drawString(0, line, 'Trapuzarrak ({})'.format(order.pk))
 
-    # Finally write the file
-    tf = NamedTemporaryFile()
-    name = '{}.pdf'.format(tf.name)
-    print(name)
-    c.writePDFfile(name)
+    # Close the PDF object cleanly, and we're done.
+    p.showPage()
+    p.save()
 
-    f = open(name, 'rb')
-    f.seek(0)
-    response = FileResponse(f, content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="ticket.pdf"'
-    return response
+    # FileResponse sets the Content-Disposition header so that browsers
+    # present the option to save the file.
+    buffer.seek(0)
+    return FileResponse(buffer, as_attachment=True, filename='ticket.pdf')
 
 
 # Add hours
