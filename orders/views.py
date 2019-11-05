@@ -2,6 +2,7 @@
 
 from datetime import date, datetime
 from random import randint
+from tempfile import NamedTemporaryFile
 
 import markdown2
 from django.contrib.auth import logout
@@ -156,7 +157,7 @@ def dummy_text_file_view(request):
     items = OrderItem.objects.filter(reference=order)
 
     # Edit the content
-    text.set(cls=text.LatexRunner, texenc='utf-8')
+    text.set(engine=text.LatexRunner, texenc='utf-8')
     text.preamble(r'\usepackage{ucs}')
     text.preamble(r'\usepackage[utf8x]{inputenc}')
     c = canvas.canvas()
@@ -170,7 +171,9 @@ def dummy_text_file_view(request):
     c.text(0, line, 'Trapuzarrak ({})'.format(order.pk))
 
     # Finally write the file
-    name = './orders/tmp/ticket.pdf'
+    tf = NamedTemporaryFile()
+    name = '{}.pdf'.format(tf.name)
+    print(name)
     c.writePDFfile(name)
 
     f = open(name, 'rb')
