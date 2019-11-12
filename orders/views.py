@@ -1,6 +1,5 @@
 """Define all the views for the app."""
 
-import io
 from datetime import date, datetime
 from random import randint
 
@@ -12,7 +11,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, DecimalField, F, Q, Sum
 from django.db.utils import IntegrityError
-from django.http import Http404, HttpResponseServerError, JsonResponse, FileResponse
+from django.http import (
+    Http404, HttpResponseServerError, JsonResponse, FileResponse, )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -31,7 +31,6 @@ from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
 from decouple import config
-from reportlab.pdfgen import canvas
 
 
 class CommonContexts:
@@ -151,34 +150,13 @@ def timetable_required(function):
     return _inner
 
 
-def printableview(request):
-    """Instead of creating a doc, let's try a printable page."""
-    # Create a file-like buffer to receive PDF data.
-    buffer = io.BytesIO()
-
-    # Create the PDF object, using the buffer as its "file."
-    p = canvas.Canvas(buffer)
-
-    # Draw things on the PDF. Here's where the PDF generation happens.
-    # See the ReportLab documentation for the full list of functionality.
-    order = Order.objects.last()
-    items = OrderItem.objects.filter(reference=order)
-    line = 15
-    for item in items:
-        p.drawString(10, line, item.ticket_print, )
-        p.drawString(200, line, '{}eur'.format(item.price_bt), )
-        p.drawString(300, line, '{}eur'.format(item.subtotal_bt), )
-        line += 15
-    p.drawString(0, line, 'Trapuzarrak ({})'.format(order.pk))
-
-    # Close the PDF object cleanly, and we're done.
-    p.showPage()
-    p.save()
-
-    # FileResponse sets the Content-Disposition header so that browsers
-    # present the option to save the file.
-    buffer.seek(0)
-    return FileResponse(buffer, as_attachment=True, filename='ticket.pdf')
+@login_required
+def printable_ticket(request, invoice_no):
+    """Download an invoiced order."""
+    invoice = Invoice.objects.get(invoice_no=invoice_no)
+    pdf = invoice.printable_ticket()
+    filename = 'ticket-{}.pdf'.format(invoice.invoice_no)
+    return FileResponse(pdf, as_attachment=True, filename=filename, )
 
 
 # Add hours
@@ -840,17 +818,26 @@ def order_express_view(request, pk):
     if request.method == 'POST':
         cp = request.POST.get('cp', None)
         customer_pk = request.POST.get('customer', None)
-        if cp:
+        pay_method = request.POST.get('pay_method', None)
+        if cp:  # Add a zip code to the express order
             c = Customer.objects.get_or_create(
                 name='express', city='server', phone=0, cp=cp,
                 notes='AnnonymousUserAutmaticallyCreated')
             order.customer = c[0]
             order.save()
-        elif customer_pk:
+        elif customer_pk:  # convert to regular order
             c = get_object_or_404(Customer, pk=customer_pk)
             order.customer = c
             order.ref_name = 'Venta express con arreglo'
             order.save()
+        elif pay_method:  # Invoice the order
+            form = InvoiceForm(request.POST)
+            if form.is_valid():
+                invoice = form.save(commit=False)
+                invoice.reference = order
+                invoice.save()
+                if request.POST.get('email', None):
+                    pass  # define the email sending options
         else:
             raise Http404('Something went wrong with the request.')
 
@@ -862,11 +849,12 @@ def order_express_view(request, pk):
     customers = customers.exclude(provider=True)
     items = OrderItem.objects.filter(reference=order)
     available_items = Item.objects.all()[:10]
-    already_invoiced = Invoice.objects.filter(reference=order)
 
     cur_user = request.user
     now = datetime.now()
     session = Timetable.active.get(user=request.user)
+
+    form = InvoiceForm()
 
     view_settings = {'order': order,
                      'customers': customers,
@@ -875,8 +863,8 @@ def order_express_view(request, pk):
                      'session': session,
                      'item_types': settings.ITEM_TYPE[1:],
                      'items': items,
+                     'form': form,
                      'available_items': available_items,
-                     'invoiced': already_invoiced,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
                      'placeholder': 'Busca un nombre',
@@ -1571,10 +1559,13 @@ class Actions(View):
             data['html_id'] = '#ticket'
             total = items.aggregate(
                 total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+
+            form = InvoiceForm()
             context = {'items': items,
                        'total': total,
                        'order': order,
                        'customers': customers,
+                       'form': form,
 
                        # CRUD Actions
                        'js_action_delete': 'order-express-item-delete',
@@ -1618,7 +1609,8 @@ class Actions(View):
                 invoice = form.save(commit=False)
                 invoice.reference = order
                 invoice.save()
-                data['redirect'] = (reverse('invoiceslist'))
+                data['redirect'] = reverse(
+                    'order_view', kwargs={'pk': order.pk})
                 data['form_is_valid'] = True
             else:
                 data['form_is_valid'] = False
@@ -1932,12 +1924,13 @@ class Actions(View):
             data['html_id'] = '#ticket'
             total = items.aggregate(
                 total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            form = InvoiceForm()
             context = {'items': items,
                        'total': total,
                        'order': order,
+                       'form': form,
 
                        # CRUD Actions
-                       # 'js_action_edit': 'order-express-item-edit',
                        'js_action_delete': 'order-express-item-delete',
                        'js_data_pk': '0',
                        }

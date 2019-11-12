@@ -8,15 +8,15 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, FileResponse
 from django.test import Client, TestCase, tag
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 
 from orders import settings
 from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
                            Item, Order, OrderItem, PQueue, Timetable)
-from orders.forms import ItemTimesForm
+from orders.forms import ItemTimesForm, InvoiceForm
 from orders.views import CommonContexts
 
 from decouple import config
@@ -526,6 +526,46 @@ class CommonContextOrderDetails(TestCase):
         self.assertEqual(context['js_action_edit'], 'order-item-edit')
         self.assertEqual(context['js_action_delete'], 'order-item-delete')
         self.assertEqual(context['js_data_pk'], order.pk)
+
+
+class PrintableTicketTests(TestCase):
+    """Test the printable ticket view."""
+
+    def setUp(self):
+        """Set up the test suite."""
+        u = User.objects.create_user(username='regular', password='test')
+        self.client = Client()
+        self.client.login(username='regular', password='test')
+        c = Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Item.objects.create(name='Test', fabrics=5, price=10)
+        order = Order.objects.create(
+            user=u, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order)
+
+    def test_printable_ticket_requires_login(self):
+        self.client = Client()
+        login_url = '/accounts/login/?next=/ticket_print%26invoice_no%253D1'
+        resp = self.client.get(
+            reverse('ticket_print', kwargs={'invoice_no': 1}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+
+    def test_printable_ticket_requires_valid_invoice_no(self):
+        with self.assertRaises(NoReverseMatch):
+            self.client.get(reverse('ticket_print'))
+        with self.assertRaises(NoReverseMatch):
+            self.client.get(reverse('ticket_print',
+                                    kwargs={'invoice_no': 1e5}))
+
+    def test_printable_ticket_outputs_a_file(self):
+        invoice = Invoice.objects.last()
+        resp = self.client.get(
+            reverse('ticket_print', kwargs={'invoice_no': invoice.invoice_no}))
+        self.assertIsInstance(resp, FileResponse)
 
 
 class AddHoursTests(TestCase):
@@ -2317,6 +2357,23 @@ class OrderExpressTests(TestCase):
         order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.customer.name, 'Test')
 
+    def test_post_pay_method_ivoices_order(self):
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        with self.assertRaises(ObjectDoesNotExist):
+            Invoice.objects.get(reference=order)  # The invoice not yet
+
+        OrderItem.objects.create(
+            element=Item.objects.first(), qty=5, reference=order)
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'pay_method': settings.PAYMENT_METHODS[0][0]})
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(Invoice.objects.get(reference=order))
+
     def test_invalid_pk_raises_404(self):
         """Raise a 404 when trying to select a void customer."""
         self.client.login(username='regular', password='test')
@@ -2400,14 +2457,14 @@ class OrderExpressTests(TestCase):
 
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertFalse(resp.context['invoiced'])
+        self.assertFalse(resp.context['order'].invoiced)
 
         OrderItem.objects.create(
             reference=order_express, element=Item.objects.last(), price=10)
         Invoice.objects.create(reference=order_express)
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertTrue(resp.context['invoiced'])
+        self.assertTrue(resp.context['order'].invoiced)
 
     def test_total_amount(self):
         """Test the proper sum of ticket."""
@@ -2436,6 +2493,7 @@ class OrderExpressTests(TestCase):
             reverse('order_express', args=[order_express.pk]))
         self.assertEqual(resp.context['user'].username, 'regular')
         self.assertEqual(len(resp.context['item_types']), 19)
+        self.assertIsInstance(resp.context['form'], InvoiceForm)
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
         self.assertEqual(resp.context['placeholder'], 'Busca un nombre')
         self.assertEqual(resp.context['search_on'], 'items')
