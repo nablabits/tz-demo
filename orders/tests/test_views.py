@@ -5108,7 +5108,6 @@ class ActionsPostMethodRaises(TestCase):
                    'comment-read',
                    'send-to-order',
                    'send-to-order-express',
-                   'order-item-add',
                    'ticket-to-invoice',
                    'order-edit',
                    'order-edit-add-prepaid',
@@ -5400,7 +5399,6 @@ class ActionsPostMethodCreate(TestCase):
         """
         actions = ('order-comment',
                    'comment-read',
-                   'order-item-add',
                    'ticket-to-invoice',
                    'order-edit',
                    'order-edit-date',
@@ -5484,132 +5482,6 @@ class ActionsPostMethodCreate(TestCase):
         self.assertTrue(read_comment.read)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(data['redirect'], reverse('main'))
-
-    def test_order_item_add_adds_item(self):
-        """Test the proper insertion of items."""
-        order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.first()
-        self.client.post(reverse('actions'), {'action': 'order-item-add',
-                                              'pk': order.pk,
-                                              'element': item_obj.pk,
-                                              'qty': 2,
-                                              'crop': 0,
-                                              'sewing': 0,
-                                              'iron': 0,
-                                              'fit': True,
-                                              'stock': True,
-                                              'description': 'added item',
-                                              'test': True
-                                              })
-        item = OrderItem.objects.get(description='added item')
-        self.assertTrue(item)
-        self.assertFalse(item.fit)
-        self.assertTrue(item.stock)
-        self.assertEqual(item.reference, order)
-
-    def test_order_item_add_context_response(self):
-        """Test the response given by add item."""
-        order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.first()
-        resp = self.client.post(reverse('actions'),
-                                {'action': 'order-item-add',
-                                 'pk': order.pk,
-                                 'element': item_obj.pk,
-                                 'qty': 2,
-                                 'crop': 0,
-                                 'sewing': 0,
-                                 'iron': 0,
-                                 'description': 'added item',
-                                 'test': True
-                                 })
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/order_details.html')
-        self.assertIsInstance(context, list)
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#order-details')
-        vars = ('order', 'items', 'btn_title_add', 'js_action_add',
-                'js_action_edit', 'js_action_delete', 'js_data_pk')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_order_item_add_invalid_form_returns_to_form_again(self):
-        """Test item add invalid form behaviour."""
-        order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.first()
-        resp = self.client.post(reverse('actions'),
-                                {'action': 'order-item-add',
-                                 'pk': order.pk,
-                                 'element': item_obj.pk,
-                                 'qty': 'invalid quantity',
-                                 'crop': 0,
-                                 'sewing': 0,
-                                 'iron': 0,
-                                 'description': 'added item',
-                                 'test': True
-                                 })
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/order_details.html')
-        vars = ('form', 'order')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_ticket_to_invoice_issues_an_invoice(self):
-        """Test the correct issue of invoices."""
-        order = Order.objects.first()
-        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
-        for i in range(3):
-            OrderItem.objects.create(reference=order, element=item_obj)
-        self.client.post(
-            reverse('actions'),
-            {'pk': order.pk, 'action': 'ticket-to-invoice', 'pay_method': 'V',
-             'test': True})
-        invoice = Invoice.objects.first()
-        self.assertEqual(invoice.reference, order)
-        self.assertEqual(invoice.issued_on.date(), date.today())
-        self.assertEqual(invoice.invoice_no, 1)
-        self.assertEqual(invoice.amount, 60)
-        self.assertEqual(invoice.pay_method, 'V')
-
-    def test_ticket_to_invoice_context_response(self):
-        """Test the dictionaries and the response."""
-        order = Order.objects.first()
-        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
-        for i in range(3):
-            OrderItem.objects.create(reference=order, element=item_obj)
-        resp = self.client.post(
-            reverse('actions'),
-            {'pk': order.pk, 'action': 'ticket-to-invoice', 'pay_method': 'V',
-             'test': True})
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(
-            data['redirect'], reverse('invoiceslist'))
-
-    def test_ticket_to_invoice_rejected_form(self):
-        """Test when from is not valid."""
-        order = Order.objects.first()
-        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
-        for i in range(3):
-            OrderItem.objects.create(reference=order, element=item_obj)
-        resp = self.client.post(
-            reverse('actions'),
-            {'pk': order.pk, 'action': 'ticket-to-invoice',
-             'pay_method': 'invalid', 'test': True})
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/regular_form.html')
-        vars = ('form', 'items', 'order', 'total', 'modal_title', 'pk',
-                'action', 'submit_btn', 'custom_form', )
-        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_send_to_order_raises_error_invalid_item(self):
         """If no item is given raise a 404."""

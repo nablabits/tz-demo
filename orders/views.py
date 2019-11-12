@@ -1573,32 +1573,7 @@ class Actions(View):
                        }
             template = 'includes/ticket.html'
 
-        # Attach item to order (POST)
-        elif action == 'order-item-add':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderItemForm(request.POST)
-            if form.is_valid():
-                add_item = form.save(commit=False)
-                add_item.reference = order
-                add_item.save()
-                items = OrderItem.objects.filter(reference=order)
-                template = 'includes/order_details.html'
-                context = {'items': items,
-                           'order': order,
-                           'btn_title_add': 'Añadir prenda',
-                           'js_action_add': 'order-item-add',
-                           'js_action_edit': 'order-item-edit',
-                           'js_action_delete': 'order-item-delete',
-                           'js_data_pk': order.pk,
-                           }
-
-                data['form_is_valid'] = True
-                data['html_id'] = '#order-details'
-            else:
-                context = {'order': order, 'form': form}
-                template = 'includes/order_details.html'
-                data['form_is_valid'] = False
-
+        # Invoice Order (regular only POST)
         elif action == 'ticket-to-invoice':
             order = get_object_or_404(Order, pk=pk)
             items = OrderItem.objects.filter(reference=order)
