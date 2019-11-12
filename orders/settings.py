@@ -40,7 +40,7 @@ PAYMENT_METHODS = (
     ('T', 'Transferencia')
 )
 
-GOAL = 240
+GOAL = 197
 
 WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
 
