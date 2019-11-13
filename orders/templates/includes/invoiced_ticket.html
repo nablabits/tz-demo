@@ -16,6 +16,20 @@
   <div class="d-flex justify-content-end mt-4">
     <h3><strong>Total:</strong>&nbsp;{{order.total}}€</h3>
   </div>
+  <div class="d-flex justify-content-center">
+    <a href="{% url 'ticket_print' order.invoice.invoice_no %}">
+      <button class="mr-1 mt-1 btn btn-outline-success">
+        <i class="fa fa-vote-yea"></i><br>Imprimir ticket
+      </button>
+    </a>
+    {% if order.customer.name != 'express' %}
+    <a href="{% url 'order_view' order.pk %}">
+      <button class="ml-1 mt-1 btn btn-outline-success">
+        <i class="fa fa-dolly"></i><br>Ir al pedido
+      </button>
+    </a>
+    {% endif %}
+  </div>
 </div>
 <div class="modal-footer">
   <button type="button" class="btn btn-outline-info" data-dismiss="modal">Cerrar</button>

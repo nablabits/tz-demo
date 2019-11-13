@@ -7,42 +7,36 @@
           <!-- Goal box -->
           <div class="d-flex flex-column border rounded custom_bg_1 p-2">
             <h1 class="mb-0"><i class="far fa-bullseye-arrow"></i><br>Progreso del año</h1>
-            <div class="d-flex my-3 justify-content-center">
-              <p class="bg-bar0 border border-secondary rounded p-1 text-white">Ventas<br>{{aggregates.0}}€</p>
-              <p class="bg-bar1 border border-secondary rounded p-1 ml-1 text-white">Confirmados<br>{{aggregates.1}}€</p>
-              <p class="bg-bar2 border border-secondary rounded p-1 ml-1 text-white">Por Confirmar<br>{{aggregates.2}}€</p>
-              <p class="bg-bar3 border border-secondary rounded p-1 ml-1 text-white">Producido TZ<br>{{aggregates.3}}€</p>
-              <p class="bg-bar4 border border-secondary rounded p-1 ml-1 text-white">En cola TZ<br>{{aggregates.4}}€</p>
-            </div>
-            <div class="d-flex justify-content-start ml-auto" style="width: calc(100% - {{bar.0}}%);">
-              <p class="mb-0"><i class="far fa-chevron-down mr-1" style="margin-left: -6px;"></i>{{aggregates.0}}€</p>
+            <div class="d-flex my-3 justify-content-between mx-5">
+              <h5 class="bg-bar0 border border-secondary rounded p-1 text-white">Ventas<br>{{aggregates.0}}€</h5>
+              <h5 class="bg-bar1 border border-secondary rounded p-1 text-white">Confirmados<br>{{aggregates.1}}€</h5>
+              <h5 class="bg-bar2 border border-secondary rounded p-1 text-white">Por Confirmar<br>{{aggregates.2}}€</h5>
             </div>
             <div class="progress mx-2" style="background-color: #bad49f;">
-              <div class="progress-bar bg-bar0" role="progressbar" style="width: {{bar.0}}%"></div>
+              {%if aggregates.4 > aggregates.0 %}
+                <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{bar.4}}%">{{aggregates.4}}€</div>
+              {% else %}
+                  <div class="progress-bar progress-bar-striped bg-success" role="progressbar" style="width: {{bar.4}}%">{{aggregates.4}}€</div>
+              {% endif %}
+              <div class="d-flex pl-2">
+                Objetivo
+              </div>
+            </div>
+            <div class="progress mx-2 mt-1" style="background-color: #bad49f; height:30px;">
+              <div class="progress-bar bg-bar0" role="progressbar" style="width: {{bar.0}}%">{{aggregates.0}}€</div>
               <div class="progress-bar bg-bar1" role="progressbar" style="width: {{bar.1}}%"></div>
               <div class="progress-bar bg-bar2" role="progressbar" style="width: {{bar.2}}%"></div>
-              <div class="progress-bar bg-bar3" role="progressbar" style="width: {{bar.3}}%"></div>
-              <div class="progress-bar bg-bar4" role="progressbar" style="width: {{bar.4}}%"></div>
-              <div class="d-flex pl-2">
+              <div class="d-flex pl-2 align-items-center">
                 Ingresos
               </div>
             </div>
-            <div class="progress mt-1 mx-2" style="background-color: #bad49f;">
-              {%if se_diff > 0%}
-                <div class="progress-bar custom_bg_2 text-dark" role="progressbar" style="width: {{exp_perc}}%;">
-                  {{se_diff}}€
-                </div>
-              {%else%}
-              <div class="progress-bar progress-bar-striped bg-warning text-dark" role="progressbar" style="width: {{exp_perc}}%">
-                {{se_diff}}
+            <div class="progress mt-1 mx-2" style="background-color: #bad49f; height:30px;">
+              <div class="progress-bar custom_bg_2 text-dark" role="progressbar" style="width: {{bar.3}}%">
+                {{aggregates.3}}€
               </div>
-              {%endif%}
-              <div class="d-flex pl-2">
+              <div class="d-flex pl-2 align-items-center">
                 Gastos
               </div>
-            </div>
-            <div class="d-flex justify-content-center">
-              <h4><i class="far fa-chevron-up ml-1"></i><br>{{goal}}€</h4>
             </div>
           </div>
 

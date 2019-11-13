@@ -3,6 +3,7 @@
 Its intended use is for business related to tailor made clothes.
 """
 
+import io
 from datetime import date, timedelta
 
 from django.contrib.auth.models import User
@@ -16,6 +17,8 @@ from .utils import WeekColor, prettify_times
 from decouple import config
 
 from todoist.api import TodoistAPI
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
 
 
 class Customer(models.Model):
@@ -205,15 +208,6 @@ class Order(models.Model):
             return round((int(self.status)-2) * 100 / 4, 0)
 
     @property
-    def times(self):
-        """Return the total time tracked and the total trackeable time."""
-        tracked = 0
-        items = self.orderitem_set.filter(stock=False)
-        for item in items:
-            tracked = tracked + item.time_quality
-        return (tracked, len(items) * 3)
-
-    @property
     def has_no_items(self):
         """Determine if the order has no items."""
         items = OrderItem.objects.filter(reference=self)
@@ -228,6 +222,15 @@ class Order(models.Model):
         return Comment.objects.filter(reference=self)
 
     @property
+    def times(self):
+        """Determine how many of the trackeable times have been tracked."""
+        tracked = 0
+        items = self.orderitem_set.filter(stock=False)
+        for item in items:
+            tracked = tracked + item.time_quality
+        return (tracked, len(items) * 3)
+
+    @property
     def estimated_time(self):
         """Estimate the time in seconds to produce the order."""
         items = OrderItem.objects.filter(reference=self)
@@ -238,6 +241,16 @@ class Order(models.Model):
             ts += s
             ti += i
         return (tc, ts, ti)
+
+    @property
+    def production_time(self):
+        """Calculate the total production time spent."""
+        items = OrderItem.objects.filter(reference=self)
+        time = items.aggregate(
+            tc=models.Sum('crop'),
+            ts=models.Sum('sewing'),
+            ti=models.Sum('iron'), )
+        return time['tc'] + time['ts'] + time['ti']
 
     def deliver(self):
         """Deliver the order and update the date."""
@@ -576,12 +589,17 @@ class OrderItem(models.Model):
 
     @property
     def ticket_print(self):
-        """Output the ticket print in single call."""
+        """Output the ticket print lines."""
         item = self.element
-        ticket_str = (
-            str(self.qty) + ' x ' + item.get_item_type_display() +
-            ' ' + item.name
-        )
+        type_name = item.get_item_type_display()
+        item_name = item.name
+        if item.foreing:
+            if type_name[-1] in ('a', ):
+                item_name = 'genérica'
+            else:
+                item_name = 'genérico'
+        ticket_str = '{} x {} {}'.format(self.qty, type_name, item_name)
+
         return ticket_str
 
 
@@ -795,6 +813,82 @@ class Invoice(models.Model):
         order.archive()
 
         super().save(*args, **kwargs)
+
+    def printable_ticket(self, lc=False):
+        """Create a PDF with the sale summary to send or to print."""
+        def linecutter(ticket_print):
+            """Cut the line string when it's too long."""
+            f, s, n = ticket_print, None, 25
+            if len(f) > n:
+                f = f[:n]
+                while f[-1] != ' ':
+                    n -= 1
+                    f, s = f[:n], ticket_print[n:]
+                return f[:-1], s
+            else:
+                return f
+
+        # Exit with the line cut for testing
+        if lc:
+            return linecutter(lc)
+
+        order = self.reference
+        items = OrderItem.objects.filter(reference=order)
+
+        buffer = io.BytesIO()
+
+        # Create the PDF object, using the buffer as its "file."
+        p = canvas.Canvas(buffer)
+        p.setFont("Helvetica", 24)
+
+        # Notice that the PDF is written bottom up, so start by the end
+        line = 20 * mm  # bottom margin
+
+        # Start out with the summary
+        summary = (
+            'Guztira: {}€'.format(order.total),
+            'BEZ/IVA (21%) €: {}€'.format(order.vat), )
+        for textline in summary:
+            p.drawRightString(180 * mm, line, textline)
+            line += 15 * mm
+
+        # Separator line & netx block margin
+        p.line(100*mm, line, 200*mm, line)
+        line += 30 * mm
+
+        # Sale breakdown
+        for item in items:
+            p.drawRightString(140 * mm, line, '{}€'.format(item.price), )
+            p.drawRightString(180 * mm, line, '{}€'.format(item.subtotal), )
+            for tl in linecutter(item.ticket_print):
+                p.drawString(0, line, tl)
+                line += 10 * mm
+            line += 10 * mm
+
+        # Separator
+        p.line(0, line, 200*mm, line)
+
+        # Finally, the header
+        textobject = p.beginText()
+        textobject.setTextOrigin(0, line + 60 * mm)
+        textobject.textLines(
+            """Trapuzarrak · Euskal Jantziak
+            Iratxe Maruri Garrastazu
+            78870226Y
+            Foru enparantza 2, lonja.
+            48100 Mungia.
+            """)
+        textobject.moveCursor(0, 20)
+        textobject.textOut(
+            'Factura simplificada nº: {}'.format(self.invoice_no))
+        p.drawText(textobject)
+
+        # Close the PDF object cleanly, and we're done.
+        p.showPage()
+        p.save()
+
+        buffer.seek(0)
+        return buffer
 
     class Meta():
         """Meta options."""
