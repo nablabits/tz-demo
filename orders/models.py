@@ -826,7 +826,7 @@ class Invoice(models.Model):
                     f, s = f[:n], ticket_print[n:]
                 return f[:-1], s
             else:
-                return f
+                return (f, )
 
         # Exit with the line cut for testing
         if lc:
