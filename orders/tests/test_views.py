@@ -8,15 +8,15 @@ from django import forms
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.http import JsonResponse, Http404
+from django.http import JsonResponse, Http404, FileResponse
 from django.test import Client, TestCase, tag
-from django.urls import reverse
+from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 
 from orders import settings
 from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
                            Item, Order, OrderItem, PQueue, Timetable)
-from orders.forms import ItemTimesForm
+from orders.forms import ItemTimesForm, InvoiceForm
 from orders.views import CommonContexts
 
 from decouple import config
@@ -528,6 +528,46 @@ class CommonContextOrderDetails(TestCase):
         self.assertEqual(context['js_data_pk'], order.pk)
 
 
+class PrintableTicketTests(TestCase):
+    """Test the printable ticket view."""
+
+    def setUp(self):
+        """Set up the test suite."""
+        u = User.objects.create_user(username='regular', password='test')
+        self.client = Client()
+        self.client.login(username='regular', password='test')
+        c = Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Item.objects.create(name='Test', fabrics=5, price=10)
+        order = Order.objects.create(
+            user=u, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        Invoice.objects.create(reference=order)
+
+    def test_printable_ticket_requires_login(self):
+        self.client = Client()
+        login_url = '/accounts/login/?next=/ticket_print%26invoice_no%253D1'
+        resp = self.client.get(
+            reverse('ticket_print', kwargs={'invoice_no': 1}))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+
+    def test_printable_ticket_requires_valid_invoice_no(self):
+        with self.assertRaises(NoReverseMatch):
+            self.client.get(reverse('ticket_print'))
+        with self.assertRaises(NoReverseMatch):
+            self.client.get(reverse('ticket_print',
+                                    kwargs={'invoice_no': 1e5}))
+
+    def test_printable_ticket_outputs_a_file(self):
+        invoice = Invoice.objects.last()
+        resp = self.client.get(
+            reverse('ticket_print', kwargs={'invoice_no': invoice.invoice_no}))
+        self.assertIsInstance(resp, FileResponse)
+
+
 class AddHoursTests(TestCase):
     """Test the add hours page."""
 
@@ -759,12 +799,6 @@ class MainViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/main.html')
 
-    def test_goal(self):
-        """Test the goal var."""
-        elapsed = date.today() - date(2018, 12, 31)
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['goal'], elapsed.days * settings.GOAL)
-
     def test_aggregates_sales_filters_current_year_invoices(self):
         """Only current year invoices are computed."""
         for order in Order.objects.all():
@@ -861,32 +895,6 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['aggregates'][2], 20)
 
-    def test_aggregates_produced_tz_filter_in_tz_orders_with_status_7(self):
-        """Produced tz should filter in delivered tz orders."""
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][3], 0)
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.status = 7
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][3], 10)
-
-    def test_aggregates_future_tz_filter_in_tz_orders_without_status_7(self):
-        """Future tz should filter in undelivered tz orders."""
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][4], 0)
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        status = 6
-        for order in Order.objects.all():
-            order.customer = tz
-            order.status = status
-            order.save()
-            status += 1
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][4], 10)
-
     def test_aggregates_confirmed_multiplies_price_by_qty(self):
         """Test the correct product."""
         for item in OrderItem.objects.all():
@@ -906,37 +914,12 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['aggregates'][2], 30)
 
-    def test_aggregates_produced_tz_multiplies_price_by_qty(self):
-        """Test the correct product."""
-        for item in OrderItem.objects.all():
-            item.qty = 3
-            item.save()
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.status = 7
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][3], 30)
-
-    def test_aggregates_future_tz_multiplies_price_by_qty(self):
-        """Test the correct product."""
-        for item in OrderItem.objects.all():
-            item.qty = 3
-            item.save()
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][4], 30)
-
     def test_aggregates_avoid_none_type(self):
         """Empty queries return NoneType and that can't be summed."""
         for item in OrderItem.objects.all():
             item.delete()
         resp = self.client.get(reverse('main'))
-        for aggregate in resp.context['aggregates']:
+        for aggregate in resp.context['aggregates'][:3]:
             self.assertEqual(aggregate, 0)
 
     def test_aggregates_sales_return_float(self):
@@ -944,11 +927,13 @@ class MainViewTests(TestCase):
         for order in Order.objects.all():
             Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][0], 30)
         self.assertIsInstance(resp.context['aggregates'][0], float)
 
     def test_aggregates_confirmed_returns_float(self):
         """Check the correct type."""
         resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
         self.assertIsInstance(resp.context['aggregates'][1], float)
 
     def test_aggregates_unconfirmed_returns_float(self):
@@ -957,41 +942,30 @@ class MainViewTests(TestCase):
         unconfirmed.confirmed = False
         unconfirmed.save()
         resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][2], 10)
         self.assertIsInstance(resp.context['aggregates'][2], float)
-
-    def test_aggregates_produced_tz_returns_float(self):
-        """Check the correct type."""
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.status = 7
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertIsInstance(resp.context['aggregates'][3], float)
-
-    def test_aggregates_future_tz_returns_float(self):
-        """Check the correct type."""
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertIsInstance(resp.context['aggregates'][4], float)
 
     def test_bar(self):
         """Test the correct amounts for bar."""
-        # Create two more orders to have all the elements
-        for i in range(2):
-            order = Order.objects.create(
-                user=User.objects.first(),
-                customer=Customer.objects.first(),
-                delivery=date.today(), ref_name='Test', )
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-        sold, confirmed, unconfirmed, tz_done, tz_future = Order.objects.all()
+        # Create one more orders to have all the elements
+        order = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            delivery=date.today(), ref_name='Test', )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        sold, confirmed, unconfirmed = Order.objects.all()[:3]
+
+        # Create also an expense
+        supplier = Customer.objects.create(
+            name='supplier', phone=0, cp=0, provider=True)
+        Expense.objects.create(
+            issuer=supplier, invoice_no=0, issued_on=date.today(),
+            amount=100)
 
         # Fetch the goal
-        elapsed = date.today() - date(2018, 12, 31)
+        today, cur_year = date.today(), date.today().year
+        elapsed = today - date(cur_year - 1, 12, 31)
         goal = elapsed.days * settings.GOAL
 
         # Set qtys to have a decent number of 'em
@@ -1008,62 +982,29 @@ class MainViewTests(TestCase):
         unconfirmed.confirmed = False
         unconfirmed.save()
 
-        # Set tz done order
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_done.customer = tz
-        tz_done.status = 7
-        tz_done.save()
-
-        # Set tz future order
-        tz_future.customer = tz
-        tz_future.save()
-
         # Finally, test it
         resp = self.client.get(reverse('main'))
-        agg = 0  # The aggregate iterator
-        for amount in resp.context['bar']:
-            self.assertEqual(
-                amount,
-                round(resp.context['aggregates'][agg] * 100 / (2 * goal), 2))
-            agg += 1
+        sales, conf, unconf, exp, goal = resp.context['aggregates']
 
-    def test_expenses_bar(self):
-        """Test the expenses bar."""
-        supplier = Customer.objects.create(
-            name='supplier', phone=0, cp=0, provider=True)
+        relevant = (sales, exp, goal)
+        mn, mx = min(relevant) * .9,  max(relevant) * 1.1
+        bar_len = mx - mn
 
-        # Fetch the goal
-        elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL
-
-        for i in range(3):
-            Expense.objects.create(
-                issuer=supplier, invoice_no=0, issued_on=date.today(),
-                amount=100)
-        resp = self.client.get(reverse('main'))
-
+        bar = resp.context['bar']
+        self.assertEqual(bar[0], round((sales - mn) * 100 / bar_len, 2))
         self.assertEqual(
-            resp.context['exp_perc'], round(30000 / (2 * goal), 2))
+            bar[1],
+            round(((sales + conf - mn) * 100 / bar_len) - bar[0], 2))
+        self.assertEqual(
+            bar[2],
+            round(((sales + conf + unconf - mn)*100/bar_len)-sum(bar[:2]), 2))
+        self.assertEqual(bar[3], round((exp - mn) * 100 / bar_len, 2))
+        self.assertEqual(bar[4], round((goal - mn) * 100 / bar_len, 2))
 
     def test_expenses_avoid_NoneType_error(self):
         """Total should return 0 in None queries."""
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['exp_perc'], 0)
-
-    def test_se_diff(self):
-        """Test the correct value of difference."""
-        supplier = Customer.objects.create(
-            name='supplier', phone=0, cp=0, provider=True)
-
-        for i in range(3):
-            Expense.objects.create(
-                issuer=supplier, invoice_no=0, issued_on=date.today(),
-                amount=100)
-        for order in Order.objects.all():
-            Invoice.objects.create(reference=order)
-
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['se_diff'], 300)
+        self.assertEqual(resp.context['aggregates'][3], 0)
 
     def test_active_count_box(self):
         """Test the active box."""
@@ -2317,6 +2258,23 @@ class OrderExpressTests(TestCase):
         order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.customer.name, 'Test')
 
+    def test_post_pay_method_ivoices_order(self):
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        with self.assertRaises(ObjectDoesNotExist):
+            Invoice.objects.get(reference=order)  # The invoice not yet
+
+        OrderItem.objects.create(
+            element=Item.objects.first(), qty=5, reference=order)
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'pay_method': settings.PAYMENT_METHODS[0][0]})
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(Invoice.objects.get(reference=order))
+
     def test_invalid_pk_raises_404(self):
         """Raise a 404 when trying to select a void customer."""
         self.client.login(username='regular', password='test')
@@ -2400,14 +2358,14 @@ class OrderExpressTests(TestCase):
 
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertFalse(resp.context['invoiced'])
+        self.assertFalse(resp.context['order'].invoiced)
 
         OrderItem.objects.create(
             reference=order_express, element=Item.objects.last(), price=10)
         Invoice.objects.create(reference=order_express)
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertTrue(resp.context['invoiced'])
+        self.assertTrue(resp.context['order'].invoiced)
 
     def test_total_amount(self):
         """Test the proper sum of ticket."""
@@ -2436,6 +2394,7 @@ class OrderExpressTests(TestCase):
             reverse('order_express', args=[order_express.pk]))
         self.assertEqual(resp.context['user'].username, 'regular')
         self.assertEqual(len(resp.context['item_types']), 19)
+        self.assertIsInstance(resp.context['form'], InvoiceForm)
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
         self.assertEqual(resp.context['placeholder'], 'Busca un nombre')
         self.assertEqual(resp.context['search_on'], 'items')
@@ -5050,7 +5009,6 @@ class ActionsPostMethodRaises(TestCase):
                    'comment-read',
                    'send-to-order',
                    'send-to-order-express',
-                   'order-item-add',
                    'ticket-to-invoice',
                    'order-edit',
                    'order-edit-add-prepaid',
@@ -5342,7 +5300,6 @@ class ActionsPostMethodCreate(TestCase):
         """
         actions = ('order-comment',
                    'comment-read',
-                   'order-item-add',
                    'ticket-to-invoice',
                    'order-edit',
                    'order-edit-date',
@@ -5426,132 +5383,6 @@ class ActionsPostMethodCreate(TestCase):
         self.assertTrue(read_comment.read)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(data['redirect'], reverse('main'))
-
-    def test_order_item_add_adds_item(self):
-        """Test the proper insertion of items."""
-        order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.first()
-        self.client.post(reverse('actions'), {'action': 'order-item-add',
-                                              'pk': order.pk,
-                                              'element': item_obj.pk,
-                                              'qty': 2,
-                                              'crop': 0,
-                                              'sewing': 0,
-                                              'iron': 0,
-                                              'fit': True,
-                                              'stock': True,
-                                              'description': 'added item',
-                                              'test': True
-                                              })
-        item = OrderItem.objects.get(description='added item')
-        self.assertTrue(item)
-        self.assertFalse(item.fit)
-        self.assertTrue(item.stock)
-        self.assertEqual(item.reference, order)
-
-    def test_order_item_add_context_response(self):
-        """Test the response given by add item."""
-        order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.first()
-        resp = self.client.post(reverse('actions'),
-                                {'action': 'order-item-add',
-                                 'pk': order.pk,
-                                 'element': item_obj.pk,
-                                 'qty': 2,
-                                 'crop': 0,
-                                 'sewing': 0,
-                                 'iron': 0,
-                                 'description': 'added item',
-                                 'test': True
-                                 })
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/order_details.html')
-        self.assertIsInstance(context, list)
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#order-details')
-        vars = ('order', 'items', 'btn_title_add', 'js_action_add',
-                'js_action_edit', 'js_action_delete', 'js_data_pk')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_order_item_add_invalid_form_returns_to_form_again(self):
-        """Test item add invalid form behaviour."""
-        order = Order.objects.get(ref_name='example')
-        item_obj = Item.objects.first()
-        resp = self.client.post(reverse('actions'),
-                                {'action': 'order-item-add',
-                                 'pk': order.pk,
-                                 'element': item_obj.pk,
-                                 'qty': 'invalid quantity',
-                                 'crop': 0,
-                                 'sewing': 0,
-                                 'iron': 0,
-                                 'description': 'added item',
-                                 'test': True
-                                 })
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(template, 'includes/order_details.html')
-        vars = ('form', 'order')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_ticket_to_invoice_issues_an_invoice(self):
-        """Test the correct issue of invoices."""
-        order = Order.objects.first()
-        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
-        for i in range(3):
-            OrderItem.objects.create(reference=order, element=item_obj)
-        self.client.post(
-            reverse('actions'),
-            {'pk': order.pk, 'action': 'ticket-to-invoice', 'pay_method': 'V',
-             'test': True})
-        invoice = Invoice.objects.first()
-        self.assertEqual(invoice.reference, order)
-        self.assertEqual(invoice.issued_on.date(), date.today())
-        self.assertEqual(invoice.invoice_no, 1)
-        self.assertEqual(invoice.amount, 60)
-        self.assertEqual(invoice.pay_method, 'V')
-
-    def test_ticket_to_invoice_context_response(self):
-        """Test the dictionaries and the response."""
-        order = Order.objects.first()
-        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
-        for i in range(3):
-            OrderItem.objects.create(reference=order, element=item_obj)
-        resp = self.client.post(
-            reverse('actions'),
-            {'pk': order.pk, 'action': 'ticket-to-invoice', 'pay_method': 'V',
-             'test': True})
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(
-            data['redirect'], reverse('invoiceslist'))
-
-    def test_ticket_to_invoice_rejected_form(self):
-        """Test when from is not valid."""
-        order = Order.objects.first()
-        item_obj = Item.objects.create(name='example', fabrics=1, price=20)
-        for i in range(3):
-            OrderItem.objects.create(reference=order, element=item_obj)
-        resp = self.client.post(
-            reverse('actions'),
-            {'pk': order.pk, 'action': 'ticket-to-invoice',
-             'pay_method': 'invalid', 'test': True})
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/regular_form.html')
-        vars = ('form', 'items', 'order', 'total', 'modal_title', 'pk',
-                'action', 'submit_btn', 'custom_form', )
-        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_send_to_order_raises_error_invalid_item(self):
         """If no item is given raise a 404."""
@@ -5763,7 +5594,7 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(data['html_id'], '#ticket')
         self.assertEqual(data['template'], 'includes/ticket.html')
         vars = ('items', 'total', 'order', 'customers', 'js_action_delete',
-                'js_data_pk')
+                'js_data_pk', 'form')
         self.assertTrue(self.context_vars(data['context'], vars))
 
         orderitem = OrderItem.objects.first()
@@ -5839,6 +5670,42 @@ class ActionsPostMethodCreate(TestCase):
         self.assertFalse(data['form_is_valid'])
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
+        self.assertTrue(self.context_vars(context, vars))
+
+    def test_ticket_to_invoice_valid(self):
+        order = Order.objects.first()
+        item = Item.objects.create(name='test',  fabrics=0, price=10)
+        OrderItem.objects.create(element=item, reference=order, qty=3)
+        resp = self.client.post(
+            reverse('actions'),
+            {'action': 'ticket-to-invoice', 'pk': order.pk, 'pay_method': 'V',
+             'test': True, })
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(Invoice.objects.get(reference=order))
+        self.assertEqual(data['redirect'],
+                         reverse('order_view', kwargs={'pk': order.pk}))
+
+    def test_ticket_to_invoice_not_valid(self):
+        order = Order.objects.first()
+        item = Item.objects.create(name='test',  fabrics=0, price=10)
+        OrderItem.objects.create(element=item, reference=order, qty=3)
+        resp = self.client.post(
+            reverse('actions'),
+            {'action': 'ticket-to-invoice', 'pk': order.pk, 'void': 'V',
+             'test': True, })
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+        self.assertFalse(Invoice.objects.filter(reference=order))
+        template = data['template']
+        context = data['context']
+        self.assertEqual(template, 'includes/regular_form.html')
+        vars = ('form', 'items', 'order', 'total', 'modal_title', 'pk',
+                'action', 'submit_btn', 'custom_form', )
         self.assertTrue(self.context_vars(context, vars))
 
 
@@ -6489,7 +6356,8 @@ class ActionsPostMethodEdit(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['template'], 'includes/ticket.html')
         self.assertEqual(data['html_id'], '#ticket')
-        vars = ('items', 'total', 'order', 'js_action_delete', 'js_data_pk', )
+        vars = ('items', 'total', 'order', 'form', 'js_action_delete',
+                'js_data_pk', )
         self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_delete_obj_item_deletes_the_item(self):

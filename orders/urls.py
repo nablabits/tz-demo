@@ -43,6 +43,10 @@ urlpatterns = [
     re_path(r'^customer_view/(?P<pk>[0-9]+)$',
             views.customer_view, name='customer_view'),
 
+    # Printer view
+    re_path(r'^ticket_print&invoice_no=(?P<invoice_no>[0-9]+)$',
+            views.printable_ticket, name='ticket_print'),
+
     # Generic views
     path('timetables/', views.TimetableList.as_view(), name='timetables'),
 
@@ -63,8 +67,5 @@ urlpatterns = [
 
     # The API url
     path('API/', include(router.urls)),
-
-    # Dummy text output_field
-    path('ticket/', views.printableview)
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

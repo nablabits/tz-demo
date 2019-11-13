@@ -1,6 +1,5 @@
 """Define all the views for the app."""
 
-import io
 from datetime import date, datetime
 from random import randint
 
@@ -12,7 +11,8 @@ from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, DecimalField, F, Q, Sum
 from django.db.utils import IntegrityError
-from django.http import Http404, HttpResponseServerError, JsonResponse, FileResponse
+from django.http import (
+    Http404, HttpResponseServerError, JsonResponse, FileResponse, )
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
@@ -31,7 +31,6 @@ from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
 from decouple import config
-from reportlab.pdfgen import canvas
 
 
 class CommonContexts:
@@ -151,34 +150,13 @@ def timetable_required(function):
     return _inner
 
 
-def printableview(request):
-    """Instead of creating a doc, let's try a printable page."""
-    # Create a file-like buffer to receive PDF data.
-    buffer = io.BytesIO()
-
-    # Create the PDF object, using the buffer as its "file."
-    p = canvas.Canvas(buffer)
-
-    # Draw things on the PDF. Here's where the PDF generation happens.
-    # See the ReportLab documentation for the full list of functionality.
-    order = Order.objects.last()
-    items = OrderItem.objects.filter(reference=order)
-    line = 15
-    for item in items:
-        p.drawString(10, line, item.ticket_print, )
-        p.drawString(200, line, '{}eur'.format(item.price_bt), )
-        p.drawString(300, line, '{}eur'.format(item.subtotal_bt), )
-        line += 15
-    p.drawString(0, line, 'Trapuzarrak ({})'.format(order.pk))
-
-    # Close the PDF object cleanly, and we're done.
-    p.showPage()
-    p.save()
-
-    # FileResponse sets the Content-Disposition header so that browsers
-    # present the option to save the file.
-    buffer.seek(0)
-    return FileResponse(buffer, as_attachment=True, filename='ticket.pdf')
+@login_required
+def printable_ticket(request, invoice_no):
+    """Download an invoiced order."""
+    invoice = Invoice.objects.get(invoice_no=invoice_no)
+    pdf = invoice.printable_ticket()
+    filename = 'ticket-{}.pdf'.format(invoice.invoice_no)
+    return FileResponse(pdf, as_attachment=True, filename=filename, )
 
 
 # Add hours
@@ -221,12 +199,12 @@ def add_hours(request):
 def main(request):
     """Create the home page view."""
     # Goal box, goal
-    elapsed = date.today() - date(2018, 12, 31)
+    today, cur_year = date.today(), date.today().year
+    elapsed = today - date(cur_year - 1, 12, 31)
     goal = elapsed.days * settings.GOAL
 
     # GoalBox, Avoid naive dates
-    offset = date.today() - date(2018, 12, 31)
-    start = timezone.now() - offset
+    start = timezone.now() - elapsed
 
     # GoalBox, this year unsold items in queue
     year_items = OrderItem.objects.filter(reference__delivery__gte=start)
@@ -235,7 +213,7 @@ def main(request):
     year_items = year_items.exclude(reference__status=8)
 
     # GoalBox, solid incomes: already sold or in confirmed orders
-    sales = Invoice.objects.filter(issued_on__year=date.today().year)
+    sales = Invoice.objects.filter(issued_on__year=cur_year)
     sales = sales.aggregate(total=Sum('amount'))
     confirmed = year_items.filter(reference__confirmed=True)
     confirmed = confirmed.exclude(
@@ -245,14 +223,15 @@ def main(request):
     unconfirmed = year_items.exclude(reference__confirmed=True)
     unconfirmed = unconfirmed.exclude(
         reference__customer__name__iexact='trapuzarrak')
-    tz_items = year_items.filter(
-        reference__customer__name__iexact='trapuzarrak')
-    produced_tz = tz_items.filter(reference__status=7)
-    future_tz = tz_items.exclude(reference__status__in=[7, 8])
 
-    # GoalBox, get aggregations for above queries
-    queries = (confirmed, unconfirmed, produced_tz, future_tz, )
-    aggregates = list()
+    # GoalBox, summary amounts
+    if not sales['total']:  # avoid NoneType aggregate
+        aggregates = [0, ]
+    else:
+        aggregates = [float(sales['total']), ]
+
+    # GoalBox, get aggregations for confirmed & unconfirmed
+    queries = (confirmed, unconfirmed)
     for query in queries:
         aggregate = query.aggregate(
             total=Sum(F('price') * F('qty'), output_field=DecimalField()))
@@ -262,20 +241,27 @@ def main(request):
             aggregate = float(aggregate['total'])
         aggregates.append(aggregate)
 
-    # GoalBox, summary amounts and bar
-    if not sales['total']:  # avoid NoneType aggregate
-        aggregates.insert(0, 0)
-    else:
-        aggregates.insert(0, float(sales['total']))  # Amounts list
-    bar = [round(amount * 100 / (2 * goal), 2) for amount in aggregates]
-
-    # GoalBox, expenses bar
+    # GoalBox, calculate expenses
     expenses = Expense.objects.filter(
-        issued_on__year=2019).aggregate(total=Sum('amount'))
+        issued_on__year=cur_year).aggregate(total=Sum('amount'))
     if not expenses['total']:
         expenses['total'] = 0
-    exp_perc = round(float(expenses['total']) * 100 / (2 * goal), 2)
-    se_diff = expenses['total']
+    aggregates.append(float(expenses['total']))
+
+    # Finally, insert the goal estimation to compute
+    aggregates.append(goal)
+
+    # Estimate the length of the bar
+    relevant = (aggregates[0], aggregates[3], aggregates[4])
+    mn, mx = min(relevant) * .9,  max(relevant) * 1.1
+    bar_len = mx - mn
+
+    # Estimate the percentages for each aggregate
+    bar = [round((amount - mn) * 100 / bar_len, 2) for amount in aggregates]
+
+    # Adjust confirmed and unconfirmed since they are not included in relevant
+    bar[1] = round(((sum(aggregates[:2]) - mn)*100 / bar_len)-bar[0], 2)
+    bar[2] = round(((sum(aggregates[:3]) - mn)*100 / bar_len)-sum(bar[:2]), 2)
 
     # Active Box
     active = Order.active.count()
@@ -365,11 +351,8 @@ def main(request):
 
     now = datetime.now()
 
-    view_settings = {'goal': goal,
-                     'bar': bar,
+    view_settings = {'bar': bar,
                      'aggregates': aggregates,
-                     'exp_perc': exp_perc,
-                     'se_diff': se_diff,
                      'active': active,
                      'active_msg': active_msg,
                      'pending': Order.pending_orders.count(),
@@ -840,17 +823,26 @@ def order_express_view(request, pk):
     if request.method == 'POST':
         cp = request.POST.get('cp', None)
         customer_pk = request.POST.get('customer', None)
-        if cp:
+        pay_method = request.POST.get('pay_method', None)
+        if cp:  # Add a zip code to the express order
             c = Customer.objects.get_or_create(
                 name='express', city='server', phone=0, cp=cp,
                 notes='AnnonymousUserAutmaticallyCreated')
             order.customer = c[0]
             order.save()
-        elif customer_pk:
+        elif customer_pk:  # convert to regular order
             c = get_object_or_404(Customer, pk=customer_pk)
             order.customer = c
             order.ref_name = 'Venta express con arreglo'
             order.save()
+        elif pay_method:  # Invoice the order
+            form = InvoiceForm(request.POST)
+            if form.is_valid():
+                invoice = form.save(commit=False)
+                invoice.reference = order
+                invoice.save()
+                if request.POST.get('email', None):
+                    pass  # define the email sending options
         else:
             raise Http404('Something went wrong with the request.')
 
@@ -862,11 +854,12 @@ def order_express_view(request, pk):
     customers = customers.exclude(provider=True)
     items = OrderItem.objects.filter(reference=order)
     available_items = Item.objects.all()[:10]
-    already_invoiced = Invoice.objects.filter(reference=order)
 
     cur_user = request.user
     now = datetime.now()
     session = Timetable.active.get(user=request.user)
+
+    form = InvoiceForm()
 
     view_settings = {'order': order,
                      'customers': customers,
@@ -875,8 +868,8 @@ def order_express_view(request, pk):
                      'session': session,
                      'item_types': settings.ITEM_TYPE[1:],
                      'items': items,
+                     'form': form,
                      'available_items': available_items,
-                     'invoiced': already_invoiced,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
                      'placeholder': 'Busca un nombre',
@@ -1571,10 +1564,13 @@ class Actions(View):
             data['html_id'] = '#ticket'
             total = items.aggregate(
                 total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+
+            form = InvoiceForm()
             context = {'items': items,
                        'total': total,
                        'order': order,
                        'customers': customers,
+                       'form': form,
 
                        # CRUD Actions
                        'js_action_delete': 'order-express-item-delete',
@@ -1582,32 +1578,7 @@ class Actions(View):
                        }
             template = 'includes/ticket.html'
 
-        # Attach item to order (POST)
-        elif action == 'order-item-add':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderItemForm(request.POST)
-            if form.is_valid():
-                add_item = form.save(commit=False)
-                add_item.reference = order
-                add_item.save()
-                items = OrderItem.objects.filter(reference=order)
-                template = 'includes/order_details.html'
-                context = {'items': items,
-                           'order': order,
-                           'btn_title_add': 'Añadir prenda',
-                           'js_action_add': 'order-item-add',
-                           'js_action_edit': 'order-item-edit',
-                           'js_action_delete': 'order-item-delete',
-                           'js_data_pk': order.pk,
-                           }
-
-                data['form_is_valid'] = True
-                data['html_id'] = '#order-details'
-            else:
-                context = {'order': order, 'form': form}
-                template = 'includes/order_details.html'
-                data['form_is_valid'] = False
-
+        # Invoice Order (regular only POST)
         elif action == 'ticket-to-invoice':
             order = get_object_or_404(Order, pk=pk)
             items = OrderItem.objects.filter(reference=order)
@@ -1618,7 +1589,8 @@ class Actions(View):
                 invoice = form.save(commit=False)
                 invoice.reference = order
                 invoice.save()
-                data['redirect'] = (reverse('invoiceslist'))
+                data['redirect'] = reverse(
+                    'order_view', kwargs={'pk': order.pk})
                 data['form_is_valid'] = True
             else:
                 data['form_is_valid'] = False
@@ -1932,12 +1904,13 @@ class Actions(View):
             data['html_id'] = '#ticket'
             total = items.aggregate(
                 total=Sum(F('qty') * F('price'), output_field=DecimalField()))
+            form = InvoiceForm()
             context = {'items': items,
                        'total': total,
                        'order': order,
+                       'form': form,
 
                        # CRUD Actions
-                       # 'js_action_edit': 'order-express-item-edit',
                        'js_action_delete': 'order-express-item-delete',
                        'js_data_pk': '0',
                        }

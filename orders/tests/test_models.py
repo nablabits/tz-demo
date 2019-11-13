@@ -1,4 +1,6 @@
 """Test the app models."""
+from io import BytesIO
+
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 
@@ -374,6 +376,35 @@ class TestOrders(TestCase):
             delivery=date(2018, 12, 31), prepaid=50, )
         self.assertTrue(order.invoiced)
 
+    def test_has_no_items(self):
+        """Test the order has no items."""
+        order = Order.objects.create(user=User.objects.all()[0],
+                                     customer=Customer.objects.all()[0],
+                                     ref_name='Test%',
+                                     delivery=date.today(),
+                                     budget=100,
+                                     prepaid=100)
+        self.assertTrue(order.has_no_items)
+        item = Item.objects.create(name='Test item', fabrics=2)
+        for i in range(2):
+            OrderItem.objects.create(element=item, reference=order, qty=i,
+                                     crop=time(5), sewing=time(3),
+                                     iron=time(0))
+        order = Order.objects.get(pk=order.pk)
+        self.assertFalse(order.has_no_items)
+
+    def test_has_comments(self):
+        o = Order.objects.create(user=User.objects.all()[0],
+                                 customer=Customer.objects.all()[0],
+                                 ref_name='Test%',
+                                 delivery=date.today(),
+                                 )
+        self.assertFalse(o.has_comments)
+        Comment.objects.create(
+            user=User.objects.all()[0], reference=o, comment='Test')
+        o = Order.objects.get(pk=o.pk)
+        self.assertTrue(o.has_comments)
+
     def test_the_count_of_times_per_item_in_an_order(self):
         """Test the correct output of count times per order."""
         order = Order.objects.create(user=User.objects.all()[0],
@@ -409,35 +440,6 @@ class TestOrders(TestCase):
         self.assertEqual(order.times[0], 2)
         self.assertEqual(order.times[1], 3)
 
-    def test_has_no_items(self):
-        """Test the order has no items."""
-        order = Order.objects.create(user=User.objects.all()[0],
-                                     customer=Customer.objects.all()[0],
-                                     ref_name='Test%',
-                                     delivery=date.today(),
-                                     budget=100,
-                                     prepaid=100)
-        self.assertTrue(order.has_no_items)
-        item = Item.objects.create(name='Test item', fabrics=2)
-        for i in range(2):
-            OrderItem.objects.create(element=item, reference=order, qty=i,
-                                     crop=time(5), sewing=time(3),
-                                     iron=time(0))
-        order = Order.objects.get(pk=order.pk)
-        self.assertFalse(order.has_no_items)
-
-    def test_has_comments(self):
-        o = Order.objects.create(user=User.objects.all()[0],
-                                 customer=Customer.objects.all()[0],
-                                 ref_name='Test%',
-                                 delivery=date.today(),
-                                 )
-        self.assertFalse(o.has_comments)
-        Comment.objects.create(
-            user=User.objects.all()[0], reference=o, comment='Test')
-        o = Order.objects.get(pk=o.pk)
-        self.assertTrue(o.has_comments)
-
     def test_order_estimated_time(self):
         # Create previous orders
         older = Order.objects.create(user=User.objects.first(),
@@ -468,6 +470,18 @@ class TestOrders(TestCase):
         curr = Order.objects.get(pk=curr.pk)
 
         self.assertEqual(curr.estimated_time, (5+7, 2*(5+7), 3*(5+7)))
+
+    def test_order_production_time(self):
+        """Test the property."""
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date.today(),
+            prepaid=10)
+        times = [timedelta(minutes=t) for t in (10, 20, 30)]
+        OrderItem.objects.create(reference=order, element=Item.objects.last(),
+                                 crop=times[0], sewing=times[1], iron=times[2])
+        self.assertEqual(order.production_time, timedelta(hours=1))
 
     def test_deliver(self):
         o = Order.objects.create(user=User.objects.all()[0],
@@ -1137,6 +1151,23 @@ class TestOrderItems(TestCase):
 
         self.assertEqual(test_item.prettified_est, ['2.0h', '4.0h', '6.0h'])
 
+    def test_ticket_print(self):
+        item_obj = Item.objects.create(
+            name='ticket print', item_type='1', fabrics=10, price=30)
+        item = OrderItem.objects.create(
+            element=item_obj, reference=Order.objects.first(), qty=5, )
+        self.assertEqual(item.ticket_print, '5 x Falda ticket print')
+
+        # Now test a generic object (foreign)
+        item_obj.foreing = True
+        item_obj.save()
+        self.assertEqual(item.ticket_print, '5 x Falda genérica')
+
+        # Check the gender
+        item_obj.item_type = '2'
+        item_obj.save()
+        self.assertEqual(item.ticket_print, '5 x Pantalón genérico')
+
 
 class TestPQueue(TestCase):
     """Test the production queue model."""
@@ -1436,7 +1467,6 @@ class TestPQueue(TestCase):
         self.assertEqual(item.score, 1000)
 
 
-@tag('todoist')
 class TestInvoice(TestCase):
     """Test the invoice model."""
 
@@ -1569,6 +1599,7 @@ class TestInvoice(TestCase):
         invoice = Invoice.objects.create(reference=order)
         self.assertEqual(invoice.amount, 0)
 
+    @tag('todoist')
     def test_invoicing_archives_todoist(self):
         order = Order.objects.first()
         OrderItem.objects.create(
@@ -1580,6 +1611,25 @@ class TestInvoice(TestCase):
         project = order.t_api.projects.get_by_id(order.t_pid)
         project.delete()
         order.t_api.commit()
+
+    def test_printable_ticket_returns_bytesIO(self):
+        """Test the output for the method."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+        self.assertIsInstance(invoice.printable_ticket(), BytesIO)
+
+    def test_line_cutter(self):
+        """Test the different options for the method."""
+        invoice = Invoice.objects.create(reference=Order.objects.first())
+
+        # First test lines under 25 chars
+        linestr = invoice.printable_ticket(lc='def foo')
+        self.assertEqual(linestr, 'def foo')
+
+        # Now over 25 chars
+        long_str = 'A very long string with more than 25 characters'
+        linestr = invoice.printable_ticket(lc=long_str)
+        self.assertEqual(
+            linestr, ('A very long string with', 'more than 25 characters'))
 
 
 class TestExpense(TestCase):
