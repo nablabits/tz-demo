@@ -199,12 +199,12 @@ def add_hours(request):
 def main(request):
     """Create the home page view."""
     # Goal box, goal
-    elapsed = date.today() - date(2018, 12, 31)
+    today, cur_year = date.today(), date.today().year
+    elapsed = today - date(cur_year - 1, 12, 31)
     goal = elapsed.days * settings.GOAL
 
     # GoalBox, Avoid naive dates
-    offset = date.today() - date(2018, 12, 31)
-    start = timezone.now() - offset
+    start = timezone.now() - elapsed
 
     # GoalBox, this year unsold items in queue
     year_items = OrderItem.objects.filter(reference__delivery__gte=start)
@@ -213,7 +213,7 @@ def main(request):
     year_items = year_items.exclude(reference__status=8)
 
     # GoalBox, solid incomes: already sold or in confirmed orders
-    sales = Invoice.objects.filter(issued_on__year=date.today().year)
+    sales = Invoice.objects.filter(issued_on__year=cur_year)
     sales = sales.aggregate(total=Sum('amount'))
     confirmed = year_items.filter(reference__confirmed=True)
     confirmed = confirmed.exclude(
@@ -223,14 +223,15 @@ def main(request):
     unconfirmed = year_items.exclude(reference__confirmed=True)
     unconfirmed = unconfirmed.exclude(
         reference__customer__name__iexact='trapuzarrak')
-    tz_items = year_items.filter(
-        reference__customer__name__iexact='trapuzarrak')
-    produced_tz = tz_items.filter(reference__status=7)
-    future_tz = tz_items.exclude(reference__status__in=[7, 8])
 
-    # GoalBox, get aggregations for above queries
-    queries = (confirmed, unconfirmed, produced_tz, future_tz, )
-    aggregates = list()
+    # GoalBox, summary amounts
+    if not sales['total']:  # avoid NoneType aggregate
+        aggregates = [0, ]
+    else:
+        aggregates = [float(sales['total']), ]
+
+    # GoalBox, get aggregations for confirmed & unconfirmed
+    queries = (confirmed, unconfirmed)
     for query in queries:
         aggregate = query.aggregate(
             total=Sum(F('price') * F('qty'), output_field=DecimalField()))
@@ -240,20 +241,27 @@ def main(request):
             aggregate = float(aggregate['total'])
         aggregates.append(aggregate)
 
-    # GoalBox, summary amounts and bar
-    if not sales['total']:  # avoid NoneType aggregate
-        aggregates.insert(0, 0)
-    else:
-        aggregates.insert(0, float(sales['total']))  # Amounts list
-    bar = [round(amount * 100 / (2 * goal), 2) for amount in aggregates]
-
-    # GoalBox, expenses bar
+    # GoalBox, calculate expenses
     expenses = Expense.objects.filter(
-        issued_on__year=2019).aggregate(total=Sum('amount'))
+        issued_on__year=cur_year).aggregate(total=Sum('amount'))
     if not expenses['total']:
         expenses['total'] = 0
-    exp_perc = round(float(expenses['total']) * 100 / (2 * goal), 2)
-    se_diff = expenses['total']
+    aggregates.append(float(expenses['total']))
+
+    # Finally, insert the goal estimation to compute
+    aggregates.append(goal)
+
+    # Estimate the length of the bar
+    relevant = (aggregates[0], aggregates[3], aggregates[4])
+    mn, mx = min(relevant) * .9,  max(relevant) * 1.1
+    bar_len = mx - mn
+
+    # Estimate the percentages for each aggregate
+    bar = [round((amount - mn) * 100 / bar_len, 2) for amount in aggregates]
+
+    # Adjust confirmed and unconfirmed since they are not included in relevant
+    bar[1] = round(((sum(aggregates[:2]) - mn)*100 / bar_len)-bar[0], 2)
+    bar[2] = round(((sum(aggregates[:3]) - mn)*100 / bar_len)-sum(bar[:2]), 2)
 
     # Active Box
     active = Order.active.count()
@@ -343,11 +351,8 @@ def main(request):
 
     now = datetime.now()
 
-    view_settings = {'goal': goal,
-                     'bar': bar,
+    view_settings = {'bar': bar,
                      'aggregates': aggregates,
-                     'exp_perc': exp_perc,
-                     'se_diff': se_diff,
                      'active': active,
                      'active_msg': active_msg,
                      'pending': Order.pending_orders.count(),

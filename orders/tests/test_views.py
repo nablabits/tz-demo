@@ -799,12 +799,6 @@ class MainViewTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/main.html')
 
-    def test_goal(self):
-        """Test the goal var."""
-        elapsed = date.today() - date(2018, 12, 31)
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['goal'], elapsed.days * settings.GOAL)
-
     def test_aggregates_sales_filters_current_year_invoices(self):
         """Only current year invoices are computed."""
         for order in Order.objects.all():
@@ -901,32 +895,6 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['aggregates'][2], 20)
 
-    def test_aggregates_produced_tz_filter_in_tz_orders_with_status_7(self):
-        """Produced tz should filter in delivered tz orders."""
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][3], 0)
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.status = 7
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][3], 10)
-
-    def test_aggregates_future_tz_filter_in_tz_orders_without_status_7(self):
-        """Future tz should filter in undelivered tz orders."""
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][4], 0)
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        status = 6
-        for order in Order.objects.all():
-            order.customer = tz
-            order.status = status
-            order.save()
-            status += 1
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][4], 10)
-
     def test_aggregates_confirmed_multiplies_price_by_qty(self):
         """Test the correct product."""
         for item in OrderItem.objects.all():
@@ -946,37 +914,12 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['aggregates'][2], 30)
 
-    def test_aggregates_produced_tz_multiplies_price_by_qty(self):
-        """Test the correct product."""
-        for item in OrderItem.objects.all():
-            item.qty = 3
-            item.save()
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.status = 7
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][3], 30)
-
-    def test_aggregates_future_tz_multiplies_price_by_qty(self):
-        """Test the correct product."""
-        for item in OrderItem.objects.all():
-            item.qty = 3
-            item.save()
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['aggregates'][4], 30)
-
     def test_aggregates_avoid_none_type(self):
         """Empty queries return NoneType and that can't be summed."""
         for item in OrderItem.objects.all():
             item.delete()
         resp = self.client.get(reverse('main'))
-        for aggregate in resp.context['aggregates']:
+        for aggregate in resp.context['aggregates'][:3]:
             self.assertEqual(aggregate, 0)
 
     def test_aggregates_sales_return_float(self):
@@ -984,11 +927,13 @@ class MainViewTests(TestCase):
         for order in Order.objects.all():
             Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][0], 30)
         self.assertIsInstance(resp.context['aggregates'][0], float)
 
     def test_aggregates_confirmed_returns_float(self):
         """Check the correct type."""
         resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][1], 30)
         self.assertIsInstance(resp.context['aggregates'][1], float)
 
     def test_aggregates_unconfirmed_returns_float(self):
@@ -997,41 +942,30 @@ class MainViewTests(TestCase):
         unconfirmed.confirmed = False
         unconfirmed.save()
         resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.context['aggregates'][2], 10)
         self.assertIsInstance(resp.context['aggregates'][2], float)
-
-    def test_aggregates_produced_tz_returns_float(self):
-        """Check the correct type."""
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.status = 7
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertIsInstance(resp.context['aggregates'][3], float)
-
-    def test_aggregates_future_tz_returns_float(self):
-        """Check the correct type."""
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.save()
-        resp = self.client.get(reverse('main'))
-        self.assertIsInstance(resp.context['aggregates'][4], float)
 
     def test_bar(self):
         """Test the correct amounts for bar."""
-        # Create two more orders to have all the elements
-        for i in range(2):
-            order = Order.objects.create(
-                user=User.objects.first(),
-                customer=Customer.objects.first(),
-                delivery=date.today(), ref_name='Test', )
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-        sold, confirmed, unconfirmed, tz_done, tz_future = Order.objects.all()
+        # Create one more orders to have all the elements
+        order = Order.objects.create(
+            user=User.objects.first(),
+            customer=Customer.objects.first(),
+            delivery=date.today(), ref_name='Test', )
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last())
+        sold, confirmed, unconfirmed = Order.objects.all()[:3]
+
+        # Create also an expense
+        supplier = Customer.objects.create(
+            name='supplier', phone=0, cp=0, provider=True)
+        Expense.objects.create(
+            issuer=supplier, invoice_no=0, issued_on=date.today(),
+            amount=100)
 
         # Fetch the goal
-        elapsed = date.today() - date(2018, 12, 31)
+        today, cur_year = date.today(), date.today().year
+        elapsed = today - date(cur_year - 1, 12, 31)
         goal = elapsed.days * settings.GOAL
 
         # Set qtys to have a decent number of 'em
@@ -1048,62 +982,29 @@ class MainViewTests(TestCase):
         unconfirmed.confirmed = False
         unconfirmed.save()
 
-        # Set tz done order
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_done.customer = tz
-        tz_done.status = 7
-        tz_done.save()
-
-        # Set tz future order
-        tz_future.customer = tz
-        tz_future.save()
-
         # Finally, test it
         resp = self.client.get(reverse('main'))
-        agg = 0  # The aggregate iterator
-        for amount in resp.context['bar']:
-            self.assertEqual(
-                amount,
-                round(resp.context['aggregates'][agg] * 100 / (2 * goal), 2))
-            agg += 1
+        sales, conf, unconf, exp, goal = resp.context['aggregates']
 
-    def test_expenses_bar(self):
-        """Test the expenses bar."""
-        supplier = Customer.objects.create(
-            name='supplier', phone=0, cp=0, provider=True)
+        relevant = (sales, exp, goal)
+        mn, mx = min(relevant) * .9,  max(relevant) * 1.1
+        bar_len = mx - mn
 
-        # Fetch the goal
-        elapsed = date.today() - date(2018, 12, 31)
-        goal = elapsed.days * settings.GOAL
-
-        for i in range(3):
-            Expense.objects.create(
-                issuer=supplier, invoice_no=0, issued_on=date.today(),
-                amount=100)
-        resp = self.client.get(reverse('main'))
-
+        bar = resp.context['bar']
+        self.assertEqual(bar[0], round((sales - mn) * 100 / bar_len, 2))
         self.assertEqual(
-            resp.context['exp_perc'], round(30000 / (2 * goal), 2))
+            bar[1],
+            round(((sales + conf - mn) * 100 / bar_len) - bar[0], 2))
+        self.assertEqual(
+            bar[2],
+            round(((sales + conf + unconf - mn)*100/bar_len)-sum(bar[:2]), 2))
+        self.assertEqual(bar[3], round((exp - mn) * 100 / bar_len, 2))
+        self.assertEqual(bar[4], round((goal - mn) * 100 / bar_len, 2))
 
     def test_expenses_avoid_NoneType_error(self):
         """Total should return 0 in None queries."""
         resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['exp_perc'], 0)
-
-    def test_se_diff(self):
-        """Test the correct value of difference."""
-        supplier = Customer.objects.create(
-            name='supplier', phone=0, cp=0, provider=True)
-
-        for i in range(3):
-            Expense.objects.create(
-                issuer=supplier, invoice_no=0, issued_on=date.today(),
-                amount=100)
-        for order in Order.objects.all():
-            Invoice.objects.create(reference=order)
-
-        resp = self.client.get(reverse('main'))
-        self.assertEqual(resp.context['se_diff'], 300)
+        self.assertEqual(resp.context['aggregates'][3], 0)
 
     def test_active_count_box(self):
         """Test the active box."""
