@@ -1,5 +1,10 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v81, Nov 13
+  * **Nuevo:** Ahora podemos imprimir tickets de venta.
+  * **Mejora:** La barra de progreso es más intuitiva ahora.
+  * **Bug:** el objetivo anual se ha recalculado para que cuadre a 72.000€
+
 ### v80, Sept 29
   * **Bug:** el botón de prepago ha vuelto del más allá y además ahora se envia
   una copia oculta al mail de administración.
