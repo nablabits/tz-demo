@@ -1004,6 +1004,17 @@ class TestOrderItems(TestCase):
             element=object_item, reference=Order.objects.first(), )
         self.assertTrue(item.stock)
 
+    def test_orderitem_tz_orders_have_no_stock_items(self):
+        """TZ orders can't have stock items."""
+        tz = Customer.objects.create(name='TrapuZarrak', phone=0, cp=0)
+        order = Order.objects.first()
+        order.customer = tz
+        order.save()
+        item = OrderItem.objects.create(
+            element=Item.objects.first(), reference=order, stock=True)
+
+        self.assertFalse(item.stock)
+
     def test_orderitem_stock_false_for_foreign_items(self):
         """Ensure that foreign items are not stock."""
         order = Order.objects.first()
@@ -1027,6 +1038,18 @@ class TestOrderItems(TestCase):
         o_item.fit = True
         o_item.save()
         self.assertFalse(OrderItem.objects.get(pk=o_item.pk).fit)
+
+    def test_tz_orders_cant_contain_foreign_items(self):
+        tz = Customer.objects.create(name='TrapuZarrak', phone=0, cp=0)
+        order = Order.objects.first()
+        order.customer = tz
+        order.save()
+        base_item = Item.objects.last()
+        base_item.foreing = True
+        base_item.save()
+        item = OrderItem.objects.create(element=base_item, reference=order)
+        with self.assertRaises(ValidationError):
+            item.clean()
 
     def test_add_items_to_orders_default_item(self):
         """If no element is selected, Predetermiando is default."""
@@ -1623,13 +1646,13 @@ class TestInvoice(TestCase):
 
         # First test lines under 25 chars
         linestr = invoice.printable_ticket(lc='def foo')
-        self.assertEqual(linestr, 'def foo')
+        self.assertEqual(linestr, ('def foo', ))
 
         # Now over 25 chars
         long_str = 'A very long string with more than 25 characters'
         linestr = invoice.printable_ticket(lc=long_str)
         self.assertEqual(
-            linestr, ('A very long string with', 'more than 25 characters'))
+            linestr, ('more than 25 characters', 'A very long string with'))
 
 
 class TestExpense(TestCase):
