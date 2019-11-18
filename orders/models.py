@@ -824,7 +824,7 @@ class Invoice(models.Model):
                 while f[-1] != ' ':
                     n -= 1
                     f, s = f[:n], ticket_print[n:]
-                return f[:-1], s
+                return s, f[:-1]
             else:
                 return (f, )
 
@@ -838,7 +838,8 @@ class Invoice(models.Model):
         buffer = io.BytesIO()
 
         # Create the PDF object, using the buffer as its "file."
-        p = canvas.Canvas(buffer)
+        w, h = 200 * mm, (160 + 30 * len(items)) * mm
+        p = canvas.Canvas(buffer, pagesize=(w, h))
         p.setFont("Helvetica", 24)
 
         # Notice that the PDF is written bottom up, so start by the end
