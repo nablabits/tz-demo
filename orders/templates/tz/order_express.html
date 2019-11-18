@@ -31,8 +31,13 @@
           </div>
         </div>
         <div class="card-footer">
-          <div class="d-flex">
-            <a href="{% url 'ticket_print' order.invoice.invoice_no %}" class="mx-auto">
+          <div class="d-flex justify-content-center">
+            <a href="{% url 'main' %}" class="mx-1">
+              <button class="mr-1 mt-1 btn btn-outline-success">
+                <i class="fa fa-home"></i><br>Ir al inicio
+              </button>
+            </a>
+            <a href="{% url 'ticket_print' order.invoice.invoice_no %}" class="mx-1">
               <button class="mr-1 mt-1 btn btn-outline-success">
                 <i class="fa fa-vote-yea"></i><br>Imprimir ticket
               </button>
