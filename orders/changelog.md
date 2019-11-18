@@ -1,5 +1,15 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v81a, Nov 18
+  * **Mejora:** ahora la vista de ticket se agranda al Facturar
+  * **Mejora:** añadido un botón para volver al inicio tras facturar un ticket.
+  * **Mejora:** ahora hay más espacio en la parte inferior de la app para que la
+  información no se quede escondida debajo de la barra.
+  * **Bug:** ya aparecen todas las lineas en la impresión de tickets con muchos
+  elementos.
+  * **Bug:** las lineas adicionales en el ticket ahora aparecen donde deberían
+  aparecer (a continuación).
+
 ### v81, Nov 13
   * **Nuevo:** Ahora podemos imprimir tickets de venta.
   * **Mejora:** La barra de progreso es más intuitiva ahora.
