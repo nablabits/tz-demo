@@ -508,8 +508,6 @@ class OrderItem(models.Model):
     def save(self, *args, **kwargs):
         """Override the save method."""
         # Avoid items to be stock and fit simultaneously.
-        if self.stock:
-            self.fit = False
         try:
             default = Item.objects.get(name='Predeterminado')
         except ObjectDoesNotExist:
@@ -532,17 +530,33 @@ class OrderItem(models.Model):
         if self.reference.ref_name == 'Quick':
             self.stock = True
 
-        # Ensure that stock items have no times
+        # Ensure that stock items have no times and can't be fit
         if self.stock:
             self.crop = timedelta(0)
             self.sewing = timedelta(0)
             self.iron = timedelta(0)
+            self.fit = False
+
+        # Ensure tz orders don't contain stock items
+        if self.reference.customer.name.lower() == 'trapuzarrak':
+            self.stock = False
 
         # Finally, ensure that foreign items are not Stock
         if self.element.foreing:
             self.stock = False
 
         super().save(*args, **kwargs)
+
+    def clean(self):
+        """Define custom validators."""
+        # Tz orders can't contain foreign items
+        void = (
+            self.reference.customer.name.lower() == 'trapuzarrak' and
+            self.element.foreing is True
+        )
+        if void:
+            raise ValidationError(_('Los pedidos de Trapuzarrak no pueden ' +
+                                    'contener prendas externas'))
 
     @property
     def time_quality(self):
