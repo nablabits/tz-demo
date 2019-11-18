@@ -9,6 +9,7 @@ $(document).ready(function () {
     })
   })
 
+  // Chagelog Load
   var loadChangelog = function () {
     $.ajax({
       url: '/changelog/',
@@ -59,4 +60,17 @@ $(document).ready(function () {
     $(this).find('.fa-pencil').toggleClass('d-none')
     $(this).find('.fa-comment-plus').toggleClass('d-none')
   })
+
+  // enalarge ticket on invoice issuing
+  function enlargeTicket () {
+    $('#invoice-wrapper').collapse('toggle')
+    $('#item-selector-wrapper').toggleClass('d-none')
+    $('#ticket-wrapper').find('#ticket-actions-wrapper').toggleClass('d-none')
+    $('#ticket-wrapper').find('#ticket-actions-wrapper').toggleClass('d-flex')
+    $('#ticket-wrapper').toggleClass('col-md-4')
+    $('#ticket-wrapper').toggleClass('col-lg-3')
+    $('#ticket-wrapper').toggleClass('col-md-6')
+  }
+  $('#ticket-wrapper').on('click', '#invoice-trigger', enlargeTicket)
+  $('#ticket-wrapper').on('click', '#add-more-items', enlargeTicket)
 })
