@@ -36,7 +36,7 @@
   <button class="mr-1 mt-1 btn btn-outline-success" data-toggle="collapse" data-target="#convert">
     <i class="fa fa-exchange"></i><br>Convertir
   </button>
-  <button class="mr-1 mt-1 btn btn-outline-success" data-toggle="collapse" data-target="#invoice">
+  <button class="mr-1 mt-1 btn btn-outline-success" data-toggle="collapse" data-target="#invoice" {% if order.total == 0 %}disabled{% endif %}>
     <i class="fa fa-vote-yea"></i><br>Facturar
   </button>
 </div>
@@ -87,7 +87,7 @@
       <input class="form-control" type="email" name="email" placeholder="{no disponible aun}" disabled>
     </div>
     <button class="btn btn-outline-success" type="submit">
-      Facturar
+      <i class="fa fa-vote-yea mr-1"></i>Facturar
     </button>
   </form>
   <small>Ojo, facturar es una acción que no se puede deshacer, así que asegúrate de que todo está correcto</small>
