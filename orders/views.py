@@ -1561,7 +1561,7 @@ class Actions(View):
             # Context for the view
             items = OrderItem.objects.filter(reference=order)
             data['form_is_valid'] = True
-            data['html_id'] = '#ticket'
+            data['html_id'] = '#ticket-wrapper'
             total = items.aggregate(
                 total=Sum(F('qty') * F('price'), output_field=DecimalField()))
 

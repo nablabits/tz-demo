@@ -5591,7 +5591,7 @@ class ActionsPostMethodCreate(TestCase):
         self.assertIsInstance(resp.content, bytes)
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#ticket')
+        self.assertEqual(data['html_id'], '#ticket-wrapper')
         self.assertEqual(data['template'], 'includes/ticket.html')
         vars = ('items', 'total', 'order', 'customers', 'js_action_delete',
                 'js_data_pk', 'form')
