@@ -5,6 +5,8 @@ from django.contrib import admin
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
+from django.utils.translation import gettext_lazy as _
+
 
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
@@ -12,7 +14,33 @@ class CustomerAdmin(admin.ModelAdmin):
 
     date_hierarchy = ('creation')
     list_display = ('name', 'CIF', 'address', 'city', 'cp', 'phone', 'email', )
-    list_filter = ('city', 'provider' )
+    list_filter = ('city', 'provider')
+
+
+class CustomerByName(admin.SimpleListFilter):
+    """Set the filter by issuer and order by name."""
+    title = _('issuer name')
+
+    parameter_name = 'issuer_by_name'
+
+    def lookups(self, request, model_admin):
+        """Returns a list of tuples.
+
+        The first element in each tuple is the coded value for the option that
+        will appear in the URL query. The second element is the human-readable
+        name for the option that will appear
+        in the right sidebar.
+        """
+
+        q = Customer.objects.filter(provider=False).order_by('name')
+
+        return [(entry.name, entry.name) for entry in q]
+
+    def queryset(self, request, queryset):
+        if not self.value():
+            return queryset.all()
+        else:
+            return queryset.filter(issuer__name=self.value())
 
 
 @admin.register(Order)
@@ -22,7 +50,7 @@ class OrderAdmin(admin.ModelAdmin):
     date_hierarchy = 'inbox_date'
     list_display = ('pk', 'inbox_date', 'customer', 'user', 'ref_name',
                     'status', 'budget', 'prepaid', )
-    list_filter = ('customer', 'status')
+    list_filter = ('status', CustomerByName)
 
 
 @admin.register(Item)
@@ -58,13 +86,39 @@ class InvoiceAdmin(admin.ModelAdmin):
                     'pay_method', )
 
 
+class IssuerByName(admin.SimpleListFilter):
+    """Set the filter by issuer and order by name."""
+    title = _('issuer name')
+
+    parameter_name = 'issuer_by_name'
+
+    def lookups(self, request, model_admin):
+        """Returns a list of tuples.
+
+        The first element in each tuple is the coded value for the option that
+        will appear in the URL query. The second element is the human-readable
+        name for the option that will appear
+        in the right sidebar.
+        """
+
+        q = Customer.objects.filter(provider=True).order_by('name')
+
+        return [(entry.name, entry.name) for entry in q]
+
+    def queryset(self, request, queryset):
+        if not self.value():
+            return queryset.all()
+        else:
+            return queryset.filter(issuer__name=self.value())
+
+
 @admin.register(Expense)
 class ExpenseAdmin(admin.ModelAdmin):
     """Beautify the expense admin view."""
 
     list_display = (
         'pk', 'issued_on', 'issuer', 'invoice_no', 'concept', 'amount', )
-    list_filter = ('issuer', )
+    list_filter = ('issued_on', IssuerByName, )
 
 
 @admin.register(BankMovement)
