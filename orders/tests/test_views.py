@@ -1006,6 +1006,109 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['aggregates'][3], 0)
 
+    @tag('tt')
+    def test_tracked_times_is_none(self):
+        """Created tt_ratios is None when there are no times."""
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios, None)
+
+    @tag('tt')
+    def test_tracked_times_excludes_stock_items(self):
+        order = Order.objects.first()
+        order.status = '7'
+        order.save()
+        item = OrderItem.objects.get(reference=order)
+        item.stock = False
+        item.crop = timedelta(hours=5)
+        item.save()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios['crop'], 100)
+
+        # Although crop time is 0 return None since is stock
+        item.stock = True
+        item.save()
+        self.assertEqual(item.crop, timedelta(0))  # Stock can't have times
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios, None)
+
+    @tag('tt')
+    def test_tracked_time_excludes_foreign_items(self):
+        order = Order.objects.first()
+        order.status = '7'
+        order.save()
+        item = OrderItem.objects.get(reference=order)
+        item.stock = False
+        item.crop = timedelta(hours=5)
+        item.save()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios['crop'], 100)
+
+        base_item = Item.objects.get(pk=item.element.pk)
+        base_item.foreing = True
+        base_item.save()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios, None)
+
+    @tag('tt')
+    def test_tracked_time_picks_status_7(self):
+        order = Order.objects.first()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(order.status, '1')
+        self.assertEqual(ratios, None)
+
+        order.status = '7'
+        order.save()
+        item = OrderItem.objects.get(reference=order)
+        item.stock = False
+        item.crop = timedelta(hours=5)
+        item.save()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios['crop'], 100)
+
+    @tag('tt')
+    def test_tracked_time_picks_current_year_items(self):
+        order = Order.objects.first()
+        order.status = '7'
+        order.save()
+        item = OrderItem.objects.get(reference=order)
+        item.stock = False
+        item.crop = timedelta(hours=5)
+        item.save()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios['crop'], 100)
+
+        order.inbox_date = timezone.now() - timedelta(days=365)
+        order.save()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        self.assertEqual(ratios, None)
+
+    @tag('tt')
+    def test_tracked_time_excludes_0_times(self):
+        for order in Order.objects.all():
+            order.status = '7'
+            order.save()
+
+        c, s, i = OrderItem.objects.all()
+        c.crop = timedelta(5)
+        s.sewing = timedelta(5)
+        i.iron = timedelta(5)
+        c.save(), s.save(), i.save()
+        resp = self.client.get(reverse('main'))
+        ratios = resp.context['tt_ratio']
+        for t in ('crop', 'sewing', 'iron', 'mean'):
+            self.assertEqual(ratios[t], 33)
+
+        self.assertEqual(ratios['absolute'], (1, 1, 1, 3))
+
     def test_active_count_box(self):
         """Test the active box."""
         resp = self.client.get(reverse('main'))

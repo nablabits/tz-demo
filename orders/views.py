@@ -1,6 +1,6 @@
 """Define all the views for the app."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from random import randint
 
 import markdown2
@@ -263,6 +263,25 @@ def main(request):
     bar[1] = round(((sum(aggregates[:2]) - mn)*100 / bar_len)-bar[0], 2)
     bar[2] = round(((sum(aggregates[:3]) - mn)*100 / bar_len)-sum(bar[:2]), 2)
 
+    # GoalBox, tracked time ratios this year
+    nat = timedelta(0)
+    tt = OrderItem.objects.filter(stock=False).filter(element__foreing=False)
+    tt = tt.filter(reference__status='7')
+    tt = tt.filter(reference__inbox_date__year=cur_year)
+    if tt:
+        ttc, tts, tti = (
+            tt.exclude(crop=nat), tt.exclude(sewing=nat), tt.exclude(iron=nat))
+        ttc, tts, tti, tt = [query.count() for query in (ttc, tts, tti, tt)]
+        tt_ratio = {
+            'crop': round(100 * ttc / tt),
+            'sewing': round(100 * tts / tt),
+            'iron': round(100 * tti / tt),
+            'absolute': (ttc, tts, tti, tt),
+            'mean': round(100 * (ttc+tts+tti)/(3*tt))
+        }
+    else:
+        tt_ratio = None
+
     # Active Box
     active = Order.active.count()
     active_msg = False
@@ -353,6 +372,7 @@ def main(request):
 
     view_settings = {'bar': bar,
                      'aggregates': aggregates,
+                     'tt_ratio': tt_ratio,
                      'active': active,
                      'active_msg': active_msg,
                      'pending': Order.pending_orders.count(),
