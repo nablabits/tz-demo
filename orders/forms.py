@@ -98,14 +98,15 @@ class ItemTimesForm(forms.ModelForm):
         fields = ('crop', 'sewing', 'iron', )
 
 
-class AddTimesForm(forms.ModelForm):
-    """Edit the item times on Pqueue."""
+class OrderItemNotes(forms.ModelForm):
+    """Add/edit some notes to already created OrderItems."""
 
     class Meta:
         """Meta options for a quick design."""
 
         model = OrderItem
-        fields = ('crop', 'sewing', 'iron')
+        fields = ('description',)
+
 
 
 class CommentForm(forms.ModelForm):

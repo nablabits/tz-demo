@@ -16,7 +16,7 @@ from django.utils import timezone
 from orders import settings
 from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
                            Item, Order, OrderItem, PQueue, Timetable)
-from orders.forms import ItemTimesForm, InvoiceForm
+from orders.forms import ItemTimesForm, InvoiceForm, OrderItemNotes
 from orders.views import CommonContexts
 
 from decouple import config
@@ -526,6 +526,179 @@ class CommonContextOrderDetails(TestCase):
         self.assertEqual(context['js_action_edit'], 'order-item-edit')
         self.assertEqual(context['js_action_delete'], 'order-item-delete')
         self.assertEqual(context['js_data_pk'], order.pk)
+
+
+class CommonContextPqueue(TestCase):
+    """Test the common context variables for pqueue."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        for i in range(1, 3):
+            Item.objects.create(name='Test item%s' % i, fabrics=5)
+
+        # Create orderitems
+        for item in Item.objects.all():
+            OrderItem.objects.create(reference=order, element=item)
+
+    def test_available_items_exclude_delivered_and_cancelled_orders(self):
+        """The list only includes active orders."""
+        for i in range(2):
+            order = Order.objects.create(user=User.objects.first(),
+                                         customer=Customer.objects.first(),
+                                         ref_name='Void order',
+                                         delivery=date.today(),
+                                         status=i + 7, budget=0, prepaid=0)
+            OrderItem.objects.create(reference=order,
+                                     element=Item.objects.first())
+
+        context = CommonContexts.pqueue()
+        for item in context['available']:
+            self.assertEqual(item.reference.ref_name, 'Test order')
+
+    def test_available_items_exclude_discount_items(self):
+        """Discounts are excluded from list."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        item = Item.objects.first()
+        item.name = 'Descuento'
+        item.save()
+
+        context = CommonContexts.pqueue()
+        self.assertEqual(context['available'].count(), 2)
+        for item in context['available']:
+            self.assertNotEqual(item.element.name, 'Descuento')
+
+    def test_available_items_exclude_stock_items(self):
+        """The list only includes production items."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        stock_item = OrderItem.objects.first()
+        stock_item.stock = True
+        stock_item.description = 'Stocked item'
+        stock_item.save()
+
+        context = CommonContexts.pqueue()
+        self.assertEqual(context['available'].count(), 2)
+        for item in context['available']:
+            self.assertNotEqual(item.description, 'Stocked item')
+
+    def test_available_items_exclude_items_already_queued(self):
+        """The list only includes items that aren't yet in the queue."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        queued_item = OrderItem.objects.first()
+        queued_item.description = 'Queued item'
+        queued_item.save()
+
+        PQueue.objects.create(item=queued_item)
+
+        context = CommonContexts.pqueue()
+        self.assertEqual(context['available'].count(), 2)
+        for item in context['available']:
+            self.assertNotEqual(item.description, 'Queued item')
+
+    def test_available_items_exclude_foreign(self):
+        """Foreign items can't be shown in PQueue."""
+        self.assertEqual(OrderItem.objects.all().count(), 3)
+        queued_item = OrderItem.objects.last()
+        queued_item.description = 'Foreign item'
+        queued_item.element.foreing = True
+        queued_item.element.save()
+
+        context = CommonContexts.pqueue()
+        self.assertEqual(context['available'].count(), 2)
+        for item in context['available']:
+            self.assertNotEqual(item.description, 'Queued item')
+
+    def test_available_items_sort_by_delivery(self):
+        """Sort by delivery, then by ref_name."""
+        delivery = date.today() + timedelta(days=1)
+        order = Order.objects.create(user=User.objects.first(),
+                                     customer=Customer.objects.first(),
+                                     ref_name='Future order',
+                                     delivery=delivery,
+                                     budget=0, prepaid=0)
+        OrderItem.objects.bulk_create([
+            OrderItem(reference=order, element=Item.objects.first(), price=0),
+            OrderItem(reference=order, element=Item.objects.last(), price=0),
+        ])
+        orders = Order.objects.all()
+        self.assertEqual(orders.count(), 2)
+        context = CommonContexts.pqueue()
+        for item in context['available'][:3]:
+            self.assertEqual(item.reference.ref_name, 'Test order')
+        for item in context['available'][3:5]:
+            self.assertEqual(item.reference.ref_name, 'Future order')
+
+    def test_available_items_sort_by_ref_name(self):
+        """On equal delivery, sort by ref_name."""
+        order = Order.objects.create(user=User.objects.first(),
+                                     customer=Customer.objects.first(),
+                                     ref_name='Future order',
+                                     delivery=date.today(),
+                                     budget=0, prepaid=0)
+        OrderItem.objects.bulk_create([
+            OrderItem(reference=order, element=Item.objects.first(), price=0),
+            OrderItem(reference=order, element=Item.objects.last(), price=0),
+        ])
+        orders = Order.objects.all()
+        self.assertEqual(orders.count(), 2)
+        context = CommonContexts.pqueue()
+        for item in context['available'][:2]:
+            self.assertEqual(item.reference.ref_name, 'Future order')
+        for item in context['available'][2:5]:
+            self.assertEqual(item.reference.ref_name, 'Test order')
+
+    def test_queued_items_exclude_delivered_and_cancelled_orders(self):
+        """The queue only shows active order items."""
+        for i in range(2):
+            order = Order.objects.create(user=User.objects.first(),
+                                         customer=Customer.objects.first(),
+                                         ref_name='Void order',
+                                         delivery=date.today(),
+                                         status=i + 7, budget=0, prepaid=0)
+            OrderItem.objects.create(reference=order,
+                                     element=Item.objects.first())
+
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        context = CommonContexts.pqueue()
+        for item in context['active']:
+            self.assertEqual(item.item.reference.ref_name, 'Test order')
+
+    def test_queued_items_active_and_completed(self):
+        """Active items are positive scored, while completed are negative."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        completed_item = PQueue.objects.first()
+        completed_item.complete()
+        context = CommonContexts.pqueue()
+        self.assertEqual(context['active'].count(), 2)
+        self.assertEqual(context['completed'].count(), 1)
+
+    def test_i_relax_does_not_raise_error(self):
+        """Test picking the icon does not raise index error."""
+        self.client.login(username='regular', password='test')
+        for i in range(20):  # big enough
+            context = CommonContexts.pqueue()
+            if context['i_relax'] not in settings.RELAX_ICONS:
+                raise ValueError('Not in list')
 
 
 class PrintableTicketTests(TestCase):
@@ -2955,146 +3128,22 @@ class PQueueManagerTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
 
-    def test_available_items_exclude_delivered_and_cancelled_orders(self):
-        """The list only includes active orders."""
-        for i in range(2):
-            order = Order.objects.create(user=User.objects.first(),
-                                         customer=Customer.objects.first(),
-                                         ref_name='Void order',
-                                         delivery=date.today(),
-                                         status=i + 7, budget=0, prepaid=0)
-            OrderItem.objects.create(reference=order,
-                                     element=Item.objects.first())
-
-        resp = self.client.get(reverse('pqueue_manager'))
-        for item in resp.context['available']:
-            self.assertEqual(item.reference.ref_name, 'Test order')
-
-    def test_available_items_exclude_stock_items(self):
-        """The list only includes production items."""
-        self.assertEqual(OrderItem.objects.all().count(), 3)
-        stock_item = OrderItem.objects.first()
-        stock_item.stock = True
-        stock_item.description = 'Stocked item'
-        stock_item.save()
-
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(len(resp.context['available']), 2)
-        for item in resp.context['available']:
-            self.assertNotEqual(item.description, 'Stocked item')
-
-    def test_available_items_exclude_discount_items(self):
-        """Discounts are excluded from list."""
-        self.assertEqual(OrderItem.objects.all().count(), 3)
-        item = Item.objects.first()
-        item.name = 'Descuento'
-        item.save()
-
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(len(resp.context['available']), 2)
-        for item in resp.context['available']:
-            self.assertNotEqual(item.element.name, 'Descuento')
-
-    def test_available_items_exclude_items_already_queued(self):
-        """The list only includes items that aren't yet in the queue."""
-        self.assertEqual(OrderItem.objects.all().count(), 3)
-        queued_item = OrderItem.objects.first()
-        queued_item.description = 'Queued item'
-        queued_item.save()
-
-        PQueue.objects.create(item=queued_item)
-
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(len(resp.context['available']), 2)
-        for item in resp.context['available']:
-            self.assertNotEqual(item.description, 'Queued item')
-
-    def test_available_items_exclude_foreign(self):
-        """Foreign items can't be shown in PQueue."""
-        self.assertEqual(OrderItem.objects.all().count(), 3)
-        queued_item = OrderItem.objects.last()
-        queued_item.description = 'Foreign item'
-        queued_item.element.foreing = True
-        queued_item.element.save()
-
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(len(resp.context['available']), 2)
-        for item in resp.context['available']:
-            self.assertNotEqual(item.description, 'Queued item')
-
-    def test_available_items_sort_by_delivery(self):
-        """Sort by delivery, then by ref_name."""
-        delivery = date.today() + timedelta(days=1)
-        order = Order.objects.create(user=User.objects.first(),
-                                     customer=Customer.objects.first(),
-                                     ref_name='Future order',
-                                     delivery=delivery,
-                                     budget=0, prepaid=0)
-        OrderItem.objects.bulk_create([
-            OrderItem(reference=order, element=Item.objects.first(), price=0),
-            OrderItem(reference=order, element=Item.objects.last(), price=0),
-        ])
-        orders = Order.objects.all()
-        self.assertEqual(orders.count(), 2)
-        resp = self.client.get(reverse('pqueue_manager'))
-        for item in resp.context['available'][:3]:
-            self.assertEqual(item.reference.ref_name, 'Test order')
-        for item in resp.context['available'][3:5]:
-            self.assertEqual(item.reference.ref_name, 'Future order')
-
-    def test_available_items_sort_by_ref_name(self):
-        """On equal delivery, sort by ref_name."""
-        order = Order.objects.create(user=User.objects.first(),
-                                     customer=Customer.objects.first(),
-                                     ref_name='Future order',
-                                     delivery=date.today(),
-                                     budget=0, prepaid=0)
-        OrderItem.objects.bulk_create([
-            OrderItem(reference=order, element=Item.objects.first(), price=0),
-            OrderItem(reference=order, element=Item.objects.last(), price=0),
-        ])
-        orders = Order.objects.all()
-        self.assertEqual(orders.count(), 2)
-        resp = self.client.get(reverse('pqueue_manager'))
-        for item in resp.context['available'][:2]:
-            self.assertEqual(item.reference.ref_name, 'Future order')
-        for item in resp.context['available'][2:5]:
-            self.assertEqual(item.reference.ref_name, 'Test order')
-
-    def test_queued_items_exclude_delivered_and_cancelled_orders(self):
-        """The queue only shows active order items."""
-        for i in range(2):
-            order = Order.objects.create(user=User.objects.first(),
-                                         customer=Customer.objects.first(),
-                                         ref_name='Void order',
-                                         delivery=date.today(),
-                                         status=i + 7, budget=0, prepaid=0)
-            OrderItem.objects.create(reference=order,
-                                     element=Item.objects.first())
-
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        resp = self.client.get(reverse('pqueue_manager'))
-        for item in resp.context['active']:
-            self.assertEqual(item.item.reference.ref_name, 'Test order')
-
-    def test_queued_items_active_and_completed(self):
-        """Active items are positive scored, while completed are negative."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        completed_item = PQueue.objects.first()
-        completed_item.complete()
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(len(resp.context['active']), 2)
-        self.assertEqual(len(resp.context['completed']), 1)
-
-    def test_i_relax_does_not_raise_error(self):
-        """Test picking the icon does not raise index error."""
+    def test_common_context_is_imported(self):
+        """Test the vars comming in the commom context."""
         self.client.login(username='regular', password='test')
-        for i in range(20):  # big enough
-            resp = self.client.get(reverse('pqueue_manager'))
-            if resp.context['i_relax'] not in settings.RELAX_ICONS:
-                raise ValueError('Not in list')
+        resp = self.client.get(reverse('pqueue_manager'))
+        vars = ('available', 'active', 'completed', 'i_relax', 'now',
+                'version', 'title', )
+        for var in vars:
+            self.assertTrue(var in resp.context.keys())
+
+    def test_cur_user_and_session(self):
+        """Test the vars that weren't included in the common context."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.get(username='regular')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(resp.context['cur_user'], user)
+        self.assertIsInstance(resp.context['session'], Timetable)
 
 
 class PQueueTabletTests(TestCase):
@@ -3176,40 +3225,22 @@ class PQueueTabletTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
 
-    def test_queued_items_exclude_delivered_and_cancelled_orders(self):
-        """The queue only shows active order items."""
-        for i in range(2):
-            order = Order.objects.create(user=User.objects.first(),
-                                         customer=Customer.objects.first(),
-                                         ref_name='Void order',
-                                         delivery=date.today(),
-                                         status=i + 7, budget=0, prepaid=0)
-            OrderItem.objects.create(reference=order,
-                                     element=Item.objects.first())
-
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        resp = self.client.get(reverse('pqueue_tablet'))
-        for item in resp.context['active']:
-            self.assertEqual(item.item.reference.ref_name, 'Test order')
-
-    def test_queued_items_active_and_completed(self):
-        """Active items are positive scored, while completed are negative."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        completed_item = PQueue.objects.first()
-        completed_item.complete()
-        resp = self.client.get(reverse('pqueue_tablet'))
-        self.assertEqual(len(resp.context['active']), 2)
-        self.assertEqual(len(resp.context['completed']), 1)
-
-    def test_i_relax_does_not_raise_error(self):
-        """Test picking the icon does not raise index error."""
+    def test_common_context_is_imported(self):
+        """Test the vars comming in the commom context."""
         self.client.login(username='regular', password='test')
-        for i in range(20):  # big enough
-            resp = self.client.get(reverse('pqueue_tablet'))
-            if resp.context['i_relax'] not in settings.RELAX_ICONS:
-                raise ValueError('Not in list')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        vars = ('available', 'active', 'completed', 'i_relax', 'now',
+                'version', 'title', )
+        for var in vars:
+            self.assertTrue(var in resp.context.keys())
+
+    def test_cur_user_and_session(self):
+        """Test the vars that weren't included in the common context."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.get(username='regular')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.context['cur_user'], user)
+        self.assertIsInstance(resp.context['session'], Timetable)
 
 
 class PQueueActionsTests(TestCase):
@@ -6862,6 +6893,39 @@ class OrderItemsCRUDTests(TestCase):
         error = dict(iron=['Enter a valid duration.', ])
         self.assertFalse(resp.context['data']['form_is_valid'])
         self.assertEqual(resp.context['data']['error'], error)
+
+    def test_edit_notes_void_item_retunrs_404(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': int(1e5),  # big enough
+                                 'action': 'edit-notes',
+                                 })
+        self.assertEqual(resp.status_code, 404)
+
+    def test_form_is_edit_notes_form(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'edit-notes',
+                                 'test': True,
+                                 })
+        self.assertIsInstance(resp.context['form'], OrderItemNotes)
+
+    def test_edit_notes_actually_edits_notes(self):
+        item = OrderItem.objects.first()
+        self.assertEqual(item.description, '')
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': item.pk,
+                                 'action': 'edit-notes',
+                                 'description': 'foo bar',
+                                 'test': True,
+                                 })
+        item = OrderItem.objects.first()  # reload item
+        self.assertEqual(item.description, 'foo bar')
+
+        # Now test the data var returned to AJAX
+        self.assertTrue(resp.context['data']['form_is_valid'])
+        self.assertEqual(resp.context['data']['html_id'],
+                         '#item-details-{}'.format(item.pk))
+        self.assertTemplateUsed(resp, 'includes/pqueue_element_details.html')
 
     def test_view_returns_a_JSON_reponse(self):
         item = OrderItem.objects.first()

@@ -24,9 +24,9 @@ from rest_framework import viewsets
 
 from . import serializers, settings
 from .utils import prettify_times
-from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
+from .forms import (CommentForm, CustomerForm, EditDateForm,
                     InvoiceForm, ItemForm, OrderForm, OrderItemForm,
-                    TimetableCloseForm, ItemTimesForm, )
+                    TimetableCloseForm, ItemTimesForm, OrderItemNotes,)
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
@@ -129,6 +129,33 @@ class CommonContexts:
                 'js_data_pk': order.pk,
                 }
         return vars
+
+    @staticmethod
+    def pqueue():
+        """Get common context var for pqueue."""
+        available = OrderItem.objects.exclude(reference__status__in=[7, 8])
+        available = available.exclude(element__name__iexact='Descuento')
+        available = available.exclude(stock=True).filter(pqueue__isnull=True)
+        available = available.exclude(element__foreing=True)
+        available = available.order_by('reference__delivery',
+                                       'reference__ref_name')
+        pqueue = PQueue.objects.select_related('item__reference')
+        pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+        pqueue_completed = pqueue.filter(score__lt=0)
+        pqueue_active = pqueue.filter(score__gt=0)
+        i_relax = settings.RELAX_ICONS[
+            randint(0, len(settings.RELAX_ICONS) - 1)]
+
+        view_settings = {'available': available,
+                         'active': pqueue_active,
+                         'completed': pqueue_completed,
+                         'i_relax': i_relax,
+                         'now': timezone.now(),
+                         'version': settings.VERSION,
+                         'title': 'TrapuZarrak · Cola de producción',
+                         }
+
+        return view_settings
 
 
 def timetable_required(function):
@@ -941,60 +968,20 @@ def customer_view(request, pk):
 @timetable_required
 def pqueue_manager(request):
     """Display the production queue and edit it."""
-    available = OrderItem.objects.exclude(reference__status__in=[7, 8])
-    available = available.exclude(element__name__iexact='Descuento')
-    available = available.exclude(stock=True).filter(pqueue__isnull=True)
-    available = available.exclude(element__foreing=True)
-    available = available.order_by('reference__delivery',
-                                   'reference__ref_name')
-    pqueue = PQueue.objects.select_related('item__reference')
-    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
-    pqueue_completed = pqueue.filter(score__lt=0)
-    pqueue_active = pqueue.filter(score__gt=0)
-    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
-
-    cur_user = request.user
-    now = datetime.now()
-    session = Timetable.active.get(user=request.user)
-
-    view_settings = {'available': available,
-                     'active': pqueue_active,
-                     'completed': pqueue_completed,
-                     'i_relax': i_relax,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'version': settings.VERSION,
-                     'title': 'TrapuZarrak · Cola de producción',
-                     }
-    return render(request, 'tz/pqueue_manager.html', view_settings)
+    context = CommonContexts.pqueue()
+    context['cur_user'] = request.user
+    context['session'] = Timetable.active.get(user=request.user)
+    return render(request, 'tz/pqueue_manager.html', context)
 
 
 @login_required
 @timetable_required
 def pqueue_tablet(request):
     """Tablet view of pqueue."""
-    pqueue = PQueue.objects.select_related('item__reference')
-    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
-    pqueue_completed = pqueue.filter(score__lt=0)
-    pqueue_active = pqueue.filter(score__gt=0)
-    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
-
-    cur_user = request.user
-    now = datetime.now()
-    session = Timetable.active.get(user=request.user)
-
-    view_settings = {'active': pqueue_active,
-                     'completed': pqueue_completed,
-                     'i_relax': i_relax,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'version': settings.VERSION,
-                     'title': ('TrapuZarrak · Cola de producción' +
-                               '(vista tablet)'),
-                     }
-    return render(request, 'tz/pqueue_tablet.html', view_settings)
+    context = CommonContexts.pqueue()
+    context['cur_user'] = request.user
+    context['session'] = Timetable.active.get(user=request.user)
+    return render(request, 'tz/pqueue_tablet.html', context)
 
 
 # Generic views
@@ -1809,7 +1796,7 @@ class Actions(View):
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
-            form = AddTimesForm(request.POST, instance=item)
+            form = ItemTimesForm(request.POST, instance=item)
             if form.is_valid():
                 form.save()
                 data['form_is_valid'] = True
@@ -2055,6 +2042,7 @@ class OrderItemsCRUD(View):
             return HttpResponseServerError('No action was given.')
 
         if action == 'edit-times':
+            # Edit the times int the order view
             item = get_object_or_404(OrderItem, pk=pk)
             form = ItemTimesForm(request.POST, instance=item)
             if form.is_valid():
@@ -2068,6 +2056,17 @@ class OrderItemsCRUD(View):
             template = 'includes/orderitems_list.html'
             context = CommonContexts.order_details(
                 request=request, pk=item.reference.pk)
+
+        elif action == 'edit-notes':
+            # Edit/add notes in the pqueue
+            item = get_object_or_404(OrderItem, pk=pk)
+            form = OrderItemNotes(request.POST, instance=item)
+            form.save()
+            data['form_is_valid'] = True  # this form is always valid
+            data['html_id'] = '#item-details-{}'.format(item.pk)
+            template = 'includes/pqueue_element_details.html'
+            item = dict(item=item)
+            context = dict(item=item)  # a bit recursive to match the for loop
         else:
             return HttpResponseServerError('The action was not found.')
 
@@ -2148,7 +2147,7 @@ def changelog(request):
     if request.method != 'GET':
         raise Http404('The filter should go in a get request')
     data = dict()
-    with open('orders/changelog.md') as md:
+    with open('orders/docs/changelog.md') as md:
         md_file = md.read()
         changelog = markdown2.markdown(md_file)
 

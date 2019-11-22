@@ -43,5 +43,6 @@ A brief schema of template hierarchy.
 
   * **block pqueuetablet** -> pqueue_tablet.html
     * **include** includes/item_string.html
+    * **include** includes/pqueue_element_details.html
 
   * **block timetable_list** -> timetable_list.html
