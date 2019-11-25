@@ -233,7 +233,7 @@ class Order(models.Model):
     @property
     def estimated_time(self):
         """Estimate the time in seconds to produce the order."""
-        items = OrderItem.objects.filter(reference=self)
+        items = OrderItem.objects.filter(reference=self).exclude(stock=True)
         tc, ts, ti = 0, 0, 0  # set initial times to 0
         for item in items:
             c, s, i = item.estimated_time

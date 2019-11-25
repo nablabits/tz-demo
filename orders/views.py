@@ -1,6 +1,6 @@
 """Define all the views for the app."""
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from random import randint
 
 import markdown2
@@ -24,9 +24,9 @@ from rest_framework import viewsets
 
 from . import serializers, settings
 from .utils import prettify_times
-from .forms import (AddTimesForm, CommentForm, CustomerForm, EditDateForm,
+from .forms import (CommentForm, CustomerForm, EditDateForm,
                     InvoiceForm, ItemForm, OrderForm, OrderItemForm,
-                    TimetableCloseForm, ItemTimesForm, )
+                    TimetableCloseForm, ItemTimesForm, OrderItemNotes,)
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
                      Order, OrderItem, PQueue, Timetable, )
 
@@ -102,7 +102,10 @@ class CommonContexts:
 
         cur_user = request.user
         now = datetime.now()
-        session = Timetable.active.get(user=request.user)
+        try:
+            session = Timetable.active.get(user=request.user)
+        except ObjectDoesNotExist:
+            session = None
 
         # Display estimated times
         order_est = [prettify_times(d) for d in order.estimated_time]
@@ -130,11 +133,43 @@ class CommonContexts:
                 }
         return vars
 
+    @staticmethod
+    def pqueue():
+        """Get common context var for pqueue."""
+        available = OrderItem.objects.exclude(reference__status__in=[7, 8])
+        available = available.exclude(element__name__iexact='Descuento')
+        available = available.exclude(stock=True).filter(pqueue__isnull=True)
+        available = available.exclude(element__foreing=True)
+        available = available.order_by('reference__delivery',
+                                       'reference__ref_name')
+        pqueue = PQueue.objects.select_related('item__reference')
+        pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+        pqueue_completed = pqueue.filter(score__lt=0)
+        pqueue_active = pqueue.filter(score__gt=0)
+        i_relax = settings.RELAX_ICONS[
+            randint(0, len(settings.RELAX_ICONS) - 1)]
+
+        view_settings = {'available': available,
+                         'active': pqueue_active,
+                         'completed': pqueue_completed,
+                         'i_relax': i_relax,
+                         'now': timezone.now(),
+                         'version': settings.VERSION,
+                         'title': 'TrapuZarrak · Cola de producción',
+                         }
+
+        return view_settings
+
 
 def timetable_required(function):
-    """Prevent users without valid timetable to load pages."""
+    """Prevent users without valid timetable to load pages.
+
+    Superusers and voyeur are allowed to navigate freely.
+    """
     def _inner(request, *args, **kwargs):
         u = request.user
+        if u.is_superuser or u.username == config('VOYEUR_USER'):
+            return function(request, *args, **kwargs)
         active = Timetable.objects.filter(user=u).filter(end__isnull=True)
         if not active:
             Timetable.objects.create(user=u)
@@ -163,9 +198,15 @@ def printable_ticket(request, invoice_no):
 @login_required
 def add_hours(request):
     """Close an open work session."""
+    u = request.user
+    # Superuser and voyeur should skip this process
+    if u.is_superuser or u.username == config('VOYEUR_USER'):
+        logout(request)
+        return redirect('login')
+
     # prevent reaching this page without valid timetable open
     try:
-        active = Timetable.active.get(user=request.user)
+        active = Timetable.active.get(user=u)
     except ObjectDoesNotExist:
         return redirect('main')
 
@@ -263,6 +304,25 @@ def main(request):
     bar[1] = round(((sum(aggregates[:2]) - mn)*100 / bar_len)-bar[0], 2)
     bar[2] = round(((sum(aggregates[:3]) - mn)*100 / bar_len)-sum(bar[:2]), 2)
 
+    # GoalBox, tracked time ratios this year
+    nat = timedelta(0)
+    tt = OrderItem.objects.filter(stock=False).filter(element__foreing=False)
+    tt = tt.filter(reference__status='7')
+    tt = tt.filter(reference__inbox_date__year=cur_year)
+    if tt:
+        ttc, tts, tti = (
+            tt.exclude(crop=nat), tt.exclude(sewing=nat), tt.exclude(iron=nat))
+        ttc, tts, tti, tt = [query.count() for query in (ttc, tts, tti, tt)]
+        tt_ratio = {
+            'crop': round(100 * ttc / tt),
+            'sewing': round(100 * tts / tt),
+            'iron': round(100 * tti / tt),
+            'absolute': (ttc, tts, tti, tt),
+            'mean': round(100 * (ttc+tts+tti)/(3*tt))
+        }
+    else:
+        tt_ratio = None
+
     # Active Box
     active = Order.active.count()
     active_msg = False
@@ -342,7 +402,10 @@ def main(request):
     top5 = top5.order_by('-total')[:5]
 
     cur_user = request.user
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     # Query last comments on active orders
     comments = Comment.objects.exclude(user=cur_user)
@@ -353,6 +416,7 @@ def main(request):
 
     view_settings = {'bar': bar,
                      'aggregates': aggregates,
+                     'tt_ratio': tt_ratio,
                      'active': active,
                      'active_msg': active_msg,
                      'pending': Order.pending_orders.count(),
@@ -570,7 +634,10 @@ def orderlist(request, orderby):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'active': active,
                      'confirmed': confirmed,
@@ -619,7 +686,10 @@ def customerlist(request):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'customers': customers,
                      'user': cur_user,
@@ -648,7 +718,10 @@ def itemslist(request):
     """Show the different item objects."""
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'user': cur_user,
                      'now': now,
@@ -716,7 +789,10 @@ def invoiceslist(request):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'user': cur_user,
                      'now': now,
@@ -746,9 +822,15 @@ def kanban(request):
         context = CommonContexts.kanban(confirmed=False)
     else:
         context = CommonContexts.kanban()
+
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
+
     context['cur_user'] = request.user
     context['now'] = datetime.now()
-    context['session'] = Timetable.active.get(user=request.user)
+    context['session'] = session
     context['version'] = settings.VERSION
     context['title'] = 'TrapuZarrak · Vista Kanban'
 
@@ -857,7 +939,10 @@ def order_express_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     form = InvoiceForm()
 
@@ -900,7 +985,10 @@ def customer_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'customer': customer,
                      'orders_active': active,
@@ -921,60 +1009,28 @@ def customer_view(request, pk):
 @timetable_required
 def pqueue_manager(request):
     """Display the production queue and edit it."""
-    available = OrderItem.objects.exclude(reference__status__in=[7, 8])
-    available = available.exclude(element__name__iexact='Descuento')
-    available = available.exclude(stock=True).filter(pqueue__isnull=True)
-    available = available.exclude(element__foreing=True)
-    available = available.order_by('reference__delivery',
-                                   'reference__ref_name')
-    pqueue = PQueue.objects.select_related('item__reference')
-    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
-    pqueue_completed = pqueue.filter(score__lt=0)
-    pqueue_active = pqueue.filter(score__gt=0)
-    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
-
-    cur_user = request.user
-    now = datetime.now()
-    session = Timetable.active.get(user=request.user)
-
-    view_settings = {'available': available,
-                     'active': pqueue_active,
-                     'completed': pqueue_completed,
-                     'i_relax': i_relax,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'version': settings.VERSION,
-                     'title': 'TrapuZarrak · Cola de producción',
-                     }
-    return render(request, 'tz/pqueue_manager.html', view_settings)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
+    context = CommonContexts.pqueue()
+    context['cur_user'] = request.user
+    context['session'] = session
+    return render(request, 'tz/pqueue_manager.html', context)
 
 
 @login_required
 @timetable_required
 def pqueue_tablet(request):
     """Tablet view of pqueue."""
-    pqueue = PQueue.objects.select_related('item__reference')
-    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
-    pqueue_completed = pqueue.filter(score__lt=0)
-    pqueue_active = pqueue.filter(score__gt=0)
-    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
-
-    cur_user = request.user
-    now = datetime.now()
-    session = Timetable.active.get(user=request.user)
-
-    view_settings = {'active': pqueue_active,
-                     'completed': pqueue_completed,
-                     'i_relax': i_relax,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'version': settings.VERSION,
-                     'title': ('TrapuZarrak · Cola de producción' +
-                               '(vista tablet)'),
-                     }
-    return render(request, 'tz/pqueue_tablet.html', view_settings)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
+    context = CommonContexts.pqueue()
+    context['cur_user'] = request.user
+    context['session'] = session
+    return render(request, 'tz/pqueue_tablet.html', context)
 
 
 # Generic views
@@ -989,13 +1045,22 @@ class TimetableList(ListView):
 
     def get_queryset(self):
         """Customize the list of times by showing only user's ones."""
-        query = Timetable.objects.filter(user=self.request.user)
+        u = self.request.user
+        if u.is_superuser or u.username == config('VOYEUR_USER'):
+            query = Timetable.objects.all()
+        else:
+            query = Timetable.objects.filter(user=self.request.user)
         return query.order_by('-start')[:10]
 
     def get_context_data(self, **kwargs):
         """Add some extra variables to make the view consistent with base."""
+        u = self.request.user
         context = super().get_context_data(**kwargs)
-        context['session'] = self.get_queryset()[0]
+        if u.is_superuser or u.username == config('VOYEUR_USER'):
+            context['session'] = None
+        else:
+            context['session'] = self.get_queryset()[0]
+        context['user'] = u
         return context
 
 
@@ -1789,7 +1854,7 @@ class Actions(View):
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
             item = OrderItem.objects.select_related('reference').get(pk=pk)
-            form = AddTimesForm(request.POST, instance=item)
+            form = ItemTimesForm(request.POST, instance=item)
             if form.is_valid():
                 form.save()
                 data['form_is_valid'] = True
@@ -2035,6 +2100,7 @@ class OrderItemsCRUD(View):
             return HttpResponseServerError('No action was given.')
 
         if action == 'edit-times':
+            # Edit the times int the order view
             item = get_object_or_404(OrderItem, pk=pk)
             form = ItemTimesForm(request.POST, instance=item)
             if form.is_valid():
@@ -2048,6 +2114,17 @@ class OrderItemsCRUD(View):
             template = 'includes/orderitems_list.html'
             context = CommonContexts.order_details(
                 request=request, pk=item.reference.pk)
+
+        elif action == 'edit-notes':
+            # Edit/add notes in the pqueue
+            item = get_object_or_404(OrderItem, pk=pk)
+            form = OrderItemNotes(request.POST, instance=item)
+            form.save()
+            data['form_is_valid'] = True  # this form is always valid
+            data['html_id'] = '#item-details-{}'.format(item.pk)
+            template = 'includes/pqueue_element_details.html'
+            item = dict(item=item)
+            context = dict(item=item)  # a bit recursive to match the for loop
         else:
             return HttpResponseServerError('The action was not found.')
 
@@ -2128,7 +2205,7 @@ def changelog(request):
     if request.method != 'GET':
         raise Http404('The filter should go in a get request')
     data = dict()
-    with open('orders/changelog.md') as md:
+    with open('orders/docs/changelog.md') as md:
         md_file = md.read()
         changelog = markdown2.markdown(md_file)
 
@@ -2353,12 +2430,14 @@ class OrderAPIList(viewsets.ReadOnlyModelViewSet):
 
 class ItemAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for items."""
+
     queryset = Item.objects.all()
     serializer_class = serializers.ItemSerializer
 
 
 class OrderItemAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for order items."""
+
     queryset = OrderItem.objects.all()
     serializer_class = serializers.OrderItemSerializer
 

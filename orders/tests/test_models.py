@@ -466,6 +466,8 @@ class TestOrders(TestCase):
 
         OrderItem.objects.create(element=items[0], qty=5, reference=curr)
         OrderItem.objects.create(element=items[1], qty=7, reference=curr)
+        OrderItem.objects.create(
+            element=items[2], qty=7, reference=curr, stock=True)
 
         curr = Order.objects.get(pk=curr.pk)
 
