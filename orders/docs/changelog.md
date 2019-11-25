@@ -1,7 +1,20 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v82, Nov 25
+  * **Nuevo:** ahora la vista principal muestra los ratios de tiempos registrados.
+  * **Mejora:** Se pueden añadir notas a clientes y a prendas desde la vista de
+  la tablet.
+  * **Mejora:** se ha añadido un botón para seguir añadiendo prendas al ticket
+  si se ha pulsado previamente facturar.
+  * **Mejora:** la vista de administrador ahora filtra los clientes por nombre.
+  * **Bug:** ahora los tiempos de producción excluyen de la cuenta las prendas
+  de stock.
+  * **Bug:**  ya funciona correctamente el checkbox de prendas externas del
+  selector de prendas.
+  * **Bug:** los pedidos de tz no pueden tener prendas de stock o externas.
+
 ### v81a, Nov 18
-  * **Mejora:** ahora la vista de ticket se agranda al Facturar
+  * **Mejora:** ahora la vista de ticket se agranda al Facturar.
   * **Mejora:** añadido un botón para volver al inicio tras facturar un ticket.
   * **Mejora:** ahora hay más espacio en la parte inferior de la app para que la
   información no se quede escondida debajo de la barra.
