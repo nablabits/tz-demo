@@ -38,6 +38,32 @@
                 Gastos
               </div>
             </div>
+            <h3 class=mt-3><i class="fad fa-stopwatch mr-2"></i>Tiempos medidos:</h3>
+            {% if tt_ratio.absolute.3 == false %}
+              <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="fad fa-ban mr-1"></i>Aun no hay pedidos entregados este año
+                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                  <span aria-hidden="true">×</span>
+                </button>
+              </div>
+            {% else %}
+              <small>Sobre {{tt_ratio.absolute.3}} prendas en pedidos entregados este año</small>
+              <div class="d-flex justify-content-around ml-4 my-2">
+                <div class="border border-secondary rounded p-1 custom_bg_2">
+                  <i class="far fa-cut pr-1" aria-hidden="true"></i>Corte<br>
+                  {{tt_ratio.absolute.0}} ({{tt_ratio.crop}}%)
+                </div>
+                <div class="border border-secondary rounded p-1 custom_bg_2">
+                  <i class="far fa-bolt pr-1" aria-hidden="true"></i>Confección<br>
+                  {{tt_ratio.absolute.1}} ({{tt_ratio.sewing}}%)
+                </div>
+                <div class="border border-secondary rounded p-1 custom_bg_2">
+                  <i class="far fa-flower-tulip pr-1" aria-hidden="true"></i>Planchado<br>
+                  {{tt_ratio.absolute.2}} ({{tt_ratio.iron}}%)
+                </div>
+              </div>
+              <p>Promedio de tiempos registrados: {{tt_ratio.mean}}%</p>
+              {% endif %}
           </div>
 
           <!-- Add boxes -->

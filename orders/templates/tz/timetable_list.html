@@ -4,11 +4,16 @@
 {% load i18n %}
 {% language 'es' %}
 <div class="container">
-  <h2>Kaixo {{timetables.0.user.username}}!</h2>
-  <p>Éstos son los últimos 10 tiempos que has registrado.</p>
+  <h2>Kaixo {{user}}!</h2>
+  {% if not session %}
+    <p>Éstos son los últimos 10 tiempos que se han registrado.</p>
+  {% else %}
+    <p>Éstos son los últimos 10 tiempos que has registrado.</p>
+  {% endif %}
   <table class="table table-striped">
     <thead>
       <tr>
+        <th scope="col"><i class="far fa-user pr-2"></i><strong>Usuario</strong></th>
         <th scope="col"><i class="far fa-calendar-alt pr-1"></i><strong>Dia</strong></th>
         <th scope="col"><i class="far fa-stopwatch pr-1"></i><strong>Comienzo</strong></th>
         <th scope="col"><i class="far fa-chess-clock-alt pr-1"></i><strong>Cierre</strong></th>
@@ -18,6 +23,7 @@
     <tbody>
       {%for timetable in timetables%}
       <tr>
+        <td scope="row">{{timetable.user}}</td>
         <td scope="row">{{timetable.start|date:'D, d-m'}}</td>
         <td>{{timetable.start|date:'P'}}</td>
         <td>

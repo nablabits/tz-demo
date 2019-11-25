@@ -21,39 +21,13 @@
           </div>
 
           <div class="d-flex align-items-center">
-            <button class="mr-1 btn btn-lg btn-outline-success" data-toggle="collapse" data-target="#item-details-{{item.pk}}" aria-expanded="false" aria-controls="item-details-{{item.pk}}">
+            <button class="mr-1 btn btn-lg btn-outline-success" data-toggle="collapse" data-target="#item-details-{{item.pk}}" aria-expanded="false" aria-controls="#item-details-{{item.pk}}">
               <i class="far fa-eye pl-1"></i> Ver
             </button>
           </div>
         </div>
         <div class="collapse" id="item-details-{{item.pk}}">
-          <div class="d-flex flex-column mt-4">
-            <span><i class="fa fa-tshirt pr-2"></i><strong>Detalles de la prenda:</strong></span>
-            <ul class="ml-4">
-              <li>Cantidad: {{item.item.qty}}</li>
-              <li>Tiempos: {{item.item.crop}}, {{item.item.sewing}}, {{item.item.iron}}</li>
-              {%if item.item.description%}
-                <li>Notas: {{item.item.description}}</li>
-              {%endif%}
-            </ul>
-            <span class="mt-4"><i class="fal fa-clipboard-list pr-2"></i><strong>Detalles del pedido:</strong></span>
-            <ul class="ml-4">
-              <li>Entrega: {{item.item.reference.delivery}}</li>
-              <li>Prioridad: {{item.item.reference.priority}}</li>
-              <li>Medidas: cintura, {{item.item.reference.waist}}; pecho, {{item.item.reference.chest}};
-              cadera, {{item.item.reference.hip}}; largo, {{item.item.reference.lenght}};</li>
-              {%if item.item.reference.others%}
-                <li>Notas: {{item.item.reference.others}}</li>
-              {%endif%}
-            </ul>
-            <div class="d-flex ml-auto mt-2">
-              <button class="mr-2 btn-lg btn btn-outline-success js-crud-edit" data-action="pqueue-add-time" data-pk="{{item.item.pk}}"><i class="fa fa-clock"></i> Añadir tiempos</button>
-              <button class="mr-2 btn-lg btn btn-outline-success js-crud-add" data-action="order-add-comment" data-pk="{{item.item.reference.pk}}"><i class="fa fa-comment"></i> Comentar</button>
-              <button class="mr-1 btn-lg btn btn-outline-success js-queue" data-action="tb-complete" data-pk="{{item.pk}}">
-                <i class="far fa-check pl-1"></i> Completar
-              </button>
-            </div>
-          </div>
+          {% include 'includes/pqueue_element_details.html'%}
         </div>
       </div>
     {% endfor %}
