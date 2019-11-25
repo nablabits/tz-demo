@@ -106,17 +106,23 @@
 
       <footer class="bg-light fixed-bottom py-2 px-2 border-top border-secondary">
         <span class="px-3">
-          <i class="far fa-user pr-2"></i>Kaixo {{user.username}}!
+          <i class="far fa-user pr-2"></i>Kaixo {{user}}!
         </span>
-        <span class="px-3">
-          <i class="far fa-chess-clock pr-2"></i>Inicio:
-            {% language 'es' %}
-            {{session.start | naturaltime}}&nbsp;&nbsp;( {{session.start | time}}h )
-            {% endlanguage %}
-        </span>
+        {% if not session %}
+          <span class="px-3">
+            <i class="far fa-chess-clock pr-2"></i>No estas registrando tiempos ahora
+          </span>
+        {% else %}
+          <span class="px-3">
+            <i class="far fa-chess-clock pr-2"></i>Inicio:
+              {% language 'es' %}
+              {{session.start | naturaltime}}&nbsp;&nbsp;( {{session.start | time}}h )
+              {% endlanguage %}
+          </span>
+        {% endif %}
         <span class="px-3">
           <a href="{% url 'timetables' %}">
-          <i class="far fa-eye pr-2"></i> Ver mis tiempos
+          <i class="far fa-eye pr-2"></i> Ver tiempos
           </a>
         </span>
 

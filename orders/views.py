@@ -102,7 +102,10 @@ class CommonContexts:
 
         cur_user = request.user
         now = datetime.now()
-        session = Timetable.active.get(user=request.user)
+        try:
+            session = Timetable.active.get(user=request.user)
+        except ObjectDoesNotExist:
+            session = None
 
         # Display estimated times
         order_est = [prettify_times(d) for d in order.estimated_time]
@@ -159,9 +162,14 @@ class CommonContexts:
 
 
 def timetable_required(function):
-    """Prevent users without valid timetable to load pages."""
+    """Prevent users without valid timetable to load pages.
+
+    Superusers and voyeur are allowed to navigate freely.
+    """
     def _inner(request, *args, **kwargs):
         u = request.user
+        if u.is_superuser or u.username == config('VOYEUR_USER'):
+            return function(request, *args, **kwargs)
         active = Timetable.objects.filter(user=u).filter(end__isnull=True)
         if not active:
             Timetable.objects.create(user=u)
@@ -190,9 +198,15 @@ def printable_ticket(request, invoice_no):
 @login_required
 def add_hours(request):
     """Close an open work session."""
+    u = request.user
+    # Superuser and voyeur should skip this process
+    if u.is_superuser or u.username == config('VOYEUR_USER'):
+        logout(request)
+        return redirect('login')
+
     # prevent reaching this page without valid timetable open
     try:
-        active = Timetable.active.get(user=request.user)
+        active = Timetable.active.get(user=u)
     except ObjectDoesNotExist:
         return redirect('main')
 
@@ -388,7 +402,10 @@ def main(request):
     top5 = top5.order_by('-total')[:5]
 
     cur_user = request.user
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     # Query last comments on active orders
     comments = Comment.objects.exclude(user=cur_user)
@@ -617,7 +634,10 @@ def orderlist(request, orderby):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'active': active,
                      'confirmed': confirmed,
@@ -666,7 +686,10 @@ def customerlist(request):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'customers': customers,
                      'user': cur_user,
@@ -695,7 +718,10 @@ def itemslist(request):
     """Show the different item objects."""
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'user': cur_user,
                      'now': now,
@@ -763,7 +789,10 @@ def invoiceslist(request):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'user': cur_user,
                      'now': now,
@@ -793,9 +822,15 @@ def kanban(request):
         context = CommonContexts.kanban(confirmed=False)
     else:
         context = CommonContexts.kanban()
+
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
+
     context['cur_user'] = request.user
     context['now'] = datetime.now()
-    context['session'] = Timetable.active.get(user=request.user)
+    context['session'] = session
     context['version'] = settings.VERSION
     context['title'] = 'TrapuZarrak · Vista Kanban'
 
@@ -904,7 +939,10 @@ def order_express_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     form = InvoiceForm()
 
@@ -947,7 +985,10 @@ def customer_view(request, pk):
 
     cur_user = request.user
     now = datetime.now()
-    session = Timetable.active.get(user=request.user)
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
 
     view_settings = {'customer': customer,
                      'orders_active': active,
@@ -968,9 +1009,13 @@ def customer_view(request, pk):
 @timetable_required
 def pqueue_manager(request):
     """Display the production queue and edit it."""
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
     context = CommonContexts.pqueue()
     context['cur_user'] = request.user
-    context['session'] = Timetable.active.get(user=request.user)
+    context['session'] = session
     return render(request, 'tz/pqueue_manager.html', context)
 
 
@@ -978,9 +1023,13 @@ def pqueue_manager(request):
 @timetable_required
 def pqueue_tablet(request):
     """Tablet view of pqueue."""
+    try:
+        session = Timetable.active.get(user=request.user)
+    except ObjectDoesNotExist:
+        session = None
     context = CommonContexts.pqueue()
     context['cur_user'] = request.user
-    context['session'] = Timetable.active.get(user=request.user)
+    context['session'] = session
     return render(request, 'tz/pqueue_tablet.html', context)
 
 
@@ -996,13 +1045,22 @@ class TimetableList(ListView):
 
     def get_queryset(self):
         """Customize the list of times by showing only user's ones."""
-        query = Timetable.objects.filter(user=self.request.user)
+        u = self.request.user
+        if u.is_superuser or u.username == config('VOYEUR_USER'):
+            query = Timetable.objects.all()
+        else:
+            query = Timetable.objects.filter(user=self.request.user)
         return query.order_by('-start')[:10]
 
     def get_context_data(self, **kwargs):
         """Add some extra variables to make the view consistent with base."""
+        u = self.request.user
         context = super().get_context_data(**kwargs)
-        context['session'] = self.get_queryset()[0]
+        if u.is_superuser or u.username == config('VOYEUR_USER'):
+            context['session'] = None
+        else:
+            context['session'] = self.get_queryset()[0]
+        context['user'] = u
         return context
 
 
@@ -2372,12 +2430,14 @@ class OrderAPIList(viewsets.ReadOnlyModelViewSet):
 
 class ItemAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for items."""
+
     queryset = Item.objects.all()
     serializer_class = serializers.ItemSerializer
 
 
 class OrderItemAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for order items."""
+
     queryset = OrderItem.objects.all()
     serializer_class = serializers.OrderItemSerializer
 

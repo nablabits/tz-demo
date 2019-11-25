@@ -764,6 +764,23 @@ class AddHoursTests(TestCase):
         resp = self.client.get(reverse('add_hours'))
         self.assertEqual(resp.status_code, 302)
 
+    def test_superusers_and_voyeur_are_logged_out_directly(self):
+        """These users skip the process of adding hours."""
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('add_hours'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, reverse('login'))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('add_hours'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, reverse('login'))
+
     def test_initial_vars(self):
         """Test the initial vars values."""
         resp = self.client.get(reverse('add_hours'))
@@ -926,6 +943,23 @@ class MainViewTests(TestCase):
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
         self.client.login(username='regular', password='test')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('main'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
     def test_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
@@ -1461,6 +1495,24 @@ class MainViewTests(TestCase):
             self.assertTrue(resp.context['top5'][i].total >=
                             resp.context['top5'][i+1].total)
 
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        resp = self.client.get(reverse('main'))
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('main'))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('main'))
+        self.assertFalse(resp.context['session'])
+
     def test_comments(self):
         """Exclude user comments & read ones."""
         f = User.objects.create(username='foreign', password='void')
@@ -1487,6 +1539,174 @@ class MainViewTests(TestCase):
         self.assertEqual(
             resp.context['placeholder'], 'Buscar pedido (referencia)')
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Inicio')
+
+
+class SearchBoxTest(TestCase):
+    """Test the standard views."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create users
+        regular = User.objects.create_user(username='regular', password='test')
+        regular.save()
+
+        # Create some customers
+        for customer in range(10):
+            Customer.objects.create(name='Customer%s' % customer,
+                                    address='This computer',
+                                    city='No city',
+                                    phone='66666666%s' % customer,
+                                    email='customer%s@example.com' % customer,
+                                    CIF='5555G',
+                                    cp='48100')
+
+        # Create some orders
+        for order in range(20):
+            customer = Customer.objects.first()
+            # delivery = date.today() + timedelta(days=order % 5)
+            Order.objects.create(user=regular,
+                                 customer=customer,
+                                 ref_name='example%s' % order,
+                                 delivery=date.today(),
+                                 prepaid=0)
+
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        if len(context) == len(vars):
+            context_is_valid = 0
+            for item in context:
+                for var in vars:
+                    if item == var:
+                        context_is_valid += 1
+            if context_is_valid == len(vars):
+                return True
+        else:
+            return False
+
+    def test_search_box_invalid_method(self):
+        """Search must be POST method."""
+        with self.assertRaises(TypeError):
+            self.client.get(reverse('search'))
+
+    def test_search_box_empty_string_returns_404(self):
+        """Trying to search empty string should return 404."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'orders',
+                                 'search-obj': ''})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_search_box_invalid_search_on(self):
+        """Search_on fields should be either orders or customers."""
+        with self.assertRaises(ValueError):
+            self.client.post(reverse('search'), {'search-on': 'invalid',
+                                                 'search-obj': 'string'})
+
+        with self.assertRaises(ValueError):
+            self.client.post(reverse('search'), {'search-on':  '',
+                                                 'search-obj': 'string'})
+
+    def test_search_box_on_orders(self):
+        """Test search orders."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'orders',
+                                 'search-obj': 'example11',
+                                 'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEqual(data['template'], 'includes/search_results.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEqual(data['model'], 'orders')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], 'example11')
+
+    def test_search_on_orders_by_pk(self):
+        """Test search orders by pk."""
+        order = Order.objects.first()
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'orders',
+                                 'search-obj': order.pk,
+                                 'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEqual(data['template'], 'includes/search_results.html')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], order.ref_name)
+
+    def test_search_box_on_customers_str(self):
+        """Test search customers by name."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'customers',
+                                 'search-obj': 'Customer1',
+                                 'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEqual(data['template'], 'includes/search_results.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEqual(data['model'], 'customers')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], 'Customer1')
+
+    def test_search_box_on_customers_int(self):
+        """Test search customers by phone."""
+        resp = self.client.post(reverse('search'),
+                                {'search-on': 'customers',
+                                 'search-obj': 666666665,
+                                 'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertEqual(data['template'], 'includes/search_results.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEqual(data['model'], 'customers')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['query_result_name'], 'Customer5')
+
+    def test_search_box_case_insensitive(self):
+        """Search should return the same resuslts regardless the case."""
+        resp1 = self.client.post(reverse('search'),
+                                 {'search-on': 'orders',
+                                  'search-obj': 'example11',
+                                  'test': True})
+        resp2 = self.client.post(reverse('search'),
+                                 {'search-on': 'orders',
+                                  'search-obj': 'exaMple11',
+                                  'test': True})
+        data1 = json.loads(str(resp1.content, 'utf-8'))
+        data2 = json.loads(str(resp2.content, 'utf-8'))
+        self.assertEqual(data1['query_result_name'],
+                         data2['query_result_name'])
+
+    def test_search_on_items_no_order_pk(self):
+        """Test the correct raise of 404."""
+        resp = self.client.post(
+            reverse('search'),
+            {'search-on': 'items', 'search-obj': 'test item', 'test': True})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_search_on_items(self):
+        """Test the correct item search."""
+        order = Order.objects.first()
+        item = Item.objects.create(name='Test', fabrics=0, price=2)
+        resp = self.client.post(
+            reverse('search'),
+            {'search-on': 'items', 'search-obj': 'test',
+             'order-pk': order.pk, 'test': True})
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('query_result', 'model', 'order_pk')
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertEqual(data['template'], 'includes/search_results.html')
+        self.assertEqual(data['query_result'], 1)
+        self.assertEqual(data['model'], 'items')
+        self.assertEqual(data['query_result_name'], item.name)
 
 
 class OrderListTests(TestCase):
@@ -1519,6 +1739,23 @@ class OrderListTests(TestCase):
                                  budget=2000,
                                  prepaid=0)
         Item.objects.create(name='test', fabrics=1, price=10)
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('orderlist', args=['date']))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
     def test_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
@@ -2477,6 +2714,28 @@ class OrderListTests(TestCase):
                                        kwargs={'orderby': 'date'}))
         self.assertEqual(resp.context['user'].username, 'regular')
 
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('orderlist',
+                                       kwargs={'orderby': 'date'}))
+        self.assertFalse(resp.context['session'])
+
     def test_context_vars(self):
         """Test the remaining context vars (fixed)."""
         self.client.login(username='regular', password='test')
@@ -2490,197 +2749,413 @@ class OrderListTests(TestCase):
         self.assertEqual(resp.context['colors'], settings.WEEK_COLORS)
 
 
-class OrderExpressTests(TestCase):
-    """Test the order express view."""
+class CustomerListTests(TestCase):
+    """Test the customer list view."""
 
-    @classmethod
-    def setUpTestData(self):
-        """Create all the elements at once."""
-        user = User.objects.create_user(username='regular', password='test')
-        user.save()
+    def setUp(self):
+        """Create the necessary items on database at once.
 
-        Customer.objects.create(
-            name='Test', city='Bilbao', phone=0, cp=48003)
-        Item.objects.create(name='Test', fabrics=5, price=10)
+        Will be created:
+            5 Customers
+            20 Orders (random customer) where:
+                The first 10 are delivered
+                first order has:
+                    5 items (exact one each other)
+                    10 comments (divided in 2 users) & First comment read
+                    Is closed
+                11th order is cancelled
+        """
+        # Create users
+        regular = User.objects.create_user(username='regular', password='test')
+        another = User.objects.create_user(username='another', password='test')
 
-    def test_pk_out_of_range_raises_404(self):
-        """Raise a 404 when trying to select a void order."""
-        self.client.login(username='regular', password='test')
-        resp = self.client.get(reverse('order_express', args=[5000]))
-        self.assertEqual(resp.status_code, 404)
+        # Create some customers
+        for customer in range(10):
+            Customer.objects.create(name='Customer%s' % customer,
+                                    address='This computer',
+                                    city='No city',
+                                    phone='666666666',
+                                    email='customer%s@example.com' % customer,
+                                    CIF='5555G',
+                                    cp='48100')
 
-    def test_post_cp_changes_cp(self):
-        """Test the correct update of customer."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order = Order.objects.get(customer__name='express')
-        resp = self.client.post(reverse('order_express', args=[order.pk]),
-                                {'cp': 230})
-        self.assertEqual(resp.context['order'].customer.cp, '230')
+        # Create some orders
+        for order in range(20):
+            pk = randint(1, 9)  # The first customer should have no order
+            customer = Customer.objects.get(name='Customer%s' % pk)
+            delivery = date.today() + timedelta(days=order % 5)
+            Order.objects.create(user=regular,
+                                 customer=customer,
+                                 ref_name='example%s' % order,
+                                 delivery=delivery,
+                                 waist=randint(10, 50),
+                                 chest=randint(10, 50),
+                                 hip=randint(10, 50),
+                                 lenght=randint(10, 50),
+                                 others='Custom notes',
+                                 budget=2000,
+                                 prepaid=0)
 
-    def test_post_customer_changes_customer(self):
-        """Test the proper change of customer."""
-        self.client.login(username='regular', password='test')
-        c = Customer.objects.first()
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order = Order.objects.get(customer__name='express')
-        resp = self.client.post(reverse('order_express', args=[order.pk]),
-                                {'customer': c.pk})
+        # Create comments
+        for comment in range(10):
+            if comment % 2:
+                user = regular
+            else:
+                user = another
+            order = Order.objects.get(ref_name='example0')
+            Comment.objects.create(user=user,
+                                   reference=order,
+                                   comment='Comment%s' % comment)
+
+        # Create some items
+        for item in range(5):
+            order = Order.objects.get(ref_name='example0')
+            OrderItem.objects.create(qty=5,
+                                     description='notes',
+                                     reference=order)
+
+        # deliver the first 10 orders
+        order_bulk_edit = Order.objects.all().order_by('inbox_date')[:10]
+        for order in order_bulk_edit:
+            order.ref_name = 'example delivered' + str(order.pk)
+            order.status = 7
+            order.save()
+
+        # Have a closed order (delivered & paid)
+        order = Order.objects.filter(status=7)[0]
+        order.ref_name = 'example closed'
+        order.prepaid = order.budget
+        order.save()
+
+        # Have a read comment
+        order = Order.objects.get(ref_name='example closed')
+        comment = Comment.objects.first()
+        comment.read = True
+        comment.reference = order
+        comment.comment = 'read comment'
+        comment.save()
+
+        # Now login to avoid the 404
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        context_is_valid = 0
+        for item in context:
+            for var in vars:
+                if item == var:
+                    context_is_valid += 1
+        if context_is_valid == len(vars):
+            return True
+        else:
+            return False
+
+    def test_timetable_required_creates_timetable(self):
+        """When no working session is open a timetable should be created."""
+        self.assertFalse(Timetable.objects.all())
+        resp = self.client.get(reverse('customerlist'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/list_view.html')
+        self.assertEquals(Timetable.objects.count(), 1)
+        self.assertEquals(Timetable.objects.all()[0].user.username, 'regular')
+
+    def test_timetable_required_is_void_15_hours(self):
+        """When the timer has been running for +15h user should be prompted."""
+        Timetable.objects.create(
+            user=User.objects.first(),
+            start=(timezone.now() - timedelta(hours=15.5)),
+        )
+        login_url = '/add-hours'
+        resp = self.client.get(reverse('customerlist'))
         self.assertEqual(resp.status_code, 302)
-        order = Order.objects.get(pk=order.pk)
-        self.assertEqual(order.customer.name, 'Test')
+        self.assertRedirects(resp, login_url)
+        self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_post_pay_method_ivoices_order(self):
+    def test_cst_timetable_required_is_void_change_date_and_still_valid(self):
+        """When the timer has been running since the day before."""
         self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order = Order.objects.get(customer__name='express')
-        with self.assertRaises(ObjectDoesNotExist):
-            Invoice.objects.get(reference=order)  # The invoice not yet
+        dlt = (timezone.now() - timedelta(hours=14.5))
+        if timezone.now().date() == dlt.date():
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('customerlist'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/list_view.html')
+            self.assertEquals(Timetable.objects.count(), 1)
+        else:  # runs fine before 14:30
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            login_url = '/add-hours'
+            resp = self.client.get(reverse('customerlist'))
+            self.assertEqual(resp.status_code, 302)
+            self.assertRedirects(resp, login_url)
+            self.assertEquals(Timetable.objects.count(), 1)
 
-        OrderItem.objects.create(
-            element=Item.objects.first(), qty=5, reference=order)
-        resp = self.client.post(reverse('order_express', args=[order.pk]),
-                                {'pay_method': settings.PAYMENT_METHODS[0][0]})
+    def test_customer_list(self):
+        """Test the main features on customer list."""
+        resp = self.client.get(reverse('customerlist'))
 
         self.assertEqual(resp.status_code, 200)
-        self.assertTrue(Invoice.objects.get(reference=order))
+        self.assertTemplateUsed(resp, 'tz/list_view.html')
 
-    def test_invalid_pk_raises_404(self):
-        """Raise a 404 when trying to select a void customer."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order = Order.objects.get(customer__name='express')
-        resp = self.client.post(reverse('order_express', args=[order.pk]),
-                                {'customer': 3000})
-        self.assertEqual(resp.status_code, 404)
+        ctx = resp.context
+        self.assertEqual(str(ctx['user']), 'regular')
 
-    def test_no_cp_or_not_customerpk_should_raise_404(self):
-        """Raise a 404 when not passing valid arguments."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order = Order.objects.get(customer__name='express')
-        resp = self.client.post(reverse('order_express', args=[order.pk]),
-                                {'void': 'null'})
-        self.assertEqual(resp.status_code, 404)
+    def test_customer_view_excludes_express_customer(self):
+        """Express customer is annonymous, so ensure not appearing."""
+        express = Customer.objects.first()
+        express.name = 'express'
+        express.save()
+        resp = self.client.get(reverse('customerlist'))
+        customers = resp.context['customers']
+        self.assertEqual(len(customers), 9)
+        for customer in customers:
+            self.assertNotEqual(customer.name, 'express')
 
-    def test_regular_orders_should_be_redirected(self):
-        """Redirect to order view with regular orders."""
-        self.client.login(username='regular', password='test')
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='Test', delivery=date.today(),
-            budget=0, prepaid=0, )
-        resp = self.client.get(reverse('order_express', args=[order.pk]))
-        self.assertEqual(resp.status_code, 302)
+    def test_customer_view_excludes_providers(self):
+        """Providers are shown only in admin view."""
+        express = Customer.objects.first()
+        express.provider = True
+        express.save()
+        resp = self.client.get(reverse('customerlist'))
+        customers = resp.context['customers']
+        self.assertEqual(len(customers), 9)
+        for customer in customers:
+            self.assertNotEqual(customer.name, 'express')
 
-    def test_customer_list_excludes_express_and_providers(self):
-        """These customers should be excluded."""
-        self.client.login(username='regular', password='test')
-        Customer.objects.create(
-            name='provider', city='server', phone=0, cp=48003, provider=True)
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        resp = self.client.get(
-            reverse('order_express', args=[order_express.pk]))
-        self.assertEqual(resp.context['customers'].count(), 1)
-        self.assertEqual(resp.context['customers'][0].name, 'Test')
-        self.assertEqual(Customer.objects.count(), 3)
-
-    def test_items_belong_to_the_order(self):
-        """Display all the items that are owned by an order."""
-        self.client.login(username='regular', password='test')
-        user = User.objects.first()
-        c = Customer.objects.first()
-        regular_order = Order.objects.create(
-            user=user, customer=c, ref_name='Test', delivery=date.today(),
-            budget=0, prepaid=0, )
-        excluded_item = OrderItem.objects.create(
-            reference=regular_order, element=Item.objects.last()
-        )
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        included_item = OrderItem.objects.create(
-            reference=order_express, element=Item.objects.last())
-
-        resp = self.client.get(
-            reverse('order_express', args=[order_express.pk]))
-        self.assertEqual(resp.context['items'].count(), 1)
-        for i in resp.context['items']:
-            self.assertNotEqual(i, excluded_item)
-            self.assertEqual(i, included_item)
-
-    def test_get_already_invoiced_orders(self):
-        """Test the proper display of invoiced orders."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-
-        resp = self.client.get(
-            reverse('order_express', args=[order_express.pk]))
-        self.assertFalse(resp.context['order'].invoiced)
-
-        OrderItem.objects.create(
-            reference=order_express, element=Item.objects.last(), price=10)
-        Invoice.objects.create(reference=order_express)
-        resp = self.client.get(
-            reverse('order_express', args=[order_express.pk]))
-        self.assertTrue(resp.context['order'].invoiced)
-
-    def test_total_amount(self):
-        """Test the proper sum of ticket."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        item = Item.objects.last()
-        OrderItem.objects.create(
-            reference=order_express, element=item, price=10, qty=3)
-        OrderItem.objects.create(
-            reference=order_express, element=item, price=20, qty=2)
-        resp = self.client.get(
-            reverse('order_express', args=[order_express.pk]))
-        self.assertEqual(resp.context['order'].total, 70)
-
-    def test_context_vars(self):
-        """Test the remaining context vars."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        resp = self.client.get(
-            reverse('order_express', args=[order_express.pk]))
-        self.assertEqual(resp.context['user'].username, 'regular')
-        self.assertEqual(len(resp.context['item_types']), 19)
-        self.assertIsInstance(resp.context['form'], InvoiceForm)
-        self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
-        self.assertEqual(resp.context['placeholder'], 'Busca un nombre')
-        self.assertEqual(resp.context['search_on'], 'items')
-
-        # CRUD actions
-        self.assertEqual(resp.context['btn_title_add'], 'Nueva prenda')
-        self.assertEqual(resp.context['js_action_add'], 'object-item-add')
-        self.assertEqual(
-            resp.context['js_action_delete'], 'order-express-item-delete')
+    def test_customer_list_context_vars(self):
+        """Test the correct context vars."""
+        resp = self.client.get(reverse('customerlist'))
+        self.assertEqual(resp.context['search_on'], 'customers')
+        self.assertEqual(resp.context['placeholder'], 'Buscar cliente')
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Clientes')
+        self.assertEqual(resp.context['h3'], 'Todos los clientes')
+        self.assertEqual(resp.context['btn_title_add'], 'Nuevo cliente')
+        self.assertEqual(resp.context['js_action_add'], 'customer-add')
         self.assertEqual(resp.context['js_data_pk'], '0')
+        self.assertEqual(resp.context['include_template'],
+                         'includes/customer_list.html')
+
+    def test_customer_list_paginator(self):
+        """Test paginator functionality on customer list."""
+        for i in range(10):
+            Customer.objects.create(name='Test customer%s' % i,
+                                    city='This computer',
+                                    phone=55,
+                                    cp=30)
+        resp = self.client.get('/customers')
+
+        self.assertEqual(resp.status_code, 200)
+
+        customers = resp.context['customers']
+        self.assertFalse(customers.has_previous())
+        self.assertTrue(customers.has_next())
+        self.assertTrue(customers.has_other_pages())
+        self.assertEqual(customers.next_page_number(), 2)
+        self.assertEqual(len(customers), 10)
+
+    def test_customer_paginator_not_an_int_exception(self):
+        """When page is not an int, paginator should go to the first one.
+
+        That is because the exception was catch.
+        """
+        for i in range(10):
+            Customer.objects.create(name='Test customer%s' % i,
+                                    city='This computer',
+                                    phone=55,
+                                    cp=30)
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get(reverse('customerlist'), {'page': 'invalid'})
+
+        customers = resp.context['customers']
+        self.assertFalse(customers.has_previous())
+        self.assertTrue(customers.has_next())
+        self.assertTrue(customers.has_other_pages())
+        self.assertEqual(customers.number, 1)
+
+    def test_customer_paginator_empty_exception(self):
+        """When page given is empty, paginator should go to the last one.
+
+        That is because the exception was catch.
+        """
+        for i in range(10):
+            Customer.objects.create(name='Test customer%s' % i,
+                                    city='This computer',
+                                    phone=55,
+                                    cp=30)
+        login = self.client.login(username='regular', password='test')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+        resp = self.client.get(reverse('customerlist'), {'page': 20})
+
+        customers = resp.context['customers']
+        self.assertEqual(customers.number, 2)
+        self.assertTrue(customers.has_previous())
+        self.assertFalse(customers.has_next())
+        self.assertTrue(customers.has_other_pages())
+        self.assertEqual(len(customers), 10)
+
+    def test_customer_view(self):
+        """Test the customer details view.
+
+        Let the 10 delivered orders be owned by the tested customer who should
+        have no previous orders.
+        """
+        customer = Customer.objects.first()
+        no_orders = Order.objects.filter(customer=customer)
+        self.assertEqual(len(no_orders), 0)
+        item = Item.objects.create(name='Test', fabrics=1, price=10)
+
+        orders = Order.objects.all()
+        for order in orders:
+            order.customer = customer
+            order.prepaid = 0
+            order.save()
+            OrderItem.objects.create(reference=order, element=item)
+
+        Invoice.objects.create(reference=Order.objects.first())
+
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/customer_view.html')
+
+        self.assertEqual(len(resp.context['orders_active']), 10)
+        self.assertEqual(len(resp.context['orders_delivered']), 10)
+        self.assertEqual(len(resp.context['orders_cancelled']), 0)
+        self.assertEqual(resp.context['orders_made'], 20)
+        self.assertEqual(len(resp.context['pending']), 19)
+
+
+class ItemsListTests(TestCase):
+    """Separated test for items list to test timetable decorator.
+
+    The original tests are under standard views tests but eventually I came up
+    with another arrangement such that each view has its tests ordered by
+    statement show up.
+
+    In the future those tests will end up here.
+    """
+
+    def setUp(self):
+        """Create the necessary items on database at once.
+
+        1 user, 1 customer, 3 orders.
+        """
+        self.client = Client()
+        user = User.objects.create_user(username='regular', password='test')
+        customer = Customer.objects.create(name='Test Customer',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           cp='48100')
+        for i in range(3):
+            Order.objects.create(
+                user=user, customer=customer, ref_name='Test order%s' % i,
+                delivery=date.today(), inbox_date=timezone.now())
+        Item.objects.create(name='test', fabrics=1, price=10)
+        for order in Order.objects.all():
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        self.client.login(username='regular', password='test')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('itemslist'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('itemslist'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
+
+    def test_timetable_required_creates_timetable(self):
+        """When no working session is open a timetable should be created."""
+        self.assertFalse(Timetable.objects.all())
+        resp = self.client.get(reverse('itemslist'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/list_view.html')
+        self.assertEquals(Timetable.objects.count(), 1)
+        self.assertEquals(Timetable.objects.all()[0].user.username, 'regular')
+
+    def test_timetable_required_is_void_15_hours(self):
+        """When the timer has been running for +15h user should be prompted."""
+        Timetable.objects.create(
+            user=User.objects.first(),
+            start=(timezone.now() - timedelta(hours=15.5)),
+        )
+        login_url = '/add-hours'
+        resp = self.client.get(reverse('itemslist'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+        self.assertEquals(Timetable.objects.count(), 1)
+
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
+        """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
+        dlt = (timezone.now() - timedelta(hours=14.5))
+        if timezone.now().date() == dlt.date():
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('itemslist'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/list_view.html')
+            self.assertEquals(Timetable.objects.count(), 1)
+        else:  # runs fine before 14:30
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            login_url = '/add-hours'
+            resp = self.client.get(reverse('itemslist'))
+            self.assertEqual(resp.status_code, 302)
+            self.assertRedirects(resp, login_url)
+            self.assertEquals(Timetable.objects.count(), 1)
+
+    def test_items_view_default_item(self):
+        """In the begining just one item should be on db."""
+        resp = self.client.get(reverse('itemslist'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/list_view.html')
+
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        resp = self.client.get(reverse('itemslist'))
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('itemslist'))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('itemslist'))
+        self.assertFalse(resp.context['session'])
+
+    def test_items_view_context_vars(self):
+        """Test the correct context vars."""
+        resp = self.client.get(reverse('itemslist'))
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Prendas')
+        self.assertEqual(resp.context['h3'], 'Todas las prendas')
+        self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
+        self.assertEqual(resp.context['js_action_add'], 'object-item-add')
+        self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
+        self.assertEqual(resp.context['js_action_delete'],
+                         'object-item-delete')
+        self.assertEqual(resp.context['js_data_pk'], '0')
+        self.assertEqual(resp.context['version'], settings.VERSION)
 
 
 class InvoicesListTest(TestCase):
@@ -2695,6 +3170,26 @@ class InvoicesListTest(TestCase):
         Customer.objects.create(
             name='Test', city='Bilbao', phone=0, cp=48003)
         Item.objects.create(name='Test', fabrics=5, price=10)
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        self.client.login(username='regular', password='test')
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertTemplateUsed(resp, 'tz/invoices.html')
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertTemplateUsed(resp, 'tz/invoices.html')
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
     def test_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
@@ -2919,42 +3414,38 @@ class InvoicesListTest(TestCase):
     def test_invoices_view_current_user(self):
         """Test the current user."""
         self.client.login(username='regular', password='test')
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='Test', delivery=date.today(),
-            budget=0, prepaid=0, )
-        OrderItem.objects.create(
-            reference=order, element=Item.objects.last())
-        Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['user'].username, 'regular')
+
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertFalse(resp.context['session'])
 
     def test_invoices_view_title(self):
         """Test the window title."""
         self.client.login(username='regular', password='test')
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='Test', delivery=date.today(),
-            budget=0, prepaid=0, )
-        OrderItem.objects.create(
-            reference=order, element=Item.objects.last())
-        Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Facturas')
 
     def test_invoices_template_used(self):
         """Test the window title."""
         self.client.login(username='regular', password='test')
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='Test', delivery=date.today(),
-            budget=0, prepaid=0, )
-        OrderItem.objects.create(
-            reference=order, element=Item.objects.last())
-        Invoice.objects.create(reference=order)
         resp = self.client.get(reverse('invoiceslist'))
         self.assertTemplateUsed(resp, 'tz/invoices.html')
 
@@ -2967,7 +3458,7 @@ class KanbanTests(TestCase):
         """Create the necessary items on database at once."""
         # Create a user
         u = User.objects.create_user(
-            username='user', is_staff=True, is_superuser=True, password='test')
+            username='user', is_staff=True, password='test')
 
         # Create a customer
         c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
@@ -2987,6 +3478,23 @@ class KanbanTests(TestCase):
     def setUp(self):
         """Auto login for tests."""
         self.client.login(username='user', password='test')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('kanban'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
     def test_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
@@ -3033,6 +3541,24 @@ class KanbanTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/kanban.html')
 
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        resp = self.client.get(reverse('kanban'))
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('kanban'))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('kanban'))
+        self.assertFalse(resp.context['session'])
+
     def test_kanban_outputs_current_user(self):
         """Test the correct var."""
         resp = self.client.get(reverse('kanban'))
@@ -3047,704 +3573,6 @@ class KanbanTests(TestCase):
         """Test the correct var."""
         resp = self.client.get(reverse('kanban'))
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Vista Kanban')
-
-
-class PQueueManagerTests(TestCase):
-    """Test the pqueue manager view."""
-
-    def setUp(self):
-        """Create the necessary items on database at once."""
-        # Create a user
-        user = User.objects.create_user(username='regular', password='test')
-
-        # Create a customer
-        customer = Customer.objects.create(name='Customer Test',
-                                           address='This computer',
-                                           city='No city',
-                                           phone='666666666',
-                                           email='customer@example.com',
-                                           CIF='5555G',
-                                           notes='Default note',
-                                           cp='48100')
-        # Create an order
-        order = Order.objects.create(user=user,
-                                     customer=customer,
-                                     ref_name='Test order',
-                                     delivery=date.today(),
-                                     budget=2000,
-                                     prepaid=0)
-        for i in range(1, 3):
-            Item.objects.create(name='Test item%s' % i, fabrics=5)
-
-        # Create orderitems
-        for item in Item.objects.all():
-            OrderItem.objects.create(reference=order, element=item)
-
-        self.client.login(username='regular', password='test')
-
-    def test_timetable_required_creates_timetable(self):
-        """When no working session is open a timetable should be created."""
-        self.assertFalse(Timetable.objects.all())
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
-        self.assertEquals(Timetable.objects.count(), 1)
-        self.assertEquals(Timetable.objects.all()[0].user.username, 'regular')
-
-    def test_timetable_required_is_void_15_hours(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=15.5)),
-        )
-        login_url = '/add-hours'
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertRedirects(resp, login_url)
-        self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_void_change_date_and_still_valid(self):
-        """When the timer has been running since the day before."""
-        self.client.login(username='regular', password='test')
-        dlt = (timezone.now() - timedelta(hours=14.5))
-        if timezone.now().date() == dlt.date():
-            Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('pqueue_manager'))
-            self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
-            self.assertEquals(Timetable.objects.count(), 1)
-        else:  # runs fine before 14:30
-            Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            login_url = '/add-hours'
-            resp = self.client.get(reverse('pqueue_manager'))
-            self.assertEqual(resp.status_code, 302)
-            self.assertRedirects(resp, login_url)
-            self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_view_exists(self):
-        """First test the existence of pqueue view."""
-        self.client.login(username='regular', password='test')
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
-
-    def test_common_context_is_imported(self):
-        """Test the vars comming in the commom context."""
-        self.client.login(username='regular', password='test')
-        resp = self.client.get(reverse('pqueue_manager'))
-        vars = ('available', 'active', 'completed', 'i_relax', 'now',
-                'version', 'title', )
-        for var in vars:
-            self.assertTrue(var in resp.context.keys())
-
-    def test_cur_user_and_session(self):
-        """Test the vars that weren't included in the common context."""
-        self.client.login(username='regular', password='test')
-        user = User.objects.get(username='regular')
-        resp = self.client.get(reverse('pqueue_manager'))
-        self.assertEqual(resp.context['cur_user'], user)
-        self.assertIsInstance(resp.context['session'], Timetable)
-
-
-class PQueueTabletTests(TestCase):
-    """Test the pqueue tablet view."""
-
-    def setUp(self):
-        """Create the necessary items on database at once."""
-        # Create a user
-        user = User.objects.create_user(username='regular', password='test')
-
-        # Create a customer
-        customer = Customer.objects.create(name='Customer Test',
-                                           address='This computer',
-                                           city='No city',
-                                           phone='666666666',
-                                           email='customer@example.com',
-                                           CIF='5555G',
-                                           notes='Default note',
-                                           cp='48100')
-        # Create an order
-        order = Order.objects.create(user=user,
-                                     customer=customer,
-                                     ref_name='Test order',
-                                     delivery=date.today(),
-                                     budget=2000,
-                                     prepaid=0)
-        for i in range(1, 3):
-            Item.objects.create(name='Test item%s' % i, fabrics=5)
-
-        # Create orderitems
-        for item in Item.objects.all():
-            OrderItem.objects.create(reference=order, element=item)
-
-        self.client.login(username='regular', password='test')
-
-    def test_timetable_required_creates_timetable(self):
-        """When no working session is open a timetable should be created."""
-        self.assertFalse(Timetable.objects.all())
-        resp = self.client.get(reverse('pqueue_tablet'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
-        self.assertEquals(Timetable.objects.count(), 1)
-        self.assertEquals(Timetable.objects.all()[0].user.username, 'regular')
-
-    def test_timetable_required_is_void_15_hours(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=15.5)),
-        )
-        login_url = '/add-hours'
-        resp = self.client.get(reverse('pqueue_tablet'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertRedirects(resp, login_url)
-        self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_timetable_required_is_void_change_date_and_still_valid(self):
-        """When the timer has been running since the day before."""
-        self.client.login(username='regular', password='test')
-        dlt = (timezone.now() - timedelta(hours=14.5))
-        if timezone.now().date() == dlt.date():
-            Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('pqueue_tablet'))
-            self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
-            self.assertEquals(Timetable.objects.count(), 1)
-        else:  # runs fine before 14:30
-            Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            login_url = '/add-hours'
-            resp = self.client.get(reverse('pqueue_tablet'))
-            self.assertEqual(resp.status_code, 302)
-            self.assertRedirects(resp, login_url)
-            self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_view_exists(self):
-        """First test the existence of pqueue tablet view."""
-        self.client.login(username='regular', password='test')
-        resp = self.client.get(reverse('pqueue_tablet'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
-
-    def test_common_context_is_imported(self):
-        """Test the vars comming in the commom context."""
-        self.client.login(username='regular', password='test')
-        resp = self.client.get(reverse('pqueue_tablet'))
-        vars = ('available', 'active', 'completed', 'i_relax', 'now',
-                'version', 'title', )
-        for var in vars:
-            self.assertTrue(var in resp.context.keys())
-
-    def test_cur_user_and_session(self):
-        """Test the vars that weren't included in the common context."""
-        self.client.login(username='regular', password='test')
-        user = User.objects.get(username='regular')
-        resp = self.client.get(reverse('pqueue_tablet'))
-        self.assertEqual(resp.context['cur_user'], user)
-        self.assertIsInstance(resp.context['session'], Timetable)
-
-
-class PQueueActionsTests(TestCase):
-    """Test the AJAX server side."""
-
-    def setUp(self):
-        """Create the necessary items on database at once."""
-        # Create a user
-        user = User.objects.create_user(username='regular', password='test')
-
-        # Create a customer
-        customer = Customer.objects.create(name='Customer Test',
-                                           address='This computer',
-                                           city='No city',
-                                           phone='666666666',
-                                           email='customer@example.com',
-                                           CIF='5555G',
-                                           notes='Default note',
-                                           cp='48100')
-        # Create an order
-        order = Order.objects.create(user=user,
-                                     customer=customer,
-                                     ref_name='Test order',
-                                     delivery=date.today(),
-                                     budget=2000,
-                                     prepaid=0)
-        item = Item.objects.create(name='Test item object', fabrics=5)
-
-        # Create orderitems
-        for i in range(3):
-            OrderItem.objects.create(reference=order, element=item)
-
-        self.client.login(username='regular', password='test')
-
-    def context_vars(self, context, vars):
-        """Compare the given vars with the ones in response."""
-        context_is_valid = 0
-        for item in context:
-            for var in vars:
-                if item == var:
-                    context_is_valid += 1
-        if context_is_valid == len(vars):
-            return True
-        else:
-            return False
-
-    def test_valid_method(self):
-        """Only post method is accepted."""
-        item = OrderItem.objects.first()
-        resp = self.client.get(reverse('queue-actions'),
-                               {'pk': item.pk, 'action': 'send'})
-        self.assertEqual(resp.status_code, 500)
-        self.assertEqual(resp.content.decode('utf-8'),
-                         'The request should go in a post method')
-
-    def test_no_pk_or_no_action_raise_500(self):
-        """Ensure that action and pk are sent with the request."""
-        item = OrderItem.objects.first()
-        resp_no_pk = self.client.post(reverse('queue-actions'),
-                                      {'action': 'send'})
-        resp_no_action = self.client.post(reverse('queue-actions'),
-                                          {'pk': item.pk})
-        self.assertEqual(resp_no_pk.status_code, 500)
-        self.assertEqual(resp_no_pk.content.decode('utf-8'),
-                         'POST data was poor')
-        self.assertEqual(resp_no_action.status_code, 500)
-        self.assertEqual(resp_no_action.content.decode('utf-8'),
-                         'POST data was poor')
-
-    def test_valid_actions(self):
-        """Only certain actions are possible."""
-        item = OrderItem.objects.first()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': item.pk, 'action': 'invalid'})
-        self.assertEqual(resp.status_code, 500)
-        self.assertEqual(resp.content.decode('utf-8'),
-                         'The action was not recognized')
-
-    def test_pk_out_of_range_raises_404(self):
-        """Test the correct pk."""
-        actions = ('send', 'back', 'up', 'down', 'top', 'bottom', 'complete',
-                   'uncomplete')
-        for action in actions:
-            resp = self.client.post(reverse('queue-actions'),
-                                    {'pk': 2000, 'action': action})
-            self.assertEqual(resp.status_code, 404)
-
-    def test_send_action_valid(self):
-        """Test the correct process of send action."""
-        item = OrderItem.objects.first()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': item.pk, 'action': 'send',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertTrue(data['reload'])
-        self.assertFalse(data['html_id'])
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.all().count(), 1)
-
-    def test_send_action_rejected(self):
-        """Test the correct process of send action."""
-        item = OrderItem.objects.first()
-        item.stock = True
-        item.save()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': item.pk, 'action': 'send',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertFalse(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['error'], 'Couldn\'t save the object')
-        self.assertEqual(PQueue.objects.all().count(), 0)
-
-    def test_back_action_valid(self):
-        """Test the correct send back to item list."""
-        item = PQueue.objects.create(item=OrderItem.objects.first())
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': item.pk, 'action': 'back',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertTrue(data['reload'])
-        self.assertFalse(data['html_id'])
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.all().count(), 0)
-
-    def test_up_action_valid(self):
-        """Test the correct process of up action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': last.pk, 'action': 'up',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.first(), first)
-        self.assertEqual(PQueue.objects.last(), mid)
-
-    def test_up_action_rejected(self):
-        """Test the correct process of up action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        stocked_item = OrderItem.objects.last()
-        stocked_item.stock = True
-        stocked_item.save()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': last.pk, 'action': 'up',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertFalse(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['error'], 'Couldn\'t clean the object')
-        self.assertEqual(PQueue.objects.all().count(), 3)
-
-    def test_top_action_valid(self):
-        """Test the correct process of top action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': last.pk, 'action': 'top',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.first(), last)
-        self.assertEqual(PQueue.objects.last(), mid)
-
-    def test_top_action_rejected(self):
-        """Test the correct process of top action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        stocked_item = OrderItem.objects.last()
-        stocked_item.stock = True
-        stocked_item.save()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': last.pk, 'action': 'top',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertFalse(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['error'], 'Couldn\'t clean the object')
-        self.assertEqual(PQueue.objects.all().count(), 3)
-
-    def test_down_action_valid(self):
-        """Test the correct process of down action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'down',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.first(), mid)
-        self.assertEqual(PQueue.objects.last(), last)
-
-    def test_down_action_rejected(self):
-        """Test the correct process of down action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        stocked_item = OrderItem.objects.first()
-        stocked_item.stock = True
-        stocked_item.save()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'down',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertFalse(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['error'], 'Couldn\'t clean the object')
-        self.assertEqual(PQueue.objects.all().count(), 3)
-
-    def test_bottom_action_valid(self):
-        """Test the correct process of bottom action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'bottom',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.first(), mid)
-        self.assertEqual(PQueue.objects.last(), first)
-
-    def test_bottom_action_rejected(self):
-        """Test the correct process of bottom action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        stocked_item = OrderItem.objects.first()
-        stocked_item.stock = True
-        stocked_item.save()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'bottom',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertFalse(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['error'], 'Couldn\'t clean the object')
-        self.assertEqual(PQueue.objects.all().count(), 3)
-
-    def test_complete_action_valid(self):
-        """Test the correct process of complete action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'complete',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
-
-    def test_tablet_complete_action_valid(self):
-        """Test the correct process of complete action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'tb-complete',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list-tablet')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
-
-    def test_complete_action_rejected(self):
-        """Test the correct process of complete action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        stocked_item = OrderItem.objects.first()
-        stocked_item.stock = True
-        stocked_item.save()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'complete',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertFalse(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['error'], 'Couldn\'t clean the object')
-        self.assertEqual(PQueue.objects.all().count(), 3)
-        self.assertFalse(PQueue.objects.filter(score__lt=0).count())
-
-    def test_uncomplete_action_valid(self):
-        """Test the correct process of uncomplete action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        first.complete()
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'uncomplete',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 0)
-
-    def test_tablet_uncomplete_action_valid(self):
-        """Test the correct process of uncomplete action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        first.complete()
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'tb-uncomplete',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertTrue(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['html_id'], '#pqueue-list-tablet')
-        self.assertFalse(data['error'])
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 0)
-
-    def test_uncomplete_action_rejected(self):
-        """Test the correct process of uncomplete action."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        first, mid, last = PQueue.objects.all()
-        first.complete()
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
-        stocked_item = OrderItem.objects.first()
-        stocked_item.stock = True
-        stocked_item.save()
-        resp = self.client.post(reverse('queue-actions'),
-                                {'pk': first.pk, 'action': 'uncomplete',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('active', 'completed', )
-        self.assertEqual(data['template'], 'includes/pqueue_list.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertFalse(data['is_valid'])
-        self.assertFalse(data['reload'])
-        self.assertEqual(data['error'], 'Couldn\'t clean the object')
-        self.assertEqual(PQueue.objects.all().count(), 3)
-        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
-
-
-class TimetableListTests(TestCase):
-    """Test the generic view for timetables."""
-
-    def setUp(self):
-        user = User.objects.create_user(username='regular', password='test')
-        user.save()
-
-        Timetable.objects.create(user=user, hours=timedelta(seconds=3600))
-
-        self.client.login(username='regular', password='test')
-
-    def test_template(self):
-        resp = self.client.get(reverse('timetables'))
-        self.assertTemplateUsed(resp, 'tz/timetable_list.html')
-        self.assertEqual(resp.status_code, 200)
-
-    def test_context_main_var(self):
-        resp = self.client.get(reverse('timetables'))
-        self.assertTrue(resp.context['timetables'])
-
-    def test_view_only_shows_current_user_timetables(self):
-        user2 = User.objects.create_user(username='alt', password='test')
-        user2.save()
-        Timetable.objects.create(user=user2, hours=timedelta(seconds=3000))
-
-        self.assertEqual(Timetable.objects.count(), 2)
-        resp = self.client.get(reverse('timetables'))
-        self.assertEqual(len(resp.context['timetables']), 1)
-        self.assertEqual(
-            resp.context['timetables'][0].user.username, 'regular')
-
-    def test_view_only_shows_last_10_entries_descending_ordered(self):
-        start = timezone.now() - timedelta(days=15)
-        for _ in range(12):
-            Timetable.objects.create(
-                user=User.objects.first(),
-                start=start,
-                hours=timedelta(seconds=3600))
-            start += timedelta(days=1)
-        resp = self.client.get(reverse('timetables'))
-
-        timetables = resp.context['timetables']
-        self.assertTrue(len(timetables), 10)
-
-        for n, t in enumerate(timetables[:9]):
-            self.assertTrue(t.start > timetables[n + 1].start)
-
-    def test_session_var_is_last_timetable(self):
-        start = timezone.now() - timedelta(days=15)
-        for _ in range(5):
-            Timetable.objects.create(
-                user=User.objects.first(),
-                start=start,
-                hours=timedelta(seconds=3600))
-            start += timedelta(days=1)
-        resp = self.client.get(reverse('timetables'))
-        self.assertEqual(resp.context['session'], Timetable.objects.last())
 
 
 @tag('todoist')
@@ -3763,6 +3591,25 @@ class OrderViewTests(TestCase):
             delivery=date.today(), budget=100, prepaid=0, )
 
         self.client.login(username='regular', password='test')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        order = Order.objects.first()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        order = Order.objects.first()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
     def test_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
@@ -3967,6 +3814,25 @@ class OrderViewTests(TestCase):
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEqual(resp.context['items'].count(), 3)
 
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        order = Order.objects.first()
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('order_view', args=[order.pk]))
+        self.assertFalse(resp.context['session'])
+
     def test_context_variables(self):
         """Test the remaining variables.
 
@@ -3992,8 +3858,245 @@ class OrderViewTests(TestCase):
         self.assertEqual(resp.context['js_data_pk'], order.pk)
 
 
-class StandardViewsTest(TestCase):
-    """Test the standard views."""
+class OrderExpressTests(TestCase):
+    """Test the order express view."""
+
+    @classmethod
+    def setUpTestData(self):
+        """Create all the elements at once."""
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        Customer.objects.create(
+            name='Test', city='Bilbao', phone=0, cp=48003)
+        Item.objects.create(name='Test', fabrics=5, price=10)
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.get(reverse('order_express', args=[order.pk]), )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('order_express', args=[order.pk]), )
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
+
+    def test_pk_out_of_range_raises_404(self):
+        """Raise a 404 when trying to select a void order."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('order_express', args=[5000]))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_post_cp_changes_cp(self):
+        """Test the correct update of customer."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'cp': 230})
+        self.assertEqual(resp.context['order'].customer.cp, '230')
+
+    def test_post_customer_changes_customer(self):
+        """Test the proper change of customer."""
+        self.client.login(username='regular', password='test')
+        c = Customer.objects.first()
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'customer': c.pk})
+        self.assertEqual(resp.status_code, 302)
+        order = Order.objects.get(pk=order.pk)
+        self.assertEqual(order.customer.name, 'Test')
+
+    def test_post_pay_method_ivoices_order(self):
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        with self.assertRaises(ObjectDoesNotExist):
+            Invoice.objects.get(reference=order)  # The invoice not yet
+
+        OrderItem.objects.create(
+            element=Item.objects.first(), qty=5, reference=order)
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'pay_method': settings.PAYMENT_METHODS[0][0]})
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(Invoice.objects.get(reference=order))
+
+    def test_invalid_pk_raises_404(self):
+        """Raise a 404 when trying to select a void customer."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'customer': 3000})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_no_cp_or_not_customerpk_should_raise_404(self):
+        """Raise a 404 when not passing valid arguments."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.post(reverse('order_express', args=[order.pk]),
+                                {'void': 'null'})
+        self.assertEqual(resp.status_code, 404)
+
+    def test_regular_orders_should_be_redirected(self):
+        """Redirect to order view with regular orders."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        resp = self.client.get(reverse('order_express', args=[order.pk]))
+        self.assertEqual(resp.status_code, 302)
+
+    def test_customer_list_excludes_express_and_providers(self):
+        """These customers should be excluded."""
+        self.client.login(username='regular', password='test')
+        Customer.objects.create(
+            name='provider', city='server', phone=0, cp=48003, provider=True)
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['customers'].count(), 1)
+        self.assertEqual(resp.context['customers'][0].name, 'Test')
+        self.assertEqual(Customer.objects.count(), 3)
+
+    def test_items_belong_to_the_order(self):
+        """Display all the items that are owned by an order."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.first()
+        c = Customer.objects.first()
+        regular_order = Order.objects.create(
+            user=user, customer=c, ref_name='Test', delivery=date.today(),
+            budget=0, prepaid=0, )
+        excluded_item = OrderItem.objects.create(
+            reference=regular_order, element=Item.objects.last()
+        )
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        included_item = OrderItem.objects.create(
+            reference=order_express, element=Item.objects.last())
+
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['items'].count(), 1)
+        for i in resp.context['items']:
+            self.assertNotEqual(i, excluded_item)
+            self.assertEqual(i, included_item)
+
+    def test_get_already_invoiced_orders(self):
+        """Test the proper display of invoiced orders."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertFalse(resp.context['order'].invoiced)
+
+        OrderItem.objects.create(
+            reference=order_express, element=Item.objects.last(), price=10)
+        Invoice.objects.create(reference=order_express)
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertTrue(resp.context['order'].invoiced)
+
+    def test_total_amount(self):
+        """Test the proper sum of ticket."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        item = Item.objects.last()
+        OrderItem.objects.create(
+            reference=order_express, element=item, price=10, qty=3)
+        OrderItem.objects.create(
+            reference=order_express, element=item, price=20, qty=2)
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['order'].total, 70)
+
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'), {'cp': 0, 'pk': 'None',
+                                              'action': 'order-express-add', })
+        order = Order.objects.get(customer__name='express')
+        resp = self.client.get(reverse('order_express', args=[order.pk]), )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('order_express', args=[order.pk]), )
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('order_express', args=[order.pk]), )
+        self.assertFalse(resp.context['session'])
+
+    def test_context_vars(self):
+        """Test the remaining context vars."""
+        self.client.login(username='regular', password='test')
+        self.client.post(reverse('actions'),
+                         {'cp': 0, 'pk': 'None',
+                          'action': 'order-express-add', })
+        order_express = Order.objects.get(customer__name='express')
+        resp = self.client.get(
+            reverse('order_express', args=[order_express.pk]))
+        self.assertEqual(resp.context['user'].username, 'regular')
+        self.assertEqual(len(resp.context['item_types']), 19)
+        self.assertIsInstance(resp.context['form'], InvoiceForm)
+        self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
+        self.assertEqual(resp.context['placeholder'], 'Busca un nombre')
+        self.assertEqual(resp.context['search_on'], 'items')
+
+        # CRUD actions
+        self.assertEqual(resp.context['btn_title_add'], 'Nueva prenda')
+        self.assertEqual(resp.context['js_action_add'], 'object-item-add')
+        self.assertEqual(
+            resp.context['js_action_delete'], 'order-express-item-delete')
+        self.assertEqual(resp.context['js_data_pk'], '0')
+
+
+class CustomerViewTests(TestCase):
+    """Test the customer list view."""
 
     def setUp(self):
         """Create the necessary items on database at once.
@@ -4010,25 +4113,20 @@ class StandardViewsTest(TestCase):
         """
         # Create users
         regular = User.objects.create_user(username='regular', password='test')
-        another = User.objects.create_user(username='another', password='test')
 
-        # Create some customers
-        for customer in range(10):
-            Customer.objects.create(name='Customer%s' % customer,
+        c = Customer.objects.create(name='Customer',
                                     address='This computer',
                                     city='No city',
                                     phone='666666666',
-                                    email='customer%s@example.com' % customer,
+                                    email='customer@example.com',
                                     CIF='5555G',
                                     cp='48100')
 
         # Create some orders
-        for order in range(20):
-            pk = randint(1, 9)  # The first customer should have no order
-            customer = Customer.objects.get(name='Customer%s' % pk)
+        for order in range(5):
             delivery = date.today() + timedelta(days=order % 5)
             Order.objects.create(user=regular,
-                                 customer=customer,
+                                 customer=c,
                                  ref_name='example%s' % order,
                                  delivery=delivery,
                                  waist=randint(10, 50),
@@ -4039,17 +4137,6 @@ class StandardViewsTest(TestCase):
                                  budget=2000,
                                  prepaid=0)
 
-        # Create comments
-        for comment in range(10):
-            if comment % 2:
-                user = regular
-            else:
-                user = another
-            order = Order.objects.get(ref_name='example0')
-            Comment.objects.create(user=user,
-                                   reference=order,
-                                   comment='Comment%s' % comment)
-
         # Create some items
         for item in range(5):
             order = Order.objects.get(ref_name='example0')
@@ -4058,7 +4145,7 @@ class StandardViewsTest(TestCase):
                                      reference=order)
 
         # deliver the first 10 orders
-        order_bulk_edit = Order.objects.all().order_by('inbox_date')[:10]
+        order_bulk_edit = Order.objects.all().order_by('inbox_date')[:3]
         for order in order_bulk_edit:
             order.ref_name = 'example delivered' + str(order.pk)
             order.status = 7
@@ -4070,18 +4157,28 @@ class StandardViewsTest(TestCase):
         order.prepaid = order.budget
         order.save()
 
-        # Have a read comment
-        order = Order.objects.get(ref_name='example closed')
-        comment = Comment.objects.first()
-        comment.read = True
-        comment.reference = order
-        comment.comment = 'read comment'
-        comment.save()
-
         # Now login to avoid the 404
         login = self.client.login(username='regular', password='test')
         if not login:
             raise RuntimeError('Couldn\'t login')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        customer = Customer.objects.first()
+        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
@@ -4094,47 +4191,6 @@ class StandardViewsTest(TestCase):
             return True
         else:
             return False
-
-    def test_timetable_required_creates_timetable(self):
-        """When no working session is open a timetable should be created."""
-        self.assertFalse(Timetable.objects.all())
-        resp = self.client.get(reverse('customerlist'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/list_view.html')
-        self.assertEquals(Timetable.objects.count(), 1)
-        self.assertEquals(Timetable.objects.all()[0].user.username, 'regular')
-
-    def test_timetable_required_is_void_15_hours(self):
-        """When the timer has been running for +15h user should be prompted."""
-        Timetable.objects.create(
-            user=User.objects.first(),
-            start=(timezone.now() - timedelta(hours=15.5)),
-        )
-        login_url = '/add-hours'
-        resp = self.client.get(reverse('customerlist'))
-        self.assertEqual(resp.status_code, 302)
-        self.assertRedirects(resp, login_url)
-        self.assertEquals(Timetable.objects.count(), 1)
-
-    def test_cst_timetable_required_is_void_change_date_and_still_valid(self):
-        """When the timer has been running since the day before."""
-        self.client.login(username='regular', password='test')
-        dlt = (timezone.now() - timedelta(hours=14.5))
-        if timezone.now().date() == dlt.date():
-            Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            customer = Customer.objects.first()
-            resp = self.client.get(
-                reverse('customer_view', args=[customer.pk]))
-            self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/customer_view.html')
-            self.assertEquals(Timetable.objects.count(), 1)
-        else:  # runs fine before 14:30
-            Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            login_url = '/add-hours'
-            resp = self.client.get(reverse('invoiceslist'))
-            self.assertEqual(resp.status_code, 302)
-            self.assertRedirects(resp, login_url)
-            self.assertEquals(Timetable.objects.count(), 1)
 
     def test_cst_view_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
@@ -4181,121 +4237,11 @@ class StandardViewsTest(TestCase):
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_customer_list(self):
-        """Test the main features on customer list."""
-        resp = self.client.get(reverse('customerlist'))
-
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/list_view.html')
-
-        ctx = resp.context
-        self.assertEqual(str(ctx['user']), 'regular')
-
-    def test_customer_view_excludes_express_customer(self):
-        """Express customer is annonymous, so ensure not appearing."""
-        express = Customer.objects.first()
-        express.name = 'express'
-        express.save()
-        resp = self.client.get(reverse('customerlist'))
-        customers = resp.context['customers']
-        self.assertEqual(len(customers), 9)
-        for customer in customers:
-            self.assertNotEqual(customer.name, 'express')
-
-    def test_customer_view_excludes_providers(self):
-        """Providers are shown only in admin view."""
-        express = Customer.objects.first()
-        express.provider = True
-        express.save()
-        resp = self.client.get(reverse('customerlist'))
-        customers = resp.context['customers']
-        self.assertEqual(len(customers), 9)
-        for customer in customers:
-            self.assertNotEqual(customer.name, 'express')
-
-    def test_customer_list_context_vars(self):
-        """Test the correct context vars."""
-        resp = self.client.get(reverse('customerlist'))
-        self.assertEqual(resp.context['search_on'], 'customers')
-        self.assertEqual(resp.context['placeholder'], 'Buscar cliente')
-        self.assertEqual(resp.context['title'], 'TrapuZarrak · Clientes')
-        self.assertEqual(resp.context['h3'], 'Todos los clientes')
-        self.assertEqual(resp.context['btn_title_add'], 'Nuevo cliente')
-        self.assertEqual(resp.context['js_action_add'], 'customer-add')
-        self.assertEqual(resp.context['js_data_pk'], '0')
-        self.assertEqual(resp.context['include_template'],
-                         'includes/customer_list.html')
-
-    def test_customer_list_paginator(self):
-        """Test paginator functionality on customer list."""
-        for i in range(10):
-            Customer.objects.create(name='Test customer%s' % i,
-                                    city='This computer',
-                                    phone=55,
-                                    cp=30)
-        resp = self.client.get('/customers')
-
-        self.assertEqual(resp.status_code, 200)
-
-        customers = resp.context['customers']
-        self.assertFalse(customers.has_previous())
-        self.assertTrue(customers.has_next())
-        self.assertTrue(customers.has_other_pages())
-        self.assertEqual(customers.next_page_number(), 2)
-        self.assertEqual(len(customers), 10)
-
-    def test_customer_paginator_not_an_int_exception(self):
-        """When page is not an int, paginator should go to the first one.
-
-        That is because the exception was catch.
-        """
-        for i in range(10):
-            Customer.objects.create(name='Test customer%s' % i,
-                                    city='This computer',
-                                    phone=55,
-                                    cp=30)
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-        resp = self.client.get(reverse('customerlist'), {'page': 'invalid'})
-
-        customers = resp.context['customers']
-        self.assertFalse(customers.has_previous())
-        self.assertTrue(customers.has_next())
-        self.assertTrue(customers.has_other_pages())
-        self.assertEqual(customers.number, 1)
-
-    def test_customer_paginator_empty_exception(self):
-        """When page given is empty, paginator should go to the last one.
-
-        That is because the exception was catch.
-        """
-        for i in range(10):
-            Customer.objects.create(name='Test customer%s' % i,
-                                    city='This computer',
-                                    phone=55,
-                                    cp=30)
-        login = self.client.login(username='regular', password='test')
-        if not login:
-            raise RuntimeError('Couldn\'t login')
-        resp = self.client.get(reverse('customerlist'), {'page': 20})
-
-        customers = resp.context['customers']
-        self.assertEqual(customers.number, 2)
-        self.assertTrue(customers.has_previous())
-        self.assertFalse(customers.has_next())
-        self.assertTrue(customers.has_other_pages())
-        self.assertEqual(len(customers), 10)
-
     def test_customer_view(self):
-        """Test the customer details view.
-
-        Let the 10 delivered orders be owned by the tested customer who should
-        have no previous orders.
-        """
+        """Test the customer details view."""
         customer = Customer.objects.first()
         no_orders = Order.objects.filter(customer=customer)
-        self.assertEqual(len(no_orders), 0)
+        self.assertEqual(no_orders.count(), 5)
         item = Item.objects.create(name='Test', fabrics=1, price=10)
 
         orders = Order.objects.all()
@@ -4313,83 +4259,88 @@ class StandardViewsTest(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'tz/customer_view.html')
 
-        self.assertEqual(len(resp.context['orders_active']), 10)
-        self.assertEqual(len(resp.context['orders_delivered']), 10)
+        self.assertEqual(len(resp.context['orders_active']), 2)
+        self.assertEqual(len(resp.context['orders_delivered']), 3)
         self.assertEqual(len(resp.context['orders_cancelled']), 0)
-        self.assertEqual(resp.context['orders_made'], 20)
-        self.assertEqual(len(resp.context['pending']), 19)
+        self.assertEqual(resp.context['orders_made'], 5)
+        self.assertEqual(len(resp.context['pending']), 4)
 
-    def test_items_view_default_item(self):
-        """In the begining just one item should be on db."""
-        resp = self.client.get(reverse('itemslist'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/list_view.html')
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        customer = Customer.objects.first()
+        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
+        self.assertIsInstance(resp.context['session'], Timetable)
 
-    def test_items_view_context_vars(self):
-        """Test the correct context vars."""
-        resp = self.client.get(reverse('itemslist'))
-        self.assertEqual(resp.context['title'], 'TrapuZarrak · Prendas')
-        self.assertEqual(resp.context['h3'], 'Todas las prendas')
-        self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
-        self.assertEqual(resp.context['js_action_add'], 'object-item-add')
-        self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
-        self.assertEqual(resp.context['js_action_delete'],
-                         'object-item-delete')
-        self.assertEqual(resp.context['js_data_pk'], '0')
-        self.assertEqual(resp.context['version'], settings.VERSION)
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
 
-    def test_mark_down_view(self):
-        """Test the proper work of view."""
-        resp = self.client.get(reverse('changelog'))
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
+        self.assertFalse(resp.context['session'])
 
-    def test_mark_down_view_only_accept_get(self):
-        """Method should be get."""
-        resp = self.client.post(reverse('changelog'))
-        self.assertEqual(resp.status_code, 404)
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('customer_view', args=[customer.pk]))
+        self.assertFalse(resp.context['session'])
 
 
-class ItemsListTests(TestCase):
-    """Separated test for items list to test timetable decorator.
-
-    The original tests are under standard views tests but eventually I came up
-    with another arrangement such that each view has its tests ordered by
-    statement show up.
-
-    In the future those tests will end up here.
-    """
+class PQueueManagerTests(TestCase):
+    """Test the pqueue manager view."""
 
     def setUp(self):
-        """Create the necessary items on database at once.
-
-        1 user, 1 customer, 3 orders.
-        """
-        self.client = Client()
+        """Create the necessary items on database at once."""
+        # Create a user
         user = User.objects.create_user(username='regular', password='test')
-        customer = Customer.objects.create(name='Test Customer',
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
                                            address='This computer',
                                            city='No city',
                                            phone='666666666',
                                            email='customer@example.com',
                                            CIF='5555G',
+                                           notes='Default note',
                                            cp='48100')
-        for i in range(3):
-            Order.objects.create(
-                user=user, customer=customer, ref_name='Test order%s' % i,
-                delivery=date.today(), inbox_date=timezone.now())
-        Item.objects.create(name='test', fabrics=1, price=10)
-        for order in Order.objects.all():
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        for i in range(1, 3):
+            Item.objects.create(name='Test item%s' % i, fabrics=5)
+
+        # Create orderitems
+        for item in Item.objects.all():
+            OrderItem.objects.create(reference=order, element=item)
+
         self.client.login(username='regular', password='test')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
     def test_timetable_required_creates_timetable(self):
         """When no working session is open a timetable should be created."""
         self.assertFalse(Timetable.objects.all())
-        resp = self.client.get(reverse('itemslist'))
+        resp = self.client.get(reverse('pqueue_manager'))
         self.assertEqual(resp.status_code, 200)
-        self.assertTemplateUsed(resp, 'tz/list_view.html')
+        self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
         self.assertEquals(Timetable.objects.count(), 1)
         self.assertEquals(Timetable.objects.all()[0].user.username, 'regular')
 
@@ -4400,7 +4351,7 @@ class ItemsListTests(TestCase):
             start=(timezone.now() - timedelta(hours=15.5)),
         )
         login_url = '/add-hours'
-        resp = self.client.get(reverse('itemslist'))
+        resp = self.client.get(reverse('pqueue_manager'))
         self.assertEqual(resp.status_code, 302)
         self.assertRedirects(resp, login_url)
         self.assertEquals(Timetable.objects.count(), 1)
@@ -4411,185 +4362,283 @@ class ItemsListTests(TestCase):
         dlt = (timezone.now() - timedelta(hours=14.5))
         if timezone.now().date() == dlt.date():
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
-            resp = self.client.get(reverse('itemslist'))
+            resp = self.client.get(reverse('pqueue_manager'))
             self.assertEqual(resp.status_code, 200)
-            self.assertTemplateUsed(resp, 'tz/list_view.html')
+            self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
             self.assertEquals(Timetable.objects.count(), 1)
         else:  # runs fine before 14:30
             Timetable.objects.create(user=User.objects.first(), start=dlt, )
             login_url = '/add-hours'
-            resp = self.client.get(reverse('itemslist'))
+            resp = self.client.get(reverse('pqueue_manager'))
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
 
+    def test_view_exists(self):
+        """First test the existence of pqueue view."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/pqueue_manager.html')
 
-class SearchBoxTest(TestCase):
-    """Test the standard views."""
+    def test_common_context_is_imported(self):
+        """Test the vars comming in the commom context."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('pqueue_manager'))
+        vars = ('available', 'active', 'completed', 'i_relax', 'now',
+                'version', 'title', )
+        for var in vars:
+            self.assertTrue(var in resp.context.keys())
 
-    @classmethod
-    def setUpTestData(cls):
+    def test_cur_user(self):
+        """Test the vars that weren't included in the common context."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.get(username='regular')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertEqual(resp.context['cur_user'], user)
+
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('pqueue_manager'))
+        self.assertFalse(resp.context['session'])
+
+
+class PQueueTabletTests(TestCase):
+    """Test the pqueue tablet view."""
+
+    def setUp(self):
         """Create the necessary items on database at once."""
-        # Create users
-        regular = User.objects.create_user(username='regular', password='test')
-        regular.save()
+        # Create a user
+        user = User.objects.create_user(username='regular', password='test')
 
-        # Create some customers
-        for customer in range(10):
-            Customer.objects.create(name='Customer%s' % customer,
-                                    address='This computer',
-                                    city='No city',
-                                    phone='66666666%s' % customer,
-                                    email='customer%s@example.com' % customer,
-                                    CIF='5555G',
-                                    cp='48100')
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        for i in range(1, 3):
+            Item.objects.create(name='Test item%s' % i, fabrics=5)
 
-        # Create some orders
-        for order in range(20):
-            customer = Customer.objects.first()
-            # delivery = date.today() + timedelta(days=order % 5)
-            Order.objects.create(user=regular,
-                                 customer=customer,
-                                 ref_name='example%s' % order,
-                                 delivery=date.today(),
-                                 prepaid=0)
+        # Create orderitems
+        for item in Item.objects.all():
+            OrderItem.objects.create(reference=order, element=item)
 
-    def context_vars(self, context, vars):
-        """Compare the given vars with the ones in response."""
-        if len(context) == len(vars):
-            context_is_valid = 0
-            for item in context:
-                for var in vars:
-                    if item == var:
-                        context_is_valid += 1
-            if context_is_valid == len(vars):
-                return True
-        else:
-            return False
+        self.client.login(username='regular', password='test')
 
-    def test_search_box_invalid_method(self):
-        """Search must be POST method."""
-        with self.assertRaises(TypeError):
-            self.client.get(reverse('search'))
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
 
-    def test_search_box_empty_string_returns_404(self):
-        """Trying to search empty string should return 404."""
-        resp = self.client.post(reverse('search'),
-                                {'search-on': 'orders',
-                                 'search-obj': ''})
-        self.assertEqual(resp.status_code, 404)
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
 
-    def test_search_box_invalid_search_on(self):
-        """Search_on fields should be either orders or customers."""
-        with self.assertRaises(ValueError):
-            self.client.post(reverse('search'), {'search-on': 'invalid',
-                                                 'search-obj': 'string'})
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
 
-        with self.assertRaises(ValueError):
-            self.client.post(reverse('search'), {'search-on':  '',
-                                                 'search-obj': 'string'})
+    def test_timetable_required_creates_timetable(self):
+        """When no working session is open a timetable should be created."""
+        self.assertFalse(Timetable.objects.all())
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
+        self.assertEquals(Timetable.objects.count(), 1)
+        self.assertEquals(Timetable.objects.all()[0].user.username, 'regular')
 
-    def test_search_box_on_orders(self):
-        """Test search orders."""
-        resp = self.client.post(reverse('search'),
-                                {'search-on': 'orders',
-                                 'search-obj': 'example11',
-                                 'test': True})
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('query_result', 'model')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertEqual(data['template'], 'includes/search_results.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEqual(data['model'], 'orders')
-        self.assertEqual(data['query_result'], 1)
-        self.assertEqual(data['query_result_name'], 'example11')
+    def test_timetable_required_is_void_15_hours(self):
+        """When the timer has been running for +15h user should be prompted."""
+        Timetable.objects.create(
+            user=User.objects.first(),
+            start=(timezone.now() - timedelta(hours=15.5)),
+        )
+        login_url = '/add-hours'
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+        self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_search_on_orders_by_pk(self):
-        """Test search orders by pk."""
-        order = Order.objects.first()
-        resp = self.client.post(reverse('search'),
-                                {'search-on': 'orders',
-                                 'search-obj': order.pk,
-                                 'test': True})
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertEqual(data['template'], 'includes/search_results.html')
-        self.assertEqual(data['query_result'], 1)
-        self.assertEqual(data['query_result_name'], order.ref_name)
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
+        """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
+        dlt = (timezone.now() - timedelta(hours=14.5))
+        if timezone.now().date() == dlt.date():
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('pqueue_tablet'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
+            self.assertEquals(Timetable.objects.count(), 1)
+        else:  # runs fine before 14:30
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            login_url = '/add-hours'
+            resp = self.client.get(reverse('pqueue_tablet'))
+            self.assertEqual(resp.status_code, 302)
+            self.assertRedirects(resp, login_url)
+            self.assertEquals(Timetable.objects.count(), 1)
 
-    def test_search_box_on_customers_str(self):
-        """Test search customers by name."""
-        resp = self.client.post(reverse('search'),
-                                {'search-on': 'customers',
-                                 'search-obj': 'Customer1',
-                                 'test': True})
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('query_result', 'model')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertEqual(data['template'], 'includes/search_results.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEqual(data['model'], 'customers')
-        self.assertEqual(data['query_result'], 1)
-        self.assertEqual(data['query_result_name'], 'Customer1')
+    def test_view_exists(self):
+        """First test the existence of pqueue tablet view."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/pqueue_tablet.html')
 
-    def test_search_box_on_customers_int(self):
-        """Test search customers by phone."""
-        resp = self.client.post(reverse('search'),
-                                {'search-on': 'customers',
-                                 'search-obj': 666666665,
-                                 'test': True})
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('query_result', 'model')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertEqual(data['template'], 'includes/search_results.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEqual(data['model'], 'customers')
-        self.assertEqual(data['query_result'], 1)
-        self.assertEqual(data['query_result_name'], 'Customer5')
+    def test_common_context_is_imported(self):
+        """Test the vars comming in the commom context."""
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        vars = ('available', 'active', 'completed', 'i_relax', 'now',
+                'version', 'title', )
+        for var in vars:
+            self.assertTrue(var in resp.context.keys())
 
-    def test_search_box_case_insensitive(self):
-        """Search should return the same resuslts regardless the case."""
-        resp1 = self.client.post(reverse('search'),
-                                 {'search-on': 'orders',
-                                  'search-obj': 'example11',
-                                  'test': True})
-        resp2 = self.client.post(reverse('search'),
-                                 {'search-on': 'orders',
-                                  'search-obj': 'exaMple11',
-                                  'test': True})
-        data1 = json.loads(str(resp1.content, 'utf-8'))
-        data2 = json.loads(str(resp2.content, 'utf-8'))
-        self.assertEqual(data1['query_result_name'],
-                         data2['query_result_name'])
+    def test_cur_user_and_session(self):
+        """Test the vars that weren't included in the common context."""
+        self.client.login(username='regular', password='test')
+        user = User.objects.get(username='regular')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertEqual(resp.context['cur_user'], user)
 
-    def test_search_on_items_no_order_pk(self):
-        """Test the correct raise of 404."""
-        resp = self.client.post(
-            reverse('search'),
-            {'search-on': 'items', 'search-obj': 'test item', 'test': True})
-        self.assertEqual(resp.status_code, 404)
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertIsInstance(resp.context['session'], Timetable)
 
-    def test_search_on_items(self):
-        """Test the correct item search."""
-        order = Order.objects.first()
-        item = Item.objects.create(name='Test', fabrics=0, price=2)
-        resp = self.client.post(
-            reverse('search'),
-            {'search-on': 'items', 'search-obj': 'test',
-             'order-pk': order.pk, 'test': True})
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('query_result', 'model', 'order_pk')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertTrue(self.context_vars(data['context'], vars))
-        self.assertEqual(data['template'], 'includes/search_results.html')
-        self.assertEqual(data['query_result'], 1)
-        self.assertEqual(data['model'], 'items')
-        self.assertEqual(data['query_result_name'], item.name)
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('pqueue_tablet'))
+        self.assertFalse(resp.context['session'])
+
+
+class TimetableListTests(TestCase):
+    """Test the generic view for timetables."""
+
+    def setUp(self):
+        user = User.objects.create_user(username='regular', password='test')
+        user.save()
+
+        Timetable.objects.create(user=user, hours=timedelta(seconds=3600))
+
+        self.client.login(username='regular', password='test')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('timetables'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('timetables'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
+
+    def test_template(self):
+        resp = self.client.get(reverse('timetables'))
+        self.assertTemplateUsed(resp, 'tz/timetable_list.html')
+        self.assertEqual(resp.status_code, 200)
+
+    def test_context_main_var(self):
+        resp = self.client.get(reverse('timetables'))
+        self.assertTrue(resp.context['timetables'])
+
+    def test_view_only_shows_current_user_timetables(self):
+        user2 = User.objects.create_user(username='alt', password='test')
+        user2.save()
+        Timetable.objects.create(user=user2, hours=timedelta(seconds=3000))
+
+        self.assertEqual(Timetable.objects.count(), 2)
+        resp = self.client.get(reverse('timetables'))
+        self.assertEqual(len(resp.context['timetables']), 1)
+        self.assertEqual(
+            resp.context['timetables'][0].user.username, 'regular')
+
+    def test_view_only_shows_last_10_entries_descending_ordered(self):
+        start = timezone.now() - timedelta(days=15)
+        for _ in range(12):
+            Timetable.objects.create(
+                user=User.objects.first(),
+                start=start,
+                hours=timedelta(seconds=3600))
+            start += timedelta(days=1)
+        resp = self.client.get(reverse('timetables'))
+
+        timetables = resp.context['timetables']
+        self.assertTrue(len(timetables), 10)
+
+        for n, t in enumerate(timetables[:9]):
+            self.assertTrue(t.start > timetables[n + 1].start)
+
+    def test_session_var_is_last_timetable(self):
+        start = timezone.now() - timedelta(days=15)
+        for _ in range(5):
+            Timetable.objects.create(
+                user=User.objects.first(),
+                start=start,
+                hours=timedelta(seconds=3600))
+            start += timedelta(days=1)
+        resp = self.client.get(reverse('timetables'))
+        self.assertEqual(resp.context['session'], Timetable.objects.last())
+
+    def test_sessions(self):
+        """Regular users should return timetable whereas su's return None."""
+        resp = self.client.get(reverse('timetables'))
+        self.assertIsInstance(resp.context['session'], Timetable)
+
+        voyeur = config('VOYEUR_USER')
+        User.objects.create_user(username=voyeur, password='vu_pass')
+        User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('timetables'))
+        self.assertFalse(resp.context['session'])
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('timetables'))
+        self.assertFalse(resp.context['session'])
 
 
 class ActionsGetMethod(TestCase):
@@ -7092,6 +7141,470 @@ class CommentsCRUD(TestCase):
         self.assertEqual(resp.status_code, 500)
         self.assertEqual(
             resp.content.decode("utf-8"), 'The action was not found.')
+
+
+class ChangelogTests(TestCase):
+    """Test the markdown modal."""
+
+    def setUp(self):
+        # Create users
+        User.objects.create_user(username='regular', password='test')
+
+    def test_mark_down_view(self):
+        """Test the proper work of view."""
+        resp = self.client.get(reverse('changelog'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+
+    def test_mark_down_view_only_accept_get(self):
+        """Method should be get."""
+        resp = self.client.post(reverse('changelog'))
+        self.assertEqual(resp.status_code, 404)
+
+
+class PQueueActionsTests(TestCase):
+    """Test the AJAX server side."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        # Create a user
+        user = User.objects.create_user(username='regular', password='test')
+
+        # Create a customer
+        customer = Customer.objects.create(name='Customer Test',
+                                           address='This computer',
+                                           city='No city',
+                                           phone='666666666',
+                                           email='customer@example.com',
+                                           CIF='5555G',
+                                           notes='Default note',
+                                           cp='48100')
+        # Create an order
+        order = Order.objects.create(user=user,
+                                     customer=customer,
+                                     ref_name='Test order',
+                                     delivery=date.today(),
+                                     budget=2000,
+                                     prepaid=0)
+        item = Item.objects.create(name='Test item object', fabrics=5)
+
+        # Create orderitems
+        for i in range(3):
+            OrderItem.objects.create(reference=order, element=item)
+
+        self.client.login(username='regular', password='test')
+
+    def context_vars(self, context, vars):
+        """Compare the given vars with the ones in response."""
+        context_is_valid = 0
+        for item in context:
+            for var in vars:
+                if item == var:
+                    context_is_valid += 1
+        if context_is_valid == len(vars):
+            return True
+        else:
+            return False
+
+    def test_valid_method(self):
+        """Only post method is accepted."""
+        item = OrderItem.objects.first()
+        resp = self.client.get(reverse('queue-actions'),
+                               {'pk': item.pk, 'action': 'send'})
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.content.decode('utf-8'),
+                         'The request should go in a post method')
+
+    def test_no_pk_or_no_action_raise_500(self):
+        """Ensure that action and pk are sent with the request."""
+        item = OrderItem.objects.first()
+        resp_no_pk = self.client.post(reverse('queue-actions'),
+                                      {'action': 'send'})
+        resp_no_action = self.client.post(reverse('queue-actions'),
+                                          {'pk': item.pk})
+        self.assertEqual(resp_no_pk.status_code, 500)
+        self.assertEqual(resp_no_pk.content.decode('utf-8'),
+                         'POST data was poor')
+        self.assertEqual(resp_no_action.status_code, 500)
+        self.assertEqual(resp_no_action.content.decode('utf-8'),
+                         'POST data was poor')
+
+    def test_valid_actions(self):
+        """Only certain actions are possible."""
+        item = OrderItem.objects.first()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'invalid'})
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.content.decode('utf-8'),
+                         'The action was not recognized')
+
+    def test_pk_out_of_range_raises_404(self):
+        """Test the correct pk."""
+        actions = ('send', 'back', 'up', 'down', 'top', 'bottom', 'complete',
+                   'uncomplete')
+        for action in actions:
+            resp = self.client.post(reverse('queue-actions'),
+                                    {'pk': 2000, 'action': action})
+            self.assertEqual(resp.status_code, 404)
+
+    def test_send_action_valid(self):
+        """Test the correct process of send action."""
+        item = OrderItem.objects.first()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'send',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertTrue(data['reload'])
+        self.assertFalse(data['html_id'])
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.all().count(), 1)
+
+    def test_send_action_rejected(self):
+        """Test the correct process of send action."""
+        item = OrderItem.objects.first()
+        item.stock = True
+        item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'send',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t save the object')
+        self.assertEqual(PQueue.objects.all().count(), 0)
+
+    def test_back_action_valid(self):
+        """Test the correct send back to item list."""
+        item = PQueue.objects.create(item=OrderItem.objects.first())
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': item.pk, 'action': 'back',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertTrue(data['reload'])
+        self.assertFalse(data['html_id'])
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.all().count(), 0)
+
+    def test_up_action_valid(self):
+        """Test the correct process of up action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'up',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), first)
+        self.assertEqual(PQueue.objects.last(), mid)
+
+    def test_up_action_rejected(self):
+        """Test the correct process of up action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.last()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'up',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_top_action_valid(self):
+        """Test the correct process of top action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'top',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), last)
+        self.assertEqual(PQueue.objects.last(), mid)
+
+    def test_top_action_rejected(self):
+        """Test the correct process of top action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.last()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': last.pk, 'action': 'top',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_down_action_valid(self):
+        """Test the correct process of down action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'down',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), mid)
+        self.assertEqual(PQueue.objects.last(), last)
+
+    def test_down_action_rejected(self):
+        """Test the correct process of down action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'down',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_bottom_action_valid(self):
+        """Test the correct process of bottom action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'bottom',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.first(), mid)
+        self.assertEqual(PQueue.objects.last(), first)
+
+    def test_bottom_action_rejected(self):
+        """Test the correct process of bottom action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'bottom',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+
+    def test_complete_action_valid(self):
+        """Test the correct process of complete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'complete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+
+    def test_tablet_complete_action_valid(self):
+        """Test the correct process of complete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'tb-complete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list-tablet')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+
+    def test_complete_action_rejected(self):
+        """Test the correct process of complete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'complete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+        self.assertFalse(PQueue.objects.filter(score__lt=0).count())
+
+    def test_uncomplete_action_valid(self):
+        """Test the correct process of uncomplete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.complete()
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'uncomplete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 0)
+
+    def test_tablet_uncomplete_action_valid(self):
+        """Test the correct process of uncomplete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.complete()
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'tb-uncomplete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'tz/pqueue_tablet.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertTrue(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['html_id'], '#pqueue-list-tablet')
+        self.assertFalse(data['error'])
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 0)
+
+    def test_uncomplete_action_rejected(self):
+        """Test the correct process of uncomplete action."""
+        for item in OrderItem.objects.all():
+            PQueue.objects.create(item=item)
+        first, mid, last = PQueue.objects.all()
+        first.complete()
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
+        stocked_item = OrderItem.objects.first()
+        stocked_item.stock = True
+        stocked_item.save()
+        resp = self.client.post(reverse('queue-actions'),
+                                {'pk': first.pk, 'action': 'uncomplete',
+                                 'test': True})
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp.content, bytes)
+        data = json.loads(str(resp.content, 'utf-8'))
+        vars = ('active', 'completed', )
+        self.assertEqual(data['template'], 'includes/pqueue_list.html')
+        self.assertTrue(self.context_vars(data['context'], vars))
+        self.assertFalse(data['is_valid'])
+        self.assertFalse(data['reload'])
+        self.assertEqual(data['error'], 'Couldn\'t clean the object')
+        self.assertEqual(PQueue.objects.all().count(), 3)
+        self.assertEqual(PQueue.objects.filter(score__lt=0).count(), 1)
 
 
 class ItemSelectorTests(TestCase):
