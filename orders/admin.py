@@ -19,9 +19,9 @@ class CustomerAdmin(admin.ModelAdmin):
 
 class CustomerByName(admin.SimpleListFilter):
     """Set the filter by issuer and order by name."""
-    title = _('issuer name')
+    title = _('customer name')
 
-    parameter_name = 'issuer_by_name'
+    parameter_name = 'customer_by_name'
 
     def lookups(self, request, model_admin):
         """Returns a list of tuples.
@@ -40,7 +40,7 @@ class CustomerByName(admin.SimpleListFilter):
         if not self.value():
             return queryset.all()
         else:
-            return queryset.filter(issuer__name=self.value())
+            return queryset.filter(customer__name=self.value())
 
 
 @admin.register(Order)
