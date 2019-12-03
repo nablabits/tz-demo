@@ -54,7 +54,11 @@
             </div>
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="{%url 'add_hours' %}"><i class="far fa-user pr-2"></i>{{user}}</a>
+            {% if session %}
+              <a class="nav-link" href="{%url 'add_hours' %}"><i class="far fa-user pr-2"></i>{{user}}</a>
+            {% else %}
+              <a class="nav-link" href="{%url 'add_hours' %}"><i class="far fa-user-secret pr-2"></i>{{user}}</a>
+            {% endif %}
           </li>
           <li class="nav-item">
             <button class="btn btn-sm btn-success nav-link" type="button" data-toggle="modal" data-target="#changelog-modal"><i class="fas fa-cogs"></i> tz app {{version}}</button>
@@ -105,19 +109,22 @@
       </div>
 
       <footer class="bg-light fixed-bottom py-2 px-2 border-top border-secondary">
-        <span class="px-3">
-          <i class="far fa-user pr-2"></i>Kaixo {{user}}!
-        </span>
-        {% if not session %}
+        {% if session %}
           <span class="px-3">
-            <i class="far fa-chess-clock pr-2"></i>No estas registrando tiempos ahora
+            <i class="far fa-user pr-2"></i>Kaixo {{user}}!
           </span>
-        {% else %}
           <span class="px-3">
             <i class="far fa-chess-clock pr-2"></i>Inicio:
               {% language 'es' %}
               {{session.start | naturaltime}}&nbsp;&nbsp;( {{session.start | time}}h )
               {% endlanguage %}
+          </span>
+        {% else %}
+          <span class="px-3">
+            <i class="far fa-user-secret pr-2"></i>Kaixo {{user}}!
+          </span>
+          <span class="px-3">
+            <i class="far fa-chess-clock pr-2"></i>No estas registrando tiempos ahora
           </span>
         {% endif %}
         <span class="px-3">

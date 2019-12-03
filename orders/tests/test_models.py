@@ -1193,6 +1193,11 @@ class TestOrderItems(TestCase):
         item_obj.save()
         self.assertEqual(item.ticket_print, '5 x Pantalón genérico')
 
+        # Check the exceptions
+        item_obj.item_type = '12'
+        item_obj.save()
+        self.assertEqual(item.ticket_print, '5 x Traje de niña genérico')
+
 
 class TestPQueue(TestCase):
     """Test the production queue model."""
