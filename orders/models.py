@@ -607,8 +607,9 @@ class OrderItem(models.Model):
         item = self.element
         type_name = item.get_item_type_display()
         item_name = item.name
+        excluded = ('Traje de niña', )
         if item.foreing:
-            if type_name[-1] in ('a', ):
+            if type_name[-1] in ('a', ) and type_name not in excluded:
                 item_name = 'genérica'
             else:
                 item_name = 'genérico'
