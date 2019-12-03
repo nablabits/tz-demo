@@ -853,7 +853,7 @@ class Invoice(models.Model):
         buffer = io.BytesIO()
 
         # Create the PDF object, using the buffer as its "file."
-        w, h = 200 * mm, (160 + 30 * len(items)) * mm
+        w, h = 180 * mm, (160 + 30 * len(items)) * mm
         p = canvas.Canvas(buffer, pagesize=(w, h))
         p.setFont("Helvetica", 24)
 
@@ -865,28 +865,28 @@ class Invoice(models.Model):
             'Guztira: {}€'.format(order.total),
             'BEZ/IVA (21%) €: {}€'.format(order.vat), )
         for textline in summary:
-            p.drawRightString(180 * mm, line, textline)
+            p.drawRightString(170 * mm, line, textline)
             line += 15 * mm
 
         # Separator line & netx block margin
-        p.line(100*mm, line, 200*mm, line)
+        p.line(100*mm, line, 180*mm, line)
         line += 30 * mm
 
         # Sale breakdown
         for item in items:
-            p.drawRightString(140 * mm, line, '{}€'.format(item.price), )
-            p.drawRightString(180 * mm, line, '{}€'.format(item.subtotal), )
+            p.drawRightString(130 * mm, line, '{}€'.format(item.price), )
+            p.drawRightString(170 * mm, line, '{}€'.format(item.subtotal), )
             for tl in linecutter(item.ticket_print):
-                p.drawString(0, line, tl)
+                p.drawString(10, line, tl)
                 line += 10 * mm
             line += 10 * mm
 
         # Separator
-        p.line(0, line, 200*mm, line)
+        p.line(0, line, 180*mm, line)
 
         # Finally, the header
         textobject = p.beginText()
-        textobject.setTextOrigin(0, line + 60 * mm)
+        textobject.setTextOrigin(10, line + 60 * mm)
         textobject.textLines(
             """Trapuzarrak · Euskal Jantziak
             Iratxe Maruri Garrastazu
