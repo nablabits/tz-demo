@@ -19,6 +19,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.views.decorators.http import require_GET
 from django.views.generic import ListView
 from rest_framework import viewsets
 
@@ -2411,6 +2412,35 @@ def item_selector(request):
         return render(request, template, context)
 
     return JsonResponse(data)
+
+
+@require_GET
+def customer_hints(request):
+    """Provide hints on customers when adding an order."""
+    search_str = request.GET.get('search')
+    if not search_str:
+        raise Http404('No string selected')
+
+    customers = Customer.objects.exclude(provider=True)
+    starts = customers.filter(name__istartswith=search_str)
+
+    if not starts:
+        outcomes = customers.filter(name__icontains=search_str)
+    else:
+        outcomes = starts
+
+    resp = dict()
+    if outcomes:
+        for n, c in enumerate(outcomes):
+            resp[n] = dict(id=c.id, name=c.name, )
+    else:
+        resp[0] = dict(id='void', name='No hay coincidencias...', )
+
+    if request.GET.get('test', None):
+        template = 'tz/base.html'  # Just a dummy
+        return render(request, template, resp)
+
+    return JsonResponse(resp)
 
 
 # API view

@@ -241,6 +241,40 @@ $(function () {
     // return false
   }
 
+  function customerHints () {
+    // Shows some hints as long as user types in
+    var search = $(this).val()
+    $.ajax({
+      url: '/customer-hints/',
+      type: 'get',
+      data: $.param({ search: search }),
+      dataType: 'json',
+      success: function (data) {
+        $('#search-result').empty().addClass('border')
+        var len = Object.keys(data).length
+        for (var i = 0; i < len; i++) {
+          var id = data[i].id
+          var fname = data[i].name
+          $('#search-result').append(
+            "<span class='py-1 js-select-customer px-2' value='" + id + "'>" + fname + '</span>')
+        }
+        // binding click event to options shown
+        $('#search-result span').bind('click', function () {
+          var name = $(this).text()
+          var pk = $(this).attr('value')
+          if (pk !== 'void') {
+            $('#action-modal #customer-hints').val(name)
+            $('#action-modal #selected-customer').attr('value', pk)
+            $('#search-result').empty().removeClass('border')
+          }
+        })
+      },
+      error: function (data) {
+        $('#search-result').empty()
+      }
+    })
+  }
+
   // actions (GET)
   $('.js-logout').click(loadActionForm)
 
@@ -262,6 +296,9 @@ $(function () {
   $('#root').on('click', '.js-order-status', updateStatus)
   $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
+
+  // Customer hints for orders
+  $('#action-modal').on('keyup', '#customer-hints', customerHints)
 
   // actions new CRUD process (POST)
   $('#root').on('submit', '.js-crud-form', saveForm)

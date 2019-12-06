@@ -7856,6 +7856,63 @@ class ItemSelectorTests(TestCase):
         self.assertIsInstance(resp.content, bytes)
 
 
+class CustomerHintsTests(TestCase):
+    """Test the customer hints AJAX call."""
+
+    def setUp(self):
+        names = ('foo', 'bar', 'baz', 'sar', )
+        for n in names:
+            Customer.objects.create(name=n, phone=0, cp=0)
+
+    def test_only_get_method_is_allowed(self):
+        resp = self.client.post(reverse('customer-hints'))
+        self.assertEqual(resp.status_code, 405)
+
+    def test_no_string_raises_404(self):
+        resp = self.client.get(reverse('customer-hints'))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_providers_are_excluded_from_the_results(self):
+        resp = self.client.get(
+            reverse('customer-hints'), {'search': 'ba', 'test': True, })
+        self.assertTrue(resp.context[0]['name'] in ('bar', 'baz'))
+        self.assertTrue(resp.context[1]['name'] in ('bar', 'baz'))
+        with self.assertRaises(KeyError):
+            resp.context[2]
+        c = Customer.objects.get(name='bar')
+        c.provider = True
+        c.save()
+        resp = self.client.get(
+            reverse('customer-hints'), {'search': 'ba', 'test': True, })
+        self.assertNotEqual(resp.context[0]['name'], 'bar')
+        with self.assertRaises(KeyError):
+            resp.context[1]
+
+    def test_searches_first_in_startswith(self):
+        resp = self.client.get(
+            reverse('customer-hints'), {'search': 'ba', 'test': True, })
+        self.assertTrue(resp.context[0]['name'] in ('bar', 'baz'))
+        self.assertTrue(resp.context[1]['name'] in ('bar', 'baz'))
+        with self.assertRaises(KeyError):
+            resp.context[2]
+
+    def test_search_in_the_whole_string(self):
+        resp = self.client.get(
+            reverse('customer-hints'), {'search': 'ar', 'test': True, })
+        self.assertTrue(resp.context[0]['name'] in ('bar', 'sar'))
+        self.assertTrue(resp.context[1]['name'] in ('bar', 'sar'))
+        with self.assertRaises(KeyError):
+            resp.context[2]
+
+    def test_search_cannot_find_anything(self):
+        resp = self.client.get(
+            reverse('customer-hints'), {'search': 'void', 'test': True, })
+        self.assertEqual(resp.context[0]['name'], 'No hay coincidencias...')
+        self.assertEqual(resp.context[0]['id'], 'void')
+        with self.assertRaises(KeyError):
+            resp.context[1]
+
+
 #
 #
 #
