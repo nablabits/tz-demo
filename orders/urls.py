@@ -59,6 +59,7 @@ urlpatterns = [
     path('changelog/', views.changelog, name='changelog'),
     path('item-selector/', views.item_selector, name='item-selector'),
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),
+    path('customer-hints/', views.customer_hints, name='customer-hints'),
 
     # Loging related urls
     path('accounts/login/', auth_views.LoginView.as_view(), name='login'),

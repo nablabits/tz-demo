@@ -1,11 +1,16 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v83, Dic 6
+  * **Mejora:** ya se pueden añadir clientes escribiendo el nombre directamente
+  en la caja.
+
 ### v82a, Dic 3
   * **Mejora:** cuando no se están midiendo tiempos (usuario *voyeur*) el icono
   de usuario es un agente secreto.
   * **Bug:** se ha aumentado el margen de los tickets.
   * **Bug:** Traje de niña ahora es generico en lugar de generica como solia
   aparecer en los tickets.
+
 ### v82, Nov 25
   * **Nuevo:** ahora la vista principal muestra los ratios de tiempos registrados.
   * **Mejora:** Se pueden añadir notas a clientes y a prendas desde la vista de
