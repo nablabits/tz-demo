@@ -18,123 +18,25 @@ from decouple import config
 from todoist.api import TodoistAPI
 
 
-class ModelTest(TestCase):
+class CommentsTests(TestCase):
     """Test the models."""
 
-    @classmethod
-    def setUpTestData(cls):
+    def setUp(self):
         """Create the necessary items on database at once."""
         # Create a user
-        User.objects.create_user(username='user', is_staff=True,
-                                 is_superuser=True)
+        u = User.objects.create_user(
+            username='user', is_staff=True, is_superuser=True, )
 
         # Create a customer
-        Customer.objects.create(name='Customer Test',
-                                address='This computer',
-                                city='No city',
-                                phone='666666666',
-                                email='customer@example.com',
-                                CIF='5555G',
-                                notes='Default note',
-                                cp='48100')
+        c = Customer.objects.create(name='Customer Test', phone=55, cp=44)
 
         # Create  an order
-        customer = Customer.objects.get(name='Customer Test')
-        Order.objects.create(user=User.objects.all()[0],
-                             customer=customer,
-                             ref_name='example',
-                             delivery=date(2018, 2, 1),
-                             waist=10,
-                             chest=20,
-                             hip=30,
-                             lenght=40,
-                             others='Custom notes',
-                             budget=2000,
-                             prepaid=1000)
+        o = Order.objects.create(
+            user=u, customer=c, ref_name='example', delivery=date(2018, 2, 1),)
 
         # Create comment
-        Comment.objects.create(user=User.objects.all()[0],
-                               reference=Order.objects.all()[0],
-                               comment='This is a comment')
-
-    def test_customer_creation(self):
-        """Test the customer creation."""
-        customer = Customer.objects.get(name='Customer Test')
-        self.assertTrue(isinstance(customer, Customer))
-        self.assertEqual(customer.__str__(), 'Customer Test')
-
-    def test_customer_provider_field(self):
-        """Test the field."""
-        customer = Customer.objects.create(
-            name='Customer Test', address='Cache', city='This computer',
-            phone='666666666', CIF='444E', cp=48003, )
-
-        self.assertIsInstance(customer.provider, bool)
-        self.assertFalse(customer.provider)
-        self.assertEqual(
-            customer._meta.get_field('provider').verbose_name, 'Proveedor')
-
-    def test_order_creation(self):
-        """Test the order creation."""
-        order = Order.objects.first()
-        order_str = str(order.pk) + ' Customer Test example'
-        self.assertTrue(isinstance(order, Order))
-        self.assertEqual(order.__str__(), order_str)
-        self.assertTrue(order.overdue)
-
-    def test_order_progress_status_1(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '1'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 0)
-
-    def test_order_progress_status_2(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '2'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 0)
-
-    def test_order_progress_status_3(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '3'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 25)
-
-    def test_order_progress_status_4(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '4'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 50)
-
-    def test_order_progress_status_5(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '5'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 75)
-
-    def test_order_progress_status_6(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '6'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 100)
+        Comment.objects.create(
+            user=u, reference=o, comment='This is a comment')
 
     def test_comment_creation(self):
         """Test the comment creation."""
@@ -149,6 +51,171 @@ class ModelTest(TestCase):
 class TestCustomer(TestCase):
     """Test the attributes & the methods of customer model."""
 
+    def setUp(self):
+        Customer.objects.create(
+            name='Test', address='foo street', city='bar', phone=55,
+            email='foo@bar.baz', CIF='baz', cp=44, notes='default', )
+
+    def test_customer_creation_field(self):
+        """Test the customer's field types."""
+        c = Customer.objects.first()
+        self.assertIsInstance(c.creation, datetime)
+        self.assertEqual(
+            c._meta.get_field('creation').verbose_name, 'Alta')
+
+    def test_customer_name_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.name, 'Test')
+        self.assertEqual(
+            c._meta.get_field('name').verbose_name, 'Nombre')
+        with self.assertRaises(DataError):
+            c.name = 65 * 'a'
+            c.save()
+
+    def test_customer_address_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.address, 'foo street')
+        self.assertEqual(
+            c._meta.get_field('address').verbose_name, 'Dirección')
+
+        c.address = ''  # Can be empty but not null
+        c.save()
+
+        with self.assertRaises(DataError):
+            c.address = 65 * 'a'
+            c.save()
+
+    def test_customer_city_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.city, 'bar')
+        self.assertEqual(
+            c._meta.get_field('city').verbose_name, 'Localidad')
+
+        c.city = ''  # Can be empty but not null
+        c.save()
+
+        with self.assertRaises(DataError):
+            c.city = 33 * 'a'
+            c.save()
+
+    def test_customer_phone_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.phone, 55)
+        self.assertEqual(
+            c._meta.get_field('phone').verbose_name, 'Telefono')
+
+    def test_customer_email_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.email, 'foo@bar.baz')
+        self.assertEqual(
+            c._meta.get_field('email').verbose_name, 'Email')
+
+        c.email = ''  # Can be empty but not null
+        c.save()
+
+    def test_customer_email_raises_data_error(self):
+        c = Customer.objects.first()
+        with self.assertRaises(DataError):
+            c.email = 65 * 'a'
+            c.save()
+
+    def test_customer_email_raises_validation_error(self):
+        c = Customer.objects.first()
+        with self.assertRaises(ValidationError):
+            c.email = 'void'
+            c.full_clean()
+
+    def test_customer_CIF_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.CIF, 'baz')
+        self.assertEqual(
+            c._meta.get_field('CIF').verbose_name, 'CIF')
+
+        c.CIF = ''  # Can be empty but not null
+        c.save()
+
+        with self.assertRaises(DataError):
+            c.CIF = 21 * 'a'
+            c.save()
+
+    def test_customer_cp_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.cp, 44)
+        self.assertEqual(
+            c._meta.get_field('cp').verbose_name, 'CP')
+
+    def test_customer_cp_field_cannot_be_empty(self):
+        c = Customer.objects.first()
+        with self.assertRaises(ValueError):
+            c.cp = ''
+            c.save()
+
+    def test_customer_cp_field_cannot_be_null(self):
+        c = Customer.objects.first()
+        with self.assertRaises(IntegrityError):
+            c.cp = None
+            c.save()
+
+        # self.assertEqual(c.notes, 'default')
+
+    def test_customer_notes_field(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.notes, 'default')
+        self.assertEqual(
+            c._meta.get_field('notes').verbose_name, 'Observaciones')
+
+        # Can be empty
+        c.notes = ''
+        self.assertEqual(c.full_clean(), None)
+        self.assertEqual(c.save(), None)
+
+        # Can be null
+        c.notes = None
+        self.assertEqual(c.full_clean(), None)
+        self.assertEqual(c.save(), None)
+
+    def test_customer_provider_field(self):
+        """Test the field."""
+        c = Customer.objects.first()
+
+        self.assertIsInstance(c.provider, bool)
+        self.assertFalse(c.provider)
+        self.assertEqual(
+            c._meta.get_field('provider').verbose_name, 'Proveedor')
+
+    def test_customer_group_field(self):
+        """Test the field."""
+        c = Customer.objects.first()
+
+        self.assertIsInstance(c.group, bool)
+        self.assertFalse(c.group)
+        self.assertEqual(
+            c._meta.get_field('group').verbose_name, 'Grupo')
+
+    def test_customer_str(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.__str__(), 'Test')
+
+    def test_avoid_duplicates(self):
+        copy = Customer(
+            name='Test', address='foo street', city='bar', phone=55,
+            email='foo@bar.baz', CIF='baz', cp=44, notes='default',
+        )
+        with self.assertRaises(ValidationError):
+            copy.clean()
+
+    def test_avoid_customer_to_be_provider_and_group_simultaneously(self):
+        c = Customer.objects.first()
+        c.provider = True
+        c.group = True
+        with self.assertRaises(ValidationError):
+            c.clean()
+
+        c.save()
+        c = Customer.objects.first()
+        self.assertFalse(c.group)
+        self.assertTrue(c.provider)
+
     def test_email_name(self):
         """Test the correct output for email comunications."""
         c = Customer.objects.create(
@@ -159,53 +226,344 @@ class TestCustomer(TestCase):
 class TestOrders(TestCase):
     """Test the Order model."""
 
-    @classmethod
-    def setUpTestData(cls):
+    def setUp(self):
         """Create the necessary items on database at once."""
         # Create a user
         User.objects.create_user(username='user', is_staff=True,
                                  is_superuser=True)
 
         # Create a customer
-        Customer.objects.create(name='Customer Test',
-                                address='This computer',
-                                city='No city',
-                                phone='666666666',
-                                email='customer@example.com',
-                                CIF='5555G',
-                                notes='Default note',
-                                cp='48100')
+        c = Customer.objects.create(
+            name='Test', address='This computer', city='No city', phone=55,
+            email='customer@example.com', CIF='5555G', notes='note', cp=44)
 
         Item.objects.create(name='test', fabrics=10, price=30)
 
-    def test_confirmed_default_true(self):
-        """Confirmed field should be bool and true by default."""
-        user = User.objects.first()
+        Order.objects.create(
+            user=User.objects.first(), customer=c, ref_name='example',
+            delivery=date(2018, 2, 1), waist=10, chest=20, hip=30, lenght=40,
+            others='Custom notes', budget=2000, prepaid=1000, )
+
+    def test_order_creation_field(self):
+        """Test the customer's field types."""
+        o = Order.objects.first()
+        self.assertIsInstance(o.inbox_date, datetime)
+
+    def test_order_user_field(self):
+        """Test the customer's field types."""
+        o = Order.objects.first()
+        u = User.objects.first()
+        self.assertEqual(o.user, u)
+
+        u.delete()
+        self.assertFalse(Order.objects.first())  # deletes on cascade
+
+    def test_order_customer_field(self):
+        """Test the customer's field types."""
+        o = Order.objects.first()
         c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='Test', delivery=date.today())
-        self.assertIsInstance(order.confirmed, bool)
-        self.assertTrue(order.confirmed)
+        self.assertEqual(o.customer, c)
 
-    def test_trapuzarrak_orders_are_always_confirmed(self):
-        """Trapuzarrak are not allowed to be unconfirmed."""
-        user = User.objects.first()
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        order = Order.objects.create(
-            user=user, delivery=date.today(), customer=tz, ref_name='Tz Order',
-            confirmed=False, )
+        self.assertTrue(c.order)  # related name
 
-        # New created TZ orders should be confirmed
-        self.assertTrue(order.confirmed)
+        # can be null
+        o.customer = None
+        o.save()
+        o = Order.objects.first()
+        self.assertFalse(o.customer)
 
-        # Changing to tz customer should change also the confirmation status
-        order.customer = Customer.objects.first()
-        order.confirmed = False
-        order.save()
-        self.assertFalse(Order.objects.get(pk=order.pk).confirmed)
-        order.customer = tz
-        order.save()
-        self.assertTrue(Order.objects.get(pk=order.pk).confirmed)
+        # deletes cascade
+        o.customer = c
+        o.save()
+        o = Order.objects.first()
+        self.assertTrue(o.customer)
+        c.delete()
+        self.assertFalse(Order.objects.first())
+
+    def test_order_mebership_field(self):
+        """Test the customer's field types."""
+        o = Order.objects.first()
+        self.assertFalse(o.membership)  # can be null
+        g = Customer.objects.create(name='group', phone=0, cp=0, group=True, )
+        o.membership = g
+        o.save()
+        o = Order.objects.first()
+        self.assertEqual(o.membership, g)
+
+        self.assertTrue(g.group_order)  # related name
+
+        # can be blank
+        o.membership = None
+        self.assertEqual(o.full_clean(), None)
+
+        # delete sets null
+        g.delete()
+        o = Order.objects.first()
+        self.assertFalse(o.membership, None)
+
+    def test_order_ref_name_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.ref_name, 'example')
+        self.assertEqual(
+            o._meta.get_field('ref_name').verbose_name, 'Referencia')
+
+        with self.assertRaises(DataError):
+            o.ref_name = 33 * 'a'
+            o.save()
+
+    def test_order_ref_name_field_cant_be_null(self):
+        o = Order.objects.first()
+        o.ref_name = None
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_ref_name_field_cant_be_blank(self):
+        o = Order.objects.first()
+        o.ref_name = ''
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_order_delivery_field(self):
+        o = Order.objects.first()
+        self.assertIsInstance(o.delivery, date)
+        self.assertEqual(
+            o._meta.get_field('delivery').verbose_name, 'Entrega prevista')
+
+        # Can be empty but not null
+        o.delivery = None
+        self.assertEqual(o.full_clean(), None)
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_status_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.status, '1')  # default
+        self.assertEqual(
+            o._meta.get_field('status').verbose_name, 'status')
+
+        with self.assertRaises(DataError):
+            o.status = '11'  # longer than 1
+            o.save()
+
+    def test_order_status_choices(self):
+        o = Order.objects.first()
+
+        with self.assertRaises(ValidationError):
+            o.status = '9'
+            o.full_clean()
+
+    def test_order_status_cant_be_null(self):
+        o = Order.objects.first()
+        o.status = None
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_status_cant_be_blank(self):
+        o = Order.objects.first()
+        o.status = None
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_order_priority_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.priority, '2')  # default
+        self.assertEqual(
+            o._meta.get_field('priority').verbose_name, 'Prioridad')
+
+        with self.assertRaises(DataError):
+            o.priority = '11'  # longer than 1
+            o.save()
+
+    def test_order_priority_choices(self):
+        o = Order.objects.first()
+
+        with self.assertRaises(ValidationError):
+            o.priority = '9'
+            o.full_clean()
+
+    def test_order_priority_cant_be_null(self):
+        o = Order.objects.first()
+        o.priority = None
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_priority_cant_be_blank(self):
+        o = Order.objects.first()
+        o.priority = None
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_order_confirmed_field(self):
+        o = Order.objects.first()
+        self.assertIsInstance(o.confirmed, bool)
+        self.assertTrue(o.confirmed)  # default
+        self.assertEqual(
+            o._meta.get_field('confirmed').verbose_name, 'Confirmado')
+
+    def test_order_waist_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.waist, 10)
+        self.assertIsInstance(o.waist, Decimal)
+        self.assertEqual(
+            o._meta.get_field('waist').verbose_name, 'Cintura')
+
+        # Default value
+        o = Order.objects.create(
+            user=User.objects.first(), delivery=date.today(), ref_name='foo',
+            customer=Customer.objects.last(), )
+        self.assertEqual(o.waist, 0)
+
+    def test_order_waist_max_digits(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.waist = 123456  # longer than 5 digits
+            o.full_clean()
+
+    def test_order_waist_max_decimals(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.waist = 12.345  # longer than 2 decimals
+            o.full_clean()
+
+    def test_order_waist_cant_be_null(self):
+        o = Order.objects.first()
+        o.waist = None
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_waist_cant_be_blank(self):
+        o = Order.objects.first()
+        o.waist = None
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_order_chest_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.chest, 20)
+        self.assertIsInstance(o.chest, Decimal)
+        self.assertEqual(
+            o._meta.get_field('chest').verbose_name, 'Pecho')
+
+        # Default value
+        o = Order.objects.create(
+            user=User.objects.first(), delivery=date.today(), ref_name='foo',
+            customer=Customer.objects.last(), )
+        self.assertEqual(o.chest, 0)
+
+    def test_order_chest_max_digits(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.chest = 123456  # longer than 5 digits
+            o.full_clean()
+
+    def test_order_chest_max_decimals(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.chest = 12.345  # longer than 2 decimals
+            o.full_clean()
+
+    def test_order_chest_cant_be_null(self):
+        o = Order.objects.first()
+        o.chest = None
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_chest_cant_be_blank(self):
+        o = Order.objects.first()
+        o.chest = None
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_order_hip_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.hip, 30)
+        self.assertIsInstance(o.hip, Decimal)
+        self.assertEqual(
+            o._meta.get_field('hip').verbose_name, 'Cadera')
+
+        # Default value
+        o = Order.objects.create(
+            user=User.objects.first(), delivery=date.today(), ref_name='foo',
+            customer=Customer.objects.last(), )
+        self.assertEqual(o.hip, 0)
+
+    def test_order_hip_max_digits(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.hip = 123456  # longer than 5 digits
+            o.full_clean()
+
+    def test_order_hip_max_decimals(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.hip = 12.345  # longer than 2 decimals
+            o.full_clean()
+
+    def test_order_hip_cant_be_null(self):
+        o = Order.objects.first()
+        o.hip = None
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_hip_cant_be_blank(self):
+        o = Order.objects.first()
+        o.hip = None
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_order_lenght_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.lenght, 40)
+        self.assertIsInstance(o.lenght, Decimal)
+        self.assertEqual(
+            o._meta.get_field('lenght').verbose_name, 'Largo')
+
+        # Default value
+        o = Order.objects.create(
+            user=User.objects.first(), delivery=date.today(), ref_name='foo',
+            customer=Customer.objects.last(), )
+        self.assertEqual(o.lenght, 0)
+
+    def test_order_lenght_max_digits(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.lenght = 123456  # longer than 5 digits
+            o.full_clean()
+
+    def test_order_lenght_max_decimals(self):
+        o = Order.objects.first()
+        with self.assertRaises(ValidationError):
+            o.lenght = 12.345  # longer than 2 decimals
+            o.full_clean()
+
+    def test_order_lenght_cant_be_null(self):
+        o = Order.objects.first()
+        o.lenght = None
+        with self.assertRaises(IntegrityError):
+            o.save()
+
+    def test_order_lenght_cant_be_blank(self):
+        o = Order.objects.first()
+        o.lenght = None
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_order_others_field(self):
+        o = Order.objects.first()
+        self.assertEqual(o.others, 'Custom notes')
+        self.assertEqual(
+            o._meta.get_field('others').verbose_name, 'Observaciones')
+
+        # Can be empty
+        o.others = ''
+        self.assertEqual(o.full_clean(), None)
+        self.assertEqual(o.save(), None)
+        # o.save()
+
+        # Can be null
+        o.others = None
+        self.assertEqual(o.full_clean(), None)
+        self.assertEqual(o.save(), None)
 
     def test_budget_and_prepaid_can_be_null(self):
         """Test the emptyness of fields and default value."""
@@ -224,13 +582,13 @@ class TestOrders(TestCase):
         for i in range(4):
             Order.objects.create(
                 user=u, customer=c, ref_name='Test', delivery=date.today())
-        self.assertEqual(Order.active.count(), 4)
+        self.assertEqual(Order.active.count(), 5)
         delivered, cancelled = Order.active.all()[:2]
         delivered.status = '7'
         delivered.save()
         cancelled.status = '8'
         cancelled.save()
-        self.assertEqual(Order.active.count(), 2)
+        self.assertEqual(Order.active.count(), 3)
 
     def test_custom_manager_pending(self):
         """Test the pending custom manager."""
@@ -257,7 +615,7 @@ class TestOrders(TestCase):
         for i in range(3):
             Order.objects.create(
                 user=u, customer=c, ref_name='Test', delivery=date.today())
-        self.assertEqual(Order.outdated.count(), 0)
+        self.assertEqual(Order.outdated.count(), 1)
         past = Order.objects.first()
         past.delivery = date.today() - timedelta(days=5)
         past.save()
@@ -287,9 +645,59 @@ class TestOrders(TestCase):
         OrderItem.objects.create(
             reference=obsolete, element=Item.objects.last())
 
-        self.assertEqual(Order.objects.count(), 3)  # total orders
+        self.assertEqual(Order.objects.count(), 4)  # total orders
         self.assertEqual(Order.obsolete.count(), 1)
         self.assertEqual(Order.obsolete.first().ref_name, 'Obsolete')
+
+    def test_customer_is_not_provider(self):
+        o = Order.objects.first()
+        c = Customer.objects.first()
+        self.assertEqual(o.customer, c)
+
+        c.provider = True
+        c.save()
+
+        o.customer = Customer.objects.first()
+        with self.assertRaises(ValidationError):
+            o.full_clean()
+
+    def test_trapuzarrak_orders_are_always_confirmed(self):
+        """Trapuzarrak are not allowed to be unconfirmed."""
+        user = User.objects.first()
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        order = Order.objects.create(
+            user=user, delivery=date.today(), customer=tz, ref_name='Tz Order',
+            confirmed=False, )
+
+        # New created TZ orders should be confirmed
+        self.assertTrue(order.confirmed)
+
+        # Changing to tz customer should change also the confirmation status
+        order.customer = Customer.objects.first()
+        order.confirmed = False
+        order.save()
+        self.assertFalse(Order.objects.get(pk=order.pk).confirmed)
+        order.customer = tz
+        order.save()
+        self.assertTrue(Order.objects.get(pk=order.pk).confirmed)
+
+    def test_ensure_membership_is_a_group_customer(self):
+        c2 = Customer.objects.create(name='foo', phone=0, cp=0)
+        o = Order.objects.first()
+        self.assertEqual(o.membership, None)
+
+        o.membership = c2
+        o.save()
+        o = Order.objects.first()
+        self.assertEqual(o.membership, None)  # keeps being None
+
+        c2.group = True
+        c2.save()
+        c2 = Customer.objects.get(pk=c2.pk)
+        o.membership = c2
+        o.save()
+        o = Order.objects.first()
+        self.assertEqual(o.membership, c2)  # Now it's ok
 
     def test_overdue(self):
         """Test the overdue attribute."""
@@ -375,6 +783,68 @@ class TestOrders(TestCase):
             user=user, customer=c, ref_name='test',
             delivery=date(2018, 12, 31), prepaid=50, )
         self.assertTrue(order.invoiced)
+
+    def test_order_creation(self):
+        """Test the order creation."""
+        order = Order.objects.first()
+        order_str = str(order.pk) + ' Test example'
+        self.assertTrue(isinstance(order, Order))
+        self.assertEqual(order.__str__(), order_str)
+        self.assertTrue(order.overdue)
+
+    def test_order_progress_status_1(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '1'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 0)
+
+    def test_order_progress_status_2(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '2'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 0)
+
+    def test_order_progress_status_3(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '3'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 25)
+
+    def test_order_progress_status_4(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '4'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 50)
+
+    def test_order_progress_status_5(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '5'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 75)
+
+    def test_order_progress_status_6(self):
+        """Test the proper display of progress."""
+        order = Order.objects.all()[0]
+        order.status = '6'
+        order.ref_name = 'status changed'
+        order.save()
+        order = Order.objects.get(ref_name='status changed')
+        self.assertEqual(order.progress, 100)
 
     def test_has_no_items(self):
         """Test the order has no items."""

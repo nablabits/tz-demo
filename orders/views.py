@@ -2416,7 +2416,7 @@ def item_selector(request):
 
 @require_GET
 def customer_hints(request):
-    """Provide hints on customers when adding an order."""
+    """Provide hints on customers when adding/editing an order."""
     search_str = request.GET.get('search')
     if not search_str:
         raise Http404('No string selected')
@@ -2426,6 +2426,35 @@ def customer_hints(request):
 
     if not starts:
         outcomes = customers.filter(name__icontains=search_str)
+    else:
+        outcomes = starts
+
+    resp = dict()
+    if outcomes:
+        for n, c in enumerate(outcomes):
+            resp[n] = dict(id=c.id, name=c.name, )
+    else:
+        resp[0] = dict(id='void', name='No hay coincidencias...', )
+
+    if request.GET.get('test', None):
+        template = 'tz/base.html'  # Just a dummy
+        return render(request, template, resp)
+
+    return JsonResponse(resp)
+
+
+@require_GET
+def group_hints(request):
+    """Provide hints on groups when adding/editing an order."""
+    search_str = request.GET.get('search')
+    if not search_str:
+        raise Http404('No string selected')
+
+    groups = Customer.objects.filter(group=True)
+    starts = groups.filter(name__istartswith=search_str)
+
+    if not starts:
+        outcomes = groups.filter(name__icontains=search_str)
     else:
         outcomes = starts
 

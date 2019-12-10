@@ -25,7 +25,7 @@ class OrderForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = Order
-        fields = ('customer', 'ref_name', 'delivery', 'priority',
+        fields = ('customer', 'membership', 'ref_name', 'delivery', 'priority',
                   'waist', 'chest', 'hip', 'lenght', 'others',
                   'budget', 'prepaid', 'confirmed', )
 

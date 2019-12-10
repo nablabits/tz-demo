@@ -11,14 +11,19 @@
           <h4 class="text-white"><i class="fa fa-arrow-alt-left pr-1"></i> Volver</h4>
         </div>
       </a>
-      <div class="d-flex mr-3 border rounded py-1 px-3 align-items-start">
-        <h4>
-          <strong>#{{order.pk}} </strong>{{order.customer}}
-        </h4>
-        <a href="{% url 'customer_view' pk=order.customer.pk %}" target="_blank">
-          <small><i class="fa fa-external-link pl-1"></i></small>
-        </a>
-        <h4 class="ml-4">{{order.ref_name}}</h4>
+      <div class="d-flex flex-column mr-3 border rounded py-1 px-3 align-items-start">
+        <div class="d-flex">
+          <h4>
+            <strong>#{{order.pk}} </strong>{{order.customer}}
+          </h4>
+          <a href="{% url 'customer_view' pk=order.customer.pk %}" target="_blank">
+            <small><i class="fa fa-external-link pl-1"></i></small>
+          </a>
+          <h4 class="ml-4">{{order.ref_name}}</h4>
+        </div>
+        <div class="">
+          {% if order.membership %}({{order.membership}}){% endif %}
+        </div>
       </div>
       <span class="py-1 px-2 border rounded mr-3">
         <i class="fas fa-shopping-cart pr-2"></i>{{order.total}}€

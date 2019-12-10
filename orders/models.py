@@ -34,6 +34,7 @@ class Customer(models.Model):
     cp = models.IntegerField('CP')
     notes = models.TextField('Observaciones', blank=True, null=True)
     provider = models.BooleanField('Proveedor', default=False)
+    group = models.BooleanField('Grupo', default=False)
 
     def __str__(self):
         """Get the name of the entry."""
@@ -54,6 +55,21 @@ class Customer(models.Model):
                 if duplicated:
                     raise ValidationError({'name': _('The customer already ' +
                                                      'exists in the db')})
+
+        # Avoid being provider & group @ the same time
+        if self.provider and self.group:
+            raise ValidationError(
+                {'provider': _('Un cliente no puede ser proveedor y grupo al' +
+                               'mismo tiempo')})
+
+    def save(self, *args, **kwargs):
+        """Override save method."""
+        # if clean() was not called, providers are default, this avoids being
+        # group and provider simultaneously
+        if self.provider:
+            self.group = False
+
+        super().save(*args, **kwargs)
 
     def email_name(self):
         """Get first name in lower case and properly capitalized."""
@@ -87,7 +103,12 @@ class Order(models.Model):
     )
     inbox_date = models.DateTimeField(default=timezone.now)
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE)
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, null=True)
+    customer = models.ForeignKey(
+        Customer, on_delete=models.CASCADE, null=True,
+        related_name='order')
+    membership = models.ForeignKey(
+        Customer, limit_choices_to={'group': True}, blank=True,
+        null=True, on_delete=models.SET_NULL, related_name='group_order')
     ref_name = models.CharField('Referencia', max_length=32)
     delivery = models.DateField('Entrega prevista', blank=True)
     status = models.CharField(max_length=1, choices=STATUS, default='1')
@@ -107,6 +128,8 @@ class Order(models.Model):
     others = models.TextField('Observaciones', blank=True, null=True)
 
     # Pricing
+    # budget was deprecated by 2019 on invoices behalf
+    # prepaid was deprecated by 2020 on payments model behalf
     budget = models.DecimalField(
         'Presupuesto', max_digits=7, decimal_places=2, blank=True, null=True)
     prepaid = models.DecimalField(
@@ -125,11 +148,22 @@ class Order(models.Model):
         return '%s %s %s' % (self.pk,
                              self.customer, self.ref_name)
 
+    def clean(self):
+        """Set validation constraints."""
+        # Ensure that customer is not provider
+        if self.customer and self.customer.provider:
+            msg = 'El cliente no puede ser proveedor'
+            raise ValidationError({'customer': _(msg)})
+
     def save(self, *args, **kwargs):
         """Override save method."""
         # ensure trapuzarrak is always Confirmed
-        if self.customer.name.lower() == 'trapuzarrak':
+        if self.customer and self.customer.name.lower() == 'trapuzarrak':
             self.confirmed = True
+
+        # ensure membership field is a group customer
+        if self.membership and not self.membership.group:
+            self.membership = None
 
         super().save(*args, **kwargs)
 
