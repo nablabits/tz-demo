@@ -5192,7 +5192,6 @@ class ActionsPostMethodRaises(TestCase):
                    'comment-read',
                    'send-to-order',
                    'send-to-order-express',
-                   'ticket-to-invoice',
                    'order-edit',
                    'order-edit-add-prepaid',
                    'order-edit-date',
@@ -5483,7 +5482,6 @@ class ActionsPostMethodCreate(TestCase):
         """
         actions = ('order-comment',
                    'comment-read',
-                   'ticket-to-invoice',
                    'order-edit',
                    'order-edit-date',
                    'customer-edit',
@@ -5853,42 +5851,6 @@ class ActionsPostMethodCreate(TestCase):
         self.assertFalse(data['form_is_valid'])
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_ticket_to_invoice_valid(self):
-        order = Order.objects.first()
-        item = Item.objects.create(name='test',  fabrics=0, price=10)
-        OrderItem.objects.create(element=item, reference=order, qty=3)
-        resp = self.client.post(
-            reverse('actions'),
-            {'action': 'ticket-to-invoice', 'pk': order.pk, 'pay_method': 'V',
-             'test': True, })
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-        self.assertTrue(Invoice.objects.get(reference=order))
-        self.assertEqual(data['redirect'],
-                         reverse('order_view', kwargs={'pk': order.pk}))
-
-    def test_ticket_to_invoice_not_valid(self):
-        order = Order.objects.first()
-        item = Item.objects.create(name='test',  fabrics=0, price=10)
-        OrderItem.objects.create(element=item, reference=order, qty=3)
-        resp = self.client.post(
-            reverse('actions'),
-            {'action': 'ticket-to-invoice', 'pk': order.pk, 'void': 'V',
-             'test': True, })
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertFalse(data['form_is_valid'])
-        self.assertFalse(Invoice.objects.filter(reference=order))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/regular_form.html')
-        vars = ('form', 'items', 'order', 'total', 'modal_title', 'pk',
-                'action', 'submit_btn', 'custom_form', )
         self.assertTrue(self.context_vars(context, vars))
 
 
@@ -7911,8 +7873,6 @@ class CustomerHintsTests(TestCase):
         self.assertEqual(resp.context[0]['id'], 'void')
         with self.assertRaises(KeyError):
             resp.context[1]
-
-
 
 
 class GroupHintsTests(TestCase):

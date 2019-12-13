@@ -1644,34 +1644,6 @@ class Actions(View):
                        }
             template = 'includes/ticket.html'
 
-        # Invoice Order (regular only POST)
-        elif action == 'ticket-to-invoice':
-            order = get_object_or_404(Order, pk=pk)
-            items = OrderItem.objects.filter(reference=order)
-            total = items.aggregate(
-                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
-            form = InvoiceForm(request.POST)
-            if form.is_valid():
-                invoice = form.save(commit=False)
-                invoice.reference = order
-                invoice.save()
-                data['redirect'] = reverse(
-                    'order_view', kwargs={'pk': order.pk})
-                data['form_is_valid'] = True
-            else:
-                data['form_is_valid'] = False
-                context = {'form': form,
-                           'items': items,
-                           'order': order,
-                           'total': total,
-                           'modal_title': 'Facturar',
-                           'pk': order.pk,
-                           'action': 'ticket-to-invoice',
-                           'submit_btn': 'Facturar',
-                           'custom_form': 'includes/custom_forms/invoice.html',
-                           }
-                template = 'includes/regular_form.html'
-
         # Edit order (POST)
         elif action == 'order-edit':
             order = get_object_or_404(Order, pk=pk)
