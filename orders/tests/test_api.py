@@ -121,8 +121,8 @@ class ReadOnlyTests(APITestCase):
 
     def test_expense_api(self):
         """Test the correct content for expense API."""
-        p = Customer.objects.create(
-            name='Provider', phone=0, cp=0, provider=True)
+        p = Customer.objects.create(name='Provider', phone=0, cp=0, CIF='baz',
+                                    provider=True, address='foo', city='bar', )
         Expense.objects.create(
             issuer=p, invoice_no='NA', issued_on=date.today(),
             concept='Concept', amount=10, )
