@@ -4,7 +4,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 
 from .models import (Comment, Customer, Invoice, Item, Order, OrderItem,
-                     Timetable, )
+                     Timetable, CashFlowIO, Expense)
 
 
 class CustomerForm(forms.ModelForm):
@@ -108,7 +108,6 @@ class OrderItemNotes(forms.ModelForm):
         fields = ('description',)
 
 
-
 class CommentForm(forms.ModelForm):
     """Add comments using a form."""
 
@@ -127,6 +126,23 @@ class InvoiceForm(forms.ModelForm):
 
         model = Invoice
         fields = ('pay_method', )
+
+
+class CashFlowIOForm(forms.ModelForm):
+    """Create and update cashflow instances."""
+
+    class Meta:
+        """Meta options for a quick design."""
+
+        model = CashFlowIO
+        exclude = ['creation', ]
+
+    def __init__(self, *args, **kwargs):
+        """Override default settings."""
+        super(CashFlowIOForm, self).__init__(*args, **kwargs)
+        queryset = Expense.objects.filter(closed=False)
+        self.fields['expense'].queryset = queryset
+        self.fields['expense'].label = 'Factura'
 
 
 class EditDateForm(forms.ModelForm):

@@ -3,7 +3,7 @@
 from django.contrib import admin
 
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
-                     Order, OrderItem, PQueue, Timetable, )
+                     Order, OrderItem, PQueue, Timetable, CashFlowIO)
 
 from django.utils.translation import gettext_lazy as _
 
@@ -116,9 +116,17 @@ class IssuerByName(admin.SimpleListFilter):
 class ExpenseAdmin(admin.ModelAdmin):
     """Beautify the expense admin view."""
 
-    list_display = (
-        'pk', 'issued_on', 'issuer', 'invoice_no', 'concept', 'amount', )
+    list_display = ('pk', 'issued_on', 'issuer', 'invoice_no', 'concept',
+                    'amount', 'closed')
     list_filter = ('issued_on', IssuerByName, )
+
+
+@admin.register(CashFlowIO)
+class CashFlowIOAdmin(admin.ModelAdmin):
+    """Beautify the CashFlow admin view."""
+
+    list_display = (
+        'pk', 'creation', 'order', 'expense', 'amount', 'pay_method', )
 
 
 @admin.register(BankMovement)

@@ -109,13 +109,15 @@ $(function () {
     e.preventDefault()
     var form = $(this)
     var formData = form.serializeArray()
+    var btn = form.find('.js-submit')
+    var errorBox = form.find('.js-errors')
     $.ajax({
       url: form.attr('action'),
       data: formData,
       type: form.attr('method'),
       dataType: 'json',
       beforeSend: function () {
-        form.find('.js-submit').addClass('d-none')
+        btn.addClass('d-none')
         form.find('.js-bg-working').removeClass('d-none')
       },
       success: function (data) {
@@ -128,7 +130,8 @@ $(function () {
             $(data.html_id).html(data.html)
           }
         } else {
-          $('js-errors', this).html(data.errors)
+          btn.removeClass('d-none')
+          errorBox.html(data.errors)
         }
       }
     })

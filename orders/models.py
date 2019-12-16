@@ -167,6 +167,17 @@ class Order(models.Model):
 
         super().save(*args, **kwargs)
 
+    def kill(self, pay_method='C'):
+        """Close the debt."""
+        if self.pending:
+            CashFlowIO.objects.create(
+                order=self, amount=self.pending, pay_method=pay_method)
+
+    @property
+    def tz(self):
+        """Determine whether the customer is Trapuzarrak."""
+        return self.customer.name.lower() == 'trapuzarrak'
+
     @property
     def overdue(self):
         """Set the overdue property."""
@@ -199,9 +210,19 @@ class Order(models.Model):
         return round(float(self.total_bt) * .21, 2)
 
     @property
+    def already_paid(self):
+        """Collect the total amount paid by the order."""
+        cf = CashFlowIO.inbounds.filter(order=self)
+        prepaid = cf.aggregate(total=models.Sum('amount'))
+        if not prepaid['total']:
+            return 0
+        else:
+            return prepaid['total']
+
+    @property
     def pending(self):
         """Get the pending amount of the order."""
-        return self.prepaid - self.total
+        return self.total - self.already_paid
 
     @property
     def invoiced(self):
@@ -833,9 +854,7 @@ class Invoice(models.Model):
 
     def save(self, *args, **kwargs):
         """Override the save method."""
-        # Ensure tz has no invoices
-        if self.reference.customer.name.lower() == 'trapuzarrak':
-            raise ValueError('TZ can\'t be invoiced')
+        self.clean()  # first, run custom validators
 
         """Ensure that the invoices are consecutive starting at 1 while keeping
         their original value (if any)."""
@@ -846,22 +865,24 @@ class Invoice(models.Model):
             else:
                 self.invoice_no = newest.invoice_no + 1
 
-        # Get the total amount of the ticket
-        items = OrderItem.objects.filter(reference=self.reference)
-        field = models.F
-        total = items.aggregate(
-            amount=models.Sum(field('qty') * field('price'),
-                              output_field=models.DecimalField()))
-        if not items:
-            raise ValidationError('The invoice has no items')
-        else:
-            self.amount = total['amount']
+        self.amount = self.reference.total  # Get the total
 
-        # Archive todoist project (if any)
-        order = Order.objects.get(pk=self.pk)
-        order.archive()
+        # orders are killed, delivered & archived (if any)
+        self.reference.kill(pay_method=self.pay_method)
+        self.reference.deliver()
+        self.reference.archive()
 
         super().save(*args, **kwargs)
+
+    def clean(self):
+        """Custom validators."""
+        # Ensure tz has no invoices
+        if self.reference.customer.name.lower() == 'trapuzarrak':
+            raise ValidationError({'reference': 'TZ can\'t be invoiced'})
+
+        # Ensure invoices have items (although the amount can be 0€)
+        if self.reference.has_no_items:
+            raise ValidationError({'reference': 'The invoice has no items'})
 
     def printable_ticket(self, lc=False):
         """Create a PDF with the sale summary to send or to print."""
@@ -963,6 +984,10 @@ class Expense(models.Model):
         default='T')
     in_b = models.BooleanField('En B', default=False)
     notes = models.TextField('Observaciones', blank=True, null=True)
+    closed = models.BooleanField('Cerrado', default=False)
+
+    def __str__(self):
+        return '{} {}'.format(self.pk, self.issuer.name)
 
     def clean(self):
         """Ensure the invoices are valid."""
@@ -974,6 +999,150 @@ class Expense(models.Model):
             raise ValidationError(
                 {'issuer': _('The customer does not match' +
                              ' some of the required fields')})
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def kill(self):
+        """Close the debt."""
+        if self.pending:
+            CashFlowIO.objects.create(
+                expense=self, amount=self.pending, pay_method=self.pay_method)
+        self.closed = True
+        self.save()
+
+    def _self_close(self):
+        """Check the consistency of the close attribute.
+
+        Closed attribute rely on their cashflows' amounts and although delete
+        method should reopen the expense, it might be useful from time to time
+        to check manually if everything is ok. This method does so.
+        """
+        if self.pending:
+            self.closed = False  # Swap truth
+        else:
+            self.closed = True  # Swap truth
+
+        return self.save()
+
+    @property
+    def already_paid(self):
+        """Collect the total amount paid by the order."""
+        cf = CashFlowIO.outbounds.filter(expense=self)
+        prepaid = cf.aggregate(total=models.Sum('amount'))
+        if not prepaid['total']:
+            return 0
+        else:
+            return prepaid['total']
+
+    @property
+    def pending(self):
+        """Get the pending amount for the expense."""
+        return self.amount - self.already_paid
+
+
+class CashFlowIO(models.Model):
+    """Manage the inbound/outbound movements.
+
+    This model tracks the payments done to orders in advance and the splitted
+    expense invoices to have a better feel of how the business is running.
+
+    It completely substitutes 2019's prepaid box.
+    """
+    creation = models.DateTimeField(default=timezone.now)
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True,
+                              null=True, related_name='cfio_prepaids')
+    expense = models.ForeignKey(Expense, on_delete=models.CASCADE, blank=True,
+                                null=True, limit_choices_to={'closed': False})
+    amount = models.DecimalField(max_digits=7, decimal_places=2)
+    pay_method = models.CharField(
+        max_length=1, choices=settings.PAYMENT_METHODS, default='C')
+
+    # Custom managers
+    objects = models.Manager()
+    inbounds = managers.Inbounds()
+    outbounds = managers.Outbounds()
+
+    def save(self, *args, **kwargs):
+        """Override save options."""
+        self.clean()  # Run custom validators
+        super().save(*args, **kwargs)
+        e = self.expense
+        if e and e.pending == 0:
+            e.closed = True
+            e.save()
+
+    def delete(self, *args, **kwargs):
+        """Override delete options."""
+        # Ensure expenses are reopened after deleting one of their cashflows
+        if self.expense:
+            self.expense.closed = False
+            self.expense.save()
+        super().delete(*args, **kwargs)
+
+    def clean(self):
+        """Custom validation parameters."""
+        # Prevent both order and expense being null simultaneously
+        if not self.order and not self.expense:
+            msg = 'Pedido y gasto no pueden estar vacios al mismo tiempo.'
+            raise ValidationError({'order': _(msg)})
+
+        # Prevent both order and expense being True simultaneously
+        if self.order and self.expense:
+            msg = 'Pedido y gasto no pueden tener valor al mismo tiempo.'
+            raise ValidationError({'order': _(msg)})
+
+        """
+        Prevent amount to be over expense/order amount.
+        You might want to call kill() in the respective models to close
+        payments.
+        """
+        if self.order:
+            pending = self.order.pending
+        else:
+            pending = self.expense.pending
+
+        if self.amount > pending:
+            msg = ('No se puede pagar más de la cantidad ' +
+                   'pendiente ({}).'.format(pending))
+            raise ValidationError({'amount': _(msg)})
+
+        # Prevent trapuzarrak having cashflow items
+        if self.order and self.order.customer.name.lower() == 'trapuzarrak':
+            msg = 'Los pedidos de trapuzarrak no admiten pagos'
+            raise ValidationError({'order': _(msg)})
+
+    @staticmethod
+    def update_old():
+        """Update the old cash management.
+
+        Previously, prepaids and total payments where stored in orders/invoices
+        so we have to make sure that all the invoices processed have their
+        corresponding cash flow movement. Also we need to do so with expense
+        objects.
+        """
+        print('Updating invoices')
+        invoices = Invoice.objects.reverse()
+        for i in invoices:
+            CashFlowIO.objects.create(creation=i.issued_on, order=i.reference,
+                                      amount=i.amount, pay_method=i.pay_method)
+
+        print('Updating expenses')
+        expenses = Expense.objects.reverse()
+        for e in expenses:
+            creation = timezone.now() - (timezone.now().date() - e.issued_on)
+            CashFlowIO.objects.create(creation=creation, expense=e,
+                                      amount=e.amount, pay_method=e.pay_method)
+            e.closed = True
+            e.save()
+
+        print('Completed. You might want to update prepaids of active orders.')
+
+    class Meta():
+        """Meta options."""
+
+        ordering = ['-creation']
 
 
 class BankMovement(models.Model):

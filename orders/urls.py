@@ -56,6 +56,8 @@ urlpatterns = [
     path('orderitems-CRUD/',
          views.OrderItemsCRUD.as_view(), name='orderitems-CRUD'),
     path('comments-CRUD/', views.CommentsCRUD.as_view(), name='comments-CRUD'),
+    path('cashflowio-CRUD/', views.CashFlowIOCRUD.as_view(),
+         name='cashflowio-CRUD', ),
     path('changelog/', views.changelog, name='changelog'),
     path('item-selector/', views.item_selector, name='item-selector'),
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),

@@ -5,13 +5,16 @@ from datetime import date, datetime, time, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib.auth.models import User
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, ObjectDoesNotExist
 from django.db.utils import DataError, IntegrityError
 from django.test import TestCase, tag
 from django.utils import timezone
 
-from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
-                           Item, Order, OrderItem, PQueue, Timetable, )
+from orders.models import (
+    BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
+    PQueue, Timetable, CashFlowIO, )
+
+from orders.settings import PAYMENT_METHODS
 
 from decouple import config
 
@@ -699,6 +702,46 @@ class TestOrders(TestCase):
         o = Order.objects.first()
         self.assertEqual(o.membership, c2)  # Now it's ok
 
+    def test_kill_order_pending_0(self):
+        order = Order.objects.first()
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        order.kill()
+        self.assertEqual(CashFlowIO.objects.count(), 1)
+        self.assertEqual(order.pending, 0)
+
+        order.kill()  # Should do nothing
+        self.assertEqual(CashFlowIO.objects.count(), 1)
+        self.assertEqual(order.pending, 0)
+
+    def test_kill_order(self):
+        order = Order.objects.first()
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        order.kill()
+        cf = CashFlowIO.objects.get(order=order)
+        self.assertTrue(cf)
+        self.assertEqual(cf.pay_method, 'C')  # default
+        self.assertEqual(cf.amount, 150)
+        cf.delete()
+
+        for pm in ('V', 'T'):
+            order.kill(pay_method=pm)
+            cf = CashFlowIO.objects.get(order=order)
+            self.assertEqual(cf.pay_method, pm)
+            cf.delete()
+
+    def test_order_tz(self):
+        order = Order.objects.first()
+        self.assertFalse(order.tz)
+
+        tz = Customer.objects.create(name='TrapuzaRrAk', phone=0, cp=0)
+        order.customer = tz
+        order.save()
+        self.assertTrue(order.tz)
+
     def test_overdue(self):
         """Test the overdue attribute."""
         user = User.objects.first()
@@ -749,17 +792,27 @@ class TestOrders(TestCase):
                 reference=order, element=Item.objects.last())
         self.assertEqual(order.vat, round(150 * .21 / 1.21, 2))
 
-    def test_pending_amount(self):
-        """Test the correct pending amount."""
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='test', delivery=date.today(),
-            prepaid=10)
+    def test_already_paid(self):
+        order = Order.objects.first()
         for i in range(5):
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
-        self.assertEqual(order.pending, -140)
+        self.assertEqual(order.already_paid, 0)
+
+        for _ in range(2):
+            CashFlowIO.objects.create(order=order, amount=10)
+        self.assertEqual(order.already_paid, 20)
+
+    def test_pending_amount(self):
+        order = Order.objects.first()
+        for i in range(5):
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+        self.assertEqual(order.pending, 150)
+
+        for _ in range(2):
+            CashFlowIO.objects.create(order=order, amount=10)
+        self.assertEqual(order.pending, 130)
 
     def test_invoiced(self):
         """Test the invoiced property."""
@@ -1970,21 +2023,19 @@ class TestPQueue(TestCase):
 class TestInvoice(TestCase):
     """Test the invoice model."""
 
-    @classmethod
-    def setUpTestData(cls):
+    def setUp(self):
         """Create the necessary items on database at once."""
         # Create a user
-        user = User.objects.create_user(
+        u = User.objects.create_user(
             username='user', is_staff=True, )
 
         # Create a customer
-        customer = Customer.objects.create(
+        c = Customer.objects.create(
             name='Customer Test', city='NoCity', phone='6', cp='1')
 
         # Create an order
         order = Order.objects.create(
-            user=user, customer=customer, ref_name='Test order',
-            budget=2000, prepaid=0, delivery=date.today())
+            user=u, customer=c, ref_name='foo', delivery=date.today())
 
         # Create obj item
         item = Item.objects.create(name='Test item', fabrics=5, price=10)
@@ -2017,15 +2068,6 @@ class TestInvoice(TestCase):
         invoice = Invoice.objects.create(reference=Order.objects.first())
         self.assertIsInstance(invoice.issued_on, datetime)
         self.assertEqual(invoice.issued_on.date(), date.today())
-
-    def test_tz_cannot_be_invoiced(self):
-        """Ensure that tz can't be invoiced."""
-        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
-        tz_order = Order.objects.first()
-        tz_order.customer = tz
-        tz_order.save()
-        with self.assertRaises(ValueError):
-            Invoice.objects.create(reference=tz_order)
 
     def test_invoice_no_default_1(self):
         """When there're no invoices yet, the first one is 1."""
@@ -2081,14 +2123,6 @@ class TestInvoice(TestCase):
             invoice.pay_method = 'K'
             invoice.full_clean()
 
-    def test_total_amount_0_raises_error(self):
-        """Test the proper raise when invoice has no items."""
-        item = OrderItem.objects.first()
-        item.delete()
-        order = Order.objects.first()
-        with self.assertRaises(ValidationError):
-            Invoice.objects.create(reference=order)
-
     def test_total_amount_0_is_allowed(self):
         """But invoices with 0 amount are allowed, eg, with discount."""
         order = Order.objects.first()
@@ -2098,6 +2132,47 @@ class TestInvoice(TestCase):
             reference=order, element=Item.objects.first(), price=-110)
         invoice = Invoice.objects.create(reference=order)
         self.assertEqual(invoice.amount, 0)
+
+    def test_invoice_kills_order(self):
+        o = Order.objects.first()
+        with self.assertRaises(ObjectDoesNotExist):
+            CashFlowIO.objects.get(order=o)
+
+        for pm, _ in PAYMENT_METHODS:
+            i = Invoice.objects.create(reference=o, pay_method=pm)
+            i.full_clean()
+            cf = CashFlowIO.objects.get(order=o)
+            self.assertTrue(cf)
+            self.assertEqual(cf.amount, o.total)
+            self.assertEqual(cf.amount, i.amount)
+            self.assertEqual(cf.pay_method, i.pay_method)
+            cf.delete()
+            i.delete()
+
+    def test_invoice_kills_negative_order(self):
+        i, o = OrderItem.objects.first(), Order.objects.first()
+        i.price = -30
+        i.save()
+        iv = Invoice.objects.create(reference=o)
+        cf = CashFlowIO.objects.first()
+
+        self.assertEqual(Invoice.objects.count(), 1)
+        self.assertEqual(CashFlowIO.objects.count(), 1)
+        self.assertEqual(o.pending, 0)
+        self.assertEqual(iv.amount, -30)
+        self.assertEqual(cf.amount, -30)
+
+    def test_invoice_delivers_order(self):
+        o = Order.objects.first()
+        o.delivery = date(2019, 1, 1)
+        o.satus = '1'
+        o.save()
+
+        Invoice.objects.create(reference=o)
+
+        o = Order.objects.get(pk=o.pk)
+        self.assertEqual(o.delivery, date.today())
+        self.assertEqual(o.status, '7')
 
     @tag('todoist')
     def test_invoicing_archives_todoist(self):
@@ -2111,6 +2186,24 @@ class TestInvoice(TestCase):
         project = order.t_api.projects.get_by_id(order.t_pid)
         project.delete()
         order.t_api.commit()
+
+    def test_tz_cannot_be_invoiced(self):
+        """Ensure that tz can't be invoiced."""
+        tz = Customer.objects.create(name='TraPuZarrak', phone=0, cp=0)
+        tz_order = Order.objects.first()
+        tz_order.customer = tz
+        tz_order.save()
+        with self.assertRaises(ValidationError):
+            Invoice.objects.create(reference=tz_order)
+
+    def test_invoice_with_no_items_raises_error(self):
+        for i in OrderItem.objects.all():
+            i.delete()
+        o = Order.objects.first()
+        self.assertTrue(o.has_no_items)
+
+        with self.assertRaises(ValidationError):
+            Invoice.objects.create(reference=o)
 
     def test_printable_ticket_returns_bytesIO(self):
         """Test the output for the method."""
@@ -2278,49 +2371,354 @@ class TestExpense(TestCase):
             expense._meta.get_field('notes').verbose_name,
             'Observaciones')
 
+    def test_closed_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100,
+            notes='Notes')
+        expense.full_clean()
+        self.assertIsInstance(expense.closed, bool)
+        self.assertFalse(expense.closed)
+        self.assertEqual(
+            expense._meta.get_field('closed').verbose_name,
+            'Cerrado')
+
+    def test_str(self):
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='foo',
+            issued_on=date.today(), concept='bar', amount=100, notes='baz')
+        s = '{} {}'.format(expense.pk, 'Customer Test')
+        self.assertEqual(expense.__str__(), s)
+
+    def test_kill(self):
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='foo',
+            issued_on=date.today(), concept='bar', amount=100, notes='baz')
+
+        with self.assertRaises(ObjectDoesNotExist):
+            CashFlowIO.objects.get(expense=expense)
+
+        self.assertEqual(CashFlowIO.objects.count(), 0)
+
+        for pm, _ in PAYMENT_METHODS:
+            expense.pay_method = pm
+            expense.save()
+            expense.kill()
+            cf = CashFlowIO.objects.get(expense=expense)
+
+            self.assertEqual(expense.pending, 0)
+            self.assertEqual(cf.amount, 100)
+            self.assertEqual(cf.pay_method, pm)
+
+            expense.kill()  # should do nothing
+            self.assertEqual(expense.pending, 0)
+            self.assertEqual(CashFlowIO.objects.count(), 1)
+            self.assertTrue(CashFlowIO.objects.get(expense=expense))
+
+            cf.delete()
+
+    def test_self_close(self):
+        e = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='foo', concept='bar',
+            issued_on=date.today(), amount=100, closed=True)
+
+        # Test pending and closed
+        self.assertTrue(e.closed and e.pending)  # Inconsistent
+        e._self_close()
+        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent
+        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent
+
+        # Test not pending and not closed
+        e.kill()
+        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent
+        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent
+        e.closed = False
+        e.save()
+        self.assertFalse(e.closed or e.pending)  # Inconsistent
+        e._self_close()
+        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent again
+        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent again
+
+    def test_already_paid(self):
+        e = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='foo',
+            issued_on=date.today(), concept='bar', amount=100, notes='baz')
+
+        self.assertEqual(e.already_paid, 0)
+
+        for _ in range(2):
+            CashFlowIO.objects.create(expense=e, amount=10)
+
+        self.assertEqual(e.already_paid, 20)
+
+    def test_pending_amount(self):
+        e = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='foo',
+            issued_on=date.today(), concept='bar', amount=100, notes='baz')
+
+        for _ in range(2):
+            CashFlowIO.objects.create(expense=e, amount=10)
+
+        self.assertEqual(e.pending, 80)
+
     def test_no_address_raises_error(self):
         """Raise ValidationError with partially filled customers."""
         void = Customer.objects.create(
             name='Customer Test', city='This computer',
             phone='666666666', CIF='444E', cp=48003, provider=True, )
-        void_expense = Expense.objects.create(
-            issuer=void, invoice_no='Test',
-            issued_on=date.today(), concept='Concept', amount=100, )
         with self.assertRaises(ValidationError):
-            void_expense.full_clean()
+            Expense.objects.create(
+                issuer=void, invoice_no='Test',
+                issued_on=date.today(), concept='Concept', amount=100, )
 
     def test_no_city_raises_error(self):
         """Raise ValidationError with partially filled customers."""
         void = Customer.objects.create(
             name='Customer Test', address='Cache', phone='666666666',
             CIF='444E', cp=48003, provider=True, )
-        void_expense = Expense.objects.create(
-            issuer=void, invoice_no='Test',
-            issued_on=date.today(), concept='Concept', amount=100, )
         with self.assertRaises(ValidationError):
-            void_expense.full_clean()
+            Expense.objects.create(
+                issuer=void, invoice_no='Test', issued_on=date.today(),
+                concept='Concept', amount=100, )
 
     def test_no_cif_raises_error(self):
         """Raise ValidationError with partially filled customers."""
         void = Customer.objects.create(
             name='Customer Test', address='Cache', city='This computer',
             phone='666666666', cp=48003, provider=True, )
-        void_expense = Expense.objects.create(
-            issuer=void, invoice_no='Test',
-            issued_on=date.today(), concept='Concept', amount=100, )
         with self.assertRaises(ValidationError):
-            void_expense.full_clean()
+            Expense.objects.create(
+                issuer=void, invoice_no='Test', issued_on=date.today(),
+                concept='Concept', amount=100, )
 
     def test_no_provider_raises_error(self):
         """Only providers can be issuers."""
         void = Customer.objects.create(
             name='Customer Test', address='Cache', city='This computer',
             phone='666666666', CIF='444E', cp=48003, )
-        void_expense = Expense.objects.create(
-            issuer=void, invoice_no='Test',
-            issued_on=date.today(), concept='Concept', amount=100, )
         with self.assertRaises(ValidationError):
-            void_expense.full_clean()
+            Expense.objects.create(
+                issuer=void, invoice_no='Test', issued_on=date.today(),
+                concept='Concept', amount=100, )
+
+
+class TestCashFlowIO(TestCase):
+    """Test the CashFlowIO model."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        # Create a user
+        u = User.objects.create_user(username='user', is_staff=True, )
+
+        # Create customers
+        c = Customer.objects.create(name='foo', phone=99, cp=22)
+        p = Customer.objects.create(name='foo', address='bar', city='baz',
+                                    CIF='zaz', phone=99, cp=22, provider=True)
+
+        # Create an order
+        o = Order.objects.create(user=u, customer=c, ref_name='foo',
+                                 delivery=date.today(), )
+
+        # Create items
+        i = Item.objects.create(name='Test item', fabrics=5, price=10)
+        OrderItem.objects.create(reference=o, element=i, qty=10)
+
+        # Create an expense
+        Expense.objects.create(
+            issuer=p, invoice_no='foo', issued_on=date.today(), concept='bar',
+            amount=100, )
+
+    def test_creation_is_a_date_time_field(self):
+        cf = CashFlowIO.objects.create(order=Order.objects.first(), amount=50)
+        self.assertIsInstance(cf.creation, datetime)
+
+    def test_order_is_foreign_key(self):
+        cf = CashFlowIO.objects.create(order=Order.objects.first(), amount=50)
+        self.assertIsInstance(cf.order, Order)
+
+    def test_order_can_be_null_and_blank(self):
+        cf = CashFlowIO(expense=Expense.objects.first(), amount=50)
+        cf.full_clean()  # blank
+        cf.save()
+        cf = CashFlowIO.objects.get(pk=cf.pk)
+        self.assertEqual(cf.order, None)  # Null
+
+    def test_order_deletes_cascade(self):
+        o = Order.objects.first()
+        CashFlowIO.objects.create(order=o, amount=50)
+        self.assertEqual(CashFlowIO.objects.count(), 1)
+
+        o.delete()
+        self.assertEqual(CashFlowIO.objects.count(), 0)
+
+    def test_order_related_name_is_cfio_prepaids(self):
+        o = Order.objects.first()
+        cf = CashFlowIO.objects.create(order=o, amount=50)
+        self.assertEqual(o.cfio_prepaids.all()[0], cf)
+        self.assertEqual(o.cfio_prepaids.count(), 1)
+
+    def test_expense_is_foreign_key(self):
+        cf = CashFlowIO.objects.create(
+            expense=Expense.objects.first(), amount=50)
+        self.assertIsInstance(cf.expense, Expense)
+
+    def test_expense_can_be_null_and_blank(self):
+        cf = CashFlowIO(order=Order.objects.first(), amount=50)
+        cf.full_clean()  # blank
+        cf.save()
+        cf = CashFlowIO.objects.get(pk=cf.pk)
+        self.assertEqual(cf.expense, None)  # Null
+
+    def test_expense_deletes_cascade(self):
+        e = Expense.objects.first()
+        CashFlowIO.objects.create(expense=e, amount=50)
+        self.assertEqual(CashFlowIO.objects.count(), 1)
+
+        e.delete()
+        self.assertEqual(CashFlowIO.objects.count(), 0)
+
+    def test_amount_is_decimal(self):
+        cf = CashFlowIO.objects.create(order=Order.objects.first(), amount=50)
+        cf = CashFlowIO.objects.get(pk=cf.pk)
+        self.assertIsInstance(cf.amount, Decimal)
+
+    def test_amount_max_digits(self):
+        i = OrderItem.objects.first()
+        i.qty = 100000
+        i.save()
+        with self.assertRaises(InvalidOperation):
+            CashFlowIO.objects.create(order=i.reference, amount=500000)
+
+    def test_amount_max_decimals(self):
+        cf = CashFlowIO.objects.create(
+            order=Order.objects.first(), amount=20.355)
+        msg = 'Ensure that there are no more than 2 decimal places.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            cf.full_clean()
+
+    def test_pay_method_length(self):
+        msg = 'value too long for type character varying(1)'
+        with self.assertRaisesMessage(DataError, msg):
+            CashFlowIO.objects.create(
+                order=Order.objects.first(), amount=10, pay_method='void')
+
+    def test_pay_method_out_of_choices(self):
+        cf = CashFlowIO.objects.create(
+            order=Order.objects.first(), amount=10, pay_method='X')
+        msg = 'Value \'X\' is not a valid choice.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            cf.full_clean()
+
+    def test_default_pay_method(self):
+        cf = CashFlowIO.objects.create(order=Order.objects.first(), amount=10)
+        self.assertEqual(cf.pay_method, 'C')
+
+    def test_custom_managers(self):
+        for _ in range(2):
+            CashFlowIO.objects.create(order=Order.objects.first(), amount=10)
+            CashFlowIO.objects.create(order=Order.objects.first(), amount=10)
+            CashFlowIO.objects.create(
+                expense=Expense.objects.first(), amount=10)
+
+        all = CashFlowIO.objects
+        inbounds, outbounds = CashFlowIO.inbounds, CashFlowIO.outbounds
+        self.assertEqual(all.count(), 6)
+        self.assertEqual(inbounds.count(), 4)
+        self.assertEqual(outbounds.count(), 2)
+
+        for cf in inbounds.all():
+            self.assertTrue(cf.order)
+            self.assertFalse(cf.expense)
+
+        for cf in outbounds.all():
+            self.assertTrue(cf.expense)
+            self.assertFalse(cf.order)
+
+    def test_save_closes_expense(self):
+        cf = CashFlowIO.objects.create(
+            expense=Expense.objects.first(), amount=50)
+        self.assertFalse(cf.expense.closed)
+        cf = CashFlowIO.objects.create(
+            expense=Expense.objects.first(), amount=50)  # kills the debt
+        self.assertTrue(cf.expense.closed)
+
+    def test_delete_opens_the_expense_again(self):
+        cf = CashFlowIO.objects.create(
+            expense=Expense.objects.first(), amount=100)  # kills the debt
+        self.assertTrue(cf.expense.closed)
+        cf.delete()
+        self.assertFalse(Expense.objects.first().closed)
+
+    def test_order_and_expense_cant_be_null_simultaneously(self):
+        msg = 'Pedido y gasto no pueden estar vacios al mismo tiempo.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            CashFlowIO.objects.create(amount=10)
+
+    def test_order_and_expense_cant_exist_simultaneously(self):
+        msg = 'Pedido y gasto no pueden tener valor al mismo tiempo.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            CashFlowIO.objects.create(
+                order=Order.objects.first(), expense=Expense.objects.first(),
+                amount=10)
+
+    def test_amount_cant_be_over_pending_in_orders(self):
+        msg = 'No se puede pagar más de la cantidad pendiente (100.00).'
+        with self.assertRaisesMessage(ValidationError, msg):
+            CashFlowIO.objects.create(order=Order.objects.first(), amount=110)
+
+    def test_amount_cant_be_over_pending_in_expenses(self):
+        msg = 'No se puede pagar más de la cantidad pendiente (100.00).'
+        with self.assertRaisesMessage(ValidationError, msg):
+            CashFlowIO.objects.create(
+                expense=Expense.objects.first(), amount=110)
+
+    def test_tz_orders_should_raise_rerror(self):
+        tz = Customer.objects.create(name='TrapuzaRrAk', phone=0, cp=0)
+        o = Order.objects.first()
+        o.customer = tz
+        o.save()
+        msg = 'Los pedidos de trapuzarrak no admiten pagos'
+        with self.assertRaisesMessage(ValidationError, msg):
+            CashFlowIO.objects.create(order=o, amount=10)
+
+    def test_update_old(self):
+        u = User.objects.first()
+        c = Customer.objects.get(provider=False)
+        p = Customer.objects.get(provider=True)
+        i = Item.objects.last()
+        for _ in range(3):
+            o = Order.objects.create(user=u, customer=c, delivery=date.today())
+            OrderItem.objects.create(element=i, reference=o, price=10)
+            Invoice.objects.create(reference=o)
+            Expense.objects.create(
+                issuer=p, invoice_no='foo', issued_on=date.today(),
+                concept='bar', amount=20)
+
+        # Get rid of setUp order and expense to work more easily
+        f1, f2 = Order.objects.first(), Expense.objects.first()
+        f1.delete()
+        f2.delete()
+
+        # Invoice kills auto the debts so delete them
+        for cf in CashFlowIO.objects.all():
+            cf.delete()
+
+        self.assertFalse(CashFlowIO.objects.all())
+
+        # Now update
+        CashFlowIO.update_old()
+
+        o, e = Order.objects.all(), Expense.objects.all()
+        cfs = CashFlowIO.objects.all()
+        self.assertEqual(o.count() + e.count(), cfs.count())
+
+        for cf in cfs:
+            self.assertEqual(cf.creation.date(), date.today())
+            if cf.order:
+                self.assertEqual(cf.amount, 10)
+            else:
+                self.assertEqual(cf.amount, 20)
 
 
 class TestBankMovement(TestCase):
