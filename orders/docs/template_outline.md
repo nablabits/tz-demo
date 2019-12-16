@@ -7,8 +7,6 @@ A brief schema of template hierarchy.
 
   * **block orderview** -> order_view.html
     * **include** order_status.html
-    * **include** order_details.html
-      * **include** action_buttons.html
     * **include** comments_list.html
 
   * **block orderexpress** -> order_express.html
