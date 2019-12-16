@@ -1,5 +1,12 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v??, date
+  * **Nuevo:** Ahora los pedidos aceptan un parametro grupo para clientes
+  particulares que hacen un pedido para su grupo.
+
+  * **Nuevo:** ya podemos llevar el control de los prepagos y las facturas
+  pendientes de cargo.
+
 ### v83, Dic 6
   * **Mejora:** ya se pueden añadir clientes escribiendo el nombre directamente
   en la caja.

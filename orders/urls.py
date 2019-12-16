@@ -56,10 +56,15 @@ urlpatterns = [
     path('orderitems-CRUD/',
          views.OrderItemsCRUD.as_view(), name='orderitems-CRUD'),
     path('comments-CRUD/', views.CommentsCRUD.as_view(), name='comments-CRUD'),
+    path('cashflowio-CRUD/', views.CashFlowIOCRUD.as_view(),
+         name='cashflowio-CRUD', ),
     path('changelog/', views.changelog, name='changelog'),
     path('item-selector/', views.item_selector, name='item-selector'),
     path('queue-actions/', views.pqueue_actions, name='queue-actions'),
+
+    # AJAX Hints
     path('customer-hints/', views.customer_hints, name='customer-hints'),
+    path('group-hints/', views.group_hints, name='group-hints'),
 
     # Loging related urls
     path('accounts/login/', auth_views.LoginView.as_view(), name='login'),

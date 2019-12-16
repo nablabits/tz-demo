@@ -1,5 +1,6 @@
 {% extends "tz/base.html" %}
 {% block invoices %}
+{% load widget_tweaks %}
 <div class="container mt-4">
   <ul class="nav nav-tabs" role="tablist">
     <li class="nav-item">
@@ -8,9 +9,9 @@
         </a>
     </li>
     <li class="nav-item">
-      <a class="nav-link" data-toggle="tab" href="#invoices-today" role="tab">
+      <a class="nav-link" data-toggle="tab" href="#today" role="tab">
         <i class="fal fa-calendar-day pr-2"></i>
-        Facturado hoy
+        Hoy
         <span class="ml-1 badge badge-info">{{today|length}}</span>
       </a>
     </li>
@@ -29,6 +30,13 @@
         {%else%}
           <span class="ml-1 badge badge-info">+20</span>
         {%endif%}
+      </a>
+    </li>
+
+    <li class="nav-item">
+      <a class="nav-link" data-toggle="tab" href="#pending-expenses" role="tab">
+        <i class="fal fa-calendar-week pr-2"></i>
+        Facturas pendientes <span class="ml-1 badge badge-info">{{pending_expenses|length}}</span>
       </a>
     </li>
   </ul>
@@ -94,65 +102,61 @@
       </div>
     </div>
 
-    <!-- Today's invoices -->
-    <div class="tab-pane" id="invoices-today" role="tabpanel">
+    <!-- Today -->
+    <div class="tab-pane" id="today">
       <div class="d-flex my-4">
-        <h3>Facturas hoy</h3>
+        <h3>Entradas de dinero hoy</h3>
         <div class="d-flex ml-auto">
-          {%if today_cash.total_cash%}
+          {%if cf_inbounds_today_cash.total_cash%}
           <span class="ml-2">
-            <i class="fas fa-coins p-1"></i><strong>Efectivo: </strong>{{today_cash.total_cash}}€
+            <i class="fas fa-coins p-1"></i><strong>Efectivo: </strong>{{cf_inbounds_today_cash.total_cash}}€
           </span>
           {%endif%}
-          {%if today_cash.total_card%}
+          {%if cf_inbounds_today_cash.total_card%}
             <span class="ml-2">
-              <i class="fas fa-credit-card p-1"></i><strong>Tarjeta: </strong>{{today_cash.total_card}}€
+              <i class="fas fa-credit-card p-1"></i><strong>Tarjeta: </strong>{{cf_inbounds_today_cash.total_card}}€
             </span>
           {%endif%}
-          {%if today_cash.total_transfer%}
+          {%if cf_inbounds_today_cash.total_transfer%}
             <span class="ml-2">
-              <i class="fas fa-usd-circle p-1"></i><strong>Transferencia: </strong>{{today_cash.total_transfer}}€
+              <i class="fas fa-usd-circle p-1"></i><strong>Transferencia: </strong>{{cf_inbounds_today_cash.total_transfer}}€
             </span>
           {%endif%}
           <span class="ml-4">
             <i class="far fa-piggy-bank p-1"></i><strong>Total día:
-            {%if today_cash.total%}{{today_cash.total}}{%else%}0{%endif%}€</strong>
+            {%if cf_inbounds_today_cash.total%}{{cf_inbounds_today_cash.total}}{%else%}0{%endif%}€</strong>
           </span>
         </div>
       </div>
-      {%if today%}
+
+      {%if cf_inbounds_today %}
         <table class="table">
           <thead>
             <tr>
-              <th scope="col">Factura nº</th>
-              <th scope="col">Pedido</th>
-              <th scope="col">Cliente/CP</th>
+              <th scope="col">Referencia</th>
               <th scope="col">Importe</th>
               <th scope="col">Forma de pago</th>
             </tr>
           </thead>
           <tbody>
-            {% for invoice in today %}
-            <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{invoice.pk}}">
-              <th>{{invoice.invoice_no}}</th>
-              {%if invoice.reference.ref_name == 'Quick'%}
-              <th>Ticket</th>
-              <th>{{invoice.reference.customer.cp }}</th>
-              {%else%}
-              <th>{{invoice.reference.ref_name }}</th>
-              <th>{{invoice.reference.customer.name }}</th>
-              {%endif%}
-              <th>{{invoice.amount}}€</th>
-              <th>{{invoice.get_pay_method_display}}</th>
+            {% for cf in cf_inbounds_today %}
+              {% if cf.order.invoiced %}
+                <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{cf.order.pk}}">
+                  <th>{{cf.order}}</th>
+              {% else %}
+                <th>{{cf.order}} (prepago)</th>
+              {% endif %}
+              <th>{{cf.amount}}€</th>
+              <th>{{cf.get_pay_method_display}}</th>
             </tr>
             {% endfor %}
           </tbody>
         </table>
       {%else%}
-      <div class="justify-content-center text-center">
+        <div class="justify-content-center text-center">
         <h1><i class="fal fa-frown"></i></h1>
         <h3>Vaya! parece que aún no hemos vendido nada hoy</h3>
-        <h5>Ánimo, no desesperes</h5>
+        <h5>Bueno, no desesperes, aun es pronto</h5>
       </div>
       {%endif%}
     </div>
@@ -287,6 +291,72 @@
       {%endif%}
     </div>
 
+    <!-- Pending invoices -->
+    <div class="tab-pane" id="pending-expenses">
+      <div class="d-flex justify-content-between my-4">
+        <h3>Facturas pendientes de pago</h3>
+        {%if pending_expenses_cash != 0%}
+        <span class="ml-2">
+          <i class="fas fa-coins p-1"></i><strong>Efectivo: </strong>{{pending_expenses_cash}}€
+        </span>
+        {%endif%}
+      </div>
+      {%if pending_expenses %}
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col">Fecha</th>
+              <th scope="col">Nº</th>
+              <th scope="col">Proveedor</th>
+              <th scope="col">Concepto</th>
+              <th scope="col">Pagado</th>
+              <th scope="col">Pendiente</th>
+              <th scope="col">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for e in pending_expenses %}
+            <tr>
+              <th>{{e.issued_on}}</th>
+              <th>{{e.pk}}</th>
+              <th>{{e.issuer}}</th>
+              <th>{{e.concept}}</th>
+              <th>{{e.already_paid}}</th>
+              <th>{{e.pending}}</th>
+              <th>{{e.amount}}</th>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <div class="d-flex">
+          <form class="js-crud-form" method="post" action="{% url 'cashflowio-CRUD' %}">
+            {% csrf_token %}
+            <div class="form-inline mb-2">
+              <input type="hidden" name="action" value="add-prepaid">
+              <input type="hidden" name="pay_method" value="T">
+              <label class="sr-only" for="id_expense">Pedido Nº</label>
+              {% render_field add_prepaids.expense class="form-control"%}
+              <label class="sr-only" for="id_amount">Cantidad</label>
+              {% render_field add_prepaids.amount class="form-control ml-2"%}
+              <label class="sr-only" for="id_pay_method">Medio de pago</label>
+              {% render_field add_prepaids.pay_method class="form-control ml-2"%}
+              <button type="submit" class="btn btn btn-outline-success ml-2 js-submit">Añadir prepago</button>
+              <div class="mr-auto ml-3 d-none" id="bg-working">
+                <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
+              </div>
+            </div>
+            <div class="js-errors d-flex"></div>
+          </form>
+        </div>
+      {%else%}
+      <div class="justify-content-center text-center">
+        <h1><i class="fal fa-frown"></i></h1>
+        <h3>Vaya! parece que aún no hemos vendido nada hoy</h3>
+        <h5>Bueno, no desesperes, aun es pronto</h5>
+      </div>
+      {%endif%}
+    </div>
+    </div>
 
   </div>
 

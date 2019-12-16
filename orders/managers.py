@@ -58,6 +58,22 @@ class ActiveItems(models.Manager):
         return items.filter(reference__invoice__isnull=True)
 
 
+class Inbounds(models.Manager):
+    """Get the incomes measured by CashFlowIO model."""
+
+    def get_queryset(self):
+        """Return the queryset."""
+        return super().get_queryset().filter(order__isnull=False)
+
+
+class Outbounds(models.Manager):
+    """Get the expenses measured by CashFlowIO model."""
+
+    def get_queryset(self):
+        """Return the queryset."""
+        return super().get_queryset().filter(expense__isnull=False)
+
+
 class ActiveTimetable(models.Manager):
     """Get the current active timetable for a user."""
 

@@ -14,9 +14,11 @@ from django.urls import reverse, NoReverseMatch
 from django.utils import timezone
 
 from orders import settings
-from orders.models import (BankMovement, Comment, Customer, Expense, Invoice,
-                           Item, Order, OrderItem, PQueue, Timetable)
-from orders.forms import ItemTimesForm, InvoiceForm, OrderItemNotes
+from orders.models import (
+    BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
+    PQueue, Timetable, CashFlowIO)
+from orders.forms import (ItemTimesForm, InvoiceForm, OrderItemNotes,
+                          CashFlowIOForm, )
 from orders.views import CommonContexts
 
 from decouple import config
@@ -516,6 +518,11 @@ class CommonContextOrderDetails(TestCase):
         order = Order.objects.first()
         context = CommonContexts.order_details(self.request, order.pk)
         self.assertIsInstance(context['update_times'], ItemTimesForm)
+
+    def test_cashflowio_form(self):
+        order = Order.objects.first()
+        context = CommonContexts.order_details(self.request, order.pk)
+        self.assertIsInstance(context['add_prepaids'], CashFlowIOForm)
 
     def test_static_vars(self):
         order = Order.objects.first()
@@ -1165,7 +1172,8 @@ class MainViewTests(TestCase):
 
         # Create also an expense
         supplier = Customer.objects.create(
-            name='supplier', phone=0, cp=0, provider=True)
+            name='supplier', address='foo', city='bar', CIF='baz', phone=0,
+            cp=0, provider=True)
         Expense.objects.create(
             issuer=supplier, invoice_no=0, issued_on=date.today(),
             amount=100)
@@ -3237,53 +3245,67 @@ class InvoicesListTest(TestCase):
         self.client.login(username='regular', password='test')
         user = User.objects.first()
         c = Customer.objects.first()
-        for i in range(10):
+        for pm in ('C', 'C', 'V', 'T'):
             order = Order.objects.create(
                 user=user, customer=c, ref_name='Test', delivery=date.today(),
                 budget=0, prepaid=0, )
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
-            Invoice.objects.create(reference=order)
-        card, transfer = Invoice.objects.all()[:2]
-        card.pay_method, transfer.pay_method = 'V', 'T'
-        card.save()
-        transfer.save()
+            Invoice.objects.create(reference=order, pay_method=pm)
+
         resp = self.client.get(reverse('invoiceslist'))
-        self.assertEqual(resp.context['today'].count(), 10)
-        self.assertEqual(resp.context['today_cash']['total'], 100)
-        self.assertEqual(resp.context['today_cash']['total_cash'], 80)
-        self.assertEqual(resp.context['today_cash']['total_card'], 10)
-        self.assertEqual(resp.context['today_cash']['total_transfer'], 10)
+        self.assertEqual(resp.context['cf_inbounds_today'].count(), 4)
+        self.assertEqual(resp.context['cf_inbounds_today_cash']['total'], 40)
+        self.assertEqual(
+            resp.context['cf_inbounds_today_cash']['total_cash'], 20)
+        self.assertEqual(
+            resp.context['cf_inbounds_today_cash']['total_card'], 10)
+        self.assertEqual(
+            resp.context['cf_inbounds_today_cash']['total_transfer'], 10)
+
+    def test_invoices_today_displays_today_prepaids(self):
+        """Test display today's prepaids and their total amount."""
+        self.client.login(username='regular', password='test')
+        u = User.objects.first()
+        c = Customer.objects.first()
+        for pm in ('C', 'C', 'V', 'T'):
+            order = Order.objects.create(
+                user=u, customer=c, ref_name='Test', delivery=date.today(), )
+            OrderItem.objects.create(
+                reference=order, element=Item.objects.last())
+            CashFlowIO.objects.create(order=order, pay_method=pm, amount=5)
+
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['cf_inbounds_today'].count(), 4)
+        self.assertEqual(resp.context['cf_inbounds_today_cash']['total'], 20)
+        self.assertEqual(
+            resp.context['cf_inbounds_today_cash']['total_cash'], 10)
+        self.assertEqual(
+            resp.context['cf_inbounds_today_cash']['total_card'], 5)
+        self.assertEqual(
+            resp.context['cf_inbounds_today_cash']['total_transfer'], 5)
 
     def test_invoices_week_displays_week_invoices(self):
         """Test display week's invoices and their total amount."""
         self.client.login(username='regular', password='test')
         user = User.objects.first()
         c = Customer.objects.first()
-        for i in range(10):
+        for pm in ('C', 'C', 'V', 'T'):
             order = Order.objects.create(
                 user=user, customer=c, ref_name='Test', delivery=date.today(),
                 budget=0, prepaid=0, )
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
-            Invoice.objects.create(reference=order)
+            today = timezone.now().date().isocalendar()[2]
+            delay = timedelta(days=randint(0, today - 1))
+            Invoice.objects.create(
+                reference=order, issued_on=timezone.now() - delay,
+                pay_method=pm)
 
-        today = timezone.now().date().isocalendar()[2]
-        delay = timedelta(days=randint(0, today - 1))
-        for invoice in Invoice.objects.all():
-            invoice.issued_on = invoice.issued_on - delay
-            invoice.save()
-        for invoice in Invoice.objects.all()[:5]:
-            invoice.issued_on = invoice.issued_on - timedelta(days=10)
-            invoice.save()
-        card, transfer = Invoice.objects.reverse()[:2]
-        card.pay_method, transfer.pay_method = 'V', 'T'
-        card.save()
-        transfer.save()
         resp = self.client.get(reverse('invoiceslist'))
-        self.assertEqual(resp.context['week'].count(), 5)
-        self.assertEqual(resp.context['week_cash']['total'], 50)
-        self.assertEqual(resp.context['week_cash']['total_cash'], 30)
+        self.assertEqual(resp.context['week'].count(), 4)
+        self.assertEqual(resp.context['week_cash']['total'], 40)
+        self.assertEqual(resp.context['week_cash']['total_cash'], 20)
         self.assertEqual(resp.context['week_cash']['total_card'], 10)
         self.assertEqual(resp.context['week_cash']['total_transfer'], 10)
 
@@ -3292,24 +3314,20 @@ class InvoicesListTest(TestCase):
         self.client.login(username='regular', password='test')
         user = User.objects.first()
         c = Customer.objects.first()
-        for i in range(10):
+        for pm in ('C', 'C', 'V', 'T'):
             order = Order.objects.create(
                 user=user, customer=c, ref_name='Test', delivery=date.today(),
                 budget=0, prepaid=0, )
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
-            Invoice.objects.create(reference=order)
-        for invoice in Invoice.objects.all()[:5]:
-            invoice.issued_on = invoice.issued_on - timedelta(days=31)
-            invoice.save()
-        card, transfer = Invoice.objects.reverse()[:2]
-        card.pay_method, transfer.pay_method = 'V', 'T'
-        card.save()
-        transfer.save()
+            delay = timedelta(days=randint(0, date.today().day - 1))
+            Invoice.objects.create(
+                reference=order, issued_on=timezone.now() - delay,
+                pay_method=pm)
         resp = self.client.get(reverse('invoiceslist'))
-        self.assertEqual(resp.context['month'].count(), 5)
-        self.assertEqual(resp.context['month_cash']['total'], 50)
-        self.assertEqual(resp.context['month_cash']['total_cash'], 30)
+        self.assertEqual(resp.context['month'].count(), 4)
+        self.assertEqual(resp.context['month_cash']['total'], 40)
+        self.assertEqual(resp.context['month_cash']['total_cash'], 20)
         self.assertEqual(resp.context['month_cash']['total_card'], 10)
         self.assertEqual(resp.context['month_cash']['total_transfer'], 10)
 
@@ -3318,23 +3336,18 @@ class InvoicesListTest(TestCase):
         self.client.login(username='regular', password='test')
         user = User.objects.first()
         c = Customer.objects.first()
-        for i in range(10):
+        for pm in ('C', 'C', 'V', 'T'):
             order = Order.objects.create(
-                user=user, customer=c, ref_name='Test', delivery=date.today(),
-                budget=0, prepaid=0, )
+                user=user, customer=c, ref_name='Test', delivery=date.today())
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
-            Invoice.objects.create(reference=order)
-        for invoice in Invoice.objects.all()[:5]:
-            invoice.issued_on = invoice.issued_on - timedelta(days=30)
-            invoice.save()
-        card, transfer = Invoice.objects.reverse()[:2]
-        card.pay_method, transfer.pay_method = 'V', 'T'
-        card.save()
-        transfer.save()
+            Invoice.objects.create(
+                reference=order, issued_on=timezone.now() - timedelta(days=30),
+                pay_method=pm)
+
         resp = self.client.get(reverse('invoiceslist'))
-        # 100€ - 10€ (card) - 10€ (transfer)
-        self.assertEqual(resp.context['all_time_cash']['total_cash'], 80)
+        # 40€ - 10€ (card) - 10€ (transfer)
+        self.assertEqual(resp.context['all_time_cash']['total_cash'], 20)
 
     def test_bank_movements_displays_last_ten(self):
         """Test bank movements list."""
@@ -3410,6 +3423,20 @@ class InvoicesListTest(TestCase):
         Invoice.objects.create(reference=order, pay_method='C')
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['balance'], 0)
+
+    def test_pending_expenses(self):
+        p = Customer.objects.create(name='foo', address='bar', city='baz',
+                                    phone=0, cp=0, CIF='CIF', provider=True)
+        for n in range(4):
+            e = Expense.objects.create(
+                issuer=p, invoice_no='foo', issued_on=date.today(),
+                concept='bar', amount=10)
+            if n < 2:
+                e.kill()
+        self.client.login(username='regular', password='test')
+        resp = self.client.get(reverse('invoiceslist'))
+        self.assertEqual(resp.context['pending_expenses'].count(), 2)
+        self.assertEqual(resp.context['pending_expenses_cash'], 20)
 
     def test_invoices_view_current_user(self):
         """Test the current user."""
@@ -5192,7 +5219,6 @@ class ActionsPostMethodRaises(TestCase):
                    'comment-read',
                    'send-to-order',
                    'send-to-order-express',
-                   'ticket-to-invoice',
                    'order-edit',
                    'order-edit-add-prepaid',
                    'order-edit-date',
@@ -5483,7 +5509,6 @@ class ActionsPostMethodCreate(TestCase):
         """
         actions = ('order-comment',
                    'comment-read',
-                   'ticket-to-invoice',
                    'order-edit',
                    'order-edit-date',
                    'customer-edit',
@@ -5853,42 +5878,6 @@ class ActionsPostMethodCreate(TestCase):
         self.assertFalse(data['form_is_valid'])
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_ticket_to_invoice_valid(self):
-        order = Order.objects.first()
-        item = Item.objects.create(name='test',  fabrics=0, price=10)
-        OrderItem.objects.create(element=item, reference=order, qty=3)
-        resp = self.client.post(
-            reverse('actions'),
-            {'action': 'ticket-to-invoice', 'pk': order.pk, 'pay_method': 'V',
-             'test': True, })
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-        self.assertTrue(Invoice.objects.get(reference=order))
-        self.assertEqual(data['redirect'],
-                         reverse('order_view', kwargs={'pk': order.pk}))
-
-    def test_ticket_to_invoice_not_valid(self):
-        order = Order.objects.first()
-        item = Item.objects.create(name='test',  fabrics=0, price=10)
-        OrderItem.objects.create(element=item, reference=order, qty=3)
-        resp = self.client.post(
-            reverse('actions'),
-            {'action': 'ticket-to-invoice', 'pk': order.pk, 'void': 'V',
-             'test': True, })
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertFalse(data['form_is_valid'])
-        self.assertFalse(Invoice.objects.filter(reference=order))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/regular_form.html')
-        vars = ('form', 'items', 'order', 'total', 'modal_title', 'pk',
-                'action', 'submit_btn', 'custom_form', )
         self.assertTrue(self.context_vars(context, vars))
 
 
@@ -7143,6 +7132,87 @@ class CommentsCRUD(TestCase):
             resp.content.decode("utf-8"), 'The action was not found.')
 
 
+class CashFlowIOCRUDTests(TestCase):
+    """Test the ajax call for CashFlowIO model."""
+
+    def setUp(self):
+        """Create the necessary items on database at once."""
+        u = User.objects.create_user(username='foo', password='bar')
+
+        # Create a customer
+        c = Customer.objects.create(name='Customer foo', phone=0, cp=48100)
+
+        # Create an item
+        i = Item.objects.create(name='test', fabrics=10, price=30)
+
+        # Create some orders with items
+        o = Order.objects.create(
+            user=u, customer=c, ref_name='foo', delivery=date.today(), )
+        OrderItem.objects.create(reference=o, element=i, qty=10)
+
+        # Load client
+        self.client = Client()
+
+        # Log the user in
+        login = self.client.login(username='foo', password='bar')
+        if not login:
+            raise RuntimeError('Couldn\'t login')
+
+    def test_no_action_raises_500(self):
+        """Action is mandatory."""
+        o = Order.objects.first()
+        resp = self.client.post(reverse('cashflowio-CRUD'),
+                                {'order': o.pk,
+                                 'amount': 100,
+                                 'pay_method': 'C',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No action was given.')
+
+    def test_form_saves_oject(self):
+        o = Order.objects.first()
+        resp = self.client.post(reverse('cashflowio-CRUD'),
+                                {'action': 'add-prepaid',
+                                 'order': o.pk,
+                                 'amount': 100,
+                                 'pay_method': 'C',
+                                 })
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertTrue(data['form_is_valid'])
+        self.assertTrue(data['reload'])
+        self.assertEqual(o.already_paid, 100)
+        self.assertEqual(o.pending, 200)
+
+    def test_form_throws_error(self):
+        o = Order.objects.first()
+        resp = self.client.post(reverse('cashflowio-CRUD'),
+                                {'action': 'add-prepaid',
+                                 'order': o.pk,
+                                 'amount': 500,
+                                 'pay_method': 'C',
+                                 })
+        self.assertEqual(resp.status_code, 200)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+        msg = 'No se puede pagar más de la cantidad pendiente (300.00).'
+        self.assertEqual(data['errors'], msg)
+
+    def test_action_not_found_raises_500(self):
+        """Action is mandatory."""
+        o = Order.objects.first()
+        resp = self.client.post(reverse('cashflowio-CRUD'),
+                                {'action': 'void',
+                                 'order': o.pk,
+                                 'amount': 500,
+                                 'pay_method': 'C',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'The action was not found.')
+
+
 class ChangelogTests(TestCase):
     """Test the markdown modal."""
 
@@ -7907,6 +7977,63 @@ class CustomerHintsTests(TestCase):
     def test_search_cannot_find_anything(self):
         resp = self.client.get(
             reverse('customer-hints'), {'search': 'void', 'test': True, })
+        self.assertEqual(resp.context[0]['name'], 'No hay coincidencias...')
+        self.assertEqual(resp.context[0]['id'], 'void')
+        with self.assertRaises(KeyError):
+            resp.context[1]
+
+
+class GroupHintsTests(TestCase):
+    """Test the customer hints AJAX call."""
+
+    def setUp(self):
+        names = ('foo', 'bar', 'baz', 'sar', )
+        for n in names:
+            Customer.objects.create(name=n, phone=0, cp=0, group=True)
+
+    def test_only_get_method_is_allowed(self):
+        resp = self.client.post(reverse('group-hints'))
+        self.assertEqual(resp.status_code, 405)
+
+    def test_no_string_raises_404(self):
+        resp = self.client.get(reverse('group-hints'))
+        self.assertEqual(resp.status_code, 404)
+
+    def test_only_groups_are_sought(self):
+        resp = self.client.get(
+            reverse('group-hints'), {'search': 'ba', 'test': True, })
+        self.assertTrue(resp.context[0]['name'] in ('bar', 'baz'))
+        self.assertTrue(resp.context[1]['name'] in ('bar', 'baz'))
+        with self.assertRaises(KeyError):
+            resp.context[2]
+        c = Customer.objects.get(name='bar')
+        c.group = False
+        c.save()
+        resp = self.client.get(
+            reverse('group-hints'), {'search': 'ba', 'test': True, })
+        self.assertNotEqual(resp.context[0]['name'], 'bar')
+        with self.assertRaises(KeyError):
+            resp.context[1]
+
+    def test_searches_first_in_startswith(self):
+        resp = self.client.get(
+            reverse('group-hints'), {'search': 'ba', 'test': True, })
+        self.assertTrue(resp.context[0]['name'] in ('bar', 'baz'))
+        self.assertTrue(resp.context[1]['name'] in ('bar', 'baz'))
+        with self.assertRaises(KeyError):
+            resp.context[2]
+
+    def test_search_in_the_whole_string(self):
+        resp = self.client.get(
+            reverse('group-hints'), {'search': 'ar', 'test': True, })
+        self.assertTrue(resp.context[0]['name'] in ('bar', 'sar'))
+        self.assertTrue(resp.context[1]['name'] in ('bar', 'sar'))
+        with self.assertRaises(KeyError):
+            resp.context[2]
+
+    def test_search_cannot_find_anything(self):
+        resp = self.client.get(
+            reverse('group-hints'), {'search': 'void', 'test': True, })
         self.assertEqual(resp.context[0]['name'], 'No hay coincidencias...')
         self.assertEqual(resp.context[0]['id'], 'void')
         with self.assertRaises(KeyError):

@@ -109,13 +109,15 @@ $(function () {
     e.preventDefault()
     var form = $(this)
     var formData = form.serializeArray()
+    var btn = form.find('.js-submit')
+    var errorBox = form.find('.js-errors')
     $.ajax({
       url: form.attr('action'),
       data: formData,
       type: form.attr('method'),
       dataType: 'json',
       beforeSend: function () {
-        form.find('.js-submit').addClass('d-none')
+        btn.addClass('d-none')
         form.find('.js-bg-working').removeClass('d-none')
       },
       success: function (data) {
@@ -128,7 +130,8 @@ $(function () {
             $(data.html_id).html(data.html)
           }
         } else {
-          $('js-errors', this).html(data.errors)
+          btn.removeClass('d-none')
+          errorBox.html(data.errors)
         }
       }
     })
@@ -241,36 +244,41 @@ $(function () {
     // return false
   }
 
-  function customerHints () {
+  function Hints () {
     // Shows some hints as long as user types in
     var search = $(this).val()
+    var url = $(this).attr('id')
+    var hiddenInput = '#' + $(this).next().attr('id')
+    var outcome = '#' + $(this).next().next().attr('id')
     $.ajax({
-      url: '/customer-hints/',
+      url: '/' + url + '/',
       type: 'get',
       data: $.param({ search: search }),
       dataType: 'json',
       success: function (data) {
-        $('#search-result').empty().addClass('border')
+        $(outcome).empty().addClass('border')
         var len = Object.keys(data).length
         for (var i = 0; i < len; i++) {
           var id = data[i].id
           var fname = data[i].name
-          $('#search-result').append(
-            "<span class='py-1 js-select-customer px-2' value='" + id + "'>" + fname + '</span>')
+          $(outcome).append(
+            "<span class='py-1 js-hint px-2' value='" + id + "'>" + fname + '</span>')
         }
         // binding click event to options shown
-        $('#search-result span').bind('click', function () {
+        $(outcome + ' span').bind('click', function () {
+          console.log('click');
           var name = $(this).text()
           var pk = $(this).attr('value')
+          console.log(name, pk);
           if (pk !== 'void') {
-            $('#action-modal #customer-hints').val(name)
-            $('#action-modal #selected-customer').attr('value', pk)
-            $('#search-result').empty().removeClass('border')
+            $('#action-modal ' + '#' + url).val(name)
+            $('#action-modal ' + hiddenInput).attr('value', pk)
+            $(outcome).empty().removeClass('border')
           }
         })
       },
       error: function (data) {
-        $('#search-result').empty()
+        $(outcome).empty()
       }
     })
   }
@@ -298,7 +306,7 @@ $(function () {
   $('#search').on('submit', '.js-search-order', searchAction)
 
   // Customer hints for orders
-  $('#action-modal').on('keyup', '#customer-hints', customerHints)
+  $('#action-modal').on('keyup', '.js-hints', Hints)
 
   // actions new CRUD process (POST)
   $('#root').on('submit', '.js-crud-form', saveForm)

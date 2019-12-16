@@ -117,7 +117,7 @@ th{
   background-color: #daf9bc;
 }
 
-.js-select-customer:hover{
+.js-hint:hover{
   background-color: #daf9bc;
   cursor: pointer;
 }

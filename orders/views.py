@@ -25,11 +25,12 @@ from rest_framework import viewsets
 
 from . import serializers, settings
 from .utils import prettify_times
-from .forms import (CommentForm, CustomerForm, EditDateForm,
-                    InvoiceForm, ItemForm, OrderForm, OrderItemForm,
-                    TimetableCloseForm, ItemTimesForm, OrderItemNotes,)
+from .forms import (
+    CommentForm, CustomerForm, EditDateForm, InvoiceForm, ItemForm, OrderForm,
+    OrderItemForm, TimetableCloseForm, ItemTimesForm, OrderItemNotes,
+    CashFlowIOForm, )
 from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
-                     Order, OrderItem, PQueue, Timetable, )
+                     Order, OrderItem, PQueue, Timetable, CashFlowIO, )
 
 from decouple import config
 
@@ -118,6 +119,7 @@ class CommonContexts:
                 'order_est': order_est,
                 'order_est_total': order_est_total,
                 'update_times': ItemTimesForm(),
+                'add_prepaids': CashFlowIOForm(),
                 'comments': comments,
                 'user': cur_user,
                 'now': now,
@@ -748,14 +750,16 @@ def itemslist(request):
 @timetable_required
 def invoiceslist(request):
     """List all the invoices."""
-    today = Invoice.objects.filter(issued_on__date=timezone.now().date())
+    # Invoiced today, current week and current month
+    cf_inbounds_today = CashFlowIO.inbounds.filter(
+        creation__date=timezone.now().date())
     week = Invoice.objects.filter(
         issued_on__week=timezone.now().date().isocalendar()[1])
     month = Invoice.objects.filter(
         issued_on__month=timezone.now().date().month)
     all_time_cash = Invoice.objects.filter(pay_method='C')
     all_time_cash = all_time_cash.aggregate(total_cash=Sum('amount'))
-    today_cash = today.aggregate(
+    cf_inbounds_today_cash = cf_inbounds_today.aggregate(
         total=Sum('amount'),
         total_cash=Sum('amount', filter=Q(pay_method='C')),
         total_card=Sum('amount', filter=Q(pay_method='V')),
@@ -774,6 +778,7 @@ def invoiceslist(request):
         total_transfer=Sum('amount', filter=Q(pay_method='T')),
         )
 
+    # bank-shop status
     bank_movements = BankMovement.objects.all()[:10]
     expenses = Expense.objects.filter(pay_method='C').aggregate(
         total_cash=Sum('amount')
@@ -788,6 +793,12 @@ def invoiceslist(request):
     balance = all_time_deposit['total_cash'] - all_time_cash['total_cash']
     balance = balance + expenses['total_cash']
 
+    # Pending expenses
+    pending_expenses = Expense.objects.filter(closed=False)
+    pending_expenses_cash = 0
+    for e in pending_expenses:
+        pending_expenses_cash += e.pending
+
     cur_user = request.user
     now = datetime.now()
     try:
@@ -798,13 +809,16 @@ def invoiceslist(request):
     view_settings = {'user': cur_user,
                      'now': now,
                      'session': session,
-                     'today': today,
                      'week': week,
                      'month': month,
-                     'today_cash': today_cash,
                      'week_cash': week_cash,
                      'month_cash': month_cash,
                      'bank_movements': bank_movements,
+                     'cf_inbounds_today': cf_inbounds_today,
+                     'cf_inbounds_today_cash': cf_inbounds_today_cash,
+                     'pending_expenses': pending_expenses,
+                     'pending_expenses_cash': pending_expenses_cash,
+                     'add_prepaids': CashFlowIOForm(),
                      'all_time_cash': all_time_cash,
                      'all_time_deposit': all_time_deposit,
                      'balance': balance,
@@ -919,13 +933,11 @@ def order_express_view(request, pk):
             order.ref_name = 'Venta express con arreglo'
             order.save()
         elif pay_method:  # Invoice the order
-            form = InvoiceForm(request.POST)
-            if form.is_valid():
-                invoice = form.save(commit=False)
-                invoice.reference = order
-                invoice.save()
-                if request.POST.get('email', None):
-                    pass  # define the email sending options
+            i = Invoice.objects.create(reference=order, pay_method=pay_method)
+            i.full_clean()
+            if request.POST.get('email', None):
+                pass  # define the email sending options
+
         else:
             raise Http404('Something went wrong with the request.')
 
@@ -1529,7 +1541,7 @@ class Actions(View):
         elif action == 'object-item-add':
             form = ItemForm(request.POST)
             if form.is_valid():
-                add_item = form.save()
+                form.save()
                 items = Item.objects.all()[:11]
                 data['html_id'] = '#item-selector'
                 data['form_is_valid'] = True
@@ -1643,34 +1655,6 @@ class Actions(View):
                        'js_data_pk': '0',
                        }
             template = 'includes/ticket.html'
-
-        # Invoice Order (regular only POST)
-        elif action == 'ticket-to-invoice':
-            order = get_object_or_404(Order, pk=pk)
-            items = OrderItem.objects.filter(reference=order)
-            total = items.aggregate(
-                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
-            form = InvoiceForm(request.POST)
-            if form.is_valid():
-                invoice = form.save(commit=False)
-                invoice.reference = order
-                invoice.save()
-                data['redirect'] = reverse(
-                    'order_view', kwargs={'pk': order.pk})
-                data['form_is_valid'] = True
-            else:
-                data['form_is_valid'] = False
-                context = {'form': form,
-                           'items': items,
-                           'order': order,
-                           'total': total,
-                           'modal_title': 'Facturar',
-                           'pk': order.pk,
-                           'action': 'ticket-to-invoice',
-                           'submit_btn': 'Facturar',
-                           'custom_form': 'includes/custom_forms/invoice.html',
-                           }
-                template = 'includes/regular_form.html'
 
         # Edit order (POST)
         elif action == 'order-edit':
@@ -2201,6 +2185,31 @@ class CommentsCRUD(View):
             return JsonResponse(data)
 
 
+class CashFlowIOCRUD(View):
+    """Create, update and delete CashFlowIO instances"""
+    def get(self, request):
+        pass
+
+    def post(self, request):
+        action = self.request.POST.get('action', None)
+
+        if not action:
+            return HttpResponseServerError('No action was given.')
+
+        if action == 'add-prepaid':
+            form = CashFlowIOForm(request.POST)
+            if form.is_valid():
+                form.save()
+                data = {'reload': True, 'form_is_valid': True}
+            else:
+                first = list(form.errors.values())[0][0]
+                data = {'errors': first, 'form_is_valid': False}
+        else:
+            return HttpResponseServerError('The action was not found.')
+
+        return JsonResponse(data)
+
+
 def changelog(request):
     """Display the changelog."""
     if request.method != 'GET':
@@ -2416,7 +2425,7 @@ def item_selector(request):
 
 @require_GET
 def customer_hints(request):
-    """Provide hints on customers when adding an order."""
+    """Provide hints on customers when adding/editing an order."""
     search_str = request.GET.get('search')
     if not search_str:
         raise Http404('No string selected')
@@ -2426,6 +2435,35 @@ def customer_hints(request):
 
     if not starts:
         outcomes = customers.filter(name__icontains=search_str)
+    else:
+        outcomes = starts
+
+    resp = dict()
+    if outcomes:
+        for n, c in enumerate(outcomes):
+            resp[n] = dict(id=c.id, name=c.name, )
+    else:
+        resp[0] = dict(id='void', name='No hay coincidencias...', )
+
+    if request.GET.get('test', None):
+        template = 'tz/base.html'  # Just a dummy
+        return render(request, template, resp)
+
+    return JsonResponse(resp)
+
+
+@require_GET
+def group_hints(request):
+    """Provide hints on groups when adding/editing an order."""
+    search_str = request.GET.get('search')
+    if not search_str:
+        raise Http404('No string selected')
+
+    groups = Customer.objects.filter(group=True)
+    starts = groups.filter(name__istartswith=search_str)
+
+    if not starts:
+        outcomes = groups.filter(name__icontains=search_str)
     else:
         outcomes = starts
 
