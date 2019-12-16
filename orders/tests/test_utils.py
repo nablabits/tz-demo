@@ -23,13 +23,13 @@ class WeekColorTest(TestCase):
         self.assertEqual(color, settings.WEEK_COLORS['this'])
 
     def test_next_week_returns_proper_color(self):
-        """The color is stored in settings.py."""
+        """Likely to fail close to the end of the year."""
         delivery = date.today() + timedelta(days=7)
         color = WeekColor(delivery).get()
         self.assertEqual(color, settings.WEEK_COLORS['next'])
 
     def test_in_two_weeks_returns_proper_color(self):
-        """The color is stored in settings.py."""
+        """Likely to fail close to the end of the year."""
         delivery = date.today() + timedelta(days=14)
         color = WeekColor(delivery).get()
         self.assertEqual(color, settings.WEEK_COLORS['in_two'])
