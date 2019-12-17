@@ -253,16 +253,6 @@ class Order(models.Model):
         return WeekColor(self.delivery).get()
 
     @property
-    def progress(self):
-        """Return the status in percentage."""
-        if self.status in ('6', '7', '8'):
-            return 100
-        elif self.status == '1':
-            return 0
-        else:
-            return round((int(self.status)-2) * 100 / 4, 0)
-
-    @property
     def has_no_items(self):
         """Determine if the order has no items."""
         items = OrderItem.objects.filter(reference=self)
