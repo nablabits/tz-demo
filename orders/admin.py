@@ -4,7 +4,7 @@ from django.contrib import admin
 
 from .models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
-    PQueue, Timetable, CashFlowIO, StatusShift, )
+    PQueue, Timetable, CashFlowIO, StatusShift, ExpenseCategory, )
 
 from django.utils.translation import gettext_lazy as _
 
@@ -118,8 +118,32 @@ class ExpenseAdmin(admin.ModelAdmin):
     """Beautify the expense admin view."""
 
     list_display = ('pk', 'issued_on', 'issuer', 'invoice_no', 'concept',
-                    'amount', 'closed')
-    list_filter = ('issued_on', IssuerByName, )
+                    'category', 'amount', 'consultancy', 'closed')
+    list_filter = ('issued_on', 'category', IssuerByName,)
+
+
+class CFByType(admin.SimpleListFilter):
+    """Set the filter by inbounds/outbounds."""
+    title = _('inbound-outbound')
+
+    parameter_name = 'cf_by_type'
+
+    def lookups(self, request, model_admin):
+        """Returns a list of tuples.
+
+        The first element in each tuple is the coded value for the option that
+        will appear in the URL query. The second element is the human-readable
+        name for the option that will appear
+        in the right sidebar.
+        """
+
+        return (('in', 'Inbounds'), ('out', 'Outbounds'), )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'in':
+            return queryset.filter(order__isnull=False)
+        else:
+            return queryset.filter(expense__isnull=False)
 
 
 @admin.register(CashFlowIO)
@@ -128,6 +152,8 @@ class CashFlowIOAdmin(admin.ModelAdmin):
 
     list_display = (
         'pk', 'creation', 'order', 'expense', 'amount', 'pay_method', )
+
+    list_filter = ('creation', CFByType, )
 
 
 @admin.register(BankMovement)
@@ -154,5 +180,5 @@ class TimetableAdmin(admin.ModelAdmin):
     list_filter = ('user', )
 
 
-# admin.site.register(StatusShift)
 admin.site.register(Comment)
+admin.site.register(ExpenseCategory)

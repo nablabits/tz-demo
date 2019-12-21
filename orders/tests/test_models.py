@@ -12,7 +12,7 @@ from django.utils import timezone
 
 from orders.models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
-    PQueue, Timetable, CashFlowIO, StatusShift, )
+    PQueue, Timetable, CashFlowIO, StatusShift, ExpenseCategory, )
 
 from orders.settings import PAYMENT_METHODS, WEEK_COLORS
 
@@ -2236,6 +2236,33 @@ class TestInvoice(TestCase):
             linestr, ('more than 25 characters', 'A very long string with'))
 
 
+class TestExpenseCategory(TestCase):
+
+    def test_creation_is_a_date_time_field(self):
+        e = ExpenseCategory.objects.first()  # default
+        self.assertIsInstance(e.creation, datetime)
+
+    def test_name_max_length(self):
+        msg = 'value too long for type character varying(64)'
+        with self.assertRaisesMessage(DataError, msg):
+            ExpenseCategory.objects.create(name=70 * 'a')
+
+    def test_name_is_unique(self):
+        with self.assertRaises(IntegrityError):
+            ExpenseCategory.objects.create(name='default')
+
+    def test_description_can_be_blank_and_null(self):
+        e = ExpenseCategory.objects.create(name='test')
+        self.assertEqual(e.description, None)
+
+        b = ExpenseCategory(name='blank')
+        self.assertFalse(b.full_clean())
+
+    def test_str(self):
+        e = ExpenseCategory.objects.first()  # default
+        self.assertEqual(e.__str__(), 'default')
+
+
 class TestExpense(TestCase):
     """Test the expense model."""
 
@@ -2357,6 +2384,27 @@ class TestExpense(TestCase):
             expense._meta.get_field('pay_method').verbose_name,
             'Medio de pago')
 
+    def test_category(self):
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.category, ExpenseCategory)
+        self.assertEqual(expense.category.name, 'default')
+
+        ec = ExpenseCategory.objects.create(name='foo')
+        expense.category = ec
+        expense.save()
+
+        self.assertEqual(expense.category.name, 'foo')
+
+        ec.delete()
+        expense = Expense.objects.get(pk=expense.pk)
+        self.assertEqual(expense.category.name, 'default')
+
+
+
+
     def test_in_b_field(self):
         """Test the field."""
         expense = Expense.objects.create(
@@ -2394,6 +2442,15 @@ class TestExpense(TestCase):
         self.assertEqual(
             expense._meta.get_field('closed').verbose_name,
             'Cerrado')
+
+    def test_consultancy_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100,
+            notes='Notes')
+        self.assertIsInstance(expense.consultancy, bool)
+        self.assertTrue(expense.consultancy)
 
     def test_str(self):
         expense = Expense.objects.create(

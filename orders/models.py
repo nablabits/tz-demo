@@ -21,6 +21,13 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 
 
+def default_category():
+    """Get or create the default category for expenses."""
+    obj, _ = ExpenseCategory.objects.get_or_create(
+        name='default', description='The default category')
+    return obj.pk
+
+
 class Customer(models.Model):
     """Hold the data relative to Customers."""
 
@@ -978,6 +985,16 @@ class Invoice(models.Model):
         ordering = ['-invoice_no']
 
 
+class ExpenseCategory(models.Model):
+    """Set categories for each expense so we can classify them."""
+    creation = models.DateTimeField(default=timezone.now)
+    name = models.CharField(max_length=64, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.name
+
+
 class Expense(models.Model):
     """Hold the general expenses of the business."""
 
@@ -993,9 +1010,12 @@ class Expense(models.Model):
     pay_method = models.CharField(
         'Medio de pago', max_length=1, choices=settings.PAYMENT_METHODS,
         default='T')
+    category = models.ForeignKey(ExpenseCategory, default=default_category,
+                                 on_delete=models.SET_DEFAULT)
     in_b = models.BooleanField('En B', default=False)
     notes = models.TextField('Observaciones', blank=True, null=True)
     closed = models.BooleanField('Cerrado', default=False)
+    consultancy = models.BooleanField(default=True)
 
     def __str__(self):
         return '{} {}'.format(self.pk, self.issuer.name)
