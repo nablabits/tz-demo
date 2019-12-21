@@ -2,8 +2,9 @@
 
 from django.contrib import admin
 
-from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
-                     Order, OrderItem, PQueue, Timetable, CashFlowIO)
+from .models import (
+    BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
+    PQueue, Timetable, CashFlowIO, StatusShift, )
 
 from django.utils.translation import gettext_lazy as _
 
@@ -136,6 +137,14 @@ class BankMovementAdmin(admin.ModelAdmin):
     list_display = ('action_date', 'amount', 'notes', )
 
 
+@admin.register(StatusShift)
+class StatusTrackerAdmin(admin.ModelAdmin):
+    """Beautify the status tracker admin view."""
+
+    list_display = ('order', 'status', 'date_in', 'date_out', 'notes', )
+    list_filter = ('date_in', )
+
+
 @admin.register(Timetable)
 class TimetableAdmin(admin.ModelAdmin):
     """Beautify the Timetable admin view."""
@@ -145,4 +154,5 @@ class TimetableAdmin(admin.ModelAdmin):
     list_filter = ('user', )
 
 
+# admin.site.register(StatusShift)
 admin.site.register(Comment)

@@ -3,9 +3,11 @@
 ### v??, date
   * **Nuevo:** Ahora los pedidos aceptan un parametro grupo para clientes
   particulares que hacen un pedido para su grupo.
-
   * **Nuevo:** ya podemos llevar el control de los prepagos y las facturas
   pendientes de cargo.
+  * **Nuevo:** Ahora llevamos el control de las distintas fases de los pedidos.
+  * **Mejora:** Las fases dentro de los pedidos se han adaptado para cuadrar con
+  la vista kanban.
 
 ### v83, Dic 6
   * **Mejora:** ya se pueden añadir clientes escribiendo el nombre directamente

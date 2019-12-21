@@ -25,8 +25,6 @@ urlpatterns = [
     path('search', views.search, name='search'),
 
     # List related urls
-    # re_path(r'^orders&orderby=(?P<orderby>\D+)/',
-    #         views.orderlist, name='orderlist'),
     path('kanban', views.kanban, name='kanban'),
     path('customers', views.customerlist, name='customerlist'),
     path('items', views.itemslist, name='itemslist'),

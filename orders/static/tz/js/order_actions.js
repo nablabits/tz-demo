@@ -140,7 +140,7 @@ $(function () {
   var kanbanJump = function () {
     // Move within kanban statuses
     var pk = $(this).attr('data-pk')
-    var direction = $(this).attr('data-direction')
+    var origin = $(this).attr('id')
 
     // Show spinner and hide arrows to avoid problems
     var spinner = '#bg-working-' + pk
@@ -150,7 +150,7 @@ $(function () {
     $.ajax({
       url: '/orders-CRUD/',
       data: $.param({
-        'pk': pk, 'direction': direction, 'action': 'kanban-jump'
+        'pk': pk, 'origin': origin, 'action': 'kanban-jump'
       }),
       type: 'post',
       dataType: 'json',

@@ -60,7 +60,7 @@ class Customer(models.Model):
         if self.provider and self.group:
             raise ValidationError(
                 {'provider': _('Un cliente no puede ser proveedor y grupo al' +
-                               'mismo tiempo')})
+                               ' mismo tiempo')})
 
     def save(self, *args, **kwargs):
         """Override save method."""
@@ -84,16 +84,17 @@ class Order(models.Model):
 
     STATUS = (
         # Shop
-        ('1', 'Recibido'),
+        ('1', 'Icebox'),
         # WorkShop
         ('2', 'En cola'),
-        ('3', 'Corte'),
-        ('4', 'Confección'),
-        ('5', 'Remate'),
+        ('3', 'En proceso'),
+        ('4', 'Confección'),  # deprecated since 2020
+        ('5', 'Remate'),  # deprecated since 2020
         # Shop
         ('6', 'En espera'),
         ('7', 'Entregado'),
-        ('8', 'Cancelado')
+        ('8', 'Cancelado'),
+        ('9', 'Facturado')
     )
 
     PRIORITY = (
@@ -129,7 +130,7 @@ class Order(models.Model):
 
     # Pricing
     # budget was deprecated by 2019 on invoices behalf
-    # prepaid was deprecated by 2020 on payments model behalf
+    # prepaid was deprecated by 2020 on cashflow model behalf
     budget = models.DecimalField(
         'Presupuesto', max_digits=7, decimal_places=2, blank=True, null=True)
     prepaid = models.DecimalField(
@@ -138,8 +139,7 @@ class Order(models.Model):
 
     # Custom managers
     objects = models.Manager()
-    active = managers.ActiveOrders()
-    pending_orders = managers.PendingOrders()
+    live = managers.LiveOrders()
     outdated = managers.OutdatedOrders()
     obsolete = managers.ObsoleteOrders()
 
@@ -157,6 +157,14 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save method."""
+        # ensure invoiced orders are in status 9
+        try:
+            self.invoice
+        except ObjectDoesNotExist:
+            pass
+        else:
+            self.status = '9'
+
         # ensure trapuzarrak is always Confirmed
         if self.customer and self.customer.name.lower() == 'trapuzarrak':
             self.confirmed = True
@@ -165,13 +173,54 @@ class Order(models.Model):
         if self.membership and not self.membership.group:
             self.membership = None
 
+        # Since 2020 statuses 4 & 5 are deprecated so redirect them to status 3
+        if self.status in ('4', '5'):
+            self.status = '3'
+
         super().save(*args, **kwargs)
 
+        """After saving, add a new StatusShift (will be created only if status
+        has changed)"""
+        StatusShift.objects.create(order=self, status=self.status)
+
     def kill(self, pay_method='C'):
-        """Close the debt."""
+        """Kill the order.
+
+        Kill is the only entry point for invoicing orders. It sets the last
+        state an order should have.
+        """
+        # Avoid killed orders to be rekilled
+        try:
+            self.invoice
+        except ObjectDoesNotExist:
+            pass
+        else:
+            exit
+
+        # If there are pending payments, kill'em
         if self.pending:
             CashFlowIO.objects.create(
                 order=self, amount=self.pending, pay_method=pay_method)
+
+        """
+        Only shifting up to status 7 with kanban_forward updates the
+        delivery date, so update it if we're delayed (like for express orders).
+        """
+        if self.status != '7':
+            self.deliver()  # Creates status shift
+
+        # Set status to 9 (invoiced)
+        self.status = '9'
+        self.save()  # Also creates status shift and closes it
+
+        # And issue the invoice
+        i = Invoice(reference=self, pay_method=pay_method, amount=self.total)
+        i.save(kill=True)
+
+        # Finally archive the project in todoist
+        self.archive()
+
+        return
 
     @property
     def tz(self):
@@ -190,14 +239,10 @@ class Order(models.Model):
     @property
     def total(self):
         """Get the total amount for the invoice."""
-        items = OrderItem.objects.filter(reference=self)
-        total = items.aggregate(
+        items = self.items.aggregate(
             total=models.Sum(models.F('qty') * models.F('price'),
                              output_field=models.DecimalField()))
-        if total['total'] is None:
-            return 0
-        else:
-            return total['total']
+        return [items['total'] if items['total'] else 0][0]
 
     @property
     def total_bt(self):
@@ -238,14 +283,9 @@ class Order(models.Model):
             return True
 
     @property
-    def prev_status(self):
-        """Determine the previous status."""
-        return str(int(self.status) - 1)
-
-    @property
-    def next_status(self):
-        """Determine the next status."""
-        return str(int(self.status) + 1)
+    def days_open(self):
+        """Calculate the days the order has been open."""
+        return (date.today() - self.status_shift.first().date_in.date()).days
 
     @property
     def color(self):
@@ -270,7 +310,7 @@ class Order(models.Model):
     def times(self):
         """Determine how many of the trackeable times have been tracked."""
         tracked = 0
-        items = self.orderitem_set.filter(stock=False)
+        items = self.items.filter(stock=False)
         for item in items:
             tracked = tracked + item.time_quality
         return (tracked, len(items) * 3)
@@ -299,36 +339,50 @@ class Order(models.Model):
 
     def deliver(self):
         """Deliver the order and update the date."""
-        self.status = 7
+        self.status = '7'
         self.delivery = date.today()
         return self.save()
 
     def kanban_forward(self):
-        """Jump to the next kanban stage."""
+        """Shift to the next kanban stage.
+
+        Although statuses 4 & 5 were deprecated since 2020, keep them a while.
+        """
         if self.status == '1':
             self.status = '2'
         elif self.status == '2':
             self.status = '3'
-        elif self.status in ['3', '4', '5']:
+        elif self.status in ('3', '4', '5'):
             self.status = '6'
         elif self.status == '6':
             self.status = '7'
             self.delivery = date.today()
+        elif self.status == '8':
+            self.status = '1'
         else:
-            raise ValueError('The status %s does not allow to jump forward.')
-
+            msg = 'Can\'t shift the status over 7 (call `kill()`).'
+            raise ValidationError({'status': _(msg)})
         self.save()
 
     def kanban_backward(self):
-        """Jump back to previous kanban stage."""
+        """Jump back to previous kanban stage.
+
+        Although statuses 4 & 5 were deprecated since 2020, keep them a while.
+        """
         if self.status == '2':
             self.status = '1'
-        elif self.status in ['3', '4', '5']:
+        elif self.status in ('3', '4', '5'):
             self.status = '2'
-        elif self.status == '6':
+        elif self.status in ('6', '7'):  # Order returned to fix something
             self.status = '3'
+        elif self.status == '8':  # resume order
+            self.status = '1'
+        elif self.status == '9':
+            msg = 'Invoiced orders can\'t change their status.'
+            raise ValidationError({'status': _(msg)})
         else:
-            raise ValueError('The status %s does not allow to jump backward.')
+            msg = 'Can\'t shift the status below 1.'
+            raise ValidationError({'status': _(msg)})
 
         self.save()
 
@@ -452,11 +506,8 @@ class Item(models.Model):
                               self.notes == item.notes
                               )
                 if duplicated:
-                    raise ValidationError({'name': _('Items cannot have the ' +
-                                                     'same name the same ' +
-                                                     'size and the same class'
-                                                     )})
-                    break
+                    msg = 'This item it\'s already in the db'
+                    raise ValidationError({'name': _(msg)})
 
     def save(self, *args, **kwargs):
         """Override save method.
@@ -511,12 +562,8 @@ class Item(models.Model):
     @property
     def production(self):
         """Sum the total production for this item."""
-        item = OrderItem.objects.filter(element=self)
-        item = item.exclude(element__foreing=True)
-        item = item.aggregate(total=models.Sum('qty'))
-        if not item['total']:
-            item['total'] = 0
-        return item['total']
+        item = self.order_item.aggregate(total=models.Sum('qty'))
+        return [0 if (not item['total'] or self.foreing) else item['total']][0]
 
     class Meta:
         ordering = ('name',)
@@ -525,12 +572,13 @@ class Item(models.Model):
 class OrderItem(models.Model):
     """Each order can have one or several clothes."""
 
-    # Element field should be renamed after backup all the previous fields.
-    element = models.ForeignKey(Item, blank=True, on_delete=models.PROTECT)
+    element = models.ForeignKey(
+        Item, blank=True, on_delete=models.PROTECT, related_name='order_item')
 
     qty = models.IntegerField('Cantidad', default=1)
     description = models.TextField('Descripción', blank=True)
-    reference = models.ForeignKey(Order, on_delete=models.CASCADE)
+    reference = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name='items')
 
     # Timing stuff now goes here
     crop = models.DurationField('Corte', default=timedelta(0))
@@ -565,6 +613,13 @@ class OrderItem(models.Model):
             self.element
         except ObjectDoesNotExist:
             self.element = default
+
+        # Ensure that items with times are at least in status 3
+        times = (self.crop or self.sewing or self.iron)
+        void_statuses = self.reference.status in ('1', '2')
+        if times and void_statuses:
+            self.reference.status = '3'
+            self.reference.save()
 
         # When no price is given, pickup the object item's default
         if not self.price:
@@ -724,80 +779,55 @@ class PQueue(models.Model):
         prev_elements = PQueue.objects.filter(score__gt=0)
         prev_elements = prev_elements.filter(score__lt=self.score)
         if not prev_elements:
-            return ('Warning: you are trying to raise an item that is ' +
-                    'already on top')
+            return
         else:
             self.score = prev_elements.first().score - 1
-            try:
-                self.clean()
-            except ValidationError:
-                return False
-            else:
-                self.save()
-                return True
+            self.clean()
+            self.save()
+            return True
 
     def up(self):
         """Raise one position the element in the list."""
         above_elements = PQueue.objects.filter(score__lt=self.score)
         if not above_elements:
-            return ('Warning: you are trying to raise an item that is ' +
-                    'already on top')
+            return
         elif above_elements.count() == 1:
             return self.top()
         else:
             closest, next = above_elements.reverse()[:2]
             if closest.score - next.score > 1:
                 self.score = closest.score - 1
-                try:
-                    self.clean()
-                except ValidationError:
-                    return False
-                else:
-                    self.save()
-                    return True
+                self.clean()
+                self.save()
+                return True
             else:
-                try:
-                    self.clean()
-                except ValidationError:
-                    return False
-                else:
-                    closest.score = -1
-                    closest.save()
-                    self.score = next.score + 1
-                    self.save()
-                    closest.score = next.score + 2
-                    closest.save()
-                    return True
+                closest.score = -1
+                self.clean()
+                closest.save()
+                self.score = next.score + 1
+                self.save()
+                closest.score = next.score + 2
+                closest.save()
+                return True
 
     def down(self):
         """Lower one position the element in the list."""
         next_elements = PQueue.objects.filter(score__gt=self.score)
         if not next_elements:
-            return ('Warning: you are trying to lower an item that is ' +
-                    'already at the bottom')
+            return
         else:
-            try:
-                self.clean()
-            except ValidationError:
-                return False
-            else:
-                return next_elements[0].up()
+            return next_elements[0].up()
 
     def bottom(self):
         """Lower to the bottom."""
         next_elements = PQueue.objects.filter(score__gt=self.score)
         if not next_elements:
-            return ('Warning: you are trying to lower an item that is ' +
-                    'already at the bottom')
+            return
         else:
             self.score = next_elements.last().score + 1
-            try:
-                self.clean()
-            except ValidationError:
-                return False
-            else:
-                self.save()
-                return True
+            self.clean()
+            self.save()
+            return True
 
     def complete(self):
         """Complete an item."""
@@ -806,27 +836,19 @@ class PQueue(models.Model):
             self.score = -2
         else:
             self.score = first.score - 1
-        try:
-            self.clean()
-        except ValidationError:
-            return False
-        else:
-            self.save()
-            return True
+        self.clean()
+        self.save()
+        return True
 
     def uncomplete(self):
         """Send the item again to list."""
-        try:
+        if PQueue.objects.count() == 1:
+            self.score = 1000
             self.clean()
-        except ValidationError:
-            return False
+            self.save()
+            return True
         else:
-            if PQueue.objects.all().count() == 1:
-                self.score = 1000
-                self.save()
-                return True
-            else:
-                return self.bottom()
+            return self.bottom()
 
 
 class Invoice(models.Model):
@@ -842,8 +864,12 @@ class Invoice(models.Model):
         'Medio de pago', max_length=1, choices=settings.PAYMENT_METHODS,
         default='C')
 
-    def save(self, *args, **kwargs):
+    def save(self, kill=False, *args, **kwargs):
         """Override the save method."""
+        # Ensure only Order.kill() can create/edit invoices
+        if not kill:
+            return
+
         self.clean()  # first, run custom validators
 
         """Ensure that the invoices are consecutive starting at 1 while keeping
@@ -856,11 +882,6 @@ class Invoice(models.Model):
                 self.invoice_no = newest.invoice_no + 1
 
         self.amount = self.reference.total  # Get the total
-
-        # orders are killed, delivered & archived (if any)
-        self.reference.kill(pay_method=self.pay_method)
-        self.reference.deliver()
-        self.reference.archive()
 
         super().save(*args, **kwargs)
 
@@ -1146,6 +1167,87 @@ class BankMovement(models.Model):
         """Meta options."""
 
         ordering = ['-action_date']
+
+
+class StatusShift(models.Model):
+    """The status tracker."""
+
+    order = models.ForeignKey(
+        Order, on_delete=models.CASCADE, related_name='status_shift')
+    date_in = models.DateTimeField(default=timezone.now)
+    date_out = models.DateTimeField(blank=True, null=True, )
+    status = models.CharField(max_length=1, choices=Order.STATUS, default='1')
+    notes = models.TextField(blank=True, null=True)
+
+    def save(self, force_save=False, *args, **kwargs):
+        """Override the save method.
+
+        We need to avoid close_last method to interact with the status change
+        constraint, so a force_save arg is provided.
+        """
+        # Direct save the first one
+        if not self.last or force_save:
+            return super().save(*args, **kwargs)
+
+        # Before  opening a new statusShift close the last one (forces save).
+        self.close_last()
+
+        # Prevent a new instance when status doesn't change.
+        if self.last.status == self.status:
+            return None
+
+        # When status 9 (invoiced) is reached, close also the entry
+        if self.status == '9':
+            self.date_out = timezone.now()
+
+        # print('status changed', self.status)
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Override the delete method."""
+        # Orders must have at least one (the first) ss
+        ss = self.order.status_shift
+        if ss.count() == 1:
+            msg = 'Can\'t delete the last status shift of an order'
+            raise ValidationError({'order': _(msg)})
+
+        if self.date_out:
+            msg = 'Can\'t delete other than last entries'
+            raise ValidationError({'date_out': _(msg)})
+
+        super().delete(*args, **kwargs)
+
+        # After a ss is deleted, the last one should be reopened
+        last = self.last
+        last.date_out = None
+        last.save(force_save=True)
+
+    def clean(self):
+        """Validate the model."""
+        # Ensure an order has one and only one ss open
+        ss = self.order.status_shift
+        ss = ss.filter(date_out__isnull=True).count()
+        if ss > 1:
+            pk = self.order.pk
+            msg = 'Order {} has more than one statusShift open'.format(pk)
+            raise ValidationError({'order': _(msg)})
+
+        if self.date_out and self.date_in > self.date_out:
+            i, o = self.date_in, self.date_out
+            msg = 'date_out ({}) is before date_in ({})'.format(i, o)
+            raise ValidationError({'date_in': _(msg)})
+
+    def close_last(self):
+        """Close the last status."""
+        last = self.last
+        last.date_out = timezone.now()
+        last.full_clean()
+        last.save(force_save=True)
+
+    @property
+    def last(self):
+        """Fetch the last ss from current order."""
+        return self.order.status_shift.last()
 
 
 class Timetable(models.Model):
