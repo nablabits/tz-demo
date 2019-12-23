@@ -1230,14 +1230,12 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         self.assertEqual(resp.context['aggregates'][3], 0)
 
-    @tag('tt')
     def test_tracked_times_is_none(self):
         """Created tt_ratios is None when there are no times."""
         resp = self.client.get(reverse('main'))
         ratios = resp.context['tt_ratio']
         self.assertEqual(ratios, None)
 
-    @tag('tt')
     def test_tracked_times_excludes_stock_items(self):
         order = Order.objects.first()
         order.status = '7'
@@ -1258,7 +1256,6 @@ class MainViewTests(TestCase):
         ratios = resp.context['tt_ratio']
         self.assertEqual(ratios, None)
 
-    @tag('tt')
     def test_tracked_time_excludes_foreign_items(self):
         order = Order.objects.first()
         order.status = '7'
@@ -1278,7 +1275,6 @@ class MainViewTests(TestCase):
         ratios = resp.context['tt_ratio']
         self.assertEqual(ratios, None)
 
-    @tag('tt')
     def test_tracked_time_picks_status_7(self):
         order = Order.objects.first()
         resp = self.client.get(reverse('main'))
@@ -1296,7 +1292,6 @@ class MainViewTests(TestCase):
         ratios = resp.context['tt_ratio']
         self.assertEqual(ratios['crop'], 100)
 
-    @tag('tt')
     def test_tracked_time_picks_current_year_items(self):
         order = Order.objects.first()
         order.status = '7'
@@ -1315,7 +1310,6 @@ class MainViewTests(TestCase):
         ratios = resp.context['tt_ratio']
         self.assertEqual(ratios, None)
 
-    @tag('tt')
     def test_tracked_time_excludes_0_times(self):
         for order in Order.objects.all():
             order.status = '7'
