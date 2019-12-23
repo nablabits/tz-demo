@@ -10,7 +10,6 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, DecimalField, FloatField, F, Q, Sum
-from django.db.utils import IntegrityError
 from django.http import (
     Http404, HttpResponseServerError, JsonResponse, FileResponse, )
 from django.shortcuts import get_object_or_404, redirect, render
@@ -55,8 +54,9 @@ class CommonContexts:
             confirmed=confirmed).order_by('delivery')
         waiting = Order.objects.filter(
             status='6').filter(confirmed=confirmed).order_by('delivery')
-        done = Order.live.filter(
-            status='7').filter(confirmed=confirmed).order_by('delivery')
+        done = Order.live.filter(status='7').filter(confirmed=confirmed)
+        done = done.exclude(customer__name__iexact='trapuzarrak')
+        done = done.order_by('delivery')
 
         # Get the amounts for each column
         cols = (icebox, queued, in_progress, waiting, done, )

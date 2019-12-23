@@ -1,7 +1,7 @@
 """The main test suite for views. backend."""
 
 import json
-from datetime import date, time, timedelta
+from datetime import date, timedelta
 from random import randint
 
 from django import forms
@@ -280,6 +280,20 @@ class CommonContextKanbanTests(TestCase):
 
         done = CommonContexts.kanban()['done']
         self.assertEqual(done.count(), 2)
+
+    def test_done_items_excludes_tz(self):
+        tz = Customer.objects.create(name='trapuzaRrak', cp=0, phone=0)
+        a, b = Order.objects.all()[:2]
+        a.customer = tz
+        a.status = '7'
+        a.save()
+
+        b.status = '7'
+        b.save()
+
+        done = CommonContexts.kanban()['done']
+        self.assertEqual(done.count(), 1)
+        self.assertTrue(done[0].status == '7')
 
     def test_done_items_unconfirmed(self):
         """Test the done items."""
