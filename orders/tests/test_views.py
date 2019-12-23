@@ -1276,21 +1276,24 @@ class MainViewTests(TestCase):
         self.assertEqual(ratios, None)
 
     def test_tracked_time_picks_status_7(self):
-        order = Order.objects.first()
+        a, b = Order.objects.all()[:2]
         resp = self.client.get(reverse('main'))
         ratios = resp.context['tt_ratio']
-        self.assertEqual(order.status, '1')
+        self.assertEqual(a.status, '1')
+        self.assertEqual(b.status, '1')
         self.assertEqual(ratios, None)
 
-        order.status = '7'
-        order.save()
-        item = OrderItem.objects.get(reference=order)
+        a.status = '7'
+        a.save()
+        b.kill()
+
+        item = OrderItem.objects.get(reference=a)
         item.stock = False
         item.crop = timedelta(hours=5)
         item.save()
         resp = self.client.get(reverse('main'))
         ratios = resp.context['tt_ratio']
-        self.assertEqual(ratios['crop'], 100)
+        self.assertEqual(ratios['crop'], 50)  # 50%, b has no times
 
     def test_tracked_time_picks_current_year_items(self):
         order = Order.objects.first()

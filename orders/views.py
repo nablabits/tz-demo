@@ -325,7 +325,7 @@ def main(request):
     # GoalBox, tracked time ratios this year
     nat = timedelta(0)
     tt = OrderItem.objects.filter(stock=False).filter(element__foreing=False)
-    tt = tt.filter(reference__status='7')
+    tt = tt.filter(reference__status__in=['7', '9'])
     tt = tt.filter(reference__inbox_date__year=cur_year)
     if tt:
         ttc, tts, tti = (
