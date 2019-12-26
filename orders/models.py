@@ -1259,8 +1259,15 @@ class StatusShift(models.Model):
         # print('status changed', self.status)
         return super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        """Override the delete method."""
+    def delete(self, clear_all=False, *args, **kwargs):
+        """Override the delete method.
+
+        clear_all argument was created for the update_20 module prevent the
+        Validation error on deleting last item of an order.
+        """
+        if clear_all:
+            return super().delete(*args, **kwargs)
+
         # Orders must have at least one (the first) ss
         ss = self.order.status_shift
         if ss.count() == 1:

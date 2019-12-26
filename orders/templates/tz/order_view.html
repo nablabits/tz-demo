@@ -263,9 +263,9 @@
                 <div class="d-flex flex-column">
                   Este pedido lleva abierto {{order.days_open}} días
                   {% for icon, status in status_tracker %}
-                  {% if status %}
-                  <span class="my-1"><i class="fa {{icon}} fa-fw mr-2"></i>{{status.date_in}}</span>
-                  {% endif %}
+                    {% if status %}
+                    <span class="my-1"><i class="fa {{icon}} fa-fw mr-2"></i>{{status.date_in}}</span>
+                    {% endif %}
                   {% endfor %}
                 </div>
               </div>
