@@ -2,8 +2,9 @@
 
 from django.contrib import admin
 
-from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
-                     Order, OrderItem, PQueue, Timetable, CashFlowIO)
+from .models import (
+    BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
+    PQueue, Timetable, CashFlowIO, StatusShift, ExpenseCategory, )
 
 from django.utils.translation import gettext_lazy as _
 
@@ -117,8 +118,32 @@ class ExpenseAdmin(admin.ModelAdmin):
     """Beautify the expense admin view."""
 
     list_display = ('pk', 'issued_on', 'issuer', 'invoice_no', 'concept',
-                    'amount', 'closed')
-    list_filter = ('issued_on', IssuerByName, )
+                    'category', 'amount', 'consultancy', 'closed')
+    list_filter = ('issued_on', 'category', IssuerByName,)
+
+
+class CFByType(admin.SimpleListFilter):
+    """Set the filter by inbounds/outbounds."""
+    title = _('inbound-outbound')
+
+    parameter_name = 'cf_by_type'
+
+    def lookups(self, request, model_admin):
+        """Returns a list of tuples.
+
+        The first element in each tuple is the coded value for the option that
+        will appear in the URL query. The second element is the human-readable
+        name for the option that will appear
+        in the right sidebar.
+        """
+
+        return (('in', 'Inbounds'), ('out', 'Outbounds'), )
+
+    def queryset(self, request, queryset):
+        if self.value() == 'in':
+            return queryset.filter(order__isnull=False)
+        else:
+            return queryset.filter(expense__isnull=False)
 
 
 @admin.register(CashFlowIO)
@@ -128,12 +153,22 @@ class CashFlowIOAdmin(admin.ModelAdmin):
     list_display = (
         'pk', 'creation', 'order', 'expense', 'amount', 'pay_method', )
 
+    list_filter = ('creation', CFByType, )
+
 
 @admin.register(BankMovement)
 class BankMovementAdmin(admin.ModelAdmin):
     """Beautify the order item admin view."""
 
     list_display = ('action_date', 'amount', 'notes', )
+
+
+@admin.register(StatusShift)
+class StatusTrackerAdmin(admin.ModelAdmin):
+    """Beautify the status tracker admin view."""
+
+    list_display = ('order', 'status', 'date_in', 'date_out', 'notes', )
+    list_filter = ('date_in', )
 
 
 @admin.register(Timetable)
@@ -146,3 +181,4 @@ class TimetableAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Comment)
+admin.site.register(ExpenseCategory)

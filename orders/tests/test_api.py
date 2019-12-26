@@ -23,7 +23,7 @@ class ReadOnlyTests(APITestCase):
         OrderItem.objects.create(
             element=item, reference=order, description='Test order item')
 
-        Invoice.objects.create(reference=order, )
+        order.kill()
 
         # Login
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)

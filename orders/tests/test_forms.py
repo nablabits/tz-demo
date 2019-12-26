@@ -133,8 +133,7 @@ class ItemFormTest(TestCase):
         not_valid = duplicated_form.is_valid()
         self.assertFalse(not_valid)
         self.assertEqual(duplicated_form.errors['name'][0],
-                         'Items cannot have the same name the same size and ' +
-                         'the same class')
+                         'This item it\'s already in the db')
 
     def test_items_with_different_fabrics_should_be_accepted(self):
         """Avoid cleaning for edited items."""

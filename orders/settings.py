@@ -40,6 +40,15 @@ PAYMENT_METHODS = (
     ('T', 'Transferencia')
 )
 
+STATUS_ICONS = (
+    'fa-inbox-in',  # IceBox
+    'fa-list-ol',  # Queued
+    'fa-bolt',  # Production
+    'fa-hourglass-half',  # Waiting
+    'fa-paper-plane',  # Deliver
+    'fa-euro',  # Invoiced
+)
+
 GOAL = 197
 
 WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')

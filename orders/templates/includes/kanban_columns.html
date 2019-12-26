@@ -6,10 +6,14 @@
         <span class="ml-1 badge badge-info">{{icebox.count}}</span>
         <span><i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-icebox" style="cursor:pointer;"></i></span>
       </h5>
-      <h5 class="ml-auto pr-1">{{amounts.0}}€ / {{est_times.0}}</h5>
+      <h5 class="ml-auto pr-1">{{amounts.0}}€ {% if already_paid.0 %}({{already_paid.0}}€){% endif %} / {{est_times.0}}</h5>
     </div>
     <div class="collapse" id="info-icebox">
-      <p class="m-0 p-0">Pedidos sin inicio definido</p>
+      <p class="m-0 p-0">
+        Pedidos sin inicio definido.<br>
+        Prepagos, si los hay, aparecen entre parentésis.<br>
+        Los importes no incluyen pedidos de trapuzarrak
+      </p>
     </div>
   </div>
   {% for order in icebox %}
@@ -33,10 +37,13 @@
           <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-queued" style="cursor:pointer;"></i>
         </span>
       </h5>
-      <h5 class="ml-auto pr-1">{{amounts.1}}€ / {{est_times.1}}</h5>
+      <h5 class="ml-auto pr-1">{{amounts.1}}€ {% if already_paid.1 %}({{already_paid.1}}€){% endif %} / {{est_times.1}}</h5>
     </div>
     <div class="collapse" id="info-queued">
-      <p class="m-0 p-0">Pedidos con inicio próximo</p>
+      <p class="m-0 p-0">
+        Pedidos con inicio próximo<br>
+        Prepagos, si los hay, aparecen entre parentésis.<br>
+        Los importes no incluyen pedidos de trapuzarrak
     </div>
   </div>
   {% for order in queued %}
@@ -60,10 +67,13 @@
           <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-in-progress" style="cursor:pointer;"></i>
         </span>
       </h5>
-      <h5 class="ml-auto pr-1">{{amounts.2}}€</h5>
+      <h5 class="ml-auto pr-1">{{amounts.2}}€ {% if already_paid.2 %}({{already_paid.2}}€){% endif %}</h5>
     </div>
     <div class="collapse" id="info-in-progress">
-      <p class="m-0 p-0">Pedidos en preparación (corte, confección o planchado)</p>
+      <p class="m-0 p-0">
+        Pedidos en preparación (corte, confección o planchado).<br>
+        Prepagos, si los hay, aparecen entre parentésis.<br>
+        Los importes no incluyen pedidos de trapuzarrak
     </div>
   </div>
   {% for order in in_progress %}
@@ -87,10 +97,14 @@
           <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-waiting" style="cursor:pointer;"></i>
         </span>
       </h5>
-      <h5 class="ml-auto pr-1">{{amounts.3}}€</h5>
+      <h5 class="ml-auto pr-1">{{amounts.3}}€ {% if already_paid.3 %}({{already_paid.3}}€){% endif %}</h5>
     </div>
     <div class="collapse" id="info-waiting">
-      <p class="m-0 p-0">Pedidos acabados a la espera de ser recogidos</p>
+      <p class="m-0 p-0">
+        Pedidos acabados a la espera de ser recogidos<br>
+        Prepagos, si los hay, aparecen entre parentésis.<br>
+        Los importes no incluyen pedidos de trapuzarrak
+      </p>
     </div>
   </div>
   {% for order in waiting %}
@@ -114,10 +128,14 @@
           <i class="fal fa-info-circle" data-toggle="collapse" data-target="#info-done" style="cursor:pointer;"></i>
         </span>
       </h5>
-      <h5 class="ml-auto pr-1">{{amounts.4}}€</h5>
+      <h5 class="ml-auto pr-1">{{amounts.4}}€ {% if already_paid.4 %}({{already_paid.4}}€){% endif %}</h5>
     </div>
     <div class="collapse" id="info-done">
-      <p class="m-0 p-0">Pedidos entregados con pago pendiente</p>
+      <p class="m-0 p-0">
+        Pedidos entregados con pago pendiente<br>
+        Prepagos, si los hay, aparecen entre parentésis.<br>
+        Los importes no incluyen pedidos de trapuzarrak
+      </p>
     </div>
   </div>
     {% for order in done %}

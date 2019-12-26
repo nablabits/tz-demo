@@ -12,9 +12,9 @@ from django.utils import timezone
 
 from orders.models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
-    PQueue, Timetable, CashFlowIO, )
+    PQueue, Timetable, CashFlowIO, StatusShift, ExpenseCategory, )
 
-from orders.settings import PAYMENT_METHODS
+from orders.settings import PAYMENT_METHODS, WEEK_COLORS
 
 from decouple import config
 
@@ -211,7 +211,9 @@ class TestCustomer(TestCase):
         c = Customer.objects.first()
         c.provider = True
         c.group = True
-        with self.assertRaises(ValidationError):
+        c.name = 'Customer provider & group'
+        msg = 'Un cliente no puede ser proveedor y grupo al mismo tiempo'
+        with self.assertRaisesMessage(ValidationError, msg):
             c.clean()
 
         c.save()
@@ -352,7 +354,7 @@ class TestOrders(TestCase):
         o = Order.objects.first()
 
         with self.assertRaises(ValidationError):
-            o.status = '9'
+            o.status = '10'
             o.full_clean()
 
     def test_order_status_cant_be_null(self):
@@ -578,38 +580,21 @@ class TestOrders(TestCase):
         order = Order.objects.get(ref_name='No Budget nor prepaid')
         self.assertEqual(order.prepaid, 0)
 
-    def test_custom_manager_active(self):
-        """Test the active custom manager."""
+    def test_custom_manager_live(self):
+        """Test the live custom manager."""
         u = User.objects.first()
         c = Customer.objects.first()
         for i in range(4):
             Order.objects.create(
                 user=u, customer=c, ref_name='Test', delivery=date.today())
-        self.assertEqual(Order.active.count(), 5)
-        delivered, cancelled = Order.active.all()[:2]
-        delivered.status = '7'
-        delivered.save()
-        cancelled.status = '8'
-        cancelled.save()
-        self.assertEqual(Order.active.count(), 3)
-
-    def test_custom_manager_pending(self):
-        """Test the pending custom manager."""
-        u = User.objects.first()
-        c = Customer.objects.first()
-        for i in range(5):
-            Order.objects.create(
-                user=u, customer=c, ref_name='Test', delivery=date.today())
-        self.assertEqual(Order.pending_orders.count(), 5)
-        cancelled, old, invoiced = Order.pending_orders.all()[:3]
-        cancelled.status = '8'
-        cancelled.save()
-        old.delivery = date(2018, 12, 31)
-        old.save()
+        self.assertEqual(Order.live.count(), 5)
+        invoiced, cancelled = Order.live.all()[:2]
         OrderItem.objects.create(
             reference=invoiced, element=Item.objects.last())
-        Invoice.objects.create(reference=invoiced)
-        self.assertEqual(Order.pending_orders.count(), 2)
+        invoiced.kill()
+        cancelled.status = '8'
+        cancelled.save()
+        self.assertEqual(Order.live.count(), 3)
 
     def test_custom_manager_outdated(self):
         """Test the outdated custom manager."""
@@ -635,11 +620,10 @@ class TestOrders(TestCase):
             user=u, customer=c, ref_name='Test', delivery=date.today())
 
         # Now an invoiced express order
-        invoiced = Order.objects.create(
+        i = Order.objects.create(
             user=u, customer=express, ref_name='Test', delivery=date.today())
-        OrderItem.objects.create(
-            reference=invoiced, element=Item.objects.last())
-        Invoice.objects.create(reference=invoiced)
+        OrderItem.objects.create(reference=i, element=Item.objects.last())
+        i.kill()
 
         # finally an obsolete order, invoice missing
         obsolete = Order.objects.create(
@@ -663,6 +647,19 @@ class TestOrders(TestCase):
         o.customer = Customer.objects.first()
         with self.assertRaises(ValidationError):
             o.full_clean()
+
+    def test_invoiced_orders_are_status_9(self):
+        o = Order.objects.first()
+        self.assertEqual(o.status, '1')
+
+        OrderItem.objects.create(reference=o, element=Item.objects.last())
+        o.kill()
+        self.assertEqual(o.status, '9')
+
+        for s in ('1', '2', '3', '4', '5', '6', '7', '8'):
+            o.status = s
+            o.save()
+            self.assertEqual(o.status, '9')
 
     def test_trapuzarrak_orders_are_always_confirmed(self):
         """Trapuzarrak are not allowed to be unconfirmed."""
@@ -702,6 +699,20 @@ class TestOrders(TestCase):
         o = Order.objects.first()
         self.assertEqual(o.membership, c2)  # Now it's ok
 
+    def test_statuses_4_and_5_are_deprecated(self):
+        o = Order.objects.first()
+        self.assertEqual(o.status, '1')
+
+        for s in ('3', '4', '5'):
+            pass
+            o.status = s
+            o.save()
+            self.assertEqual(o.status, '3')
+
+    def test_saving_an_order_creates_new_statusShift(self):
+        o = Order.objects.first()
+        self.assertEqual(o.status_shift.count(), 1)  # Created during setUp
+
     def test_kill_order_pending_0(self):
         order = Order.objects.first()
         for i in range(5):
@@ -715,23 +726,76 @@ class TestOrders(TestCase):
         self.assertEqual(CashFlowIO.objects.count(), 1)
         self.assertEqual(order.pending, 0)
 
-    def test_kill_order(self):
+    def test_kill_order_avoids_orders_to_be_rekilled(self):
         order = Order.objects.first()
-        for i in range(5):
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        self.assertEqual(Invoice.objects.count(), 0)
+        order.kill()
+        self.assertEqual(Invoice.objects.count(), 1)
+        order.kill()
+        self.assertEqual(Invoice.objects.count(), 1)
+
+    def test_kill_order_kills_pending_payments(self):
+        order = Order.objects.first()
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
         order.kill()
         cf = CashFlowIO.objects.get(order=order)
         self.assertTrue(cf)
         self.assertEqual(cf.pay_method, 'C')  # default
-        self.assertEqual(cf.amount, 150)
+        self.assertEqual(cf.amount, 30)
+        self.assertEqual(order.status, '9')
         cf.delete()
+        order.invoice.delete()
 
         for pm in ('V', 'T'):
             order.kill(pay_method=pm)
             cf = CashFlowIO.objects.get(order=order)
             self.assertEqual(cf.pay_method, pm)
+            self.assertEqual(order.status, '9')
             cf.delete()
+            order.invoice.delete()
+
+        self.assertEqual(Invoice.objects.count(), 0)  # Last one was killed
+
+    def test_kill_order_updates_delivery_date(self):
+        order = Order.objects.first()
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        self.assertEqual(order.delivery, date(2018, 2, 1))
+        order.kill()
+        self.assertEqual(order.delivery, date.today())
+
+    def test_kill_order_updates_status(self):
+        order = Order.objects.first()
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        self.assertEqual(order.status, '1')
+        order.kill()
+        self.assertEqual(order.status, '9')
+
+    def test_kill_order_creates_invoice(self):
+        order = Order.objects.first()
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        order.kill()
+        i = Invoice.objects.first()
+        self.assertEqual(i.reference, order)
+        self.assertEqual(i.pay_method, 'C')
+        self.assertEqual(i.amount, order.total)
+        self.assertEqual(i.issued_on.date(), date.today())
+        self.assertEqual(i.invoice_no, 1)
+
+    @tag('todoist')
+    def test_kill_order_archives_todoist(self):
+        order = Order.objects.first()
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
+
+        order.create_todoist()
+        order = Order.objects.get(pk=order.pk)
+        self.assertFalse(order.is_archived())
+        order = Order.objects.get(pk=order.pk)
+        order.kill()
+        self.assertTrue(order.is_archived())
+        project = order.t_api.projects.get_by_id(order.t_pid)
+        project.delete()
+        order.t_api.commit()
 
     def test_order_tz(self):
         order = Order.objects.first()
@@ -767,10 +831,22 @@ class TestOrders(TestCase):
         c = Customer.objects.first()
         order = Order.objects.create(
             user=user, customer=c, ref_name='test', delivery=date.today())
+        self.assertEqual(order.total, 0)
         for i in range(5):
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
         self.assertEqual(order.total, 150)
+
+    def test_total_amount_is_0(self):
+        user = User.objects.first()
+        c = Customer.objects.first()
+        order = Order.objects.create(
+            user=user, customer=c, ref_name='test', delivery=date.today())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=0)  # 30€
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=-30)
+        self.assertEqual(order.total, 0)
 
     def test_total_amount_before_taxes(self):
         user = User.objects.first()
@@ -819,13 +895,10 @@ class TestOrders(TestCase):
         user = User.objects.first()
         c = Customer.objects.first()
         order = Order.objects.create(
-            user=user, customer=c, ref_name='test', delivery=date.today(),
-            prepaid=50)
+            user=user, customer=c, ref_name='test', delivery=date.today(), )
         self.assertFalse(order.invoiced)
-        for i in range(5):
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-        Invoice.objects.create(reference=order)
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        order.kill()
         self.assertTrue(order.invoiced)
 
     def test_invoiced_returns_true_with_older_orders(self):
@@ -837,67 +910,13 @@ class TestOrders(TestCase):
             delivery=date(2018, 12, 31), prepaid=50, )
         self.assertTrue(order.invoiced)
 
-    def test_order_creation(self):
-        """Test the order creation."""
-        order = Order.objects.first()
-        order_str = str(order.pk) + ' Test example'
-        self.assertTrue(isinstance(order, Order))
-        self.assertEqual(order.__str__(), order_str)
-        self.assertTrue(order.overdue)
+    def test_days_open(self):
+        o = Order.objects.first()
+        self.assertEqual(o.days_open, 0)
 
-    def test_order_progress_status_1(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '1'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 0)
-
-    def test_order_progress_status_2(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '2'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 0)
-
-    def test_order_progress_status_3(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '3'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 25)
-
-    def test_order_progress_status_4(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '4'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 50)
-
-    def test_order_progress_status_5(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '5'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 75)
-
-    def test_order_progress_status_6(self):
-        """Test the proper display of progress."""
-        order = Order.objects.all()[0]
-        order.status = '6'
-        order.ref_name = 'status changed'
-        order.save()
-        order = Order.objects.get(ref_name='status changed')
-        self.assertEqual(order.progress, 100)
+    def test_color(self):
+        o = Order.objects.first()
+        self.assertEqual(o.color, WEEK_COLORS['this'])
 
     def test_has_no_items(self):
         """Test the order has no items."""
@@ -1019,78 +1038,76 @@ class TestOrders(TestCase):
         self.assertEqual(order.status, '7')
         self.assertEqual(order.delivery, date.today())
 
-    def test_kanban_jumps(self):
+    def test_kanban_shifts(self):
         """Test the correct jump within kanban stages."""
-        order = Order.objects.create(user=User.objects.all()[0],
-                                     customer=Customer.objects.all()[0],
-                                     ref_name='Test%',
-                                     delivery=date.today(),
-                                     budget=100,
-                                     prepaid=100)
+        order = Order.objects.create(
+            user=User.objects.first(), customer=Customer.objects.first(),
+            ref_name='foo', delivery=date.today(), )
+
         self.assertEqual(order.status, '1')
 
         # switch to queued
         order.kanban_forward()
-        order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '2')
 
         # switch to in progress
         order.kanban_forward()
-        order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '3')
 
         # switch to waiting
         order.kanban_forward()
-        order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '6')
 
         # switch to delivered
         order.kanban_forward()
-        order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '7')
 
+        # Raise ValidationError
+        msg = 'Can\'t shift the status over 7 (call `kill()`).'
+        with self.assertRaisesMessage(ValidationError, msg):
+            order.kanban_forward()
+
         # switch back to in_progress
+        order.kanban_backward()
+        self.assertEqual(order.status, '3')
+
+        # From status 6 we should also return to 3
         order.status = '6'
         order.save()
+        self.assertEqual(order.status, '6')
         order.kanban_backward()
-        order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '3')
 
         # switch back to queued
         order.kanban_backward()
-        order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '2')
 
         # switch back to queued
         order.kanban_backward()
-        order = Order.objects.get(pk=order.pk)
         self.assertEqual(order.status, '1')
 
-    def test_kanban_jump_forward_raises_error(self):
-        """Status 7 & 8 should raise an exeption."""
-        o = Order.objects.create(user=User.objects.all()[0],
-                                 customer=Customer.objects.all()[0],
-                                 ref_name='Test%',
-                                 delivery=date.today(),
-                                 )
-        for s in ('7', '8'):
-            o.status = s
-            o.save()
-            with self.assertRaises(ValueError):
-                o.kanban_forward()
+        # Raise ValidationError
+        msg = 'Can\'t shift the status below 1.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            order.kanban_backward()
 
-    def test_kanban_jump_backward_raises_error(self):
-        """Status 1, 7 & 8 should raise an exeption."""
-        o = Order.objects.create(user=User.objects.all()[0],
-                                 customer=Customer.objects.all()[0],
-                                 ref_name='Test%',
-                                 delivery=date.today(),
-                                 )
-        for s in ('1', '7', '8'):
-            o.status = s
-            o.save()
-            with self.assertRaises(ValueError):
-                o.kanban_backward()
+        # from status 8 hitting shift up or down shifts to status 1
+        for method in (order.kanban_forward, order.kanban_backward):
+            order.status = '8'
+            order.save()
+            method()
+            self.assertEqual(order.status, '1')
+
+        # Raise ValidationError for invoiced orders
+        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        # kill() creates two status shitfs, one for status 7 (thererby calling
+        # Order.deliver()) and another for status 9.
+        order.kill()
+        msg = 'Invoiced orders can\'t change their status.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            order.kanban_backward()
+
+        self.assertEqual(StatusShift.objects.filter(order=order).count(), 16)
 
 
 @tag('todoist')
@@ -1329,6 +1346,10 @@ class TestObjectItems(TestCase):
                             fabrics=5.2)
         self.assertTrue(Item.objects.get(name='Test item'))
 
+    def test_item_str(self):
+        i = Item.objects.create(name='Test item', fabrics=5.2)
+        self.assertEqual(i.__str__(), 'No definido Test item S-1 (0€)')
+
     def test_item_duplicate_raises_error(self):
         """Clean method should raise ValidationError."""
         original = Item.objects.create(name='duplicate', fabrics=0, size='2')
@@ -1337,7 +1358,8 @@ class TestObjectItems(TestCase):
         self.assertEqual(original.item_type, duplicated.item_type)
         self.assertEqual(original.item_class, duplicated.item_class)
         self.assertEqual(original.size, duplicated.size)
-        with self.assertRaises(ValidationError):
+        msg = 'This item it\'s already in the db'
+        with self.assertRaisesMessage(ValidationError, msg):
             duplicated.clean()
 
     def test_object_item_allows_6_chars_on_size(self):
@@ -1390,6 +1412,16 @@ class TestObjectItems(TestCase):
                                 size='0',
                                 fabrics=2.2)
 
+    def test_item_html_string(self):
+        i = Item.objects.create(
+            name='foo', item_type='2', item_class='M', size='xs', fabrics=5)
+        html_str = (
+            '\n<div class="d-block"><span class="mr-1">Pantalón foo</span>' +
+            '</div><div class="d-block"><span class="badge badge-primary' +
+            ' mr-1">Medium</span><span class="badge badge-info mr-1">T-xs' +
+            '</span></div>\n')
+        self.assertEqual(i.html_string, html_str)
+
     def test_item_average_times(self):
         items = [Item.objects.create(
             name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
@@ -1423,6 +1455,35 @@ class TestObjectItems(TestCase):
         self.assertEqual(items[0].avg_iron, timedelta(seconds=30))
         self.assertEqual(items[1].avg_iron, timedelta(seconds=30) / 11)
         self.assertEqual(items[2].avg_iron, timedelta(seconds=30) / 21)
+
+    @tag('current')
+    def test_pretty_average(self):
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for n, item in enumerate(items):
+            OrderItem.objects.create(
+                element=item, qty=10 * n + 1, reference=Order.objects.first(),
+                crop=timedelta(seconds=10),
+                sewing=timedelta(seconds=20),
+                iron=timedelta(seconds=30), )
+
+        a = Item.objects.first()
+        self.assertEqual(a.pretty_avg, ['10s', '20s', '30s'])
+
+    def test_production(self):
+        o = Order.objects.first()
+        i = Item.objects.create(name='i', fabrics=10, price=30, )
+        f = Item.objects.create(name='f', fabrics=10, price=30, foreing=True)
+        self.assertEqual(i.production, 0)
+        self.assertEqual(f.production, 0)
+        oi = OrderItem.objects
+        a, b, c = [
+            oi.create(reference=o, element=i, qty=10) for _ in range(3)]
+        c.element = f
+        c.save()
+        self.assertEqual(i.production, 20)
+        self.assertEqual(f.production, 0)
 
 
 class TestOrderItems(TestCase):
@@ -1487,6 +1548,54 @@ class TestOrderItems(TestCase):
         self.assertEqual(created_item.sewing, timedelta(0))
         self.assertEqual(created_item.iron, timedelta(0))
         self.assertFalse(created_item.fit)
+
+    def test_batch(self):
+        u = User.objects.first()
+        tz = Customer.objects.create(name='trapuzarrak', cp=0, phone=0)
+        cs = Customer.objects.first()
+        a = Order.objects.first()
+        b = Order.objects.create(
+            user=u, customer=tz, ref_name='foo', delivery=date.today())
+        c = Order.objects.create(
+            user=u, customer=cs, ref_name='bar', delivery=date.today())
+        i = OrderItem.objects.create(element=Item.objects.first(), reference=a)
+        self.assertEqual(i.batch, None)
+        i.batch = b
+        i.save()
+        self.assertIsInstance(i.batch, Order)
+
+        i.batch = a
+        msg = 'Lote y pedido no pueden ser iguales'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.full_clean()
+
+        i.batch = c
+        msg = ('El numero de lote tiene que corresponder con un pedido ' +
+               'de trapuzarrak')
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.full_clean()
+
+        b.delete()
+        i = OrderItem.objects.get(pk=i.pk)
+        self.assertEqual(i.batch, None)
+
+
+    def test_orders_with_timed_items_are_at_least_status_3(self):
+        o = Order.objects.first()
+        self.assertEqual(o.status, '1')
+        i = OrderItem.objects.create(
+            reference=o, element=Item.objects.last(), crop=timedelta(1))
+        self.assertEqual(o.status, '3')
+        o.kanban_backward()
+        self.assertEqual(o.status, '2')
+        i.sewing = timedelta(1)
+        i.save()
+        self.assertEqual(o.status, '3')
+        o.kanban_forward()
+        self.assertEqual(o.status, '6')
+        i.iron = timedelta(1)
+        i.save()
+        self.assertEqual(o.status, '6')
 
     def test_orderitem_price_attr(self):
         """Order item's default attributes."""
@@ -1603,12 +1712,12 @@ class TestOrderItems(TestCase):
         self.assertEqual(OrderItem.active.count(), 7)
 
         # Now modify
-        cancelled, old, invoiced, tz_owned = Order.pending_orders.all()[:4]
+        cancelled, old, invoiced, tz_owned = Order.live.all()[:4]
         cancelled.status = '8'
         cancelled.save()
         old.delivery = date(2018, 12, 31)
         old.save()
-        Invoice.objects.create(reference=invoiced)
+        invoiced.kill()
         tz = Customer.objects.create(name='Trapuzarrak', phone=0, cp=12)
         tz_owned.customer = tz
         tz_owned.save()
@@ -1937,16 +2046,19 @@ class TestPQueue(TestCase):
         last.up()
         self.assertEqual(PQueue.objects.get(pk=last.pk).score, 999)
 
-    def test_up_if_first(self):
-        """When the element is first, should warn and do nothing."""
-        for item in OrderItem.objects.all()[:2]:
-            PQueue.objects.create(item=item)
+    def test_up_does_nothing_for_first_element(self):
+        [PQueue.objects.create(item=item) for item in OrderItem.objects.all()]
         first = PQueue.objects.first()
-        warning = first.up()
-        self.assertEqual(PQueue.objects.get(pk=first.pk).score, 1000)
-        self.assertEqual(warning,
-                         ('Warning: you are trying to raise an item that is ' +
-                          'already on top'))
+        self.assertEqual(first.score, 1000)
+        first.up()
+        self.assertEqual(first.score, 1000)
+
+    def test_top_does_nothing_for_first_element(self):
+        [PQueue.objects.create(item=item) for item in OrderItem.objects.all()]
+        first = PQueue.objects.first()
+        self.assertEqual(first.score, 1000)
+        first.top()
+        self.assertEqual(first.score, 1000)
 
     def test_up_no_place(self):
         """When there's no place to fit in, scores should be swapped."""
@@ -1959,16 +2071,13 @@ class TestPQueue(TestCase):
         self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1001)
         self.assertEqual(PQueue.objects.get(pk=mid.pk).score, 1002)
 
-    def test_down_if_last(self):
+    def test_down_does_nothing_if_last(self):
         """When the element is last, should warn and do nothing."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        last = PQueue.objects.last()
-        warning = last.down()
+        _, _, last = [
+            PQueue.objects.create(item=i) for i in OrderItem.objects.all()]
         self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
-        self.assertEqual(warning,
-                         ('Warning: you are trying to lower an item that is ' +
-                          'already at the bottom'))
+        last.down()
+        self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
 
     def test_down(self):
         """Lower the position of an element."""
@@ -1980,16 +2089,13 @@ class TestPQueue(TestCase):
         self.assertEqual(PQueue.objects.get(pk=first.pk).score, 1000)
         self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
 
-    def test_bottom_if_last(self):
+    def test_bottom_does_nothig_if_last(self):
         """When the element is last, should warn and do nothing."""
-        for item in OrderItem.objects.all():
-            PQueue.objects.create(item=item)
-        last = PQueue.objects.last()
-        warning = last.bottom()
-        self.assertEqual(PQueue.objects.get(pk=last.pk).score, 1002)
-        self.assertEqual(warning,
-                         ('Warning: you are trying to lower an item that is ' +
-                          'already at the bottom'))
+        _, _, last = [
+            PQueue.objects.create(item=i) for i in OrderItem.objects.all()]
+        self.assertEqual(last.score, 1002)
+        last.bottom()
+        self.assertEqual(last.score, 1002)
 
     def test_bottom(self):
         """Lower the position of an element to the bottom."""
@@ -2019,6 +2125,12 @@ class TestPQueue(TestCase):
         item.uncomplete()
         self.assertEqual(item.score, 1000)
 
+        # When there are another items queued, uncomplete sends to bottom
+        PQueue.objects.create(item=OrderItem.objects.last())
+        item.complete()
+        item.uncomplete()
+        self.assertEqual(item.score, 1002)
+
 
 class TestInvoice(TestCase):
     """Test the invoice model."""
@@ -2045,147 +2157,96 @@ class TestInvoice(TestCase):
 
     def test_reference_is_a_one_to_one_field(self):
         """That is, each order should appear once on the table."""
-        Invoice.objects.create(reference=Order.objects.first())
-        with self.assertRaises(IntegrityError):
-            Invoice.objects.create(reference=Order.objects.first())
+        Order.objects.first().kill()
+        msg = 'Invoice with this Reference already exists.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            Invoice(reference=Order.objects.first()).validate_unique()
 
     def test_reference_delete_cascade(self):
         """If order is deleted so is invoice."""
-        order = Order.objects.first()
-        Invoice.objects.create(reference=order)
-        self.assertTrue(Invoice.objects.all())
-        order.delete()
+        o = Order.objects.first()
+        o.kill()
+        self.assertEqual(Invoice.objects.count(), 1)
+        o.delete()
         self.assertFalse(Invoice.objects.all())
 
     def test_reference_pk_matches_invoice_pk(self):
         """Since reference has primary key true."""
         order = Order.objects.first()
-        invoice = Invoice.objects.create(reference=order)
-        self.assertEqual(order.pk, invoice.pk)
+        order.kill()
+        self.assertEqual(order.pk, order.invoice.pk)
 
     def test_issued_on_is_datetime(self):
         """Test the data type and the date."""
-        invoice = Invoice.objects.create(reference=Order.objects.first())
-        self.assertIsInstance(invoice.issued_on, datetime)
-        self.assertEqual(invoice.issued_on.date(), date.today())
+        order = Order.objects.first()
+        order.kill()
+        self.assertIsInstance(order.invoice.issued_on, datetime)
+        self.assertEqual(order.invoice.issued_on.date(), date.today())
+
+    def test_only_kill_can_issue_invoices(self):
+        self.assertFalse(Invoice.objects.all())
+        Invoice.objects.create(reference=Order.objects.first())  # does nothing
+        self.assertFalse(Invoice.objects.all())
 
     def test_invoice_no_default_1(self):
         """When there're no invoices yet, the first one is 1."""
-        invoice = Invoice.objects.create(reference=Order.objects.first())
-        self.assertEqual(invoice.invoice_no, 1)
+        order = Order.objects.first()
+        order.kill()
+        self.assertEqual(order.invoice.invoice_no, 1)
 
     def test_invoice_no_autoincrement(self):
         """When there're invoices should add one to the last one."""
-        user = User.objects.first()
-        customer = Customer.objects.first()
-        for i in range(3):
-            order = Order.objects.create(
-                user=user, customer=customer, ref_name='Test%s' % i,
-                budget=10, prepaid=0, delivery=date.today())
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
-            Invoice.objects.create(reference=order)
-        i = 1
-        for invoice in Invoice.objects.reverse():
-            self.assertEqual(invoice.invoice_no, i)
-            i += 1
+        u, c = User.objects.first(), Customer.objects.first()
+        for _ in range(3):
+            o = Order.objects.create(
+                user=u, customer=c, ref_name='foo', delivery=date.today())
+            OrderItem.objects.create(reference=o, element=Item.objects.last())
+            o.kill()
+        invoices = Invoice.objects.reverse()
+        [self.assertEqual(i.invoice_no, n+1) for n, i in enumerate(invoices)]
 
     def test_invoice_no_several_saves(self):
         """Ensure the number doesn't rise on multiple save calls."""
-        invoice = Invoice.objects.create(reference=Order.objects.first())
-        self.assertEqual(invoice.invoice_no, 1)
-        invoice.pay_method = 'V'
-        invoice.save()
-        self.assertEqual(invoice.invoice_no, 1)
+        order = Order.objects.first()
+        order.kill()
+        self.assertEqual(order.invoice.invoice_no, 1)
+        order.invoice.pay_method = 'V'
+        order.invoice.save(kill=True)
+        self.assertEqual(order.invoice.invoice_no, 1)
 
     def test_invoice_amount_sums(self):
         """Test the proper sum of items."""
-        order = Order.objects.first()
-        for i in range(3):
-            OrderItem.objects.create(
-                reference=order, element=Item.objects.last(), price=20, )
-        invoice = Invoice.objects.create(reference=order)
-        self.assertIsInstance(invoice.amount, Decimal)
-        self.assertEqual(invoice.amount, 70)
+        o = Order.objects.first()
+        i = Item.objects.last()
+        for _ in range(3):
+            OrderItem.objects.create(reference=o, element=i, price=20, )
+        o.kill()
+        self.assertIsInstance(o.invoice.amount, Decimal)
+        self.assertEqual(o.invoice.amount, 70)
 
     def test_pay_method_allowed_means(self):
         """Test the proper payment methods."""
-        invoice = Invoice.objects.create(reference=Order.objects.first())
-        self.assertEqual(invoice.pay_method, 'C')
+        o = Order.objects.first()
+        o.kill()
+        self.assertEqual(o.invoice.pay_method, 'C')
         for pay_method in ('V', 'T'):
-            invoice.pay_method = pay_method
-            invoice.full_clean()
-            invoice.save()
-            self.assertEqual(invoice.pay_method, pay_method)
-            self.assertEqual(invoice.invoice_no, 1)
+            o.invoice.pay_method = pay_method
+            o.invoice.full_clean()
+            o.invoice.save(kill=True)
+            self.assertEqual(o.invoice.pay_method, pay_method)
+            self.assertEqual(o.invoice.invoice_no, 1)
 
         with self.assertRaises(ValidationError):
-            invoice.pay_method = 'K'
-            invoice.full_clean()
+            o.invoice.pay_method = 'K'
+            o.invoice.full_clean()
 
     def test_total_amount_0_is_allowed(self):
         """But invoices with 0 amount are allowed, eg, with discount."""
         order = Order.objects.first()
         OrderItem.objects.create(
-            reference=order, element=Item.objects.first(), price=100)
-        OrderItem.objects.create(
-            reference=order, element=Item.objects.first(), price=-110)
-        invoice = Invoice.objects.create(reference=order)
-        self.assertEqual(invoice.amount, 0)
-
-    def test_invoice_kills_order(self):
-        o = Order.objects.first()
-        with self.assertRaises(ObjectDoesNotExist):
-            CashFlowIO.objects.get(order=o)
-
-        for pm, _ in PAYMENT_METHODS:
-            i = Invoice.objects.create(reference=o, pay_method=pm)
-            i.full_clean()
-            cf = CashFlowIO.objects.get(order=o)
-            self.assertTrue(cf)
-            self.assertEqual(cf.amount, o.total)
-            self.assertEqual(cf.amount, i.amount)
-            self.assertEqual(cf.pay_method, i.pay_method)
-            cf.delete()
-            i.delete()
-
-    def test_invoice_kills_negative_order(self):
-        i, o = OrderItem.objects.first(), Order.objects.first()
-        i.price = -30
-        i.save()
-        iv = Invoice.objects.create(reference=o)
-        cf = CashFlowIO.objects.first()
-
-        self.assertEqual(Invoice.objects.count(), 1)
-        self.assertEqual(CashFlowIO.objects.count(), 1)
-        self.assertEqual(o.pending, 0)
-        self.assertEqual(iv.amount, -30)
-        self.assertEqual(cf.amount, -30)
-
-    def test_invoice_delivers_order(self):
-        o = Order.objects.first()
-        o.delivery = date(2019, 1, 1)
-        o.satus = '1'
-        o.save()
-
-        Invoice.objects.create(reference=o)
-
-        o = Order.objects.get(pk=o.pk)
-        self.assertEqual(o.delivery, date.today())
-        self.assertEqual(o.status, '7')
-
-    @tag('todoist')
-    def test_invoicing_archives_todoist(self):
-        order = Order.objects.first()
-        OrderItem.objects.create(
-            reference=order, element=Item.objects.first(), price=100)
-        order.create_todoist()
-        Invoice.objects.create(reference=order)
-        order = Order.objects.get(pk=order.pk)
-        self.assertTrue(order.is_archived())
-        project = order.t_api.projects.get_by_id(order.t_pid)
-        project.delete()
-        order.t_api.commit()
+            reference=order, element=Item.objects.first(), price=-10)
+        order.kill()
+        self.assertEqual(order.invoice.amount, 0)
 
     def test_tz_cannot_be_invoiced(self):
         """Ensure that tz can't be invoiced."""
@@ -2193,8 +2254,10 @@ class TestInvoice(TestCase):
         tz_order = Order.objects.first()
         tz_order.customer = tz
         tz_order.save()
-        with self.assertRaises(ValidationError):
-            Invoice.objects.create(reference=tz_order)
+        msg = 'TZ can\'t be invoiced'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i = Invoice(reference=tz_order)
+            i.clean()
 
     def test_invoice_with_no_items_raises_error(self):
         for i in OrderItem.objects.all():
@@ -2202,27 +2265,58 @@ class TestInvoice(TestCase):
         o = Order.objects.first()
         self.assertTrue(o.has_no_items)
 
-        with self.assertRaises(ValidationError):
-            Invoice.objects.create(reference=o)
+        msg = 'The invoice has no items'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i = Invoice(reference=o)
+            i.clean()
 
     def test_printable_ticket_returns_bytesIO(self):
         """Test the output for the method."""
-        invoice = Invoice.objects.create(reference=Order.objects.first())
-        self.assertIsInstance(invoice.printable_ticket(), BytesIO)
+        order = Order.objects.first()
+        order.kill()
+        self.assertIsInstance(order.invoice.printable_ticket(), BytesIO)
 
     def test_line_cutter(self):
         """Test the different options for the method."""
-        invoice = Invoice.objects.create(reference=Order.objects.first())
+        order = Order.objects.first()
+        order.kill()
 
         # First test lines under 25 chars
-        linestr = invoice.printable_ticket(lc='def foo')
+        linestr = order.invoice.printable_ticket(lc='def foo')
         self.assertEqual(linestr, ('def foo', ))
 
         # Now over 25 chars
         long_str = 'A very long string with more than 25 characters'
-        linestr = invoice.printable_ticket(lc=long_str)
+        linestr = order.invoice.printable_ticket(lc=long_str)
         self.assertEqual(
             linestr, ('more than 25 characters', 'A very long string with'))
+
+
+class TestExpenseCategory(TestCase):
+
+    def test_creation_is_a_date_time_field(self):
+        e = ExpenseCategory.objects.first()  # default
+        self.assertIsInstance(e.creation, datetime)
+
+    def test_name_max_length(self):
+        msg = 'value too long for type character varying(64)'
+        with self.assertRaisesMessage(DataError, msg):
+            ExpenseCategory.objects.create(name=70 * 'a')
+
+    def test_name_is_unique(self):
+        with self.assertRaises(IntegrityError):
+            ExpenseCategory.objects.create(name='default')
+
+    def test_description_can_be_blank_and_null(self):
+        e = ExpenseCategory.objects.create(name='test')
+        self.assertEqual(e.description, None)
+
+        b = ExpenseCategory(name='blank')
+        self.assertFalse(b.full_clean())
+
+    def test_str(self):
+        e = ExpenseCategory.objects.first()  # default
+        self.assertEqual(e.__str__(), 'default')
 
 
 class TestExpense(TestCase):
@@ -2346,6 +2440,25 @@ class TestExpense(TestCase):
             expense._meta.get_field('pay_method').verbose_name,
             'Medio de pago')
 
+    def test_category(self):
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100, )
+        expense.full_clean()
+        self.assertIsInstance(expense.category, ExpenseCategory)
+        self.assertEqual(expense.category.name, 'default')
+
+        ec = ExpenseCategory.objects.create(name='foo')
+        expense.category = ec
+        expense.save()
+
+        self.assertEqual(expense.category.name, 'foo')
+
+        ec.delete()
+        expense = Expense.objects.get(pk=expense.pk)
+        self.assertEqual(expense.category.name, 'default')
+
+
     def test_in_b_field(self):
         """Test the field."""
         expense = Expense.objects.create(
@@ -2383,6 +2496,15 @@ class TestExpense(TestCase):
         self.assertEqual(
             expense._meta.get_field('closed').verbose_name,
             'Cerrado')
+
+    def test_consultancy_field(self):
+        """Test the field."""
+        expense = Expense.objects.create(
+            issuer=Customer.objects.first(), invoice_no='Test',
+            issued_on=date.today(), concept='Concept', amount=100,
+            notes='Notes')
+        self.assertIsInstance(expense.consultancy, bool)
+        self.assertTrue(expense.consultancy)
 
     def test_str(self):
         expense = Expense.objects.create(
@@ -2690,7 +2812,7 @@ class TestCashFlowIO(TestCase):
         for _ in range(3):
             o = Order.objects.create(user=u, customer=c, delivery=date.today())
             OrderItem.objects.create(element=i, reference=o, price=10)
-            Invoice.objects.create(reference=o)
+            o.kill()
             Expense.objects.create(
                 issuer=p, invoice_no='foo', issued_on=date.today(),
                 concept='bar', amount=20)
@@ -2761,6 +2883,142 @@ class TestBankMovement(TestCase):
         bms = BankMovement.objects.all()
         for i in range(4):
             self.assertTrue(bms[i].action_date > bms[i+1].action_date)
+
+
+class TestStatusShift(TestCase):
+    """Test the status tracker model."""
+
+    def setUp(self):
+        """Configure the test.
+
+        Notice that Order creates auto a StatusShift.
+        """
+        u = User.objects.create_user(username='foo', password='bar')
+        c = Customer.objects.create(name='foo', phone=0, cp=0)
+        Order.objects.create(
+            user=u, customer=c, ref_name='foo', delivery=date.today(), )
+
+    def test_order_field(self):
+        ss = StatusShift.objects.first()
+        self.assertIsInstance(ss.order, Order)
+
+        o = Order.objects.first()
+        self.assertEqual(o.status_shift.first(), ss)  # related name
+
+        ss.order.delete()
+        self.assertFalse(StatusShift.objects.count())  # Deletes cascade
+
+    def test_date_in_field(self):
+        ss = StatusShift.objects.first()
+        self.assertIsInstance(ss.date_in, datetime)
+        self.assertEqual(ss.date_in.date(), date.today())
+
+    def test_date_out_field(self):
+        ss = StatusShift.objects.first()
+        self.assertFalse(ss.date_out)  # default Null
+        ss.date_out = timezone.now() + timedelta(days=1)
+        ss.save()
+        self.assertIsInstance(ss.date_out, datetime)
+
+    def test_status_field(self):
+        ss = StatusShift.objects.first()
+        self.assertEqual(ss.status, '1')  # default
+        for s, _ in Order.STATUS[1:]:
+            ss.status = s
+            ss.save()
+            self.assertEqual(ss.status, s)
+
+    def test_status_length(self):
+        ss = StatusShift.objects.first()
+        msg = 'value too long for type character varying(1)'
+        with self.assertRaisesMessage(DataError, msg):
+            ss.status = 'void'
+            ss.save()
+
+    def test_status_out_of_choices(self):
+        ss = StatusShift.objects.first()
+        msg = "Value 'void' is not a valid choice."
+        with self.assertRaisesMessage(ValidationError, msg):
+            ss.status = 'void'
+            ss.full_clean()
+
+    def test_direct_save(self):
+        """setUp should have created the first one."""
+        self.assertEqual(StatusShift.objects.count(), 1)
+
+    def test_close_previous_before_opening(self):
+        o = Order.objects.first()
+        o.kanban_forward()
+        s1, s2 = StatusShift.objects.all()
+        self.assertTrue(s1.date_out)
+
+    def test_skip_on_status_unchanged(self):
+        self.assertEqual(StatusShift.objects.count(), 1)
+
+        o = Order.objects.first()
+        o.ref_name = 'does not change status'
+        o.save()
+        self.assertEqual(StatusShift.objects.count(), 1)
+
+        o.kanban_forward()
+        s1, s2 = StatusShift.objects.all()
+        self.assertEqual(s1.status, '1')
+        self.assertEqual(s2.status, '2')
+
+    def test_reaching_status_9_closes_the_entry(self):
+        s1 = StatusShift.objects.first()
+        self.assertFalse(s1.date_out)
+        s1.status = '9'
+        s1.save()
+
+    def test_order_must_keep_at_least_one_ss_open(self):
+        self.assertEqual(StatusShift.objects.count(), 1)
+        msg = 'Can\'t delete the last status shift of an order'
+        with self.assertRaisesMessage(ValidationError, msg):
+            StatusShift.objects.first().delete()
+
+    def test_cant_delete_other_than_last_entries(self):
+        Order.objects.first().kanban_forward()
+        Order.objects.first().kanban_forward()
+        s1, s2, s3 = StatusShift.objects.all()
+        msg = 'Can\'t delete other than last entries'
+        for s in (s1, s2):
+            with self.assertRaisesMessage(ValidationError, msg):
+                s.delete()
+
+    def test_delete_reopens_last_status(self):
+        Order.objects.first().kanban_forward()
+        Order.objects.first().kanban_forward()
+        s1, s2, s3 = StatusShift.objects.all()
+        self.assertTrue(s1.date_out)
+        self.assertTrue(s2.date_out)
+        self.assertFalse(s3.date_out)
+        s3.delete()
+        self.assertEqual(StatusShift.objects.count(), 2)
+        self.assertFalse(StatusShift.objects.last().date_out)
+
+    def test_orders_cant_have_more_than_one_ss_open(self):
+        o = Order.objects.first()
+        self.assertFalse(StatusShift.objects.first().date_out)
+        s2 = StatusShift(order=o, status='2')
+        s2.save(force_save=True)  # does not close the previous
+        msg = 'Order {} has more than one statusShift open'.format(o.pk)
+        with self.assertRaisesMessage(ValidationError, msg):
+            s2.full_clean()
+
+    def test_date_out_should_be_after_date_in(self):
+        s1 = StatusShift.objects.first()
+        s1.date_out = timezone.now() - timedelta(seconds=240)
+        i, o = s1.date_in, s1.date_out
+        msg = 'date_out ({}) is before date_in ({})'.format(i, o)
+        with self.assertRaisesMessage(ValidationError, msg):
+            s1.full_clean()
+
+    def test_last_fetchs_the_last_entry_of_a_given_order(self):
+        Order.objects.first().kanban_forward()
+        Order.objects.first().kanban_forward()
+        s1, _, s3 = StatusShift.objects.all()
+        self.assertEqual(s1.last, s3)
 
 
 class TestTimetable(TestCase):
@@ -2895,9 +3153,12 @@ class TestTimetable(TestCase):
 
     def test_clean_15_hours_limit(self):
         """The max length for entries is 15h."""
+        t = Timetable(user=self.user, hours=timedelta(hours=15.5))
+        msg = 'Entry lasts more than 15h'
+        with self.assertRaisesMessage(ValidationError, msg):
+            t.clean()
         end = timezone.now() + timedelta(hours=15.5)
         t = Timetable(user=self.user, end=end)
-        msg = 'Entry lasts more than 15h'
         with self.assertRaisesMessage(ValidationError, msg):
             t.clean()
 

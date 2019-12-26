@@ -61,6 +61,12 @@ $(document).ready(function () {
     $(this).find('.fa-comment-plus').toggleClass('d-none')
   })
 
+  // Hover effects on kanban arrows
+  $('.js-kanban-jump').hover(function () {
+    $(this).toggleClass('fal')
+    $(this).toggleClass('fas')
+  })
+
   // enalarge ticket on invoice issuing
   function enlargeTicket () {
     $('#invoice-wrapper').collapse('toggle')

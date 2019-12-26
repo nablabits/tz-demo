@@ -6,24 +6,13 @@ from django.db import models
 
 
 # First, Order managers
-class ActiveOrders(models.Manager):
+class LiveOrders(models.Manager):
     """Get the active orders (all)."""
 
     def get_queryset(self):
         """Return the queryset."""
-        return super().get_queryset().exclude(status__in=[7, 8])
-
-
-class PendingOrders(models.Manager):
-    """Get the pending orders."""
-
-    def get_queryset(self):
-        """Return the queryset."""
-        orders = super().get_queryset().exclude(status=8)
-        orders = orders.filter(delivery__gte=date(2019, 1, 1))
-        orders = orders.exclude(ref_name__iexact='quick')
-        orders = orders.exclude(customer__name__iexact='Trapuzarrak')
-        return orders.filter(invoice__isnull=True)
+        live_orders = super().get_queryset().exclude(status__in=[8, 9])
+        return live_orders.exclude(customer__name__iexact='express')
 
 
 class OutdatedOrders(models.Manager):
@@ -32,7 +21,8 @@ class OutdatedOrders(models.Manager):
     def get_queryset(self):
         """Return the queryset."""
         orders = super().get_queryset().filter(delivery__lt=date.today())
-        return orders.exclude(status__in=[7, 8])
+        orders = orders.exclude(customer__name__iexact='express')
+        return orders.exclude(status__in=[7, 8, 9])
 
 
 class ObsoleteOrders(models.Manager):
@@ -45,7 +35,6 @@ class ObsoleteOrders(models.Manager):
         return orders.filter(invoice__isnull=True)
 
 
-# Now, OrderItems managers
 class ActiveItems(models.Manager):
     """Get the active items (excluding tz ones)."""
 

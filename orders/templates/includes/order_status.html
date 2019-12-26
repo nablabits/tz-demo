@@ -1,3 +1,4 @@
+{% load widget_tweaks %}
 {% if order.status == '8' %}
   <div class="d-flex mt-2">
     <div class="alert alert-warning" role="alert">
@@ -5,7 +6,7 @@
       <strong>Atención!</strong>
       Este pedido está anulado
       <a href="#">
-        <button class="ml-2 btn btn-warning js-order-status" data-status="1" data-pk="{{order.pk}}" id="status-reactivate"><i class="fa fa-history"></i> Reactivar</button>
+        <button class="ml-2 btn btn-warning"><i class="fa fa-history"></i> Reactivar</button>
       </a>
     </div>
   </div>
@@ -27,37 +28,37 @@
   </div>
 {% else %}
   <div class="d-flex flex-column flex-md-row align-items-center mt-3">
-    <button type="button" class="mr-2 btn btn-outline-success js-order-status {% if order.status == '1' %}active{% endif %}" data-pk="{{order.pk}}" data-status="1" id="status-inbox">
-      <i class="fal fa-inbox-in pr-2"></i>{{order.STATUS.0.1}}</button>
-    <button type="button" class="mr-2 btn btn-outline-success js-order-status {% if order.status == '2' %}active{% endif %}" data-pk="{{order.pk}}" data-status="2" id="status-waiting">
-      <i class="fal fa-list-ol pr-2"></i>{{order.STATUS.1.1}}</button>
-    <div class="btn-group mr-2 mb-2 mb-md-0" role="group">
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '3' %}active{% endif %}" data-pk="{{order.pk}}" data-status="3" id="status-preparing">
-        <i class="far fa-cut pr-2"></i>{{order.STATUS.2.1}}</button>
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '4' %}active{% endif %}" data-pk="{{order.pk}}" data-status="4" id="status-performing">
-        <i class="fal fa-bolt pr-2"></i>{{order.STATUS.3.1}}</button>
-      <button type="button" class="btn btn-outline-success js-order-status {% if order.status == '5' %}active{% endif %}" data-pk="{{order.pk}}" data-status="5" id="status-workshop">
-        <i class="fal fa-flower-tulip pr-2"></i>{{order.STATUS.4.1}}</button>
-    </div>
-    <button type="button" class="mr-2 btn btn-outline-success js-order-status {% if order.status == '6' %}active{% endif %}" data-pk="{{order.pk}}" data-status="6" id="status-outbox">
-      <i class="fal fa-hourglass-half pr-2"></i>{{order.STATUS.5.1}}</button>
+
+    <!-- Kanban shift arrow -->
+    {% if order.status in '234567' %}
+      <i class="fal fa-arrow-alt-left fa-2x pr-2 js-kanban-jump" data-pk="{{order.pk}}" id="status-shiftBack" style="cursor: pointer;"></i>
+    {%endif%}
+
+    <div class="mr-2 btn btn-outline-success {% if order.status == '1' %}active{% endif %}">
+      <i class="fal {{STATUS_ICONS.0}} pr-2"></i>{{order.STATUS.0.1}}</div>
+    <div class="mr-2 btn btn-outline-success {% if order.status == '2' %}active{% endif %}">
+      <i class="fal {{STATUS_ICONS.1}} pr-2"></i>{{order.STATUS.1.1}}</div>
+    <div class="mr-2 btn btn-outline-success {% if order.status == '3' %}active{% endif %}">
+      <i class="fal {{STATUS_ICONS.2}} pr-2"></i>{{order.STATUS.2.1}}</div>
+    <div class="mr-2 btn btn-outline-success {% if order.status == '6' %}active{% endif %}">
+      <i class="fal {{STATUS_ICONS.3}} pr-2"></i>{{order.STATUS.5.1}}</div>
     {%if order.status != '7'%}
       <form method="post" action="{% url 'order_view' pk=order.pk %}">
       {%csrf_token%}
         <input type="hidden" name="action" value="deliver-order">
         <button type="submit" class="btn btn-outline-success mr-2">
-          <i class="fal fa-paper-plane pr-2"></i>Entregar
+          <i class="fal {{STATUS_ICONS.4}} pr-2"></i>Entregar
         </button>
       </form>
     {%else%}
       <button type="button" class="mr-2 btn btn-outline-success active">
-        <i class="fal fa-handshake pr-2"></i>{{order.STATUS.6.1}}</button>
-      {%if order.customer.name != 'trapuzarrak'%}
-        <button type="button" class="btn btn-outline-success js-crud-add" data-action="ticket-to-invoice" data-pk="{{order.pk}}">
-          <i class="fa fa-euro"></i> Facturar
-        </button>
-      {%endif%}
+        <i class="fal {{STATUS_ICONS.4}} pr-2"></i>{{order.STATUS.6.1}}</button>
     {%endif%}
 
+    <!-- Kanban shift arrow -->
+      {% if order.status in '123456' %}
+      <i class="fal fa-arrow-alt-right fa-2x px-1 js-kanban-jump" data-pk="{{order.pk}}" id="status-shiftFwd" style="cursor: pointer;"></i>
+    {%endif%}
   </div>
+
 {%endif%}

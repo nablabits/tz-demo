@@ -1,0 +1,42 @@
+{% comment %}
+Delete order items.
+
+This custom form template lets delete order items. Fits to item selector both in regular and express orders.
+{% endcomment %}
+
+{% load widget_tweaks %}
+<form class="js-crud-form" method="post" action="{% url 'orderitems-CRUD' %}">
+  {% csrf_token %}
+  <div class="modal-header">
+    <h4 class="modal-title">Eliminar la prenda del pedido</h4>
+    <a type="button" class="close" data-dismiss="modal" aria-label="Close">
+      <span aria-hidden="true"><i class="fa fa-times"></i></span>
+    </a>
+  </div>
+  <div class="modal-body">
+    <div class="alert alert-warning" role="alert">
+      <i class="fa fa-exclamation-triangle pr-2"></i>
+      Atención, estás a punto de borrar<br>{{base_item.html_string}}
+    </div>
+    <p>Realmente quieres eliminar la prenda del pedido?</p>
+  </div>
+  <input type="hidden" name="order_item_pk" value="{{order_item.pk}}">
+  <input type="hidden" name="reference" value="{{order.pk}}">
+  <input type="hidden" name="action" value="delete">
+  <div class="modal-footer">
+    <div class="mr-auto d-none" id="check-success">
+      <i class="far fa-check text-success"></i> Borrado, puedes cerrar esta ventana.
+    </div>
+    <div class="mr-auto d-none" id="bg-working">
+      <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
+    </div>
+    <div class="mr-auto">
+      {{ form.non_field_errors }}
+      {{form.errors.name}}
+      {% for hidden_field in form.hidden_fields %}
+        {{ hidden_field }}
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+  </div>
+</form>

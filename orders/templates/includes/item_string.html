@@ -1,15 +1,4 @@
-{%if item.name%}
-  <span class="mr-1">#{{item.pk}}-{{item.get_item_type_display}} {{item.name}}</span>
-  <span class="badge badge-primary mr-1">{{item.get_item_class_display}}</span>
-  <span class="badge badge-info mr-1">T-{{item.size}}</span>
-
-{%elif item.element.name%} {% comment %} # used on order details {% endcomment %}
-  <span class="mx-1">{{item.element.get_item_type_display}} {{item.element.name}}</span>
-  <span class="badge badge-primary mr-1">{{item.element.get_item_class_display}}</span>
-  <span class="badge badge-info mr-1">T-{{item.element.size}}</span>
-
-{%else%} {% comment %} # used on pqueue {% endcomment %}
-  <span class="mr-1">{{item.item.element.get_item_type_display}} {{item.item.element.name}}</span>
-  <span class="badge badge-primary mr-1">{{item.item.element.get_item_class_display}}</span>
-  <span class="badge badge-info mr-1">T-{{item.item.element.size}}</span>
-{%endif%}
+{% comment %}
+Render the item string for views.
+{% endcomment %}
+<div class="d-block"><span class="mr-1">{{type}} {{name}}</span></div><div class="d-block"><span class="badge badge-primary mr-1">{{class}}</span><span class="badge badge-info mr-1">T-{{size}}</span></div>

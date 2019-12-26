@@ -9,8 +9,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.core.mail import EmailMultiAlternatives
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
-from django.db.models import Count, DecimalField, F, Q, Sum
-from django.db.utils import IntegrityError
+from django.db.models import Count, DecimalField, FloatField, F, Q, Sum
 from django.http import (
     Http404, HttpResponseServerError, JsonResponse, FileResponse, )
 from django.shortcuts import get_object_or_404, redirect, render
@@ -55,31 +54,24 @@ class CommonContexts:
             confirmed=confirmed).order_by('delivery')
         waiting = Order.objects.filter(
             status='6').filter(confirmed=confirmed).order_by('delivery')
-        done = Order.pending_orders.filter(
-            status='7').filter(confirmed=confirmed).order_by('delivery')
+        done = Order.live.filter(status='7').filter(confirmed=confirmed)
+        done = done.exclude(customer__name__iexact='trapuzarrak')
+        done = done.order_by('delivery')
 
         # Get the amounts for each column
-        amounts = list()
-        col1 = OrderItem.active.filter(reference__status='1')
-        col2 = OrderItem.active.filter(reference__status='2')
-        col3 = OrderItem.active.filter(
-            reference__status__in=['3', '4', '5', ])
-        col4 = OrderItem.active.filter(reference__status='6')
-        col5 = OrderItem.active.filter(reference__status='7')
-        for col in (col1, col2, col3, col4, col5):
-            col = col.aggregate(
-                total=Sum(F('price') * F('qty'), output_field=DecimalField()))
-            if not col['total']:
-                col['total'] = 0
-            amounts.append(col['total'])
+        cols = (icebox, queued, in_progress, waiting, done, )
+        cols = [c.exclude(customer__name__iexact='Trapuzarrak') for c in cols]
+        amounts = [sum([order.total for order in col]) for col in cols]
+        already_paid = [
+            sum([order.already_paid for order in col]) for col in cols]
 
-        eti, etq = 0, 0
-        for order in icebox:
-            eti += sum(order.estimated_time)
-        for order in queued:
-            etq += sum(order.estimated_time)
+        # Get times for icebox & queued orders. Recall that
+        # order.estimated_time returns 3 times
+        cols = (icebox, queued, )
+        est_times = [
+            sum([sum(order.estimated_time) for order in col]) for col in cols]
 
-        est_times = [prettify_times(d) for d in (eti, etq)]
+        est_times = [prettify_times(d) for d in est_times]
 
         vars = {'icebox': icebox,
                 'queued': queued,
@@ -89,6 +81,7 @@ class CommonContexts:
                 'confirmed': confirmed,
                 'update_date': EditDateForm(),
                 'amounts': amounts,
+                'already_paid': already_paid,
                 'est_times': est_times,
                 }
         return vars
@@ -106,8 +99,16 @@ class CommonContexts:
         now = datetime.now()
         try:
             session = Timetable.active.get(user=request.user)
-        except ObjectDoesNotExist:
+        except ObjectDoesNotExist:  # pragma: no cover
             session = None
+
+        # Display max status dates without overrun the next stages
+        ss = order.status_shift.all()
+        sts = ('1', '2', '3', '6', '7', '9', )
+        sis = settings.STATUS_ICONS
+        status_tracker = [
+            (sis[n], ss.filter(status=s).last()) for n, s in enumerate(sts)
+        ]
 
         # Display estimated times
         order_est = [prettify_times(d) for d in order.estimated_time]
@@ -116,24 +117,19 @@ class CommonContexts:
         title = (order.pk, order.customer.name, order.ref_name)
         vars = {'order': order,
                 'items': items,
+                'status_tracker': status_tracker,
                 'order_est': order_est,
                 'order_est_total': order_est_total,
                 'update_times': ItemTimesForm(),
                 'add_prepaids': CashFlowIOForm(),
+                'kill_order': InvoiceForm(),  # we'll use the pay_method field
                 'comments': comments,
+                'STATUS_ICONS': sis,
                 'user': cur_user,
                 'now': now,
                 'session': session,
                 'version': settings.VERSION,
-                'title': 'Pedido %s: %s, %s' % title,
-
-                # CRUD Actions
-                'btn_title_add': 'Añadir prendas',
-                'js_action_add': 'order-item-add',
-                'js_action_edit': 'order-item-edit',
-                'js_action_delete': 'order-item-delete',
-                'js_data_pk': order.pk,
-                }
+                'title': 'Pedido %s: %s, %s' % title, }
         return vars
 
     @staticmethod
@@ -247,56 +243,66 @@ def main(request):
     elapsed = today - date(cur_year - 1, 12, 31)
     goal = elapsed.days * settings.GOAL
 
-    # GoalBox, Avoid naive dates
-    start = timezone.now() - elapsed
+    """
+    Incomes bar.
 
-    # GoalBox, this year unsold items in queue
-    year_items = OrderItem.objects.filter(reference__delivery__gte=start)
-    year_items = year_items.filter(reference__invoice__isnull=True)
-    year_items = year_items.exclude(reference__ref_name__iexact='quick')
-    year_items = year_items.exclude(reference__status=8)
+    Incomes bar shows three elements (at most): current year incomes (sales +
+    prepaids); active orders' pending amount and unconfirmed orders's amounts.
 
-    # GoalBox, solid incomes: already sold or in confirmed orders
-    sales = Invoice.objects.filter(issued_on__year=cur_year)
+    0th, 1st & 2nd aggregates.
+    """
+    active_items = OrderItem.active.all()
+
+    # GoalBox, solid incomes: invoiced and prepaids
+    sales = CashFlowIO.inbounds.filter(creation__year=cur_year)
     sales = sales.aggregate(total=Sum('amount'))
-    confirmed = year_items.filter(reference__confirmed=True)
-    confirmed = confirmed.exclude(
-        reference__customer__name__iexact='trapuzarrak')
+    confirmed = active_items.filter(reference__confirmed=True)
 
-    # GoalBox, smoke incomes: unconfirmed, produced tz & future tz
-    unconfirmed = year_items.exclude(reference__confirmed=True)
-    unconfirmed = unconfirmed.exclude(
-        reference__customer__name__iexact='trapuzarrak')
+    # GoalBox, pending in unconfirmed orders
+    unconfirmed = active_items.exclude(reference__confirmed=True)
 
     # GoalBox, summary amounts
-    if not sales['total']:  # avoid NoneType aggregate
-        aggregates = [0, ]
-    else:
-        aggregates = [float(sales['total']), ]
+    aggregates = [int(sales['total']) if sales['total'] else 0]
 
     # GoalBox, get aggregations for confirmed & unconfirmed
-    queries = (confirmed, unconfirmed)
-    for query in queries:
-        aggregate = query.aggregate(
-            total=Sum(F('price') * F('qty'), output_field=DecimalField()))
-        if not aggregate['total']:  # avoid NoneType aggregate
-            aggregate = 0
+    for queryset in (confirmed, unconfirmed):
+        if queryset:
+            to_list = queryset.aggregate(
+                total=Sum(F('price') * F('qty'), output_field=FloatField()))
+            to_list = [int(to_list['total']) if to_list['total'] else 0][0]
         else:
-            aggregate = float(aggregate['total'])
-        aggregates.append(aggregate)
+            to_list = 0
+        aggregates.append(to_list)
 
-    # GoalBox, calculate expenses
-    expenses = Expense.objects.filter(
-        issued_on__year=cur_year).aggregate(total=Sum('amount'))
-    if not expenses['total']:
-        expenses['total'] = 0
-    aggregates.append(float(expenses['total']))
+    """
+    Expenses bar.
 
-    # Finally, insert the goal estimation to compute
+    Expenses bar shows two elements (at most): current year already paid
+    payments, previous and current year pending payments, provided that
+    there won't be pending payments older than that (1 year)
+
+    Aggregates 3rd & 4th.
+    """
+    cfo, e = CashFlowIO.outbounds.all(), Expense.objects.filter(closed=False)
+    already_paid = cfo.filter(creation__year=cur_year)
+    already_paid = already_paid.aggregate(total=Sum('amount'))['total']
+    pending_expenses = e.aggregate(total=Sum('amount'))['total']
+    partially_paid = cfo.filter(expense__closed=False)
+    partially_paid = partially_paid.aggregate(total=Sum('amount'))['total']
+    agg = (already_paid, pending_expenses, partially_paid, )
+    already_paid, pending_expenses, partially_paid = [
+        int(a) if a else 0 for a in agg]
+    aggregates.append(already_paid)  # 3rd aggregate, expenses paid
+
+    # 4th aggregate, pending expenses
+    aggregates.append(pending_expenses - partially_paid)
+
+    # Finally, insert the goal estimation to compute (5th aggregate)
     aggregates.append(goal)
 
-    # Estimate the length of the bar
-    relevant = (aggregates[0], aggregates[3], aggregates[4])
+    # Estimate the length of the bar from the relevant amounts: inbounds,
+    # outbounds and goal
+    relevant = (aggregates[0], aggregates[3], aggregates[5])
     mn, mx = min(relevant) * .9,  max(relevant) * 1.1
     bar_len = mx - mn
 
@@ -306,11 +312,12 @@ def main(request):
     # Adjust confirmed and unconfirmed since they are not included in relevant
     bar[1] = round(((sum(aggregates[:2]) - mn)*100 / bar_len)-bar[0], 2)
     bar[2] = round(((sum(aggregates[:3]) - mn)*100 / bar_len)-sum(bar[:2]), 2)
+    bar[4] = round(((sum(aggregates[3:5]) - mn)*100 / bar_len)-bar[3], 2)
 
     # GoalBox, tracked time ratios this year
     nat = timedelta(0)
     tt = OrderItem.objects.filter(stock=False).filter(element__foreing=False)
-    tt = tt.filter(reference__status='7')
+    tt = tt.filter(reference__status__in=['7', '9'])
     tt = tt.filter(reference__inbox_date__year=cur_year)
     if tt:
         ttc, tts, tti = (
@@ -327,29 +334,17 @@ def main(request):
         tt_ratio = None
 
     # Active Box
-    active = Order.active.count()
+    active = Order.live.exclude(status='7').count()
     active_msg = False
-    waiting = Order.active.filter(status='6').count()
+    waiting = Order.live.filter(status='6').count()
     if waiting:
         active_msg = 'Aunque hay %s para entregar' % waiting
 
     # Pending box
-    pending = Order.pending_orders.all()
-    if pending:
-        active_confirmed = OrderItem.active.filter(reference__confirmed=True)
-        pending_amount = active_confirmed.aggregate(
-            total=Sum(F('price') * F('qty'), output_field=DecimalField()))
-        prepaid = pending.aggregate(total=Sum('prepaid'))
-        if not pending_amount['total']:
-            pending_amount['total'] = 0
-        if not prepaid['total']:
-            prepaid['total'] = 0
-        pending_amount = abs(int(pending_amount['total'] - prepaid['total']))
-        if pending_amount == 0:
-            pending_msg = 'Hay pedidos activos pero no tienen prendas añadidas'
-        else:
-            pending_msg = '%s€ tenemos aún<br>por cobrar' % pending_amount
-    else:
+    pending = [o.pending for o in Order.live.all() if o.pending]
+    pending_amount = int(sum(pending))
+    pending_msg = '{}€ tenemos aún<br>por cobrar'.format(pending_amount)
+    if pending_amount == 0:
         pending_msg = 'Genial, tenemos todo cobrado!'
 
     # Outdated box
@@ -387,20 +382,20 @@ def main(request):
         balance_msg = '<h4 class="box_link_h">Estás en paz con el banco<h4>'
 
     # Month production box
-    month = Invoice.objects.filter(
-        issued_on__month=timezone.now().date().month)
+    month = CashFlowIO.inbounds.filter(creation__year=cur_year)
+    month = month.filter(creation__month=timezone.now().date().month)
     month = month.aggregate(total=Sum('amount'))
 
     # week production box
-    week = Invoice.objects.filter(
-        issued_on__week=timezone.now().date().isocalendar()[1])
+    week = CashFlowIO.inbounds.filter(creation__year=cur_year)
+    week = week.filter(creation__week=timezone.now().date().isocalendar()[1])
     week = week.aggregate(total=Sum('amount'))
 
     # top5 customers Box
     top5 = Customer.objects.exclude(name__iexact='express')
     top5 = top5.filter(order__invoice__isnull=False)
     top5 = top5.annotate(
-        total=Sum(F('order__orderitem__price') * F('order__orderitem__qty'),
+        total=Sum(F('order__items__price') * F('order__items__qty'),
                   output_field=DecimalField()))
     top5 = top5.order_by('-total')[:5]
 
@@ -422,7 +417,7 @@ def main(request):
                      'tt_ratio': tt_ratio,
                      'active': active,
                      'active_msg': active_msg,
-                     'pending': Order.pending_orders.count(),
+                     'pending': len(pending),
                      'pending_msg': pending_msg,
                      'outdated': outdated,
                      'month': month['total'],
@@ -510,168 +505,6 @@ def search(request):
 # List views
 @login_required
 @timetable_required
-def orderlist(request, orderby):
-    """Display all orders in a view.
-
-    GET requests display the orders sorted by the 'orderby' get parameter.
-    POST requests are used to update the status or to set as paid the orders
-    (for now). They display the view by date (default).
-
-    In the view, orders are separated on different tabs: active, delivered, tz
-    active & delivered, and cancelled. The first two exclude tz orders, if such
-    customer exists, while the the next two are exclusive for it (production &
-    stock for the shop). Finally, all cancelled orders are displayed regardless
-    the customer.
-    """
-    # POST method to update status & set paid an order.
-    if request.method == 'POST':
-        order_pk = request.POST.get('order')
-        order = get_object_or_404(Order, pk=order_pk)
-        if request.POST.get('status'):
-            order.status = request.POST.get('status')
-        elif request.POST.get('collect'):
-            order.prepaid = order.budget
-        else:
-            raise Http404('Action required')
-        order.save()
-
-    orders = Order.objects.exclude(ref_name__iexact='quick')
-
-    try:
-        tz = Customer.objects.get(name__iexact='trapuzarrak')
-    except ObjectDoesNotExist:
-        tz = None
-
-    # Get the orders for each tab when tz customer exists
-    if tz:
-        # First query the stock, tz related queries
-        tz_orders = orders.filter(customer=tz)
-        tz_active = tz_orders.exclude(status__in=[7, 8]).order_by('delivery')
-        tz_delivered = tz_orders.filter(status=7).order_by('-delivery')[:10]
-
-        # And the attr collection for them
-        tz_active = tz_active.annotate(Count('orderitem', distinct=True),
-                                       Count('comment', distinct=True),
-                                       timing=(Sum('orderitem__sewing') +
-                                               Sum('orderitem__iron') +
-                                               Sum('orderitem__crop')))
-        tz_delivered = tz_delivered.annotate(Count('orderitem', distinct=True),
-                                             Count('comment', distinct=True),
-                                             timing=(Sum('orderitem__sewing') +
-                                                     Sum('orderitem__iron') +
-                                                     Sum('orderitem__crop')))
-
-        # Finally, exclude tz customer for further queries and sort
-        orders = orders.exclude(customer=tz)
-
-    # If tz customer doesn't exist, these vars should be none
-    else:
-        tz_active = None
-        tz_delivered = None
-
-    delivered = orders.filter(status=7).order_by('-delivery')[:10]
-    active = orders.exclude(status__in=[7, 8])
-    cancelled = orders.filter(status=8).order_by('-inbox_date')[:10]
-    pending = orders.exclude(status=8).filter(delivery__gte=date(2019, 1, 1))
-    pending = pending.filter(invoice__isnull=True).order_by('delivery')
-    pending = pending.exclude(confirmed=False)
-
-    # Active, delivered & pending orders show some attr at glance
-    active = active.annotate(Count('orderitem', distinct=True),
-                             Count('comment', distinct=True),
-                             timing=(Sum('orderitem__sewing') +
-                                     Sum('orderitem__iron') +
-                                     Sum('orderitem__crop')))
-
-    delivered = delivered.annotate(Count('orderitem', distinct=True),
-                                   Count('comment', distinct=True),
-                                   timing=(Sum('orderitem__sewing') +
-                                           Sum('orderitem__iron') +
-                                           Sum('orderitem__crop')))
-
-    pending = pending.annotate(Count('orderitem', distinct=True),
-                               Count('comment', distinct=True),
-                               timing=(Sum('orderitem__sewing') +
-                                       Sum('orderitem__iron') +
-                                       Sum('orderitem__crop')))
-
-    # Total pending amount
-    items = OrderItem.objects.filter(reference__delivery__gte=date(2019, 1, 1))
-    items = items.exclude(reference__status=8)
-    items = items.exclude(reference__ref_name__iexact='quick')
-    items = items.exclude(reference__customer__name__iexact='Trapuzarrak')
-    items = items.filter(reference__invoice__isnull=True)
-    items = items.exclude(reference__confirmed=False)
-    items = items.aggregate(
-        total=Sum(F('price') * F('qty'), output_field=DecimalField()))
-    prepaid = pending.aggregate(total=Sum('prepaid'))
-    try:
-        pending_total = items['total'] - prepaid['total']
-    except TypeError:
-        pending_total = 0
-
-    # This week active entries
-    this_week = date.today().isocalendar()[1]
-    this_week_active = Order.objects.filter(Q(delivery__week=this_week) |
-                                            Q(delivery__lte=timezone.now()))
-    this_week_active = this_week_active.exclude(status__in=[7, 8])
-    i_relax = settings.RELAX_ICONS[randint(0, len(settings.RELAX_ICONS) - 1)]
-
-    # calendar view entries
-    active_calendar = Order.objects.exclude(status__in=[7, 8])
-    confirmed = active_calendar.filter(confirmed=True).count()
-    unconfirmed = active_calendar.filter(confirmed=False).count()
-
-    # Finally, set the sorting method on view
-    if orderby == 'date':
-        active = active.order_by('delivery')
-        active_calendar = active_calendar.order_by('delivery')
-    elif orderby == 'status':
-        active = active.order_by('status')
-        active_calendar = active_calendar.order_by('status')
-    elif orderby == 'priority':
-        active = active.order_by('priority')
-        active_calendar = active_calendar.order_by('priority')
-    else:
-        raise Http404('Required sorting method')
-
-    cur_user = request.user
-    now = datetime.now()
-    try:
-        session = Timetable.active.get(user=request.user)
-    except ObjectDoesNotExist:
-        session = None
-
-    view_settings = {'active': active,
-                     'confirmed': confirmed,
-                     'unconfirmed': unconfirmed,
-                     'delivered': delivered,
-                     'user': cur_user,
-                     'now': now,
-                     'session': session,
-                     'version': settings.VERSION,
-                     'active_stock': tz_active,
-                     'active_calendar': active_calendar,
-                     'this_week_active': this_week_active,
-                     'i_relax': i_relax,
-                     'delivered_stock': tz_delivered,
-                     'cancelled': cancelled,
-                     'pending': pending,
-                     'pending_total': pending_total,
-                     'prepaid': prepaid['total'],
-                     'to_invoice': items['total'],
-                     'order_by': orderby,
-                     'placeholder': 'Buscar pedido (referencia o nº)',
-                     'search_on': 'orders',
-                     'title': 'TrapuZarrak · Pedidos',
-                     'colors': settings.WEEK_COLORS,
-                     }
-
-    return render(request, 'tz/orders.html', view_settings)
-
-
-@login_required
-@timetable_required
 def customerlist(request):
     """Display all customers or search'em."""
     customers = Customer.objects.all().exclude(name__iexact='express')
@@ -691,7 +524,7 @@ def customerlist(request):
     now = datetime.now()
     try:
         session = Timetable.active.get(user=request.user)
-    except ObjectDoesNotExist:
+    except ObjectDoesNotExist:  # pragma: no cover
         session = None
 
     view_settings = {'customers': customers,
@@ -707,7 +540,6 @@ def customerlist(request):
                      # CRUD actions
                      'btn_title_add': 'Nuevo cliente',
                      'js_action_add': 'customer-add',
-                     'js_data_pk': '0',
 
                      'include_template': 'includes/customer_list.html',
                      }
@@ -739,8 +571,6 @@ def itemslist(request):
                      'js_action_add': 'object-item-add',
                      'js_action_edit': 'object-item-edit',
                      'js_action_delete': 'object-item-delete',
-                     'js_action_send_to': 'send-to-order',
-                     'js_data_pk': '0',
                      }
 
     return render(request, 'tz/list_view.html', view_settings)
@@ -891,6 +721,11 @@ def order_view(request, pk):
         elif action == 'deliver-order':
             order.deliver()
             tab = 'main'
+
+        elif action == 'kill-order':
+            pm = request.POST.get('pay_method', None)
+            order.kill(pay_method=pm)
+            tab = 'main'
         else:
             return HttpResponseServerError('Action was not recognized')
 
@@ -933,10 +768,10 @@ def order_express_view(request, pk):
             order.ref_name = 'Venta express con arreglo'
             order.save()
         elif pay_method:  # Invoice the order
-            i = Invoice.objects.create(reference=order, pay_method=pay_method)
-            i.full_clean()
+            order.kill(pay_method=pay_method)
+            # define the email sending options
             if request.POST.get('email', None):
-                pass  # define the email sending options
+                pass  # pragma: no cover
 
         else:
             raise Http404('Something went wrong with the request.')
@@ -957,8 +792,6 @@ def order_express_view(request, pk):
     except ObjectDoesNotExist:
         session = None
 
-    form = InvoiceForm()
-
     view_settings = {'order': order,
                      'customers': customers,
                      'user': cur_user,
@@ -966,7 +799,7 @@ def order_express_view(request, pk):
                      'session': session,
                      'item_types': settings.ITEM_TYPE[1:],
                      'items': items,
-                     'form': form,
+                     'invoice_form': InvoiceForm(),
                      'available_items': available_items,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
@@ -976,8 +809,6 @@ def order_express_view(request, pk):
                      # CRUD Actions
                      'btn_title_add': 'Nueva prenda',
                      'js_action_add': 'object-item-add',
-                     'js_action_delete': 'order-express-item-delete',
-                     'js_data_pk': '0',
                      }
     return render(request, 'tz/order_express.html', view_settings)
 
@@ -988,8 +819,8 @@ def customer_view(request, pk):
     """Display details for an especific customer."""
     customer = get_object_or_404(Customer, pk=pk)
     orders = Order.objects.filter(customer=customer)
-    active = orders.exclude(status__in=[7, 8]).order_by('delivery')
-    delivered = orders.filter(status=7).order_by('delivery')
+    active = orders.exclude(status__in=[7, 8, 9]).order_by('delivery')
+    delivered = orders.filter(status__in=[7, 9]).order_by('delivery')
     cancelled = orders.filter(status=8).order_by('delivery')
 
     # Evaluate pending orders
@@ -1165,50 +996,6 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Send item to order (GET)
-        elif action == 'send-to-order':
-            custom_form = 'includes/custom_forms/send_to_order.html'
-            item = get_object_or_404(Item, pk=pk)
-            context = {'modal_title': 'Añadir prenda a pedido',
-                       'pk': pk,
-                       'item': item,
-                       'order_pk': self.request.GET.get('aditionalpk', None),
-                       'action': 'send-to-order',
-                       'submit_btn': 'Añadir a pedido',
-                       'custom_form': custom_form,
-                       }
-            template = 'includes/regular_form.html'
-
-        # Send to order express (GET)
-        elif action == 'send-to-order-express':
-            custom_form = 'includes/custom_forms/send_to_order.html'
-            item = get_object_or_404(Item, pk=pk)
-            context = {'modal_title': 'Enviar prenda a ticket',
-                       'pk': pk,
-                       'item': item,
-                       'order_pk': self.request.GET.get('aditionalpk', None),
-                       'action': 'send-to-order-express',
-                       'submit_btn': 'Añadir a ticket',
-                       'custom_form': custom_form,
-                       }
-            template = 'includes/regular_form.html'
-
-        # Add order item (GET)
-        elif action == 'order-item-add':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderItemForm()
-            items = Item.objects.all()
-            context = {'form': form,
-                       'order': order,
-                       'items': items,
-                       'modal_title': 'Añadir prenda',
-                       'pk': order.pk,
-                       'action': 'order-item-add',
-                       'submit_btn': 'Añadir',
-                       'custom_form': 'includes/custom_forms/order_item.html',
-                       }
-            template = 'includes/regular_form.html'
-
         # Add a comment (GET)
         elif action == 'order-add-comment':
             order = get_object_or_404(Order, pk=pk)
@@ -1218,27 +1005,6 @@ class Actions(View):
                        'pk': order.pk,
                        'action': 'order-comment',
                        'submit_btn': 'Añadir',
-                       }
-            template = 'includes/regular_form.html'
-
-        # Issue invoice (GET)
-        elif action == 'ticket-to-invoice':
-            order = get_object_or_404(Order, pk=pk)
-            already_invoiced = Invoice.objects.filter(reference=order)
-            items = OrderItem.objects.filter(reference=order)
-            total = items.aggregate(
-                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
-            form = InvoiceForm()
-            context = {'form': form,
-                       'items': items,
-                       'order': order,
-                       'total': total,
-                       'invoiced': already_invoiced,
-                       'modal_title': 'Facturar',
-                       'pk': order.pk,
-                       'action': 'ticket-to-invoice',
-                       'submit_btn': 'Facturar',
-                       'custom_form': 'includes/custom_forms/invoice.html',
                        }
             template = 'includes/regular_form.html'
 
@@ -1314,21 +1080,6 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Edit order item (GET)
-        elif action == 'order-item-edit':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            form = OrderItemForm(instance=item)
-            context = {'form': form,
-                       'item': item,
-                       'modal_title': 'Editar prenda',
-                       'pk': item.pk,
-                       'action': 'order-item-edit',
-                       'submit_btn': 'Guardar',
-                       'custom_form': 'includes/custom_forms/order_item.html',
-                       }
-            template = 'includes/regular_form.html'
-
         # Edit times on pqueue (GET)
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
@@ -1356,17 +1107,6 @@ class Actions(View):
                        'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
-        # Delete order item (GET)
-        elif action == 'order-item-delete':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            context = {'modal_title': 'Eliminar prenda',
-                       'msg': 'Realmente borrar la prenda?',
-                       'pk': item.pk,
-                       'action': 'order-item-delete',
-                       'submit_btn': 'Sí, borrar'}
-            template = 'includes/delete_confirmation.html'
-
         # delete order express (GET)
         elif action == 'order-express-delete':
             order = get_object_or_404(Order, pk=pk)
@@ -1375,17 +1115,6 @@ class Actions(View):
                        'pk': order.pk,
                        'action': 'order-express-delete',
                        'submit_btn': 'Sí, descartar'}
-            template = 'includes/delete_confirmation.html'
-
-        # Delete order express item (GET)
-        elif action == 'order-express-item-delete':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            context = {'modal_title': 'Eliminar prenda',
-                       'msg': 'Realmente borrar la prenda?',
-                       'pk': item.pk,
-                       'action': 'order-express-item-delete',
-                       'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
         # Delete Customer (GET)
@@ -1549,7 +1278,6 @@ class Actions(View):
                            'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
-                           'js_action_send_to': 'send-to-order',
                            }
                 template = 'includes/item_selector.html'
             else:
@@ -1563,98 +1291,6 @@ class Actions(View):
                            'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
-
-        # Send item to order (POST)
-        elif action == 'send-to-order':
-            item = get_object_or_404(Item,
-                                     pk=self.request.POST.get('pk', None))
-            order = get_object_or_404(
-                Order, pk=self.request.POST.get('order-pk', None))
-
-            # Test isStock (convert to bool)
-            is_stock = self.request.POST.get('isStock', None)
-            if is_stock:
-                is_stock = True
-            else:
-                is_stock = False
-
-            # Now create OrderItem
-            price = self.request.POST.get('custom-price', None)
-            qty = self.request.POST.get('item-qty', 1)
-            if price is '0':
-                price = None
-            OrderItem.objects.create(
-                element=item, reference=order, qty=qty, price=price,
-                stock=is_stock, fit=False)
-
-            # Set default price (if case)
-            set_price = self.request.POST.get('set-default-price', None)
-            if set_price:
-                item.price = price
-                item.full_clean()
-                item.save()
-
-            # Context for the view
-            items = OrderItem.objects.filter(reference=order)
-            data['form_is_valid'] = True
-            data['html_id'] = '#quick-list'
-            context = {'items': items,
-                       'order': order,
-
-                       # CRUD Actions
-                       'js_action_edit': 'order-item-edit',
-                       'js_action_delete': 'order-item-delete',
-                       'js_data_pk': order.pk,
-                       }
-            template = 'includes/item_quick_list.html'
-
-        # Send item to order express (POST)
-        elif action == 'send-to-order-express':
-            item = get_object_or_404(Item,
-                                     pk=self.request.POST.get('item-pk', None))
-            order = get_object_or_404(
-                Order, pk=self.request.POST.get('order-pk', None)
-                )
-
-            # Get the customers for dropdown
-            customers = Customer.objects.exclude(name='express')
-            customers = customers.exclude(provider=True)
-
-            # Now create OrderItem
-            price = self.request.POST.get('custom-price', None)
-            qty = self.request.POST.get('item-qty', 1)
-            if price is '0':
-                price = None
-            OrderItem.objects.create(
-                element=item, reference=order, qty=qty, price=price,
-                stock=True, fit=False)
-
-            # Set default price (if case)
-            set_price = self.request.POST.get('set-default-price', None)
-            if set_price:
-                item.price = price
-                item.full_clean()
-                item.save()
-
-            # Context for the view
-            items = OrderItem.objects.filter(reference=order)
-            data['form_is_valid'] = True
-            data['html_id'] = '#ticket-wrapper'
-            total = items.aggregate(
-                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
-
-            form = InvoiceForm()
-            context = {'items': items,
-                       'total': total,
-                       'order': order,
-                       'customers': customers,
-                       'form': form,
-
-                       # CRUD Actions
-                       'js_action_delete': 'order-express-item-delete',
-                       'js_data_pk': '0',
-                       }
-            template = 'includes/ticket.html'
 
         # Edit order (POST)
         elif action == 'order-edit':
@@ -1787,7 +1423,6 @@ class Actions(View):
                            'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
-                           'js_action_send_to': 'send-to-order',
                            }
                 template = 'includes/item_selector.html'
             else:
@@ -1801,39 +1436,6 @@ class Actions(View):
                            'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
-
-        # Edit order item (POST)
-        elif action == 'order-item-edit':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            order = item.reference
-            form = OrderItemForm(request.POST, instance=item)
-            items = OrderItem.objects.filter(reference=order)
-            if form.is_valid():
-                context = {'items': items,
-                           'order': order,
-                           'btn_title_add': 'Añadir prenda',
-                           'js_action_add': 'order-item-add',
-                           'js_action_edit': 'order-item-edit',
-                           'js_action_delete': 'order-item-delete',
-                           'js_data_pk': order.pk,
-                           }
-                template = 'includes/item_quick_list.html'
-                form.save()
-                data['form_is_valid'] = True
-                data['html_id'] = '#quick-list'
-            else:
-                custom_form = 'includes/custom_forms/order_item.html'
-                context = {'form': form,
-                           'item': item,
-                           'modal_title': 'Editar prenda',
-                           'pk': item.reference.pk,
-                           'action': 'order-item-edit',
-                           'submit_btn': 'Guardar',
-                           'custom_form': custom_form,
-                           }
-                template = 'includes/regular_form.html'
-                data['form_is_valid'] = False
 
         # Add times from pqueue (POST)
         elif action == 'pqueue-add-time':
@@ -1895,47 +1497,16 @@ class Actions(View):
         # Delete object Item
         elif action == 'object-item-delete':
             item = get_object_or_404(Item, pk=pk)
-            try:
-                item.delete()
-            except IntegrityError:
-                data['form_is_valid'] = False
-                # TODO: data['error'] = process error msg
-                context = {'modal_title': 'Eliminar prenda',
-                           'msg': 'Realmente borrar la prenda?',
-                           'pk': item.pk,
-                           'action': 'object-item-delete',
-                           'submit_btn': 'Sí, borrar'}
-                template = 'includes/delete_confirmation.html'
-            else:
-                data['form_is_valid'] = True
-                items = Item.objects.all()[:11]
-                data['html_id'] = '#item-selector'
-                context = {'item_types': settings.ITEM_TYPE[1:],
-                           'available_items': items,
-                           'js_action_edit': 'object-item-edit',
-                           'js_action_delete': 'object-item-delete',
-                           'js_action_send_to': 'send-to-order',
-                           }
-                template = 'includes/item_selector.html'
-
-        # Delete item (POST)
-        elif action == 'order-item-delete':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            order = item.reference
-            items = OrderItem.objects.filter(reference=order)
             item.delete()
             data['form_is_valid'] = True
-            data['html_id'] = '#quick-list'
-            context = {'items': items,
-                       'order': order,
-                       'btn_title_add': 'Añadir prenda',
-                       'js_action_add': 'order-item-add',
-                       'js_action_edit': 'order-item-edit',
-                       'js_action_delete': 'order-item-delete',
-                       'js_data_pk': order.pk,
+            items = Item.objects.all()[:11]
+            data['html_id'] = '#item-selector'
+            context = {'item_types': settings.ITEM_TYPE[1:],
+                       'available_items': items,
+                       'js_action_edit': 'object-item-edit',
+                       'js_action_delete': 'object-item-delete',
                        }
-            template = 'includes/item_quick_list.html'
+            template = 'includes/item_selector.html'
 
         # Delete order express (POST)
         elif action == 'order-express-delete':
@@ -1943,28 +1514,6 @@ class Actions(View):
             order.delete()
             data['redirect'] = (reverse('main'))
             data['form_is_valid'] = True
-
-        # Delete items on order express (POST)
-        elif action == 'order-express-item-delete':
-            item = get_object_or_404(OrderItem, pk=pk)
-            order = item.reference
-            items = OrderItem.objects.filter(reference=order)
-            item.delete()
-            data['form_is_valid'] = True
-            data['html_id'] = '#ticket'
-            total = items.aggregate(
-                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
-            form = InvoiceForm()
-            context = {'items': items,
-                       'total': total,
-                       'order': order,
-                       'form': form,
-
-                       # CRUD Actions
-                       'js_action_delete': 'order-express-item-delete',
-                       'js_data_pk': '0',
-                       }
-            template = 'includes/ticket.html'
 
         # Delete customer (POST)
         elif action == 'customer-delete':
@@ -2004,7 +1553,7 @@ class OrdersCRUD(View):
     """
 
     def get(self, request):
-        pass
+        pass  # pragma: no cover
 
     def post(self, request):
         data = dict()
@@ -2033,29 +1582,39 @@ class OrdersCRUD(View):
         # Kanban Jump (POST)
         elif action == 'kanban-jump':
             order = get_object_or_404(Order, pk=pk)
-            dir = request.POST.get('direction', None)
-            if not dir:
-                return HttpResponseServerError('No direction was especified.')
-            if dir == 'back':
+            raw_input = request.POST.get('origin', None)
+            if not raw_input:
+                return HttpResponseServerError('No origin was especified.')
+            else:
+                origin, dir = raw_input.split('-')
+            if dir == 'shiftBack':
                 order.kanban_backward()
-            elif dir == 'next':
+            elif dir == 'shiftFwd':
                 order.kanban_forward()
             else:
                 return HttpResponseServerError('Unknown direction.')
+
+            if origin == 'status':
+                template = 'includes/order_status.html'
+                data['html_id'] = '#order-status'
+                context = CommonContexts.order_details(request, pk)
+
             data['form_is_valid'] = True
 
         else:
             return HttpResponseServerError('The action was not found.')
 
-        template = 'includes/kanban_columns.html'
-        data['html_id'] = '#kanban-columns'
-        context = CommonContexts.kanban()
+        if not template:
+            template = 'includes/kanban_columns.html'
+            data['html_id'] = '#kanban-columns'
+            context = CommonContexts.kanban()
+
         data['html'] = render_to_string(template, context, request=request)
 
         # When testing, display as a regular view in order to test variables
         if test:
             return render(
-                request, 'includes/kanban_columns.html', context=context)
+                request, template, context=context)
         else:
             return JsonResponse(data)
 
@@ -2069,23 +1628,143 @@ class OrderItemsCRUD(View):
     """
 
     def get(self, request):
-        pass
+        """Get the modal's content to perform CRUD on OrderItems."""
+        data = dict()
+        order_pk = request.GET.get('reference', None)
+        if not order_pk:
+            return HttpResponseServerError('No order was supplied')
+        order = Order.objects.get(pk=order_pk)
+
+        # Determine wether we're creating or editing/deleting
+        base_item = request.GET.get('element', None)
+        base_item = Item.objects.get(pk=base_item)
+        order_item = request.GET.get('order_item', None)
+
+        # Creating and editing use the same template
+        template = 'includes/custom_forms/order_item.html'
+
+        if order_item:  # we're editing/deleting
+            order_item = OrderItem.objects.get(pk=order_item)
+            form = OrderItemForm(instance=order_item)
+            modal_title = 'Editar prenda en pedido.'
+            if request.GET.get('delete', None):
+                template = 'includes/delete_dialogs/order_item.html'
+        else:  # we're creating
+            form = OrderItemForm()
+            modal_title = 'Añadir prenda.'
+
+        context = {'form': form,
+                   'base_item': base_item,
+                   'order_item': order_item,
+                   'order': order,
+                   'modal_title': modal_title,
+                   }
+
+        if request.POST.get('test', None):
+            return render(
+                request, template, context=context)  # pragma: no cover
+
+        data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
 
     def post(self, request):
+        """Create or update the model.
+
+        The main action process all the fields in the model so they should be
+        supplied by the form, whereas the other actions perform updates on
+        certain fields.
+
+        Eventually, we should get rid of those partial models (and therefore
+        the parameter action) by adding hidden fields to their forms.
+
+        There's also an option to update base_item price.
+        """
         data = dict()
-        pk = self.request.POST.get('pk', None)
-        action = self.request.POST.get('action', None)
-        test = self.request.POST.get('test', None)
-        template, context = False, False
-
-        if not pk:
-            return HttpResponseServerError('No pk was given.')
-
+        action = request.POST.get('action', None)
         if not action:
             return HttpResponseServerError('No action was given.')
 
-        if action == 'edit-times':
+        # Determine wether we're creating or editing/deleting
+        order_item_pk = request.POST.get('order_item_pk', None)
+        if order_item_pk:  # we're editing/deleting
+            order_item = OrderItem.objects.get(pk=order_item_pk)
+            form = OrderItemForm(request.POST, instance=order_item)
+            modal_title = 'Editar prenda en pedido.'
+        else:  # we're creating
+            form = OrderItemForm(request.POST)
+            modal_title = 'Añadir prenda.'
+            order_item = None
+
+        if action == 'main':  # Create & update
+            base_item = Item.objects.get(pk=request.POST.get('element', None))
+            order = Order.objects.get(pk=request.POST.get('reference', None))
+            order_est_total = prettify_times(sum(order.estimated_time))
+
+            if form.is_valid():
+                # perfrom db actions
+                form.save()
+                if request.POST.get('set-default-price', None):
+                    base_item.price = request.POST.get('set-default-price')
+                    base_item.notes = (
+                        base_item.notes + ' Cambio de precio desde pedido')
+                    base_item.full_clean()
+                    base_item.save()
+                template = 'includes/item_quick_list.html'
+                data['form_is_valid'] = True
+
+                # Render the view depending the order type
+                if order.ref_name == 'Quick':
+                    data['html_id'] = '#ticket-wrapper'
+                    template = 'includes/ticket.html'
+                else:
+                    data['html_id'] = '#quick-list'
+                    template = 'includes/item_quick_list.html'
+
+            # not valid form
+            else:
+                data['form_is_valid'] = False
+                template = 'includes/custom_forms/order_item.html'
+
+            context = {'form': form,
+                       'invoice_form': InvoiceForm(),
+                       'base_item': base_item,
+                       'order_item': order_item,
+                       'order': order,
+                       'order_est_total': order_est_total,
+                       'modal_title': modal_title,
+                       }
+
+        elif action == 'delete':
+            # TODO: once got rid of partial editing methods, this code below
+            # can be refactored with the main action one
+            if not order_item_pk:
+                return HttpResponseServerError('No item pk was provided.')
+            order = Order.objects.get(pk=request.POST.get('reference', None))
+            order_est_total = prettify_times(sum(order.estimated_time))
+
+            # perfrom db actions
+            order_item.delete()
+            data['form_is_valid'] = True
+
+            # Render the view depending the order type
+            if order.ref_name == 'Quick':
+                data['html_id'] = '#ticket-wrapper'
+                template = 'includes/ticket.html'
+            else:
+                data['html_id'] = '#quick-list'
+                template = 'includes/item_quick_list.html'
+            context = {'form': form,
+                       'order_item': order_item,
+                       'order': order,
+                       'order_est_total': order_est_total,
+                       'modal_title': modal_title,
+                       }
+
+        elif action == 'edit-times':
             # Edit the times int the order view
+            pk = request.POST.get('pk', None)
+            if not pk:
+                return HttpResponseServerError('No pk was given.')
             item = get_object_or_404(OrderItem, pk=pk)
             form = ItemTimesForm(request.POST, instance=item)
             if form.is_valid():
@@ -2102,6 +1781,9 @@ class OrderItemsCRUD(View):
 
         elif action == 'edit-notes':
             # Edit/add notes in the pqueue
+            pk = request.POST.get('pk', None)
+            if not pk:
+                return HttpResponseServerError('No pk was given.')
             item = get_object_or_404(OrderItem, pk=pk)
             form = OrderItemNotes(request.POST, instance=item)
             form.save()
@@ -2110,17 +1792,17 @@ class OrderItemsCRUD(View):
             template = 'includes/pqueue_element_details.html'
             item = dict(item=item)
             context = dict(item=item)  # a bit recursive to match the for loop
+
         else:
             return HttpResponseServerError('The action was not found.')
 
         data['html'] = render_to_string(template, context, request=request)
 
         # When testing, display as a regular view in order to test variables
-        if test:
+        if request.POST.get('test', None):
             context['form'] = form
             context['data'] = data
-            return render(
-                request, template, context=context)
+            return render(request, template, context=context)
         else:
             return JsonResponse(data)
 
@@ -2134,7 +1816,7 @@ class CommentsCRUD(View):
     """
 
     def get(self, request):
-        pass
+        pass  # pragma: no cover
 
     def post(self, request):
         data = dict()
@@ -2188,7 +1870,7 @@ class CommentsCRUD(View):
 class CashFlowIOCRUD(View):
     """Create, update and delete CashFlowIO instances"""
     def get(self, request):
-        pass
+        pass  # pragma: no cover
 
     def post(self, request):
         action = self.request.POST.get('action', None)
@@ -2262,15 +1944,11 @@ def pqueue_actions(request):
     if action == 'send':
         item = get_object_or_404(OrderItem, pk=pk)
         to_queue = PQueue(item=item)
-        try:
-            to_queue.clean()
-        except ValidationError:
-            data['error'] = 'Couldn\'t save the object'
-        else:
-            to_queue.save()
-            data['is_valid'] = True
-            data['reload'] = True
-            data['html_id'] = False
+        to_queue.clean()
+        to_queue.save()
+        data['is_valid'] = True
+        data['reload'] = True
+        data['html_id'] = False
 
     elif action == 'back':
         item = get_object_or_404(PQueue, pk=pk)
@@ -2281,45 +1959,33 @@ def pqueue_actions(request):
 
     elif action == 'up':
         item = get_object_or_404(PQueue, pk=pk)
-        if item.up():
-            data['is_valid'] = True
-        else:
-            data['error'] = 'Couldn\'t clean the object'
+        item.up()
+        data['is_valid'] = True
 
     elif action == 'down':
         item = get_object_or_404(PQueue, pk=pk)
-        if item.down():
-            data['is_valid'] = True
-        else:
-            data['error'] = 'Couldn\'t clean the object'
+        item.down()
+        data['is_valid'] = True
 
     elif action == 'top':
         item = get_object_or_404(PQueue, pk=pk)
-        if item.top():
-            data['is_valid'] = True
-        else:
-            data['error'] = 'Couldn\'t clean the object'
+        item.top()
+        data['is_valid'] = True
 
     elif action == 'bottom':
         item = get_object_or_404(PQueue, pk=pk)
-        if item.bottom():
-            data['is_valid'] = True
-        else:
-            data['error'] = 'Couldn\'t clean the object'
+        item.bottom()
+        data['is_valid'] = True
 
     elif action == 'complete' or action == 'tb-complete':
         item = get_object_or_404(PQueue, pk=pk)
-        if item.complete():
-            data['is_valid'] = True
-        else:
-            data['error'] = 'Couldn\'t clean the object'
+        item.complete()
+        data['is_valid'] = True
 
     elif action == 'uncomplete' or action == 'tb-uncomplete':
         item = get_object_or_404(PQueue, pk=pk)
-        if item.uncomplete():
-            data['is_valid'] = True
-        else:
-            data['error'] = 'Couldn\'t clean the object'
+        item.uncomplete()
+        data['is_valid'] = True
 
     # Tablet view id
     if action == 'tb-complete' or action == 'tb-uncomplete':
@@ -2374,10 +2040,6 @@ def item_selector(request):
         # Now divert depending the kind of order
         order = get_object_or_404(Order, pk=order_pk)
         context['order'] = order
-        if order.customer.name == 'express':
-            context['js_action_send_to'] = 'send-to-order-express'
-        else:
-            context['js_action_send_to'] = 'send-to-order'
 
     items = Item.objects.all()
 
@@ -2406,7 +2068,7 @@ def item_selector(request):
         items = items.filter(size=by_size)
         context['data_size'] = by_size
 
-    context['available_items'] = items[:5]
+    context['available_items'] = items[:15]
     context['total_items'] = items.count()
 
     template = 'includes/item_selector.html'
