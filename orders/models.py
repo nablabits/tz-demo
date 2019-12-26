@@ -278,19 +278,6 @@ class Order(models.Model):
         return self.total - self.already_paid
 
     @property
-    def invoiced(self):
-        """Determine if the order is already invoiced.
-
-        This setting determines if order appears as pending. Invoiced orders
-        don't appear as pending although their pending property is > 0, this
-        keeps their prepaid amount. This applies to orders > 2019.
-        """
-        if self.delivery >= date(2019, 1, 1):
-            return Invoice.objects.filter(reference=self)
-        else:
-            return True
-
-    @property
     def days_open(self):
         """Calculate the days the order has been open."""
         return (date.today() - self.status_shift.first().date_in.date()).days

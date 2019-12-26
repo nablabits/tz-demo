@@ -890,26 +890,6 @@ class TestOrders(TestCase):
             CashFlowIO.objects.create(order=order, amount=10)
         self.assertEqual(order.pending, 130)
 
-    def test_invoiced(self):
-        """Test the invoiced property."""
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='test', delivery=date.today(), )
-        self.assertFalse(order.invoiced)
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
-        order.kill()
-        self.assertTrue(order.invoiced)
-
-    def test_invoiced_returns_true_with_older_orders(self):
-        """Orders previous to 2019 should appear as invoiced."""
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='test',
-            delivery=date(2018, 12, 31), prepaid=50, )
-        self.assertTrue(order.invoiced)
-
     def test_days_open(self):
         o = Order.objects.first()
         self.assertEqual(o.days_open, 0)
