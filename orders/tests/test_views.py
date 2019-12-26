@@ -574,18 +574,24 @@ class CommonContextPqueue(TestCase):
         for item in Item.objects.all():
             OrderItem.objects.create(reference=order, element=item)
 
-    def test_available_items_exclude_delivered_and_cancelled_orders(self):
+    def test_available_items_excludes_delivered_cancelled_and_invoiced(self):
         """The list only includes active orders."""
-        for i in range(2):
+        for s in ('6', '7', '8'):
             order = Order.objects.create(user=User.objects.first(),
                                          customer=Customer.objects.first(),
-                                         ref_name='Void order',
+                                         ref_name='foo{}'.format(s),
                                          delivery=date.today(),
-                                         status=i + 7, budget=0, prepaid=0)
+                                         status=s)
             OrderItem.objects.create(reference=order,
                                      element=Item.objects.first())
 
+        invoiced = Order.objects.get(ref_name='foo6')
+        invoiced.kill()
+        self.assertEqual(invoiced.status, '9')
+
         context = CommonContexts.pqueue()
+        self.assertEqual(OrderItem.objects.count(), 6)
+        self.assertEqual(context['available'].count(), 3)
         for item in context['available']:
             self.assertEqual(item.reference.ref_name, 'Test order')
 
@@ -680,16 +686,20 @@ class CommonContextPqueue(TestCase):
         for item in context['available'][2:5]:
             self.assertEqual(item.reference.ref_name, 'Test order')
 
-    def test_queued_items_exclude_delivered_and_cancelled_orders(self):
+    def test_queued_items_exclude_delivered_cancelled_and_invoiced(self):
         """The queue only shows active order items."""
-        for i in range(2):
+        for s in ('6', '7', '8'):
             order = Order.objects.create(user=User.objects.first(),
                                          customer=Customer.objects.first(),
-                                         ref_name='Void order',
+                                         ref_name='foo{}'.format(s),
                                          delivery=date.today(),
-                                         status=i + 7, budget=0, prepaid=0)
+                                         status=s)
             OrderItem.objects.create(reference=order,
                                      element=Item.objects.first())
+
+        invoiced = Order.objects.get(ref_name='foo6')
+        invoiced.kill()
+        self.assertEqual(invoiced.status, '9')
 
         for item in OrderItem.objects.all():
             PQueue.objects.create(item=item)

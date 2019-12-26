@@ -1456,7 +1456,6 @@ class TestObjectItems(TestCase):
         self.assertEqual(items[1].avg_iron, timedelta(seconds=30) / 11)
         self.assertEqual(items[2].avg_iron, timedelta(seconds=30) / 21)
 
-    @tag('current')
     def test_pretty_average(self):
         items = [Item.objects.create(
             name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]

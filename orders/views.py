@@ -135,14 +135,15 @@ class CommonContexts:
     @staticmethod
     def pqueue():
         """Get common context var for pqueue."""
-        available = OrderItem.objects.exclude(reference__status__in=[7, 8])
+        available = OrderItem.objects.exclude(reference__status__in=[7, 8, 9])
+        available = available.filter(reference__confirmed=True)
         available = available.exclude(element__name__iexact='Descuento')
         available = available.exclude(stock=True).filter(pqueue__isnull=True)
         available = available.exclude(element__foreing=True)
         available = available.order_by('reference__delivery',
                                        'reference__ref_name')
         pqueue = PQueue.objects.select_related('item__reference')
-        pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
+        pqueue = pqueue.exclude(item__reference__status__in=[7, 8, 9])
         pqueue_completed = pqueue.filter(score__lt=0)
         pqueue_active = pqueue.filter(score__gt=0)
         i_relax = settings.RELAX_ICONS[
