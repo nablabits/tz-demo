@@ -129,15 +129,7 @@ class CommonContexts:
                 'now': now,
                 'session': session,
                 'version': settings.VERSION,
-                'title': 'Pedido %s: %s, %s' % title,
-
-                # CRUD Actions
-                'btn_title_add': 'Añadir prendas',
-                'js_action_add': 'order-item-add',
-                'js_action_edit': 'order-item-edit',
-                'js_action_delete': 'order-item-delete',
-                'js_data_pk': order.pk,
-                }
+                'title': 'Pedido %s: %s, %s' % title, }
         return vars
 
     @staticmethod
@@ -548,7 +540,6 @@ def customerlist(request):
                      # CRUD actions
                      'btn_title_add': 'Nuevo cliente',
                      'js_action_add': 'customer-add',
-                     'js_data_pk': '0',
 
                      'include_template': 'includes/customer_list.html',
                      }
@@ -580,8 +571,6 @@ def itemslist(request):
                      'js_action_add': 'object-item-add',
                      'js_action_edit': 'object-item-edit',
                      'js_action_delete': 'object-item-delete',
-                     'js_action_send_to': 'send-to-order',
-                     'js_data_pk': '0',
                      }
 
     return render(request, 'tz/list_view.html', view_settings)
@@ -803,8 +792,6 @@ def order_express_view(request, pk):
     except ObjectDoesNotExist:
         session = None
 
-    form = InvoiceForm()
-
     view_settings = {'order': order,
                      'customers': customers,
                      'user': cur_user,
@@ -812,7 +799,7 @@ def order_express_view(request, pk):
                      'session': session,
                      'item_types': settings.ITEM_TYPE[1:],
                      'items': items,
-                     'form': form,
+                     'invoice_form': InvoiceForm(),
                      'available_items': available_items,
                      'version': settings.VERSION,
                      'title': 'TrapuZarrak · Venta express',
@@ -822,8 +809,6 @@ def order_express_view(request, pk):
                      # CRUD Actions
                      'btn_title_add': 'Nueva prenda',
                      'js_action_add': 'object-item-add',
-                     'js_action_delete': 'order-express-item-delete',
-                     'js_data_pk': '0',
                      }
     return render(request, 'tz/order_express.html', view_settings)
 
@@ -1011,50 +996,6 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Send item to order (GET)
-        elif action == 'send-to-order':
-            custom_form = 'includes/custom_forms/send_to_order.html'
-            item = get_object_or_404(Item, pk=pk)
-            context = {'modal_title': 'Añadir prenda a pedido',
-                       'pk': pk,
-                       'item': item,
-                       'order_pk': self.request.GET.get('aditionalpk', None),
-                       'action': 'send-to-order',
-                       'submit_btn': 'Añadir a pedido',
-                       'custom_form': custom_form,
-                       }
-            template = 'includes/regular_form.html'
-
-        # Send to order express (GET)
-        elif action == 'send-to-order-express':
-            custom_form = 'includes/custom_forms/send_to_order.html'
-            item = get_object_or_404(Item, pk=pk)
-            context = {'modal_title': 'Enviar prenda a ticket',
-                       'pk': pk,
-                       'item': item,
-                       'order_pk': self.request.GET.get('aditionalpk', None),
-                       'action': 'send-to-order-express',
-                       'submit_btn': 'Añadir a ticket',
-                       'custom_form': custom_form,
-                       }
-            template = 'includes/regular_form.html'
-
-        # Add order item (GET)
-        elif action == 'order-item-add':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderItemForm()
-            items = Item.objects.all()
-            context = {'form': form,
-                       'order': order,
-                       'items': items,
-                       'modal_title': 'Añadir prenda',
-                       'pk': order.pk,
-                       'action': 'order-item-add',
-                       'submit_btn': 'Añadir',
-                       'custom_form': 'includes/custom_forms/order_item.html',
-                       }
-            template = 'includes/regular_form.html'
-
         # Add a comment (GET)
         elif action == 'order-add-comment':
             order = get_object_or_404(Order, pk=pk)
@@ -1139,21 +1080,6 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Edit order item (GET)
-        elif action == 'order-item-edit':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            form = OrderItemForm(instance=item)
-            context = {'form': form,
-                       'item': item,
-                       'modal_title': 'Editar prenda',
-                       'pk': item.pk,
-                       'action': 'order-item-edit',
-                       'submit_btn': 'Guardar',
-                       'custom_form': 'includes/custom_forms/order_item.html',
-                       }
-            template = 'includes/regular_form.html'
-
         # Edit times on pqueue (GET)
         elif action == 'pqueue-add-time':
             get_object_or_404(OrderItem, pk=pk)
@@ -1181,17 +1107,6 @@ class Actions(View):
                        'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
-        # Delete order item (GET)
-        elif action == 'order-item-delete':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            context = {'modal_title': 'Eliminar prenda',
-                       'msg': 'Realmente borrar la prenda?',
-                       'pk': item.pk,
-                       'action': 'order-item-delete',
-                       'submit_btn': 'Sí, borrar'}
-            template = 'includes/delete_confirmation.html'
-
         # delete order express (GET)
         elif action == 'order-express-delete':
             order = get_object_or_404(Order, pk=pk)
@@ -1200,17 +1115,6 @@ class Actions(View):
                        'pk': order.pk,
                        'action': 'order-express-delete',
                        'submit_btn': 'Sí, descartar'}
-            template = 'includes/delete_confirmation.html'
-
-        # Delete order express item (GET)
-        elif action == 'order-express-item-delete':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            context = {'modal_title': 'Eliminar prenda',
-                       'msg': 'Realmente borrar la prenda?',
-                       'pk': item.pk,
-                       'action': 'order-express-item-delete',
-                       'submit_btn': 'Sí, borrar'}
             template = 'includes/delete_confirmation.html'
 
         # Delete Customer (GET)
@@ -1374,7 +1278,6 @@ class Actions(View):
                            'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
-                           'js_action_send_to': 'send-to-order',
                            }
                 template = 'includes/item_selector.html'
             else:
@@ -1388,98 +1291,6 @@ class Actions(View):
                            'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
-
-        # Send item to order (POST)
-        elif action == 'send-to-order':
-            item = get_object_or_404(Item,
-                                     pk=self.request.POST.get('pk', None))
-            order = get_object_or_404(
-                Order, pk=self.request.POST.get('order-pk', None))
-
-            # Test isStock (convert to bool)
-            is_stock = self.request.POST.get('isStock', None)
-            if is_stock:
-                is_stock = True
-            else:
-                is_stock = False
-
-            # Now create OrderItem
-            price = self.request.POST.get('custom-price', None)
-            qty = self.request.POST.get('item-qty', 1)
-            if price is '0':
-                price = None
-            OrderItem.objects.create(
-                element=item, reference=order, qty=qty, price=price,
-                stock=is_stock, fit=False)
-
-            # Set default price (if case)
-            set_price = self.request.POST.get('set-default-price', None)
-            if set_price:
-                item.price = price
-                item.full_clean()
-                item.save()
-
-            # Context for the view
-            items = OrderItem.objects.filter(reference=order)
-            data['form_is_valid'] = True
-            data['html_id'] = '#quick-list'
-            context = {'items': items,
-                       'order': order,
-
-                       # CRUD Actions
-                       'js_action_edit': 'order-item-edit',
-                       'js_action_delete': 'order-item-delete',
-                       'js_data_pk': order.pk,
-                       }
-            template = 'includes/item_quick_list.html'
-
-        # Send item to order express (POST)
-        elif action == 'send-to-order-express':
-            item = get_object_or_404(Item,
-                                     pk=self.request.POST.get('item-pk', None))
-            order = get_object_or_404(
-                Order, pk=self.request.POST.get('order-pk', None)
-                )
-
-            # Get the customers for dropdown
-            customers = Customer.objects.exclude(name='express')
-            customers = customers.exclude(provider=True)
-
-            # Now create OrderItem
-            price = self.request.POST.get('custom-price', None)
-            qty = self.request.POST.get('item-qty', 1)
-            if price is '0':
-                price = None
-            OrderItem.objects.create(
-                element=item, reference=order, qty=qty, price=price,
-                stock=True, fit=False)
-
-            # Set default price (if case)
-            set_price = self.request.POST.get('set-default-price', None)
-            if set_price:
-                item.price = price
-                item.full_clean()
-                item.save()
-
-            # Context for the view
-            items = OrderItem.objects.filter(reference=order)
-            data['form_is_valid'] = True
-            data['html_id'] = '#ticket-wrapper'
-            total = items.aggregate(
-                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
-
-            form = InvoiceForm()
-            context = {'items': items,
-                       'total': total,
-                       'order': order,
-                       'customers': customers,
-                       'form': form,
-
-                       # CRUD Actions
-                       'js_action_delete': 'order-express-item-delete',
-                       'js_data_pk': '0',
-                       }
-            template = 'includes/ticket.html'
 
         # Edit order (POST)
         elif action == 'order-edit':
@@ -1612,7 +1423,6 @@ class Actions(View):
                            'available_items': items,
                            'js_action_edit': 'object-item-edit',
                            'js_action_delete': 'object-item-delete',
-                           'js_action_send_to': 'send-to-order',
                            }
                 template = 'includes/item_selector.html'
             else:
@@ -1626,39 +1436,6 @@ class Actions(View):
                            'custom_form': custom_form,
                            }
                 template = 'includes/regular_form.html'
-
-        # Edit order item (POST)
-        elif action == 'order-item-edit':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            order = item.reference
-            form = OrderItemForm(request.POST, instance=item)
-            items = OrderItem.objects.filter(reference=order)
-            if form.is_valid():
-                context = {'items': items,
-                           'order': order,
-                           'btn_title_add': 'Añadir prenda',
-                           'js_action_add': 'order-item-add',
-                           'js_action_edit': 'order-item-edit',
-                           'js_action_delete': 'order-item-delete',
-                           'js_data_pk': order.pk,
-                           }
-                template = 'includes/item_quick_list.html'
-                form.save()
-                data['form_is_valid'] = True
-                data['html_id'] = '#quick-list'
-            else:
-                custom_form = 'includes/custom_forms/order_item.html'
-                context = {'form': form,
-                           'item': item,
-                           'modal_title': 'Editar prenda',
-                           'pk': item.reference.pk,
-                           'action': 'order-item-edit',
-                           'submit_btn': 'Guardar',
-                           'custom_form': custom_form,
-                           }
-                template = 'includes/regular_form.html'
-                data['form_is_valid'] = False
 
         # Add times from pqueue (POST)
         elif action == 'pqueue-add-time':
@@ -1728,28 +1505,8 @@ class Actions(View):
                        'available_items': items,
                        'js_action_edit': 'object-item-edit',
                        'js_action_delete': 'object-item-delete',
-                       'js_action_send_to': 'send-to-order',
                        }
             template = 'includes/item_selector.html'
-
-        # Delete item (POST)
-        elif action == 'order-item-delete':
-            get_object_or_404(OrderItem, pk=pk)
-            item = OrderItem.objects.select_related('reference').get(pk=pk)
-            order = item.reference
-            items = OrderItem.objects.filter(reference=order)
-            item.delete()
-            data['form_is_valid'] = True
-            data['html_id'] = '#quick-list'
-            context = {'items': items,
-                       'order': order,
-                       'btn_title_add': 'Añadir prenda',
-                       'js_action_add': 'order-item-add',
-                       'js_action_edit': 'order-item-edit',
-                       'js_action_delete': 'order-item-delete',
-                       'js_data_pk': order.pk,
-                       }
-            template = 'includes/item_quick_list.html'
 
         # Delete order express (POST)
         elif action == 'order-express-delete':
@@ -1757,28 +1514,6 @@ class Actions(View):
             order.delete()
             data['redirect'] = (reverse('main'))
             data['form_is_valid'] = True
-
-        # Delete items on order express (POST)
-        elif action == 'order-express-item-delete':
-            item = get_object_or_404(OrderItem, pk=pk)
-            order = item.reference
-            items = OrderItem.objects.filter(reference=order)
-            item.delete()
-            data['form_is_valid'] = True
-            data['html_id'] = '#ticket'
-            total = items.aggregate(
-                total=Sum(F('qty') * F('price'), output_field=DecimalField()))
-            form = InvoiceForm()
-            context = {'items': items,
-                       'total': total,
-                       'order': order,
-                       'form': form,
-
-                       # CRUD Actions
-                       'js_action_delete': 'order-express-item-delete',
-                       'js_data_pk': '0',
-                       }
-            template = 'includes/ticket.html'
 
         # Delete customer (POST)
         elif action == 'customer-delete':
@@ -1893,23 +1628,143 @@ class OrderItemsCRUD(View):
     """
 
     def get(self, request):
-        pass  # pragma: no cover
+        """Get the modal's content to perform CRUD on OrderItems."""
+        data = dict()
+        order_pk = request.GET.get('reference', None)
+        if not order_pk:
+            return HttpResponseServerError('No order was supplied')
+        order = Order.objects.get(pk=order_pk)
+
+        # Determine wether we're creating or editing/deleting
+        base_item = request.GET.get('element', None)
+        base_item = Item.objects.get(pk=base_item)
+        order_item = request.GET.get('order_item', None)
+
+        # Creating and editing use the same template
+        template = 'includes/custom_forms/order_item.html'
+
+        if order_item:  # we're editing/deleting
+            order_item = OrderItem.objects.get(pk=order_item)
+            form = OrderItemForm(instance=order_item)
+            modal_title = 'Editar prenda en pedido.'
+            if request.GET.get('delete', None):
+                template = 'includes/delete_dialogs/order_item.html'
+        else:  # we're creating
+            form = OrderItemForm()
+            modal_title = 'Añadir prenda.'
+
+        context = {'form': form,
+                   'base_item': base_item,
+                   'order_item': order_item,
+                   'order': order,
+                   'modal_title': modal_title,
+                   }
+
+        if request.POST.get('test', None):
+            return render(
+                request, template, context=context)  # pragma: no cover
+
+        data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
 
     def post(self, request):
+        """Create or update the model.
+
+        The main action process all the fields in the model so they should be
+        supplied by the form, whereas the other actions perform updates on
+        certain fields.
+
+        Eventually, we should get rid of those partial models (and therefore
+        the parameter action) by adding hidden fields to their forms.
+
+        There's also an option to update base_item price.
+        """
         data = dict()
-        pk = self.request.POST.get('pk', None)
-        action = self.request.POST.get('action', None)
-        test = self.request.POST.get('test', None)
-        template, context = False, False
-
-        if not pk:
-            return HttpResponseServerError('No pk was given.')
-
+        action = request.POST.get('action', None)
         if not action:
             return HttpResponseServerError('No action was given.')
 
-        if action == 'edit-times':
+        # Determine wether we're creating or editing/deleting
+        order_item_pk = request.POST.get('order_item_pk', None)
+        if order_item_pk:  # we're editing/deleting
+            order_item = OrderItem.objects.get(pk=order_item_pk)
+            form = OrderItemForm(request.POST, instance=order_item)
+            modal_title = 'Editar prenda en pedido.'
+        else:  # we're creating
+            form = OrderItemForm(request.POST)
+            modal_title = 'Añadir prenda.'
+            order_item = None
+
+        if action == 'main':  # Create & update
+            base_item = Item.objects.get(pk=request.POST.get('element', None))
+            order = Order.objects.get(pk=request.POST.get('reference', None))
+            order_est_total = prettify_times(sum(order.estimated_time))
+
+            if form.is_valid():
+                # perfrom db actions
+                form.save()
+                if request.POST.get('set-default-price', None):
+                    base_item.price = request.POST.get('set-default-price')
+                    base_item.notes = (
+                        base_item.notes + ' Cambio de precio desde pedido')
+                    base_item.full_clean()
+                    base_item.save()
+                template = 'includes/item_quick_list.html'
+                data['form_is_valid'] = True
+
+                # Render the view depending the order type
+                if order.ref_name == 'Quick':
+                    data['html_id'] = '#ticket-wrapper'
+                    template = 'includes/ticket.html'
+                else:
+                    data['html_id'] = '#quick-list'
+                    template = 'includes/item_quick_list.html'
+
+            # not valid form
+            else:
+                data['form_is_valid'] = False
+                template = 'includes/custom_forms/order_item.html'
+
+            context = {'form': form,
+                       'invoice_form': InvoiceForm(),
+                       'base_item': base_item,
+                       'order_item': order_item,
+                       'order': order,
+                       'order_est_total': order_est_total,
+                       'modal_title': modal_title,
+                       }
+
+        elif action == 'delete':
+            # TODO: once got rid of partial editing methods, this code below
+            # can be refactored with the main action one
+            if not order_item_pk:
+                return HttpResponseServerError('No item pk was provided.')
+            order = Order.objects.get(pk=request.POST.get('reference', None))
+            order_est_total = prettify_times(sum(order.estimated_time))
+
+            # perfrom db actions
+            order_item.delete()
+            data['form_is_valid'] = True
+
+            # Render the view depending the order type
+            if order.ref_name == 'Quick':
+                data['html_id'] = '#ticket-wrapper'
+                template = 'includes/ticket.html'
+            else:
+                data['html_id'] = '#quick-list'
+                template = 'includes/item_quick_list.html'
+            context = {'form': form,
+                       'order_item': order_item,
+                       'order': order,
+                       'order_est_total': order_est_total,
+                       'modal_title': modal_title,
+                       }
+
+        elif action == 'edit-times':
             # Edit the times int the order view
+            pk = request.POST.get('pk', None)
+            if not pk:
+                return HttpResponseServerError('No pk was given.')
             item = get_object_or_404(OrderItem, pk=pk)
             form = ItemTimesForm(request.POST, instance=item)
             if form.is_valid():
@@ -1926,6 +1781,9 @@ class OrderItemsCRUD(View):
 
         elif action == 'edit-notes':
             # Edit/add notes in the pqueue
+            pk = request.POST.get('pk', None)
+            if not pk:
+                return HttpResponseServerError('No pk was given.')
             item = get_object_or_404(OrderItem, pk=pk)
             form = OrderItemNotes(request.POST, instance=item)
             form.save()
@@ -1934,17 +1792,17 @@ class OrderItemsCRUD(View):
             template = 'includes/pqueue_element_details.html'
             item = dict(item=item)
             context = dict(item=item)  # a bit recursive to match the for loop
+
         else:
             return HttpResponseServerError('The action was not found.')
 
         data['html'] = render_to_string(template, context, request=request)
 
         # When testing, display as a regular view in order to test variables
-        if test:
+        if request.POST.get('test', None):
             context['form'] = form
             context['data'] = data
-            return render(
-                request, template, context=context)
+            return render(request, template, context=context)
         else:
             return JsonResponse(data)
 
@@ -2182,10 +2040,6 @@ def item_selector(request):
         # Now divert depending the kind of order
         order = get_object_or_404(Order, pk=order_pk)
         context['order'] = order
-        if order.customer.name == 'express':
-            context['js_action_send_to'] = 'send-to-order-express'
-        else:
-            context['js_action_send_to'] = 'send-to-order'
 
     items = Item.objects.all()
 
@@ -2214,7 +2068,7 @@ def item_selector(request):
         items = items.filter(size=by_size)
         context['data_size'] = by_size
 
-    context['available_items'] = items[:5]
+    context['available_items'] = items[:15]
     context['total_items'] = items.count()
 
     template = 'includes/item_selector.html'

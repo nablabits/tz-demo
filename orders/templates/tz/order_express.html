@@ -1,4 +1,12 @@
 {% extends "tz/base.html" %}
+
+{% comment %}
+The order express view.
+
+A  3/4 & 1/4 column view showing the item selector on the left and the ticket.html
+view on the right
+{% endcomment %}
+
 {% block orderexpress %}
 <section id="order_view" data-pk="{{ order.pk }}">
   <div class="container pt-4">
@@ -16,8 +24,8 @@
         <div class="card-body">
           {%for item in items%}
           <div class="d-flex justify-content-between mt-2">
-            <div class="mr-5">
-              {{item.qty}} x {%include 'includes/item_string.html'%} {{item.price}}€
+            <div class="d-flex mr-5">
+              {{item.qty}} x&nbsp;{{item.element.html_string}} {{item.price}}€
             </div>
             <div class="ml-5">
               {{item.subtotal}}€
@@ -68,7 +76,7 @@
           </div>
           <div class="d-flex flex-column" id="item-selector"></div>
         </div>
-        <div class="col-md-4 col-lg-3 border rounded p-2" id="ticket-wrapper">
+        <div class="col-md-4 col-lg-3" id="ticket-wrapper">
           {% include 'includes/ticket.html' %}
         </div>
 

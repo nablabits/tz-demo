@@ -1,34 +1,97 @@
-<p><strong>Prenda seleccionada:</strong> {{item}}</p>
-<div class="row">
-  <div class="col-3">
-    <div class="form-group">
-      <label for="item-qty">Cantidad</label>
-      <input type="number" class="form-control ml-auto" name="item-qty" id="item-qty" value="1">
-    </div>
-  </div>
-  <div class="col-3">
-    <div class="form-group">
-      <label for="custom-price">Precio especial</label>
-      <input type="number" class="form-control ml-auto" name="custom-price" id="custom-price" value=0 step="0.01">
-    </div>
-  </div>
-  <div class="col-6 p-auto">
+{% load widget_tweaks %}
 
-  </div>
+<div class="modal-header">
+  <h4 class="modal-title">{{modal_title}}</h4>
+  <a type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true"><i class="fa fa-times"></i></span>
+  </a>
 </div>
-<div class="d-flex ml-4">
-  <div class="form-check">
-    <input type="checkbox" name="set-default-price" class="form-check-input" id="set-deafult-price">
-    <label for="set-default-price">Asigna este precio a la prenda genérica</label>
+<form class="js-crud-form" method="post" action="{% url 'orderitems-CRUD' %}">
+  {% csrf_token %}
+  <input type="hidden" name="element" value="{{base_item.pk}}">
+  <input type="hidden" name="reference" value="{{order.pk}}">
+  <input type="hidden" name="action" value="main">
+  {% render_field form.crop type="hidden" %}
+  {% render_field form.sewing type="hidden" %}
+  {% render_field form.iron type="hidden" %}
+  {% render_field form.fit type="hidden" %}
+
+  <div class="modal-body">
+    <p><strong>Prenda seleccionada:</strong> {{base_item.html_string}} {{base_item.price}}€</p>
+    {% if base_item.price == 0 %}
+      <div class="alert alert-warning" role="alert">
+        <i class="fa fa-exclamation-triangle pr-2"></i>Atención esta prenda no tiene precio
+      </div>
+    {% endif %}
+    <div class="row">
+      <div class="col-3">
+        <div class="form-group">
+          {{ form.qty.label_tag }}
+          {% render_field form.qty class="form-control" %}
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="form-group">
+          {{ form.price.label_tag }}
+          {% render_field form.price class="form-control" value=base_item.price%}
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="form-group">
+          <label for="id_batch">Lote</label>
+          {% render_field form.batch class="form-control" %}
+        </div>
+      </div>
+      <div class="col-6 p-auto">
+
+      </div>
+    </div>
+    {# Description field collapse #}
+    <div class="d-flex flex-column">
+      <h5 style="cursor:pointer" data-toggle="collapse" data-target="#add-description" aria-hidden="true" aria-expanded="true">Descripción<i class="fas fa-plus-circle ml-2" ></i></h5>
+      <div class="collapse" id="add-description">
+        {% render_field form.description class="form-control"%}
+      </div>
+    </div>
+    <hr>
+    <div class="d-flex ml-4">
+      <div class="form-check">
+        {% if base_item.price == 0 %}
+          <input type="checkbox" name="set-default-price" class="form-check-input" id="set-default-price" checked>
+          <label for="set-default-price">Asigna este precio a la prenda genérica (deberías)</label>
+        {% else %}
+          <input type="checkbox" name="set-default-price" class="form-check-input" id="set-default-price">
+          <label for="set-default-price">Actualizar la prenda genérica con este precio</label>
+        {% endif %}
+      </div>
+    </div>
+    <div class="d-flex ml-4">
+      <div class="form-check">
+        {% if order.ref_name == 'quick' %}
+          {% render_field form.stock|append_attr:"checked" class="form-check-input" %}
+        {% else %}
+          {% render_field form.stock class="form-check-input" %}
+        {% endif %}
+        <label for="id_stock">Es una prenda de Stock</label>
+      </div>
+    </div>
   </div>
-</div>
-{%if action == 'send-to-order'%}
-<div class="d-flex ml-4">
-  <div class="form-check">
-    <input type="checkbox" name="isStock" class="form-check-input" id="set-stock">
-    <label for="set-stock">Es una prenda de Stock</label>
+  <div class="modal-footer">
+    <div class="mr-auto d-none" id="check-success">
+      <i class="far fa-check text-success"></i> Guardado, puedes cerrar esta ventana.
+    </div>
+    <div class="mr-auto d-none" id="bg-working">
+      <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
+    </div>
+    <div class="mr-auto">
+      {{ form.non_field_errors }}
+      {{form.errors.name}}
+      {% for hidden_field in form.hidden_fields %}
+        {{ hidden_field }}
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-outline-success js-submit">
+      <i class="fas fa-check mr-1"></i>Guardar
+    </button>
   </div>
-</div>
-{%endif%}
-<input type="hidden" name="order-pk" value="{{order_pk}}">
-<input type="hidden" name="item-pk" value="{{item.pk}}">
+</form>

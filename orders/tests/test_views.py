@@ -18,7 +18,7 @@ from orders.models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
     PQueue, Timetable, CashFlowIO)
 from orders.forms import (ItemTimesForm, InvoiceForm, OrderItemNotes,
-                          CashFlowIOForm, )
+                          CashFlowIOForm, OrderItemForm, )
 from orders.views import CommonContexts
 
 from decouple import config
@@ -532,11 +532,6 @@ class CommonContextOrderDetails(TestCase):
             context['title'],
             f'Pedido {order.pk}: Customer Test, {order.ref_name}')
 
-    def test_item_times_form(self):
-        order = Order.objects.first()
-        context = CommonContexts.order_details(self.request, order.pk)
-        self.assertIsInstance(context['update_times'], ItemTimesForm)
-
     def test_cashflowio_form(self):
         order = Order.objects.first()
         context = CommonContexts.order_details(self.request, order.pk)
@@ -546,11 +541,6 @@ class CommonContextOrderDetails(TestCase):
         order = Order.objects.first()
         context = CommonContexts.order_details(self.request, order.pk)
         self.assertEqual(context['version'], settings.VERSION)
-        self.assertEqual(context['btn_title_add'], 'Añadir prendas')
-        self.assertEqual(context['js_action_add'], 'order-item-add')
-        self.assertEqual(context['js_action_edit'], 'order-item-edit')
-        self.assertEqual(context['js_action_delete'], 'order-item-delete')
-        self.assertEqual(context['js_data_pk'], order.pk)
 
 
 class CommonContextPqueue(TestCase):
@@ -1875,7 +1865,6 @@ class CustomerListTests(TestCase):
         self.assertEqual(resp.context['h3'], 'Todos los clientes')
         self.assertEqual(resp.context['btn_title_add'], 'Nuevo cliente')
         self.assertEqual(resp.context['js_action_add'], 'customer-add')
-        self.assertEqual(resp.context['js_data_pk'], '0')
         self.assertEqual(resp.context['include_template'],
                          'includes/customer_list.html')
 
@@ -2065,7 +2054,6 @@ class ItemsListTests(TestCase):
         self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
         self.assertEqual(resp.context['js_action_delete'],
                          'object-item-delete')
-        self.assertEqual(resp.context['js_data_pk'], '0')
         self.assertEqual(resp.context['version'], settings.VERSION)
 
 
@@ -2799,12 +2787,6 @@ class OrderViewTests(TestCase):
         self.assertEqual(resp.context['title'],
                          'Pedido %s: %s, %s' %
                          (order.pk, order.customer.name, order.ref_name))
-        self.assertEqual(resp.context['btn_title_add'], 'Añadir prendas')
-        self.assertEqual(resp.context['js_action_add'], 'order-item-add')
-        self.assertEqual(resp.context['js_action_edit'], 'order-item-edit')
-        self.assertEqual(
-            resp.context['js_action_delete'], 'order-item-delete')
-        self.assertEqual(resp.context['js_data_pk'], order.pk)
 
 
 class OrderExpressTests(TestCase):
@@ -3031,7 +3013,7 @@ class OrderExpressTests(TestCase):
             reverse('order_express', args=[order_express.pk]))
         self.assertEqual(resp.context['user'].username, 'regular')
         self.assertEqual(len(resp.context['item_types']), 19)
-        self.assertIsInstance(resp.context['form'], InvoiceForm)
+        self.assertIsInstance(resp.context['invoice_form'], InvoiceForm)
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Venta express')
         self.assertEqual(resp.context['placeholder'], 'Busca un nombre')
         self.assertEqual(resp.context['search_on'], 'items')
@@ -3039,9 +3021,6 @@ class OrderExpressTests(TestCase):
         # CRUD actions
         self.assertEqual(resp.context['btn_title_add'], 'Nueva prenda')
         self.assertEqual(resp.context['js_action_add'], 'object-item-add')
-        self.assertEqual(
-            resp.context['js_action_delete'], 'order-express-item-delete')
-        self.assertEqual(resp.context['js_data_pk'], '0')
 
 
 class CustomerViewTests(TestCase):
@@ -3646,20 +3625,15 @@ class ActionsGetMethod(TestCase):
     def test_pk_out_of_range_raises_404(self):
         """High pk should raise a 404."""
         actions = ('order-from-customer',
-                   'send-to-order-express',
-                   'order-item-add',
                    'order-add-comment',
                    'order-edit',
                    'order-edit-add-prepaid',
                    'order-edit-date',
                    'customer-edit',
                    'object-item-edit',
-                   'order-item-edit',
                    'pqueue-add-time',
                    'object-item-delete',
-                   'order-item-delete',
                    'order-express-delete',
-                   'order-express-item-delete',
                    'customer-delete',
                    'view-ticket',
                    )
@@ -3765,59 +3739,6 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn',
                 'custom_form')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_send_item_to_order(self):
-        """Test context dictionaries and template."""
-        item = Item.objects.first()
-        resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk,
-                                'action': 'send-to-order',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/regular_form.html')
-        self.assertIsInstance(context, list)
-        vars = ('modal_title', 'pk', 'item', 'order_pk', 'action',
-                'submit_btn', 'custom_form', )
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_send_item_to_order_express(self):
-        """Test context dictionaries and template."""
-        item = Item.objects.first()
-        resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk,
-                                'action': 'send-to-order-express',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/regular_form.html')
-        self.assertIsInstance(context, list)
-        vars = ('item', 'modal_title', 'pk', 'order_pk', 'action',
-                'submit_btn', 'custom_form')
-        self.assertTrue(self.context_vars(context, vars))
-
-    def test_add_order_item(self):
-        """Test context dictionaries and template."""
-        order = Order.objects.get(ref_name='example')
-        resp = self.client.get(reverse('actions'),
-                               {'pk': order.pk,
-                                'action': 'order-item-add',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/regular_form.html')
-        vars = ('order', 'form', 'items', 'modal_title', 'pk', 'action',
-                'submit_btn', 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
     def test_add_obj_item(self):
@@ -3952,25 +3873,6 @@ class ActionsGetMethod(TestCase):
                 'custom_form')
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_edit_order_item(self):
-        """Test context dictionaries and template."""
-        order = Order.objects.get(ref_name='example')
-        item = OrderItem.objects.get(reference=order)
-        resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk,
-                                'action': 'order-item-edit',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        vars = ('item', 'form', 'modal_title', 'pk', 'action', 'submit_btn',
-                'custom_form')
-        self.assertEqual(template, 'includes/regular_form.html')
-        self.assertIsInstance(context, list)
-        self.assertTrue(self.context_vars(context, vars))
-
     def test_pqueue_add_time(self):
         """Test context dictionaries and template."""
         item = OrderItem.objects.get(reference=Order.objects.first())
@@ -3989,24 +3891,6 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_delete_order_item(self):
-        """Test context dictionaries and template."""
-        order = Order.objects.get(ref_name='example')
-        item = OrderItem.objects.get(reference=order)
-        resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk,
-                                'action': 'order-item-delete',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/delete_confirmation.html')
-        self.assertIsInstance(context, list)
-        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
-        self.assertTrue(self.context_vars(context, vars))
-
     def test_delete_order_express(self):
         """Testthe correct content for the modal."""
         order = Order.objects.first()
@@ -4023,26 +3907,6 @@ class ActionsGetMethod(TestCase):
         self.assertIsInstance(context, list)
         vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
         self.assertTrue(self.context_vars(context, vars))
-
-    def test_delete_order_express_item(self):
-        """Test context dictionaries and template."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        item = OrderItem.objects.create(
-            reference=order_express, element=Item.objects.first())
-        resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk,
-                                'action': 'order-express-item-delete',
-                                'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertEqual(data['template'], 'includes/delete_confirmation.html')
-        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
-        self.assertTrue(self.context_vars(data['context'], vars))
 
     def test_delete_obj_item(self):
         """Test context dictionaries and template."""
@@ -4120,20 +3984,15 @@ class ActionsPostMethodRaises(TestCase):
         actions = (
                    'order-comment',
                    'comment-read',
-                   'send-to-order',
-                   'send-to-order-express',
                    'order-edit',
                    'order-edit-add-prepaid',
                    'order-edit-date',
                    'customer-edit',
                    'object-item-edit',
-                   'order-item-edit',
                    'pqueue-add-time',
                    'update-status',
                    'object-item-delete',
-                   'order-item-delete',
                    'order-express-delete',
-                   'order-express-item-delete',
                    'customer-delete',
                    )
         for action in actions:
@@ -4416,11 +4275,9 @@ class ActionsPostMethodCreate(TestCase):
                    'order-edit-date',
                    'customer-edit',
                    'object-item-edit',
-                   'order-item-edit',
                    'pqueue-add-time',
                    'update-status',
                    'object-item-delete',
-                   'order-item-delete',
                    'customer-delete',
                    )
         for action in actions:
@@ -4495,223 +4352,6 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(data['redirect'], reverse('main'))
 
-    def test_send_to_order_raises_error_invalid_item(self):
-        """If no item is given raise a 404."""
-        order = Order.objects.first()
-        no_item = self.client.post(reverse('actions'),
-                                   {'action': 'send-to-order',
-                                    'pk': 5000,
-                                    'order-pk': order.pk,
-                                    'isfit': '0',
-                                    'isStock': '1',
-                                    'test': True,
-                                    })
-        self.assertEqual(no_item.status_code, 404)
-
-    def test_send_to_order_raises_error_invalid_order(self):
-        """If no order is given raise a 404."""
-        item = Item.objects.first()
-        no_order = self.client.post(reverse('actions'),
-                                    {'action': 'send-to-order',
-                                     'pk': item.pk,
-                                     'order-pk': 50000,
-                                     'isfit': '0',
-                                     'isStock': '1',
-                                     'test': True,
-                                     })
-        self.assertEqual(no_order.status_code, 404)
-
-    def test_send_to_order_isfit_and_isStock_true(self):
-        """Test the correct store of fit and stock."""
-        item = Item.objects.first()
-        order = Order.objects.first()
-        self.client.post(reverse('actions'), {'action': 'send-to-order',
-                                              'pk': item.pk,
-                                              'order-pk': order.pk,
-                                              'isfit': '1',
-                                              'isStock': True,
-                                              'test': True,
-                                              })
-        order_item = OrderItem.objects.filter(element=item)
-        order_item = order_item.filter(reference=order)
-        self.assertEqual(len(order_item), 1)
-        self.assertTrue(order_item[0].stock)
-
-    def test_send_to_order_isfit_and_isStock_false(self):
-        """Test the correct store of fit."""
-        item = Item.objects.first()
-        order = Order.objects.first()
-        self.client.post(reverse('actions'), {'action': 'send-to-order',
-                                              'pk': item.pk,
-                                              'order-pk': order.pk,
-                                              'test': True,
-                                              })
-        order_item = OrderItem.objects.filter(
-            element=item).filter(reference=order)
-        self.assertEqual(len(order_item), 1)
-        self.assertFalse(order_item[0].stock)
-
-    def test_send_item_to_order_no_price_nor_qty(self):
-        """Should assign 1 item and default item's price."""
-        obj_item = Item.objects.first()
-        obj_item.price = 2000
-        obj_item.name = 'default price'
-        obj_item.save()
-        resp = self.client.post(reverse('actions'),
-                                {'order-pk': Order.objects.first().pk,
-                                 'action': 'send-to-order',
-                                 'pk': obj_item.pk,
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        orderitem = OrderItem.objects.first()
-        self.assertEqual(orderitem.price, 2000)
-        self.assertEqual(orderitem.qty, 1)
-
-    def test_send_item_to_order_price_0(self):
-        """Should assign object item's default."""
-        obj_item = Item.objects.first()
-        obj_item.price = 2000
-        obj_item.name = 'default price'
-        obj_item.save()
-        resp = self.client.post(reverse('actions'),
-                                {'order-pk': Order.objects.first().pk,
-                                 'action': 'send-to-order',
-                                 'custom-price': 0,
-                                 'pk': obj_item.pk,
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        orderitem = OrderItem.objects.first()
-        self.assertEqual(orderitem.price, 2000)
-
-    def test_send_item_to_order_set_default(self):
-        """When set-default-price is true set this price on Item object."""
-        obj_item = Item.objects.create(name='Test', fabrics=0, price=0)
-        self.assertEqual(obj_item.price, 0)
-        self.client.post(
-            reverse('actions'), {'order-pk': Order.objects.first().pk,
-                                 'action': 'send-to-order',
-                                 'set-default-price': True,
-                                 'custom-price': 100,
-                                 'pk': obj_item.pk,
-                                 'test': True})
-        obj_item = Item.objects.get(pk=obj_item.pk)
-        self.assertEqual(obj_item.price, 100)
-
-    def test_send_item_to_order_context_response(self):
-        """Test the correct insertion and response."""
-        resp = self.client.post(reverse('actions'),
-                                {'order-pk': Order.objects.first().pk,
-                                 'custom-price': 1000,
-                                 'item-qty': 3,
-                                 'action': 'send-to-order',
-                                 'pk': Item.objects.first().pk,
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#quick-list')
-        self.assertEqual(data['template'], 'includes/item_quick_list.html')
-        vars = ('items', 'order', 'js_action_edit', 'js_action_delete',
-                'js_data_pk')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-    def test_send_item_to_order_express_raises_404_with_item(self):
-        """Raise a 404 execption when trying to pick up an invalid item."""
-        resp = self.client.post(reverse('actions'),
-                                {'item-pk': 5000,
-                                 'action': 'send-to-order-express',
-                                 'pk': 'None',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_send_item_to_order_express_raises_404_with_order(self):
-        """Raise a 404 execption when trying to pick up an invalid order."""
-        resp = self.client.post(reverse('actions'),
-                                {'item-pk': Item.objects.first().pk,
-                                 'order-pk': 2000,
-                                 'action': 'send-to-order-express',
-                                 'pk': 'None',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 404)
-
-    def test_send_item_to_order_express_no_price_nor_qty(self):
-        """Should assign 1 item and default item's price."""
-        obj_item = Item.objects.first()
-        obj_item.price = 2000
-        obj_item.name = 'default price'
-        obj_item.save()
-        resp = self.client.post(reverse('actions'),
-                                {'item-pk': Item.objects.first().pk,
-                                 'order-pk': Order.objects.first().pk,
-                                 'action': 'send-to-order-express',
-                                 'pk': 'None',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        orderitem = OrderItem.objects.first()
-        self.assertEqual(orderitem.price, 2000)
-        self.assertEqual(orderitem.qty, 1)
-        self.assertTrue(orderitem.stock)
-        self.assertFalse(orderitem.fit)
-
-    def test_send_item_to_order_express_price_0(self):
-        """Should assign object item's default."""
-        obj_item = Item.objects.first()
-        obj_item.price = 2000
-        obj_item.name = 'default price'
-        obj_item.save()
-        resp = self.client.post(reverse('actions'),
-                                {'item-pk': Item.objects.first().pk,
-                                 'order-pk': Order.objects.first().pk,
-                                 'action': 'send-to-order-express',
-                                 'custom-price': 0,
-                                 'pk': 'None',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        orderitem = OrderItem.objects.first()
-        self.assertEqual(orderitem.price, 2000)
-
-    def test_send_item_to_order_express_set_default(self):
-        """When set-default-price is true set this price on Item object."""
-        obj_item = Item.objects.create(name='Test', fabrics=0, price=0)
-        self.assertEqual(obj_item.price, 0)
-        self.client.post(
-            reverse('actions'), {'item-pk': obj_item.pk,
-                                 'order-pk': Order.objects.first().pk,
-                                 'action': 'send-to-order-express',
-                                 'set-default-price': True,
-                                 'custom-price': 100,
-                                 'pk': 'None',
-                                 'test': True})
-        obj_item = Item.objects.get(pk=obj_item.pk)
-        self.assertEqual(obj_item.price, 100)
-
-    def test_send_item_to_order_express_context_response(self):
-        """Test the correct insertion and response."""
-        resp = self.client.post(reverse('actions'),
-                                {'item-pk': Item.objects.first().pk,
-                                 'order-pk': Order.objects.first().pk,
-                                 'custom-price': 1000,
-                                 'item-qty': 3,
-                                 'action': 'send-to-order-express',
-                                 'pk': 'None',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['html_id'], '#ticket-wrapper')
-        self.assertEqual(data['template'], 'includes/ticket.html')
-        vars = ('items', 'total', 'order', 'customers', 'js_action_delete',
-                'js_data_pk', 'form')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-        orderitem = OrderItem.objects.first()
-        self.assertEqual(orderitem.price, 1000)
-        self.assertEqual(orderitem.qty, 3)
-
     def test_obj_item_adds_item(self):
         """Test the proepr creation of item objects."""
         self.client.post(reverse('actions'), {'action': 'object-item-add',
@@ -4756,7 +4396,7 @@ class ActionsPostMethodCreate(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#item-selector')
         vars = ('item_types', 'available_items', 'js_action_edit',
-                'js_action_delete', 'js_action_send_to')
+                'js_action_delete', )
         self.assertTrue(self.context_vars(context, vars))
 
     def test_obj_item_add_invalid_form_returns_to_form_again(self):
@@ -5117,7 +4757,7 @@ class ActionsPostMethodEdit(TestCase):
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('item_types', 'available_items', 'js_action_edit',
-                'js_action_delete', 'js_action_send_to')
+                'js_action_delete',)
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
@@ -5151,55 +4791,6 @@ class ActionsPostMethodEdit(TestCase):
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('form', 'modal_title', 'pk', 'action', 'submit_btn', )
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertFalse(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/regular_form.html')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-    def test_edit_item_edits_item(self):
-        """Test the correct item edition."""
-        item = OrderItem.objects.select_related('element')
-        item = item.get(description='example item')
-        resp = self.client.post(reverse('actions'),
-                                {'element': item.element.pk,
-                                 'qty': '2',
-                                 'crop': '2',
-                                 'sewing': '2',
-                                 'iron': '2',
-                                 'description': 'Modified item',
-                                 'pk': item.pk,
-                                 'action': 'order-item-edit',
-                                 'test': True
-                                 })
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'items', 'btn_title_add', 'js_action_add',
-                'js_action_edit', 'js_action_delete', 'js_data_pk')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/item_quick_list.html')
-        self.assertEqual(data['html_id'], '#quick-list')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-        # Test if the fields were modified
-        mod_item = OrderItem.objects.get(pk=item.pk)
-        self.assertEqual(mod_item.qty, 2)
-        self.assertEqual(mod_item.description, 'Modified item')
-
-    def test_edit_item_invalid_returns_to_form(self):
-        """Test rejected forms."""
-        item = OrderItem.objects.get(description='example item')
-        resp = self.client.post(reverse('actions'),
-                                {'qty': 'invalid qty',
-                                 'pk': item.pk,
-                                 'action': 'order-item-edit',
-                                 'test': True
-                                 })
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('form', 'item', 'modal_title', 'pk', 'action', 'submit_btn',
-                'custom_form')
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertFalse(data['form_is_valid'])
@@ -5353,36 +4944,6 @@ class ActionsPostMethodEdit(TestCase):
                 self.assertEqual(order.status, '3')
             self.assertNotEqual(order.delivery, date.today())
 
-    def test_delete_order_item_deletes_the_item(self):
-        """Test the proper deletion of items."""
-        item = OrderItem.objects.get(description='example item')
-        self.client.post(reverse('actions'), {'pk': item.pk,
-                                              'action': 'order-item-delete',
-                                              'test': True
-                                              })
-        with self.assertRaises(ObjectDoesNotExist):
-            OrderItem.objects.get(pk=item.pk)
-
-    def test_delete_order_item_context_response(self):
-        """Test the response on deletion of items."""
-        item = OrderItem.objects.get(description='example item')
-        resp = self.client.post(reverse('actions'),
-                                {'pk': item.pk,
-                                 'action': 'order-item-delete',
-                                 'test': True
-                                 })
-
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('order', 'items', 'btn_title_add', 'js_action_add',
-                'js_action_edit', 'js_action_delete', 'js_data_pk')
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/item_quick_list.html')
-        self.assertEqual(data['html_id'], '#quick-list')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
     def test_delete_order_express_deletes_order(self):
         """Test the correct deletion of order express."""
         order = Order.objects.first()
@@ -5397,47 +4958,6 @@ class ActionsPostMethodEdit(TestCase):
         with self.assertRaises(ObjectDoesNotExist):
             OrderItem.objects.get(pk=order.pk)
 
-    def test_delete_order_express_item_deletes_item(self):
-        """Test the proper deletion of items."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        item = OrderItem.objects.create(
-            reference=order_express, element=Item.objects.first())
-        self.assertTrue(OrderItem.objects.get(pk=item.pk))
-        self.client.post(reverse('actions'),
-                         {'pk': item.pk,
-                          'action': 'order-express-item-delete',
-                          'test': True})
-        with self.assertRaises(ObjectDoesNotExist):
-            OrderItem.objects.get(pk=item.pk)
-
-    def test_delete_order_express_item_context_response(self):
-        """Test the proper deletion of items."""
-        self.client.login(username='regular', password='test')
-        self.client.post(reverse('actions'),
-                         {'cp': 0, 'pk': 'None',
-                          'action': 'order-express-add', })
-        order_express = Order.objects.get(customer__name='express')
-        item = OrderItem.objects.create(
-            reference=order_express, element=Item.objects.first())
-        self.assertTrue(OrderItem.objects.get(pk=item.pk))
-        resp = self.client.post(reverse('actions'),
-                                {'pk': item.pk,
-                                 'action': 'order-express-item-delete',
-                                 'test': True})
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/ticket.html')
-        self.assertEqual(data['html_id'], '#ticket')
-        vars = ('items', 'total', 'order', 'form', 'js_action_delete',
-                'js_data_pk', )
-        self.assertTrue(self.context_vars(data['context'], vars))
-
     def test_delete_obj_item_deletes_the_item(self):
         """Test the correct item deletion."""
         item = Item.objects.create(name='Test', fabrics=5)
@@ -5449,7 +4969,7 @@ class ActionsPostMethodEdit(TestCase):
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
         vars = ('item_types', 'available_items', 'js_action_edit',
-                'js_action_delete', 'js_action_send_to')
+                'js_action_delete', )
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
@@ -5686,9 +5206,7 @@ class OrdersCRUDTests(TestCase):
         common_vars = (
             'order', 'items', 'status_tracker', 'order_est', 'order_est_total',
             'update_times', 'add_prepaids', 'kill_order', 'comments',
-            'STATUS_ICONS', 'user', 'now', 'session', 'version', 'title',
-            'btn_title_add', 'js_action_add', 'js_action_edit',
-            'js_action_delete', 'js_data_pk', )
+            'STATUS_ICONS', 'user', 'now', 'session', 'version', 'title', )
         for var in common_vars:
             self.assertTrue(var in resp.context)
         self.assertTemplateUsed('includes/order_status.html')
@@ -5780,7 +5298,8 @@ class OrderItemsCRUDTests(TestCase):
         c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
 
         # Create an item
-        i = Item.objects.create(name='test', fabrics=10, price=30)
+        i = Item.objects.create(
+            name='test', fabrics=10, price=30, notes='Notes')
 
         Timetable.objects.create(user=u)
 
@@ -5798,7 +5317,103 @@ class OrderItemsCRUDTests(TestCase):
         if not login:
             raise RuntimeError('Couldn\'t login')
 
-    def test_data_should_be_a_dict(self):
+    def test_get_data_is_dict(self):
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk, })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_get_no_reference_raises_500(self):
+        resp = self.client.get(reverse('orderitems-CRUD'),)
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No order was supplied')
+
+    def test_get_picks_order(self):
+        o = Order.objects.first()
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': o.pk,
+                                'element': Item.objects.first().pk,
+                                'test': True, })
+        self.assertEquals(resp.context['order'], o)
+
+    def test_get_picks_item(self):
+        i = Item.objects.first()
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': i.pk,
+                                'test': True, })
+        self.assertEquals(resp.context['base_item'], i)
+
+    def test_get_picks_order_item(self):
+        i = OrderItem.objects.first()
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk,
+                                'order_item': i.pk,
+                                'test': True, })
+        self.assertEquals(resp.context['order_item'], i)
+
+    def test_get_template_used_for_create_and_edit(self):
+        # Create
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk,
+                                'test': True, })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed('includes/custom_forms/order_item.html')
+
+        # edit
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk,
+                                'order_item': OrderItem.objects.first().pk,
+                                'test': True, })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed('includes/custom_forms/order_item.html')
+
+    def test_get_edit_and_delete_order_item(self):
+        i = OrderItem.objects.first()
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk,
+                                'order_item': i.pk,
+                                'test': True, })
+        self.assertIsInstance(resp.context['form'], OrderItemForm)
+        self.assertEqual(resp.context['form'].instance, i)
+        self.assertEqual(
+            resp.context['modal_title'], 'Editar prenda en pedido.')
+
+    def test_get_delete_template_used(self):
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk,
+                                'order_item': OrderItem.objects.first().pk,
+                                'delete': True,
+                                'test': True, })
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed('includes/delete_dialogs/order_item.html')
+
+    def test_get_create_order_item(self):
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk,
+                                'test': True, })
+        self.assertIsInstance(resp.context['form'], OrderItemForm)
+        self.assertEqual(resp.context['modal_title'], 'Añadir prenda.')
+
+    def test_get_is_json_response(self):
+        resp = self.client.get(reverse('orderitems-CRUD'),
+                               {'reference': Order.objects.first().pk,
+                                'element': Item.objects.first().pk, })
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['html'])
+
+    def test_post_data_should_be_a_dict(self):
         """Data for AJAX request should be a dict."""
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'pk': OrderItem.objects.first().pk,
@@ -5807,45 +5422,265 @@ class OrderItemsCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertIsInstance(data, dict)
 
-    def test_no_pk_raises_500(self):
-        resp = self.client.post(reverse('orderitems-CRUD'),
-                                {'action': 'edit-times', })
-        self.assertEqual(resp.status_code, 500)
-        self.assertEqual(
-            resp.content.decode("utf-8"), 'No pk was given.')
-
-    def test_no_action_raises_500(self):
+    def test_post_no_action_raises_500(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'pk': OrderItem.objects.first().pk, })
         self.assertEqual(resp.status_code, 500)
         self.assertEqual(
             resp.content.decode("utf-8"), 'No action was given.')
 
-    def test_unknown_action_raises_500(self):
+    def test_post_editig_deleting_raises_error(self):
+        with self.assertRaises(ObjectDoesNotExist):
+            self.client.post(reverse('orderitems-CRUD'),
+                             {'reference': Order.objects.first().pk,
+                              'element': Item.objects.first().pk,
+                              'order_item_pk': 5000,  # big enough
+                              'action': 'main',
+                              'test': True, })
+
+    def test_post_editig_deleting_modal_title_and_form(self):
+        i = OrderItem.objects.first()
         resp = self.client.post(reverse('orderitems-CRUD'),
-                                {'pk': OrderItem.objects.first().pk,
-                                 'action': 'void',
-                                 })
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'order_item_pk': i.pk,
+                                 'action': 'main',
+                                 'test': True, })
+        self.assertEqual(
+            resp.context['modal_title'], 'Editar prenda en pedido.')
+        self.assertIsInstance(resp.context['form'], OrderItemForm)
+        self.assertEqual(resp.context['form'].instance, i)
+        self.assertTrue(resp.context['form'].is_bound)
+
+    def test_post_creating_modal_title_and_form(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'action': 'main',
+                                 'test': True, })
+        self.assertEqual(resp.context['modal_title'], 'Añadir prenda.')
+        self.assertIsInstance(resp.context['form'], OrderItemForm)
+        self.assertTrue(resp.context['form'].is_bound)
+        self.assertEqual(resp.context['order_item'], None)
+
+    def test_post_action_main_raises_error_for_order_and_item(self):
+        msg = 'Order matching query does not exist.'
+        with self.assertRaisesMessage(ObjectDoesNotExist, msg):
+            self.client.post(reverse('orderitems-CRUD'),
+                             {'reference': 5000,  # big enough
+                              'element': Item.objects.first().pk,
+                              'order_item_pk': OrderItem.objects.first().pk,
+                              'action': 'main',
+                              'test': True, })
+
+        msg = 'Item matching query does not exist.'
+        with self.assertRaisesMessage(ObjectDoesNotExist, msg):
+            self.client.post(reverse('orderitems-CRUD'),
+                             {'reference': Order.objects.first().pk,
+                              'element': 5000,  # big enough
+                              'order_item_pk': OrderItem.objects.first().pk,
+                              'action': 'main',
+                              'test': True, })
+
+    def test_post_action_main_estimated_times(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'order_item_pk': OrderItem.objects.first().pk,
+                                 'action': 'main',
+                                 'test': True, })
+        self.assertEqual(resp.context['order_est_total'], '0s')
+        self.assertFalse(resp.context['data']['form_is_valid'])
+
+    def test_post_action_main_saves_item(self):
+        self.assertEqual(OrderItem.objects.count(), 5)
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'qty': 5,
+                                 'crop': timedelta(0),
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
+                                 'action': 'main',
+                                 'test': True, })
+        self.assertEqual(OrderItem.objects.count(), 6)
+        self.assertTrue(resp.context['data']['form_is_valid'])
+        self.assertTemplateUsed('includes/item_quick_list.html')
+
+    def test_post_action_main_updates_base_item_price(self):
+        item = Item.objects.last()
+        self.assertEqual(item.price, 30)
+        self.assertEqual(item.notes, 'Notes')
+        self.client.post(reverse('orderitems-CRUD'),
+                         {'reference': Order.objects.first().pk,
+                          'element': item.pk,
+                          'qty': 5,
+                          'crop': timedelta(0),
+                          'sewing': timedelta(0),
+                          'iron': timedelta(0),
+                          'set-default-price': 50,
+                          'action': 'main',
+                          'test': True, })
+        item = Item.objects.last()
+        self.assertEqual(item.price, 50)
+        self.assertEqual(item.notes, 'Notes Cambio de precio desde pedido')
+
+    def test_post_action_main_cleans_base_item_price(self):
+        msg = "'void' value must be a decimal number."
+        with self.assertRaisesMessage(ValidationError, msg):
+            self.client.post(reverse('orderitems-CRUD'),
+                             {'reference': Order.objects.first().pk,
+                              'element': Item.objects.last().pk,
+                              'qty': 5,
+                              'crop': timedelta(0),
+                              'sewing': timedelta(0),
+                              'iron': timedelta(0),
+                              'set-default-price': 'void',
+                              'action': 'main',
+                              'test': True, })
+
+    def test_post_action_main_renders_ticket_view(self):
+        o = Order.objects.first()
+        o.ref_name = 'Quick'
+        o.save()
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': o.pk,
+                                 'element': Item.objects.first().pk,
+                                 'qty': 5,
+                                 'crop': timedelta(0),
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
+                                 'action': 'main',
+                                 'test': True, })
+        self.assertEqual(resp.context['data']['html_id'], '#ticket-wrapper')
+        self.assertTemplateUsed('includes/ticket.html')
+
+    def test_post_action_main_renders_quick_list(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'qty': 5,
+                                 'crop': timedelta(0),
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
+                                 'action': 'main',
+                                 'test': True, })
+        self.assertEqual(resp.context['data']['html_id'], '#quick-list')
+        self.assertTemplateUsed('includes/item_quick_list.html')
+
+    def test_post_action_main_form_not_valid(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'qty': 5,
+                                 # 'crop': timedelta(0),  missing value
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
+                                 'action': 'main',
+                                 'test': True, })
+        self.assertFalse(resp.context['data']['form_is_valid'])
+        self.assertTemplateUsed('includes/custom_forms/order_item.html')
+
+    def test_post_action_delete_raises_error_orderitem_not_provided(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'action': 'delete',
+                                 'test': True, })
         self.assertEqual(resp.status_code, 500)
         self.assertEqual(
-            resp.content.decode("utf-8"), 'The action was not found.')
+            resp.content.decode("utf-8"), 'No item pk was provided.')
 
-    def test_void_item_retunrs_404(self):
+    def test_post_action_delete_raises_error_order_not_found(self):
+        item = OrderItem.objects.last()
+        msg = 'Order matching query does not exist.'
+        with self.assertRaisesMessage(ObjectDoesNotExist, msg):
+            self.client.post(reverse('orderitems-CRUD'),
+                             {'reference': 5000,  # Big enough
+                              'element': item.element.pk,
+                              'order_item_pk': item.pk,
+                              'action': 'delete',
+                              'test': True, })
+
+    def test_post_action_delete_estimated_times(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'order_item_pk': OrderItem.objects.first().pk,
+                                 'action': 'delete',
+                                 'test': True, })
+        self.assertEqual(resp.context['order_est_total'], '0s')
+
+    def test_post_action_delete_deletes_item(self):
+        item = OrderItem.objects.last()
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': item.reference.pk,
+                                 'element': item.element.pk,
+                                 'order_item_pk': item.pk,
+                                 'action': 'delete',
+                                 'test': True, })
+        self.assertTrue(resp.context['data']['form_is_valid'])
+        msg = 'OrderItem matching query does not exist.'
+        with self.assertRaisesMessage(ObjectDoesNotExist, msg):
+            OrderItem.objects.get(pk=item.pk)
+
+    def test_post_action_delete_renders_ticket_view(self):
+        o = Order.objects.first()
+        o.ref_name = 'Quick'
+        o.save()
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': o.pk,
+                                 'element': Item.objects.first().pk,
+                                 'order_item_pk': OrderItem.objects.first().pk,
+                                 'qty': 5,
+                                 'crop': timedelta(0),
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
+                                 'action': 'delete',
+                                 'test': True, })
+        self.assertEqual(resp.context['data']['html_id'], '#ticket-wrapper')
+        self.assertTemplateUsed('includes/ticket.html')
+
+    def test_post_action_delete_renders_quick_list(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'reference': Order.objects.first().pk,
+                                 'element': Item.objects.first().pk,
+                                 'order_item_pk': OrderItem.objects.first().pk,
+                                 'qty': 5,
+                                 'crop': timedelta(0),
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
+                                 'action': 'delete',
+                                 'test': True, })
+        self.assertEqual(resp.context['data']['html_id'], '#quick-list')
+        self.assertTemplateUsed('includes/item_quick_list.html')
+
+    def test_post_edit_times_no_pk_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'action': 'edit-times', })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No pk was given.')
+
+    def test_post_void_item_retunrs_404(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'pk': int(1e5),  # big enough
                                  'action': 'edit-times',
                                  })
         self.assertEqual(resp.status_code, 404)
 
-    def test_form_is_edit_times_form(self):
+    def test_post_form_is_edit_times_form(self):
+        item = OrderItem.objects.first()
         resp = self.client.post(reverse('orderitems-CRUD'),
-                                {'pk': OrderItem.objects.first().pk,
+                                {'pk': item.pk,
                                  'action': 'edit-times',
                                  'test': True,
                                  })
         self.assertIsInstance(resp.context['form'], ItemTimesForm)
+        self.assertEqual(resp.context['form'].instance, item)
+        self.assertTrue(resp.context['form'].is_bound)
 
-    def test_edit_times_actually_edits_times(self):
+    def test_post_edit_times_actually_edits_times(self):
         item = OrderItem.objects.first()
         self.assertEqual(item.crop, timedelta(0))
         resp = self.client.post(reverse('orderitems-CRUD'),
@@ -5864,7 +5699,7 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(resp.context['data']['html_id'], '#orderitems-list')
         self.assertTemplateUsed(resp, 'includes/orderitems_list.html')
 
-    def test_edit_times_failed(self):
+    def test_post_edit_times_failed(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'pk': OrderItem.objects.first().pk,
                                  'action': 'edit-times',
@@ -5877,14 +5712,21 @@ class OrderItemsCRUDTests(TestCase):
         self.assertFalse(resp.context['data']['form_is_valid'])
         self.assertEqual(resp.context['data']['error'], error)
 
-    def test_edit_notes_void_item_retunrs_404(self):
+    def test_post_edit_notes_no_pk_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'action': 'edit-notes', })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'No pk was given.')
+
+    def test_post_edit_notes_void_item_retunrs_404(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'pk': int(1e5),  # big enough
                                  'action': 'edit-notes',
                                  })
         self.assertEqual(resp.status_code, 404)
 
-    def test_form_is_edit_notes_form(self):
+    def test_post_form_is_edit_notes_form(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'pk': OrderItem.objects.first().pk,
                                  'action': 'edit-notes',
@@ -5892,7 +5734,7 @@ class OrderItemsCRUDTests(TestCase):
                                  })
         self.assertIsInstance(resp.context['form'], OrderItemNotes)
 
-    def test_edit_notes_actually_edits_notes(self):
+    def test_post_edit_notes_actually_edits_notes(self):
         item = OrderItem.objects.first()
         self.assertEqual(item.description, '')
         resp = self.client.post(reverse('orderitems-CRUD'),
@@ -5910,7 +5752,16 @@ class OrderItemsCRUDTests(TestCase):
                          '#item-details-{}'.format(item.pk))
         self.assertTemplateUsed(resp, 'includes/pqueue_element_details.html')
 
-    def test_view_returns_a_JSON_reponse(self):
+    def test_post_unknown_action_raises_500(self):
+        resp = self.client.post(reverse('orderitems-CRUD'),
+                                {'pk': OrderItem.objects.first().pk,
+                                 'action': 'void',
+                                 })
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'The action was not found.')
+
+    def test_post_view_returns_a_JSON_reponse(self):
         item = OrderItem.objects.first()
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'pk': item.pk,
@@ -6550,8 +6401,6 @@ class ItemSelectorTests(TestCase):
                                  'aditionalpk': order.pk,
                                  })
         self.assertEqual(resp.context['order'], order)
-        self.assertEqual(
-            resp.context['js_action_send_to'], 'send-to-order')
 
     def test_item_selector_gets_order(self):
         """Test the correct pickup of order on order view."""
@@ -6559,8 +6408,6 @@ class ItemSelectorTests(TestCase):
         resp = self.client.get(
             reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
         self.assertEqual(resp.context['order'], order)
-        self.assertEqual(
-            resp.context['js_action_send_to'], 'send-to-order')
 
     def test_item_selector_get_rid_of_buttons_in_orders(self):
         """Buttons should disappear in send to order."""
@@ -6569,20 +6416,6 @@ class ItemSelectorTests(TestCase):
             reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
         self.assertFalse(resp.context['js_action_edit'])
         self.assertFalse(resp.context['js_action_delete'])
-
-    def test_item_selector_diverts_depending_kind_of_order(self):
-        """The js action changes depending the kind of order."""
-        order = Order.objects.first()
-        resp = self.client.get(
-            reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
-        self.assertEqual(resp.context['js_action_send_to'], 'send-to-order')
-        e = Customer.objects.create(name='express', phone=0, cp=0)
-        order.customer = e
-        order.save()
-        resp = self.client.get(
-            reverse('item-selector'), {'test': True, 'aditionalpk': order.pk})
-        self.assertEqual(
-            resp.context['js_action_send_to'], 'send-to-order-express')
 
     def test_item_selector_picks_up_all_the_items_get(self):
         """Test the correct filter 'all' which includes Predeterminado."""
@@ -6701,12 +6534,12 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(resp.context['available_items'].count(), 1)
         self.assertEqual(resp.context['data_size'], '0')
 
-    def test_item_selector_limits_to_5(self):
+    def test_item_selector_limits_to_15(self):
         """Test the limiting results."""
-        for i in range(10):
+        for i in range(15):
             Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
         resp = self.client.get(reverse('item-selector'), {'test': True})
-        self.assertEqual(resp.context['available_items'].count(), 5)
+        self.assertEqual(resp.context['available_items'].count(), 15)
 
     def test_item_counts(self):
         """Test the total amount of items."""

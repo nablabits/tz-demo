@@ -1,14 +1,33 @@
+{% comment %}
+Show the items that have been added to a regular order
+
+This is the ticket counterpart for regular orders and like that we can
+edit/delete the items that have been added to the order.
+{% endcomment %}
+
 <div class="card">
   <div class="card-header">
-    <h5 class="mb-0"><strong>Prendas ya añadidas</strong></h5>
-    <small>Aquí aparecen las prendas que ya has añadido al pedido.<br>
-      Cuando acabes haz click en listo</small>
+    <div class="d-flex justify-content-between">
+      <div class="d-flex flex-column">
+        <h5 class="mb-0"><strong>Prendas ya añadidas</strong></h5>
+        <small>Aquí aparecen las prendas que ya has añadido al pedido.<br>
+          Cuando acabes haz click en listo</small>
+      </div>
+      <div class="d-flex flex-column text-right">
+        <span>Total pedido: {{order.total}}€</span>
+        <span>Tiempo estimado: ~{{order_est_total}}</span>
+      </div>
+    </div>
   </div>
   <div class="card-body">
-    {% for item in items %}
-    <div class="d-flex">
-      <span class="py-1 mr-2">{{item.qty}} x {%include 'includes/item_string.html'%}</span>
-      <span class="ml-auto py-1">{%include 'includes/action_buttons.html'%}</span>
+    {% for item in order.items.all %}
+    <div class="d-flex align-items-center">
+      {{item.qty}} x&nbsp;{{item.element.html_string}}
+      <span class="ml-auto py-1">
+        <button class="mr-1 btn btn-sm btn-outline-success js-crud-load" action="{% url 'orderitems-CRUD' %}" data="element={{item.element.pk}}&order_item={{item.pk}}&reference={{order.pk}}">
+          <i class="far fa-edit"></i></button>
+        <button class="btn btn-sm btn-outline-danger js-crud-load" action="{% url 'orderitems-CRUD' %}" data="element={{item.element.pk}}&order_item={{item.pk}}&reference={{order.pk}}&delete=true"><i class="far fa-trash"></i></button>
+      </span>
     </div>
     {%endfor%}
     <a href="{%url 'order_view' order.pk %}">

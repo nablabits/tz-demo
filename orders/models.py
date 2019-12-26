@@ -11,6 +11,7 @@ from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.template.loader import render_to_string
 
 from . import managers, settings
 from .utils import WeekColor, prettify_times
@@ -325,7 +326,7 @@ class Order(models.Model):
     @property
     def estimated_time(self):
         """Estimate the time in seconds to produce the order."""
-        items = OrderItem.objects.filter(reference=self).exclude(stock=True)
+        items = self.items.exclude(stock=True)
         tc, ts, ti = 0, 0, 0  # set initial times to 0
         for item in items:
             c, s, i = item.estimated_time
@@ -533,6 +534,15 @@ class Item(models.Model):
             super().save(*args, **kwargs)
 
     @property
+    def html_string(self):
+        """Render the item string for views."""
+        context = {'type': self.get_item_type_display(),
+                   'name': self.name,
+                   'class': self.get_item_class_display(),
+                   'size': self.size, }
+        return render_to_string('includes/item_string.html', context)
+
+    @property
     def avg_crop(self):
         """Average the time to crop the item."""
         crop = OrderItem.objects.filter(element=self)
@@ -567,6 +577,12 @@ class Item(models.Model):
         return iron['total'] / iron['qtys'] if iron['qtys'] else timedelta(0)
 
     @property
+    def pretty_avg(self):
+        """Prettify the average times for views."""
+        avgs = (self.avg_crop, self.avg_sewing, self.avg_iron)
+        return [prettify_times(a.total_seconds()) for a in avgs]
+
+    @property
     def production(self):
         """Sum the total production for this item."""
         item = self.order_item.aggregate(total=models.Sum('qty'))
@@ -586,6 +602,11 @@ class OrderItem(models.Model):
     description = models.TextField('Descripción', blank=True)
     reference = models.ForeignKey(
         Order, on_delete=models.CASCADE, related_name='items')
+
+    batch = models.ForeignKey(
+        Order, on_delete=models.SET_NULL, related_name='batch', blank=True,
+        limit_choices_to=models.Q(customer__name__iexact='trapuzarrak'),
+        null=True, )
 
     # Timing stuff now goes here
     crop = models.DurationField('Corte', default=timedelta(0))
@@ -648,6 +669,10 @@ class OrderItem(models.Model):
         if self.reference.customer.name.lower() == 'trapuzarrak':
             self.stock = False
 
+        # Ensure that providing a batch number makes the item stock
+        if self.batch:
+            self.stock = True
+
         # Finally, ensure that foreign items are not Stock
         if self.element.foreing:
             self.stock = False
@@ -664,6 +689,17 @@ class OrderItem(models.Model):
         if void:
             raise ValidationError(_('Los pedidos de Trapuzarrak no pueden ' +
                                     'contener prendas externas'))
+
+        # check that reference & batch are different
+        if self.reference == self.batch:
+            msg = 'Lote y pedido no pueden ser iguales'
+            raise ValidationError({'reference': _(msg)})
+
+        # Check that only tz invoices are batch
+        if self.batch and self.batch.customer.name.lower() != 'trapuzarrak':
+            msg = ('El numero de lote tiene que corresponder con un pedido ' +
+                   'de trapuzarrak')
+            raise ValidationError({'batch': _(msg)})
 
     @property
     def time_quality(self):

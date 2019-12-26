@@ -1412,6 +1412,16 @@ class TestObjectItems(TestCase):
                                 size='0',
                                 fabrics=2.2)
 
+    def test_item_html_string(self):
+        i = Item.objects.create(
+            name='foo', item_type='2', item_class='M', size='xs', fabrics=5)
+        html_str = (
+            '\n<div class="d-block"><span class="mr-1">Pantalón foo</span>' +
+            '</div><div class="d-block"><span class="badge badge-primary' +
+            ' mr-1">Medium</span><span class="badge badge-info mr-1">T-xs' +
+            '</span></div>\n')
+        self.assertEqual(i.html_string, html_str)
+
     def test_item_average_times(self):
         items = [Item.objects.create(
             name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
@@ -1445,6 +1455,21 @@ class TestObjectItems(TestCase):
         self.assertEqual(items[0].avg_iron, timedelta(seconds=30))
         self.assertEqual(items[1].avg_iron, timedelta(seconds=30) / 11)
         self.assertEqual(items[2].avg_iron, timedelta(seconds=30) / 21)
+
+    @tag('current')
+    def test_pretty_average(self):
+        items = [Item.objects.create(
+            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+
+        for n, item in enumerate(items):
+            OrderItem.objects.create(
+                element=item, qty=10 * n + 1, reference=Order.objects.first(),
+                crop=timedelta(seconds=10),
+                sewing=timedelta(seconds=20),
+                iron=timedelta(seconds=30), )
+
+        a = Item.objects.first()
+        self.assertEqual(a.pretty_avg, ['10s', '20s', '30s'])
 
     def test_production(self):
         o = Order.objects.first()
@@ -1523,6 +1548,37 @@ class TestOrderItems(TestCase):
         self.assertEqual(created_item.sewing, timedelta(0))
         self.assertEqual(created_item.iron, timedelta(0))
         self.assertFalse(created_item.fit)
+
+    def test_batch(self):
+        u = User.objects.first()
+        tz = Customer.objects.create(name='trapuzarrak', cp=0, phone=0)
+        cs = Customer.objects.first()
+        a = Order.objects.first()
+        b = Order.objects.create(
+            user=u, customer=tz, ref_name='foo', delivery=date.today())
+        c = Order.objects.create(
+            user=u, customer=cs, ref_name='bar', delivery=date.today())
+        i = OrderItem.objects.create(element=Item.objects.first(), reference=a)
+        self.assertEqual(i.batch, None)
+        i.batch = b
+        i.save()
+        self.assertIsInstance(i.batch, Order)
+
+        i.batch = a
+        msg = 'Lote y pedido no pueden ser iguales'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.full_clean()
+
+        i.batch = c
+        msg = ('El numero de lote tiene que corresponder con un pedido ' +
+               'de trapuzarrak')
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.full_clean()
+
+        b.delete()
+        i = OrderItem.objects.get(pk=i.pk)
+        self.assertEqual(i.batch, None)
+
 
     def test_orders_with_timed_items_are_at_least_status_3(self):
         o = Order.objects.first()
@@ -2401,8 +2457,6 @@ class TestExpense(TestCase):
         ec.delete()
         expense = Expense.objects.get(pk=expense.pk)
         self.assertEqual(expense.category.name, 'default')
-
-
 
 
     def test_in_b_field(self):

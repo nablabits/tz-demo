@@ -25,29 +25,6 @@ $(function () {
     }
   })
 
-  var updateStatus = function () {
-    /* Updates current order status */
-    var pk = $(this).attr('data-pk')
-    var status = $(this).attr('data-status')
-    var action = 'update-status'
-    $.ajax({
-      url: '/actions/',
-      data: $.param({
-        'pk': pk, 'status': status, 'action': action
-      }),
-      type: 'post',
-      dataType: 'json',
-      success: function (data) {
-        if (data.reload) {
-          location.reload()
-        } else {
-          $(data.html_id).html(data.html)
-        }
-      }
-    })
-    return false
-  }
-
   var loadActionForm = function () {
     var action = $(this).attr('data-action')
     var pk = $(this).attr('data-pk')
@@ -104,7 +81,25 @@ $(function () {
     })
   }
 
-  var saveForm = function (e) {
+  function loadForm () {
+    $.ajax({
+      url: $(this).attr('action'),
+      data: $(this).attr('data'),
+      type: 'get',
+      dataType: 'json',
+      beforeSend: function () {
+        $('#action-modal').modal('show')
+      },
+      success: function (data) {
+        $('#action-modal .modal-content').html(data.html)
+        if ($('#action-modal #id_stock').attr('checked')) {
+          $('#action-modal .js-set-times').slideUp()
+        }
+      }
+    })
+  }
+
+  function saveForm (e) {
     // the new method to process AJAX for each model
     e.preventDefault()
     var form = $(this)
@@ -127,11 +122,15 @@ $(function () {
           } else if (data.redirect) {
             window.location.replace(data.redirect)
           } else {
+            $('#action-modal').modal('hide')
+            $('#action-modal #bg-working').addClass('d-none')
+            $('#action-modal #check-success').removeClass('d-none')
             $(data.html_id).html(data.html)
           }
         } else {
           btn.removeClass('d-none')
           errorBox.html(data.errors)
+          $('#action-modal .modal-content').html(data.html)
         }
       }
     })
@@ -271,8 +270,8 @@ $(function () {
           var pk = $(this).attr('value')
           console.log(name, pk);
           if (pk !== 'void') {
-            $('#action-modal ' + '#' + url).val(name)
-            $('#action-modal ' + hiddenInput).attr('value', pk)
+            $('#root ' + '#' + url).val(name)
+            $('#root ' + hiddenInput).attr('value', pk)
             $(outcome).empty().removeClass('border')
           }
         })
@@ -301,15 +300,14 @@ $(function () {
 
   // actions (POST)
   $('#action-modal').on('click', '#send-form button', saveActionForm)
-  $('#root').on('click', '.js-order-status', updateStatus)
-  $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
 
   // Customer hints for orders
-  $('#action-modal').on('keyup', '.js-hints', Hints)
+  $('#root').on('keyup', '.js-hints', Hints)
 
   // actions new CRUD process (POST)
   $('#root').on('submit', '.js-crud-form', saveForm)
+  $('#root').on('click', '.js-crud-load', loadForm)
   $('#root').on('click', '.js-kanban-jump', kanbanJump)
 
   // Pqueue actions

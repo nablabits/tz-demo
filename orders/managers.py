@@ -11,7 +11,8 @@ class LiveOrders(models.Manager):
 
     def get_queryset(self):
         """Return the queryset."""
-        return super().get_queryset().exclude(status__in=[8, 9])
+        live_orders = super().get_queryset().exclude(status__in=[8, 9])
+        return live_orders.exclude(customer__name__iexact='express')
 
 
 class OutdatedOrders(models.Manager):
@@ -20,6 +21,7 @@ class OutdatedOrders(models.Manager):
     def get_queryset(self):
         """Return the queryset."""
         orders = super().get_queryset().filter(delivery__lt=date.today())
+        orders = orders.exclude(customer__name__iexact='express')
         return orders.exclude(status__in=[7, 8, 9])
 
 

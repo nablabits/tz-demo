@@ -10,7 +10,7 @@
             <a href="{% url 'order_view' item.item.reference.pk %}">
               <strong>{{item.item.reference.pk}}. {{item.item.reference.customer.name}}</strong>
             </a>
-            <p>{%include 'includes/item_string.html'%}</p>
+            <p>{{item.item.element.html_string}}</p>
           </div>
 
           <div class="d-flex flex-column justify-content-center ml-auto">
@@ -63,7 +63,7 @@
             <a href="{% url 'order_view' item.item.reference.pk %}">
               <strong>{{item.item.reference.pk}}. {{item.item.reference.ref_name}}</strong>, &nbsp;
             </a>
-            {%include 'includes/item_string.html'%}
+            {{item.item.element.html_string}}
             <div class="d-flex ml-auto">
               <button class="mr-1 btn btn-sm btn-outline-success js-queue" data-action="uncomplete" data-pk="{{item.pk}}">
                 <i class="fal fa-upload"></i>

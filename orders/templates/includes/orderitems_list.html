@@ -10,7 +10,7 @@
   {%for item in items%}
     <div class="d-flex mx-3 my-3">
       <div class="">
-        {{item.qty}} x {%include 'includes/item_string.html'%}, {{item.price}}€
+        {{item.qty}} x {{item.element.html_string}}, {{item.price}}€
       </div>
       <div class="ml-auto">
         {{item.subtotal}}€
@@ -36,7 +36,7 @@
       <tr style="cursor: pointer;">
         <td scope="row" data-toggle="collapse" data-target=".item-detail-{{item.pk}}">
           <div class="d-flex align-items-center">
-            {{item.qty}} x {%include 'includes/item_string.html'%} {{item.price}}€
+            {{item.qty}} x {{item.element.html_string}} {{item.price}}€
             <span class="ml-2">
               {%if item.description%}
                 <i class="far fa-sticky-note"></i>
