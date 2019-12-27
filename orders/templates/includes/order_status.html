@@ -1,3 +1,7 @@
+{% comment %}
+Render the kanban status bar inside order view and the arrows to shift between states
+{% endcomment %}
+
 {% load widget_tweaks %}
 {% if order.status == '8' %}
   <div class="d-flex mt-2">
@@ -29,11 +33,12 @@
 {% else %}
   <div class="d-flex flex-column flex-md-row align-items-center mt-3">
 
-    <!-- Kanban shift arrow -->
+    {# Kanban shift down arrow #}
     {% if order.status in '234567' %}
       <i class="fal fa-arrow-alt-left fa-2x pr-2 js-kanban-jump" data-pk="{{order.pk}}" id="status-shiftBack" style="cursor: pointer;"></i>
     {%endif%}
 
+    {# Kanban statuses #}
     <div class="mr-2 btn btn-outline-success {% if order.status == '1' %}active{% endif %}">
       <i class="fal {{STATUS_ICONS.0}} pr-2"></i>{{order.STATUS.0.1}}</div>
     <div class="mr-2 btn btn-outline-success {% if order.status == '2' %}active{% endif %}">
@@ -55,7 +60,7 @@
         <i class="fal {{STATUS_ICONS.4}} pr-2"></i>{{order.STATUS.6.1}}</button>
     {%endif%}
 
-    <!-- Kanban shift arrow -->
+    {# Kanban shift up arrow #}
       {% if order.status in '123456' %}
       <i class="fal fa-arrow-alt-right fa-2x px-1 js-kanban-jump" data-pk="{{order.pk}}" id="status-shiftFwd" style="cursor: pointer;"></i>
     {%endif%}
