@@ -5254,38 +5254,8 @@ class OrdersCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertEqual(data['html_id'], '#kanban-columns')
         self.assertTrue(data['form_is_valid'])
-    #
-    # def test_kanban_jump_template(self):
-    #     """Test the correct template used."""
-    #     self.client.post(reverse('orders-CRUD'),
-    #                      {'direction': 'next',
-    #                       'pk': Order.objects.first().pk,
-    #                       'action': 'kanban-jump',
-    #                       'test': True,
-    #                       })
-    #     self.assertTemplateUsed('includes/kanban_columns.html')
-    #
-    # def test_kanban_jump_html_id(self):
-    #     """Successful processed orders html id."""
-    #     resp = self.client.post(reverse('orders-CRUD'),
-    #                             {'direction': 'next',
-    #                              'pk': Order.objects.first().pk,
-    #                              'action': 'kanban-jump',
-    #                              })
-    #     data = json.loads(str(resp.content, 'utf-8'))
-    #     self.assertEqual(data['html_id'], '#kanban-columns')
-    #
-    # def test_kanban_jump_form_is_valid(self):
-    #     """Successful processed orders html id."""
-    #     resp = self.client.post(reverse('orders-CRUD'),
-    #                             {'direction': 'next',
-    #                              'pk': Order.objects.first().pk,
-    #                              'action': 'kanban-jump',
-    #                              })
-    #     data = json.loads(str(resp.content, 'utf-8'))
-    #     self.assertTrue(data['form_is_valid'])
 
-    def test_unknown_action_raises_500(self):
+    def test_post_unknown_action_raises_500(self):
         """Action should exist."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': date(2017, 1, 1),
