@@ -1,7 +1,0 @@
-{% load widget_tweaks %}
-<div class="d-flex">
-  <div class="form-group">
-    {{ form.delivery.label_tag }}
-    <input type="date" class="form-control" name="{{ form.delivery.name }}" id="{{ form.delivery.id_for_label }}" {% if form.delivery.value != None %} value="{{ form.delivery.value|stringformat:'s' }}" {% endif %}>
-  </div>
-</div>

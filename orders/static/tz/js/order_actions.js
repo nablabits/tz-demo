@@ -268,7 +268,6 @@ $(function () {
           console.log('click');
           var name = $(this).text()
           var pk = $(this).attr('value')
-          console.log(name, pk);
           if (pk !== 'void') {
             $('#root ' + '#' + url).val(name)
             $('#root ' + hiddenInput).attr('value', pk)

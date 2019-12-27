@@ -4,6 +4,23 @@
 {% load humanize %}
 {% load i18n %}
 {% language 'es' %}
+
+{% comment %}
+Render the info about the order.
+
+Has three sections:
+  1) The quick info ref_name, customer, price and confirmation
+  2) The kanban stage
+  3, way bigger) a 4-tab view:
+    * Main, details in deep about the order, prices management and status tracker
+    * Items, shows the items already added to the order.
+      Also has the item_selector collapsed to add more items.
+      It renders with a staged area called item_quick_list in layout 8-4
+    * Comments.
+    * Tasks, connects with todoist to check the pending tasks.
+{% endcomment %}
+
+
 <section id="order_view" data-pk="{{ order.pk }}">
   <div class="container-fluid mt-4 pb-3 border-bottom">
     <div class="d-flex align-items-center">

@@ -1,5 +1,11 @@
 {% extends "tz/base.html" %}
 {% block listview %}
+
+{% comment %}
+Loads a generic list view for customers & base items depending on the variables
+got.
+{% endcomment %}
+
 {% if placeholder %}
   {% include 'includes/search_box.html' %}
 {% endif %}

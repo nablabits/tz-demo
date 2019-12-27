@@ -933,37 +933,12 @@ class Actions(View):
         pk = self.request.GET.get('pk', None)
         action = self.request.GET.get('action', None)
 
-        if not pk or not action:
+        if not action:
             raise ValueError('Unexpected GET data')
 
         """ Add actions """
-        # Add order (GET)
-        if action == 'order-add':
-            form = OrderForm()
-            context = {'form': form,
-                       'modal_title': 'Añadir Pedido',
-                       'pk': '0',
-                       'action': 'order-new',
-                       'submit_btn': 'Añadir',
-                       'custom_form': 'includes/custom_forms/order.html',
-                       }
-            template = 'includes/regular_form.html'
-
-        # Add order from customer (GET)
-        elif action == 'order-from-customer':
-            customer = get_object_or_404(Customer, pk=pk)
-            form = OrderForm(initial={'customer': customer})
-            context = {'form': form,
-                       'modal_title': 'Añadir Pedido',
-                       'pk': '0',
-                       'action': 'order-new',
-                       'submit_btn': 'Añadir',
-                       'custom_form': 'includes/custom_forms/order.html',
-                       }
-            template = 'includes/regular_form.html'
-
         # Add express order (GET)
-        elif action == 'order-express-add':
+        if action == 'order-express-add':
             custom_form = 'includes/custom_forms/order_express.html'
             context = {'modal_title': 'Nueva venta · Añadir CP',
                        'pk': '0',
@@ -1006,52 +981,6 @@ class Actions(View):
                        'pk': order.pk,
                        'action': 'order-comment',
                        'submit_btn': 'Añadir',
-                       }
-            template = 'includes/regular_form.html'
-
-        # Edit the order (GET)
-        elif action == 'order-edit':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderForm(instance=order)
-            context = {'form': form,
-                       'modal_title': 'Editar Pedido',
-                       'pk': order.pk,
-                       'action': 'order-edit',
-                       'submit_btn': 'Guardar',
-                       'custom_form': 'includes/custom_forms/order.html',
-                       }
-            template = 'includes/regular_form.html'
-
-        # Add a prepaid (GET)
-        elif action == 'order-edit-add-prepaid':
-            order = get_object_or_404(Order, pk=pk)
-            email = False
-            if order.customer.email:
-                email = True
-            form = OrderForm(instance=order)
-            custom_form = 'includes/custom_forms/order_add_prepaid.html'
-            context = {'form': form,
-                       'order': order,
-                       'modal_title': 'Añadir Prepago',
-                       'pk': order.pk,
-                       'email': email,
-                       'action': 'order-edit-add-prepaid',
-                       'submit_btn': 'Añadir',
-                       'custom_form': custom_form,
-                       }
-            template = 'includes/regular_form.html'
-
-        # Edit the date (GET)
-        elif action == 'order-edit-date':
-            order = get_object_or_404(Order, pk=pk)
-            form = EditDateForm(instance=order)
-            custom_form = 'includes/custom_forms/edit_date.html'
-            context = {'form': form,
-                       'modal_title': 'Actualizar fecha de entrega',
-                       'pk': order.pk,
-                       'action': 'order-edit-date',
-                       'submit_btn': 'Guardar',
-                       'custom_form': custom_form,
                        }
             template = 'includes/regular_form.html'
 
@@ -1176,29 +1105,8 @@ class Actions(View):
         if not pk or not action:
             raise ValueError('POST data was poor')
 
-        # Add Order (POST)
-        if action == 'order-new':
-            form = OrderForm(request.POST)
-            if form.is_valid():
-                order = form.save(commit=False)
-                order.creation = timezone.now()
-                order.user = request.user
-                order.save()
-                data['redirect'] = (reverse('order_view', args=[order.pk]))
-                data['form_is_valid'] = True
-            else:
-                data['form_is_valid'] = False
-                context = {'form': form,
-                           'modal_title': 'Añadir Pedido',
-                           'pk': '0',
-                           'action': 'order-new',
-                           'submit_btn': 'Añadir',
-                           'custom_form': 'includes/custom_forms/order.html',
-                           }
-                template = 'includes/regular_form.html'
-
         # Add express order
-        elif action == 'order-express-add':
+        if action == 'order-express-add':
             customer, created = Customer.objects.get_or_create(
                 name='express', city='server', phone=0,
                 cp=self.request.POST.get('cp'),
@@ -1293,104 +1201,6 @@ class Actions(View):
                            }
                 template = 'includes/regular_form.html'
 
-        # Edit order (POST)
-        elif action == 'order-edit':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderForm(request.POST, instance=order)
-            if form.is_valid():
-                form.save()
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-            else:
-                data['form_is_valid'] = False
-                context = {'form': form,
-                           'modal_title': 'Editar Pedido',
-                           'pk': order.pk,
-                           'action': 'order-edit',
-                           'submit_btn': 'Guardar',
-                           'custom_form': 'includes/custom_forms/order.html',
-                           }
-                template = 'includes/regular_form.html'
-
-        # Add prepaid (POST)
-        elif action == 'order-edit-add-prepaid':
-            order = get_object_or_404(Order, pk=pk)
-            form = OrderForm(request.POST, instance=order)
-            if form.is_valid():
-                form.save()
-
-                # Now email settings
-                if order.customer.email and self.request.POST.get('send-mail'):
-                    subject = 'Tu comprobante de depósito en Trapuzarrak'
-                    from_email = settings.CONTACT_EMAIL
-                    to = [order.customer.email, ]
-                    bcc = [config('EMAIL_BCC'), ]
-                    txt = ('Kaixo %s:\n\n' +
-                           'Oraitxe bertan %s€-ko aurre ordainketa egin ' +
-                           'dozu eskaera baten kontuan.\n' +
-                           '00%s da zure eskaeraren erreferentzia zenbakia, ' +
-                           'ahalik eta behin prestatu egotea, zugaz ' +
-                           'kontaktuan jarriko gara.\n\n' +
-                           'Eskerrik asko zure kofidantzagaitik.\n\n' +
-                           'Trapuzarraen taldea.\n' +
-                           '\n---\n\n' +
-                           'Acabas de dejarnos un depósito en efectivo de %s' +
-                           '€ a cuenta de un encargo que has realizado.\n' +
-                           'La referencia de tu pedido es %s, en cuanto lo ' +
-                           'tengamos listo nos pondremos en contacto ' +
-                           'contigo.\n\n' +
-                           'Gracias por tu confianza.\n\n' +
-                           'El equipo de Trapuzarrak.\n\n' +
-                           '%s\n%s') % (order.customer.email_name(),
-                                        order.prepaid, order.pk,
-                                        order.prepaid, order.pk,
-                                        settings.CONTACT_EMAIL,
-                                        settings.CONTACT_PHONE)
-                    msg = EmailMultiAlternatives(
-                        subject, txt, from_email, to=to, bcc=bcc)
-                    msg.send()
-
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-            else:
-                data['form_is_valid'] = False
-                custom_form = 'includes/custom_forms/order_add_prepaid.html'
-                if order.customer.email:
-                    email = True
-                context = {'form': form,
-                           'order': order,
-                           'modal_title': 'Añadir prepago',
-                           'pk': order.pk,
-                           'email': email,
-                           'action': 'order-edit-add-prepaid',
-                           'submit_btn': 'Guardar',
-                           'custom_form': custom_form,
-                           }
-                template = 'includes/regular_form.html'
-
-        # Edit date (POST)
-        elif action == 'order-edit-date':
-            order = get_object_or_404(Order, pk=pk)
-            form = EditDateForm(request.POST, instance=order)
-            if form.is_valid():
-                form.save()
-                data['form_is_valid'] = True
-                data['reload'] = True
-                return JsonResponse(data)
-            else:
-                data['form_is_valid'] = False
-                custom_form = 'includes/custom_forms/edit_date.html'
-                context = {'form': form,
-                           'modal_title': 'Actualizar fecha de entrega',
-                           'pk': order.pk,
-                           'action': 'order-edit-date',
-                           'submit_btn': 'Guardar',
-                           'custom_form': custom_form,
-                           }
-                template = 'includes/regular_form.html'
-
         # Edit Customer (POST)
         elif action == 'customer-edit':
             customer = get_object_or_404(Customer, pk=pk)
@@ -1474,26 +1284,6 @@ class Actions(View):
 
                 item = OrderItem.objects.select_related('reference').get(pk=pk)
                 form = OrderItemForm(instance=item)
-
-        # Update status (POST)
-        elif action == 'update-status':
-            status = self.request.POST.get('status', None)
-            order = get_object_or_404(Order, pk=pk)
-            order.status = status
-            try:
-                order.full_clean()
-            except ValidationError:
-                data['form_is_valid'] = False
-                data['reload'] = True
-                return JsonResponse(data)
-            else:
-                if status == '7':
-                    order.delivery = date.today()
-                order.save()
-                data['form_is_valid'] = True
-                data['html_id'] = '#order-status'
-                template = 'includes/order_status.html'
-                context = {'order': order}
 
         # Delete object Item
         elif action == 'object-item-delete':
