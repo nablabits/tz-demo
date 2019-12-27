@@ -1546,7 +1546,7 @@ class Actions(View):
 
 
 class OrdersCRUD(View):
-    """Process all the CRUD actions on order model.
+    """Process all the CRUD actions called by AJAX on order model.
 
     This is the new version for AJAX calls since Actions class became really
     huge to be clear. Eventually each model will have their CRUD AJAX Actions
@@ -1554,35 +1554,79 @@ class OrdersCRUD(View):
     """
 
     def get(self, request):
-        pass  # pragma: no cover
+        """Open a dialog to create or edit orders."""
+        data = dict()
+
+        # Creating and editing use the same template
+        template = 'includes/custom_forms/order.html'
+
+        # Determine whether we're editing or creating
+        order_pk = request.GET.get('order_pk', None)
+        if order_pk:  # we're editing
+            order = Order.objects.get(pk=order_pk)
+            form = OrderForm(instance=order)
+            modal_title = 'Editar pedido'
+        else:
+            form = OrderForm()
+            modal_title = 'Crear pedido'
+            order = None
+
+        context = {'form': form, 'modal_title': modal_title, 'order': order, }
+
+        # When testing, display as a regular view in order to test variables
+        if self.request.GET.get('test', None):
+            return render(request, template, context=context)
+
+        data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
 
     def post(self, request):
         data = dict()
         pk = self.request.POST.get('pk', None)
+        order = Order.objects.get(pk=pk) if pk else None
+        template, context, modal_title = None, None, None
+
         action = self.request.POST.get('action', None)
-        test = self.request.POST.get('test', None)
-        template, context = False, False
-
-        if not pk:
-            return HttpResponseServerError('No pk was given.')
-
         if not action:
             return HttpResponseServerError('No action was given.')
 
+        # Create/Edit the whole order (POST)
+        if action == 'main':
+            if order:  # we're editing
+                form = OrderForm(request.POST, instance=order)
+                modal_title = 'Editar pedido'
+            else:  # we're creating
+                form = OrderForm(request.POST)
+                modal_title = 'Crear pedido'
+
+            if form.is_valid():
+                order = form.save()
+                url = (reverse('order_view', args=[order.pk]) + '?tab=main')
+                data['redirect'] = url
+                data['form_is_valid'] = True
+                template, context = None, None  # redirect does not need'em
+            else:
+                data['form_is_valid'] = False
+                context = {'form': form, 'modal_title': modal_title, }
+                template = 'includes/custom_forms/order.html'
+
         # Edit date (POST)
-        if action == 'edit-date':
-            order = get_object_or_404(Order, pk=pk)
+        elif action == 'edit-date':
+            # Edits the date inside kanban elements
             form = EditDateForm(request.POST, instance=order)
             if form.is_valid():
                 form.save()
                 data['form_is_valid'] = True
+                data['html_id'] = '#kanban-columns'
+                context = CommonContexts.kanban()
             else:
                 data['form_is_valid'] = False
                 data['error'] = form.errors
 
         # Kanban Jump (POST)
         elif action == 'kanban-jump':
-            order = get_object_or_404(Order, pk=pk)
+            """Shifts kanban status in both kanban view and order view when
+            cliking on the arrows."""
             raw_input = request.POST.get('origin', None)
             if not raw_input:
                 return HttpResponseServerError('No origin was especified.')
@@ -1599,25 +1643,29 @@ class OrdersCRUD(View):
                 template = 'includes/order_status.html'
                 data['html_id'] = '#order-status'
                 context = CommonContexts.order_details(request, pk)
+            else:
+                template = 'includes/kanban_columns.html'
+                data['html_id'] = '#kanban-columns'
+                context = CommonContexts.kanban()
 
             data['form_is_valid'] = True
 
         else:
             return HttpResponseServerError('The action was not found.')
 
-        if not template:
-            template = 'includes/kanban_columns.html'
-            data['html_id'] = '#kanban-columns'
-            context = CommonContexts.kanban()
-
-        data['html'] = render_to_string(template, context, request=request)
-
         # When testing, display as a regular view in order to test variables
-        if test:
-            return render(
-                request, template, context=context)
-        else:
-            return JsonResponse(data)
+        # Create dummy templates and contexts so we can render the view
+        if self.request.POST.get('test', None):
+            if not template:
+                template = 'includes/custom_forms/order.html'  # dummy
+            if not context:
+                context = {  # dummy
+                    'form': form, 'modal_title': modal_title, 'data': data}
+            return render(request, template, context=context)
+
+        if context and template:
+            data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
 
 
 class OrderItemsCRUD(View):
@@ -1636,7 +1684,7 @@ class OrderItemsCRUD(View):
             return HttpResponseServerError('No order was supplied')
         order = Order.objects.get(pk=order_pk)
 
-        # Determine wether we're creating or editing/deleting
+        # Determine whether we're creating or editing/deleting
         base_item = request.GET.get('element', None)
         base_item = Item.objects.get(pk=base_item)
         order_item = request.GET.get('order_item', None)
@@ -1685,12 +1733,13 @@ class OrderItemsCRUD(View):
         if not action:
             return HttpResponseServerError('No action was given.')
 
-        # Determine wether we're creating or editing/deleting
+        # Determine whether we're creating or editing/deleting
         order_item_pk = request.POST.get('order_item_pk', None)
         if order_item_pk:  # we're editing/deleting
             order_item = OrderItem.objects.get(pk=order_item_pk)
             form = OrderItemForm(request.POST, instance=order_item)
             modal_title = 'Editar prenda en pedido.'
+
         else:  # we're creating
             form = OrderItemForm(request.POST)
             modal_title = 'Añadir prenda.'
@@ -1703,7 +1752,7 @@ class OrderItemsCRUD(View):
 
             if form.is_valid():
                 # perfrom db actions
-                form.save()
+                item = form.save()
                 if request.POST.get('set-default-price', None):
                     base_item.price = request.POST.get('set-default-price')
                     base_item.notes = (
@@ -1714,7 +1763,7 @@ class OrderItemsCRUD(View):
                 data['form_is_valid'] = True
 
                 # Render the view depending the order type
-                if order.ref_name == 'Quick':
+                if item.reference.ref_name == 'Quick':
                     data['html_id'] = '#ticket-wrapper'
                     template = 'includes/ticket.html'
                 else:
@@ -1741,11 +1790,12 @@ class OrderItemsCRUD(View):
             if not order_item_pk:
                 return HttpResponseServerError('No item pk was provided.')
             order = Order.objects.get(pk=request.POST.get('reference', None))
-            order_est_total = prettify_times(sum(order.estimated_time))
 
             # perfrom db actions
             order_item.delete()
             data['form_is_valid'] = True
+
+            order_est_total = prettify_times(sum(order.estimated_time))
 
             # Render the view depending the order type
             if order.ref_name == 'Quick':

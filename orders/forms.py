@@ -25,9 +25,7 @@ class OrderForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = Order
-        fields = ('customer', 'membership', 'ref_name', 'delivery', 'priority',
-                  'waist', 'chest', 'hip', 'lenght', 'others',
-                  'budget', 'prepaid', 'confirmed', )
+        fields = '__all__'
 
     def __init__(self, *args, **kwargs):
         """Override default settings."""

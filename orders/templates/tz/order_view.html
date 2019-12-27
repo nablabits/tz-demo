@@ -47,12 +47,35 @@
       {%endif%}
       {%if not order.invoiced%}
         <div class="d-flex ml-auto">
-          <button class="btn btn-outline-success mr-2 js-crud-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
+          <button class="btn btn-outline-success mr-2 js-crud-load" action="{% url 'orders-CRUD' %}" data="order_pk={{order.pk}}">
             <i class="fal fa-edit"></i> Editar pedido
           </button>
-          <div class="{% if order.status == '8' %}d-none{% else %}d-flex mb-auto{% endif %}">
-              <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fas fa-times"></i> Anular pedido</button>
+
+          {# Cancel order form #}
+          {% if order.status != '8' %}
+          <div class="d-flex mb-auto">
+            <form action="{% url 'orders-CRUD' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="main">
+              <input type="hidden" name="inbox_date" value="{{order.inbox_date}}">
+              <input type="hidden" name="user" value="{{order.user}}">
+              <input type="hidden" name="customer" value="{{order.customer.pk}}">
+              <input type="hidden" name="membership" value="{{order.membership.pk}}">
+              <input type="hidden" name="ref_name" value="{{order.ref_name}}">
+              <input type="hidden" name="delivery" value="{{order.delivery}}">
+              <input type="hidden" name="status" value="8">
+              <input type="hidden" name="priority" value="{{order.priority}}">
+              <input type="hidden" name="confirmed" value="{{order.confirmed}}">
+              <input type="hidden" name="waist" value="{{order.waist}}">
+              <input type="hidden" name="chest" value="{{order.chest}}">
+              <input type="hidden" name="hip" value="{{order.hip}}">
+              <input type="hidden" name="lenght" value="{{order.lenght}}">
+              <input type="hidden" name="others" value="{{order.others}}">
+              <input type="hidden" name="discount" value="{{order.discount}}">
+              <button type="submit" class="ml-2 btn btn-outline-danger"><i class="fas fa-times"></i> Anular pedido</button>
+            </form>
           </div>
+          {% endif %}
         </div>
       {%endif%}
     </div>
@@ -145,9 +168,9 @@
                   <span>{{order.customer.cp}}, {{order.customer.city}}</span>
                 </div>
                 <div class="d-flex mt-2 flex-column">
-                  {%for item in items%}
+                  {%for item in order.items.all%}
                     <div class="d-flex">
-                      <span>{{item.qty}} x {%include 'includes/item_string.html'%}</span>
+                      {{item.qty}} x&nbsp;{{item.element.html_string}}
                       <div class="ml-auto">
                         <span class="mr-4">{{item.price_bt}}€</span>
                         <span><strong>{{item.subtotal_bt}}€</strong></span>
@@ -156,9 +179,18 @@
                   {%endfor%}
                 </div>
               </div>
-              <div class="card-footer text-muted">
-                <strong>Base imponible:</strong> {{order.total_bt}}€<br>
-                <strong>IVA:</strong> {{order.vat}}€
+              <div class="card-footer">
+                <div class="d-flex justify-content-end">
+                  <div class="d-flex flex-column text-right">
+                    <span><strong>Base imponible:</strong> {{order.total_bt}}€</span>
+                    <span><strong>IVA:</strong> {{order.vat}}€</span>
+                    {% if order.discount %}
+                    <span><strong>Subtotal:</strong> {{order.total_pre_discount}}€</span>
+                    <span><strong>Descuento:</strong> {{order.discount_amount}}€ ({{order.discount}}%)</span>
+                    {% endif %}
+                    <span><strong>Total:</strong> {{order.total}}€</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -194,7 +226,7 @@
                 </div>
                 <div class="d-flex flex-column">
                   <h5 class="">
-                    <i class="far fa-shopping-cart fa-fw mr-4"></i><strong>Total del pedido:</strong> {{order.total}}€
+                    <i class="far fa-shopping-cart fa-fw mr-4"></i><strong>Total del pedido:</strong> {{order.total}}€ {% if order.discount %}({{order.discount}}% dto){% endif %}
                   </h5>
                   <div class="d-flex flex-column border-bottom pb-2">
                     <h5>

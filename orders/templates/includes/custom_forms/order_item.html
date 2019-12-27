@@ -80,10 +80,11 @@ This custom form template lets create or edit order items. Fits to item selector
 
     {# Description field collapse #}
     <div class="d-flex flex-column">
-      <h5 style="cursor:pointer" data-toggle="collapse" data-target="#add-description" aria-hidden="true" aria-expanded="true">Descripción<i class="fas fa-plus-circle ml-2" ></i></h5>
-      <div class="collapse" id="add-description">
-        {% render_field form.description class="form-control" rows="2" %}
-      </div>
+      <h5 style="cursor:pointer" data-toggle="collapse" data-target="#add-description" aria-hidden="true" aria-expanded="true">
+        <div class="collapse" id="add-description">
+          {% render_field form.description class="form-control" rows="2" %}
+        </div>
+        Descripción<i class="far fa-plus-circle ml-2 js-plusToCaret"></i></h5>
     </div>
     <hr>
     <div class="d-flex ml-4">

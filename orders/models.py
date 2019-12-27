@@ -144,6 +144,7 @@ class Order(models.Model):
     prepaid = models.DecimalField(
         'Prepago', max_digits=7, decimal_places=2, blank=True, null=True,
         default=0)
+    discount = models.PositiveSmallIntegerField('Descuento %', default=0)
 
     # Custom managers
     objects = models.Manager()
@@ -162,6 +163,11 @@ class Order(models.Model):
         if self.customer and self.customer.provider:
             msg = 'El cliente no puede ser proveedor'
             raise ValidationError({'customer': _(msg)})
+
+        # Ensure that discount does not overrun above 100%
+        if self.discount > 100:
+            msg = 'El descuento no puede ser superior al 100%'
+            raise ValidationError({'discount': _(msg)})
 
     def save(self, *args, **kwargs):
         """Override save method."""
@@ -246,21 +252,34 @@ class Order(models.Model):
 
     @property
     def total(self):
-        """Get the total amount for the invoice."""
+        """Get the total amount for the invoice.
+
+        Summs up all the items' prices and after that applies the discount.
+        """
+        return self.total_pre_discount - self.discount_amount
+
+    @property
+    def discount_amount(self):
+        """Get the amount in € of the discount."""
+        return self.total_pre_discount * self.discount / 100
+
+    @property
+    def total_pre_discount(self):
+        """Undo the discount in the total."""
         items = self.items.aggregate(
             total=models.Sum(models.F('qty') * models.F('price'),
                              output_field=models.DecimalField()))
-        return [items['total'] if items['total'] else 0][0]
+        return float(items['total']) if items['total'] else 0
 
     @property
     def total_bt(self):
         """Get the total amount before taxes."""
-        return round(float(self.total) / 1.21, 2)
+        return round(self.total_pre_discount / 1.21, 2)
 
     @property
     def vat(self):
         """Calculate the taxes amount."""
-        return round(float(self.total_bt) * .21, 2)
+        return round(self.total_bt * .21, 2)
 
     @property
     def already_paid(self):
@@ -270,12 +289,12 @@ class Order(models.Model):
         if not prepaid['total']:
             return 0
         else:
-            return prepaid['total']
+            return float(prepaid['total'])
 
     @property
     def pending(self):
         """Get the pending amount of the order."""
-        return self.total - self.already_paid
+        return round(self.total - self.already_paid, 2)
 
     @property
     def days_open(self):
@@ -949,7 +968,7 @@ class Invoice(models.Model):
         buffer = io.BytesIO()
 
         # Create the PDF object, using the buffer as its "file."
-        w, h = 180 * mm, (160 + 30 * len(items)) * mm
+        w, h = 180 * mm, (180 + 30 * len(items)) * mm
         p = canvas.Canvas(buffer, pagesize=(w, h))
         p.setFont("Helvetica", 24)
 
@@ -957,9 +976,18 @@ class Invoice(models.Model):
         line = 20 * mm  # bottom margin
 
         # Start out with the summary
-        summary = (
-            'Guztira: {}€'.format(order.total),
-            'BEZ/IVA (21%) €: {}€'.format(order.vat), )
+        if order.discount:
+            da, d_perc = (order.discount_amount, order.discount)
+            summary = (
+                'Guztira/Total: {}€'.format(order.total),
+                'Deskontua/Dto ({}%): {}€'.format(d_perc, da),
+                'BEZ/IVA (21%) €: {}€'.format(order.vat),
+                'Kuota/Base: {}€'.format(order.total_bt), )
+        else:
+            summary = (
+                'Guztira/Total: {}€'.format(order.total),
+                'BEZ/IVA (21%) €: {}€'.format(order.vat),
+                'Kuota/Base: {}€'.format(order.total_bt), )
         for textline in summary:
             p.drawRightString(170 * mm, line, textline)
             line += 15 * mm

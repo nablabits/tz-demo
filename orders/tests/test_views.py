@@ -1,7 +1,7 @@
 """The main test suite for views. backend."""
 
 import json
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from random import randint
 
 from django import forms
@@ -18,7 +18,7 @@ from orders.models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
     PQueue, Timetable, CashFlowIO)
 from orders.forms import (ItemTimesForm, InvoiceForm, OrderItemNotes,
-                          CashFlowIOForm, OrderItemForm, )
+                          CashFlowIOForm, OrderItemForm, OrderForm)
 from orders.views import CommonContexts
 
 from decouple import config
@@ -2964,14 +2964,16 @@ class OrderExpressTests(TestCase):
 
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertFalse(resp.context['order'].invoiced)
+        msg = 'Order has no invoice.'
+        with self.assertRaisesMessage(ObjectDoesNotExist, msg):
+            resp.context['order'].invoice
 
         OrderItem.objects.create(
             reference=order_express, element=Item.objects.last(), price=10)
         order_express.kill()
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
-        self.assertTrue(resp.context['order'].invoiced)
+        self.assertTrue(resp.context['order'].invoice)
 
     def test_total_amount(self):
         """Test the proper sum of ticket."""
@@ -5046,7 +5048,39 @@ class OrdersCRUDTests(TestCase):
         if not login:
             raise RuntimeError('Couldn\'t login')
 
-    def test_data_should_be_a_dict(self):
+    def test_get_data_should_be_a_dict(self):
+        resp = self.client.get(reverse('orders-CRUD'), )
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_get_template_used(self):
+        self.client.get(reverse('orders-CRUD'), {'test': True})
+        self.assertTemplateUsed('includes/custom_forms/order.html')
+
+    def test_get_edit_order(self):
+        o = Order.objects.first()
+        resp = self.client.get(reverse('orders-CRUD'),
+                               {'test': True, 'order_pk': o.pk})
+        self.assertEqual(resp.context['order'], o)
+        self.assertIsInstance(resp.context['form'], OrderForm)
+        self.assertEqual(resp.context['form'].instance, o)
+        self.assertEqual(resp.context['modal_title'], 'Editar pedido')
+
+    def test_get_create_new_order(self):
+        resp = self.client.get(reverse('orders-CRUD'), {'test': True, })
+        self.assertEqual(resp.context['order'], None)
+        self.assertIsInstance(resp.context['form'], OrderForm)
+        self.assertEqual(resp.context['modal_title'], 'Crear pedido')
+
+    def test_get_is_json_response(self):
+        resp = self.client.get(reverse('orders-CRUD'),)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['html'])
+
+    def test_post_data_should_be_a_dict(self):
         """Data for AJAX request should be a dict."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': date(2017, 1, 1),
@@ -5056,17 +5090,7 @@ class OrdersCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertIsInstance(data, dict)
 
-    def test_no_pk_raises_500(self):
-        """PK is mandatory."""
-        resp = self.client.post(reverse('orders-CRUD'),
-                                {'delivery': date(2017, 1, 1),
-                                 'action': 'edit-date',
-                                 })
-        self.assertEqual(resp.status_code, 500)
-        self.assertEqual(
-            resp.content.decode("utf-8"), 'No pk was given.')
-
-    def test_no_action_raises_500(self):
+    def test_post_no_action_raises_500(self):
         """Action is mandatory."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': date(2017, 1, 1),
@@ -5076,16 +5100,98 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(
             resp.content.decode("utf-8"), 'No action was given.')
 
-    def test_edit_date_raises_404(self):
-        """When order is not found  404 should be raised."""
-        resp = self.client.post(reverse('orders-CRUD'),
-                                {'delivery': date(2017, 1, 1),
-                                 'pk': 5000,
-                                 'action': 'edit-date',
-                                 })
-        self.assertEqual(resp.status_code, 404)
+    def test_post_main_differentiates_between_edit_and_create(self):
+        order = Order.objects.first()
+        # Create
+        post_data = {
+            'inbox_date': datetime.now(), 'user': order.user.pk,
+            'customer': order.customer.pk, 'delivery': date.today(),
+            'ref_name': 'new', 'status': '1', 'priority': '1',
+            'waist': 0, 'chest': 0, 'hip': 0, 'lenght': 0, 'discount': 0,
+            'action': 'main', 'test': True, }
+        resp = self.client.post(reverse('orders-CRUD'), post_data)
 
-    def test_edit_date_valid_form_returns_true_form_is_valid(self):
+        self.assertTrue(resp.context['form'].is_bound)
+        self.assertEqual(resp.context['modal_title'], 'Crear pedido')
+
+        # edit
+        post_data['pk'] = order.pk
+        resp = self.client.post(reverse('orders-CRUD'), post_data)
+        self.assertEqual(resp.context['form'].instance, order)
+        self.assertTrue(resp.context['form'].is_bound)
+        self.assertEqual(resp.context['modal_title'], 'Editar pedido')
+
+    def test_post_main_edits_order(self):
+        order = Order.objects.first()
+        post_data = {
+            'inbox_date': datetime.now(), 'user': order.user.pk,
+            'customer': order.customer.pk, 'delivery': date.today(),
+            'ref_name': 'edited', 'status': '1', 'priority': '1',
+            'waist': 0, 'chest': 0, 'hip': 0, 'lenght': 0, 'discount': 0,
+            'pk': order.pk, 'action': 'main', }
+        self.client.post(reverse('orders-CRUD'), post_data)
+
+        self.assertEqual(Order.objects.get(pk=order.pk).ref_name, 'edited')
+
+    def test_post_main_creates_order(self):
+        self.assertEqual(Order.objects.count(), 5)
+        post_data = {
+            'inbox_date': datetime.now(), 'user': User.objects.first().pk,
+            'customer': Customer.objects.first().pk, 'delivery': date.today(),
+            'ref_name': 'New', 'status': '1', 'priority': '1', 'waist': 0,
+            'chest': 0, 'hip': 0, 'lenght': 0, 'discount': 0, 'action': 'main'}
+        self.client.post(reverse('orders-CRUD'), post_data)
+
+        self.assertEqual(Order.objects.count(), 6)
+        self.assertEqual(Order.objects.last().ref_name, 'New')
+
+    def test_post_main_json_response(self):
+        order = Order.objects.first()
+        post_data = {
+            'inbox_date': datetime.now(), 'user': order.user.pk,
+            'customer': order.customer.pk, 'delivery': date.today(),
+            'ref_name': 'edited', 'status': '1', 'priority': '1',
+            'waist': 0, 'chest': 0, 'hip': 0, 'lenght': 0, 'discount': 0,
+            'pk': order.pk, 'action': 'main', }
+        resp = self.client.post(reverse('orders-CRUD'), post_data)
+
+        data = json.loads(str(resp.content, 'utf-8'))
+        url = (reverse('order_view', args=[order.pk]) + '?tab=main')
+        self.assertEqual(data['redirect'], url)
+        self.assertTrue(data['form_is_valid'])
+
+    def test_post_main_rejects_form(self):
+        """Test first the JSON response and then with the dummy objects."""
+        order = Order.objects.first()
+        post_data = {
+            'inbox_date': datetime.now(), 'user': order.user.pk,
+            'customer': order.customer.pk, 'delivery': 'void',
+            'ref_name': 'edited', 'status': '1', 'priority': '1',
+            'waist': 0, 'chest': 0, 'hip': 0, 'lenght': 0, 'discount': 0,
+            'pk': order.pk, 'action': 'main'}
+        resp = self.client.post(reverse('orders-CRUD'), post_data)
+
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertFalse(data['form_is_valid'])
+
+        # Now with the dummy render
+        post_data['test'] = True
+        resp = self.client.post(reverse('orders-CRUD'), post_data)
+        self.assertEqual(resp.context['form'].instance, order)
+        self.assertTrue(resp.context['form'].is_bound)
+        self.assertEqual(resp.context['modal_title'], 'Editar pedido')
+        self.assertTemplateUsed('includes/custom_forms/order.html')
+
+    def test_post_edit_date_raises_404(self):
+        msg = 'Order matching query does not exist.'
+        with self.assertRaisesMessage(ObjectDoesNotExist, msg):
+            self.client.post(reverse('orders-CRUD'),
+                             {'direction': 'next',
+                              'pk': 5000,
+                              'action': 'edit-date',
+                              })
+
+    def test_post_edit_date_valid_form_returns_true_form_is_valid(self):
         """Successful processed orders should return form_is_valid."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': date(2017, 1, 1),
@@ -5095,7 +5201,7 @@ class OrdersCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertTrue(data['form_is_valid'])
 
-    def test_edit_date_valid_form_context_is_kanban_common(self):
+    def test_post_edit_date_valid_form_context_is_kanban_common(self):
         """Just test the existence."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': date(2017, 1, 1),
@@ -5108,7 +5214,7 @@ class OrdersCRUDTests(TestCase):
         for var in common_vars:
             self.assertTrue(var in resp.context)
 
-    def test_edit_date_valid_form_template(self):
+    def test_post_edit_date_valid_form_template(self):
         """Test the correct teplate."""
         self.client.post(
             reverse('orders-CRUD'),
@@ -5119,7 +5225,7 @@ class OrdersCRUDTests(TestCase):
              })
         self.assertTemplateUsed('includes/kanban_columns.html')
 
-    def test_edit_date_html_id(self):
+    def test_post_edit_date_html_id(self):
         """Successful processed orders html id."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': date(2017, 1, 1),
@@ -5129,7 +5235,7 @@ class OrdersCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertEqual(data['html_id'], '#kanban-columns')
 
-    def test_edit_date_form_is_not_valid(self):
+    def test_post_edit_date_form_is_not_valid(self):
         """Unsuccessful processed oders should return false."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': 'void',
@@ -5139,7 +5245,7 @@ class OrdersCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertFalse(data['form_is_valid'])
 
-    def test_edit_date_form_is_not_valid_errors(self):
+    def test_post_edit_date_form_is_not_valid_errors(self):
         """Test the errors var."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'delivery': 'void',
@@ -5149,16 +5255,16 @@ class OrdersCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertEqual(data['error']['delivery'], ['Enter a valid date.', ])
 
-    def test_kanban_jump_raises_404(self):
-        """When order is not found  404 should be raised."""
-        resp = self.client.post(reverse('orders-CRUD'),
-                                {'direction': 'next',
-                                 'pk': 5000,
-                                 'action': 'kanban-jump',
-                                 })
-        self.assertEqual(resp.status_code, 404)
+    def test_post_kanban_jump_raises_error_with_invalid_order(self):
+        msg = 'Order matching query does not exist.'
+        with self.assertRaisesMessage(ObjectDoesNotExist, msg):
+            self.client.post(reverse('orders-CRUD'),
+                             {'direction': 'next',
+                              'pk': 5000,
+                              'action': 'kanban-jump',
+                              })
 
-    def test_kanban_jump_not_origin_returns_500(self):
+    def test_post_kanban_jump_not_origin_returns_500(self):
         """Origin arg is mandatory."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'pk': Order.objects.first().pk,
@@ -5168,7 +5274,7 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(
             resp.content.decode("utf-8"), 'No origin was especified.')
 
-    def test_kanban_jump_backwards(self):
+    def test_post_kanban_jump_backwards(self):
         """Test the action."""
         o = Order.objects.first()
         o.status = '3'
@@ -5181,7 +5287,7 @@ class OrdersCRUDTests(TestCase):
         o = Order.objects.get(pk=o.pk)
         self.assertEqual(o.status, '2')
 
-    def test_kanban_jump_forward(self):
+    def test_post_kanban_jump_forward(self):
         """Test the action."""
         o = Order.objects.first()
         o.status = '3'
@@ -5194,7 +5300,7 @@ class OrdersCRUDTests(TestCase):
         o = Order.objects.get(pk=o.pk)
         self.assertEqual(o.status, '6')
 
-    def test_kanban_jump_unknown_dir(self):
+    def test_post_kanban_jump_unknown_dir(self):
         """Test when no direction is given."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'origin': 'status-void',
@@ -5205,7 +5311,7 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(
             resp.content.decode("utf-8"), 'Unknown direction.')
 
-    def test_kanban_jump_origin_status(self):
+    def test_post_kanban_jump_origin_status(self):
         """Just test the existence."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'origin': 'status-shiftFwd',
@@ -5221,7 +5327,7 @@ class OrdersCRUDTests(TestCase):
             self.assertTrue(var in resp.context)
         self.assertTemplateUsed('includes/order_status.html')
 
-    def test_kanban_jump_origin_status_json_response(self):
+    def test_post_kanban_jump_origin_status_json_response(self):
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'origin': 'status-shiftFwd',
                                  'pk': Order.objects.first().pk,
@@ -5231,7 +5337,7 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(data['html_id'], '#order-status')
         self.assertTrue(data['form_is_valid'])
 
-    def test_kanban_jump_origin_kanban_view(self):
+    def test_post_kanban_jump_origin_kanban_view(self):
         """Just test the existence."""
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'origin': 'kanban-shiftFwd',
@@ -5245,7 +5351,7 @@ class OrdersCRUDTests(TestCase):
             self.assertTrue(var in resp.context)
         self.assertTemplateUsed('includes/kanban_columns.html')
 
-    def test_kanban_jump_origin_kanban_view_json_response(self):
+    def test_post_kanban_jump_origin_kanban_view_json_response(self):
         resp = self.client.post(reverse('orders-CRUD'),
                                 {'origin': 'kanban-shiftFwd',
                                  'pk': Order.objects.first().pk,
@@ -5466,11 +5572,14 @@ class OrderItemsCRUDTests(TestCase):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'reference': Order.objects.first().pk,
                                  'element': Item.objects.first().pk,
-                                 'order_item_pk': OrderItem.objects.first().pk,
+                                 'qty': 5,
+                                 'crop': timedelta(0),
+                                 'sewing': timedelta(0),
+                                 'iron': timedelta(0),
                                  'action': 'main',
                                  'test': True, })
         self.assertEqual(resp.context['order_est_total'], '0s')
-        self.assertFalse(resp.context['data']['form_is_valid'])
+        self.assertTrue(resp.context['data']['form_is_valid'])
 
     def test_post_action_main_saves_item(self):
         self.assertEqual(OrderItem.objects.count(), 5)
@@ -5972,7 +6081,7 @@ class CashFlowIOCRUDTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertFalse(data['form_is_valid'])
-        msg = 'No se puede pagar más de la cantidad pendiente (300.00).'
+        msg = 'No se puede pagar más de la cantidad pendiente (300.0).'
         self.assertEqual(data['errors'], msg)
 
     def test_action_not_found_raises_500(self):

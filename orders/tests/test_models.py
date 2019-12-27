@@ -580,6 +580,30 @@ class TestOrders(TestCase):
         order = Order.objects.get(ref_name='No Budget nor prepaid')
         self.assertEqual(order.prepaid, 0)
 
+    def test_discount(self):
+        o = Order.objects.first()
+        self.assertEqual(o.discount, 0)  # default value
+        self.assertEqual(
+            o._meta.get_field('discount').verbose_name, 'Descuento %')
+        self.assertIsInstance(o.discount, int)
+
+    def test_discount_cant_be_negative(self):
+        o = Order.objects.first()
+        msg = (
+            'new row for relation "orders_order" violates check constraint' +
+            ' "orders_order_discount_check"')
+        with self.assertRaisesMessage(IntegrityError, msg):
+            o.discount = -10
+            o.save()
+
+    def test_discount_field_cant_be_over_32767(self):
+        """Although there's also a validation exception for values over 100."""
+        o = Order.objects.first()
+        msg = 'smallint out of range'
+        with self.assertRaisesMessage(DataError, msg):
+            o.discount = 33000
+            o.save()
+
     def test_custom_manager_live(self):
         """Test the live custom manager."""
         u = User.objects.first()
@@ -647,6 +671,13 @@ class TestOrders(TestCase):
         o.customer = Customer.objects.first()
         with self.assertRaises(ValidationError):
             o.full_clean()
+
+    def test_discount_over_100_raises_validation_error(self):
+        o = Order.objects.first()
+        o.discount = 101
+        msg = 'El descuento no puede ser superior al 100%'
+        with self.assertRaisesMessage(ValidationError, msg):
+            o.clean()
 
     def test_invoiced_orders_are_status_9(self):
         o = Order.objects.first()
@@ -826,16 +857,16 @@ class TestOrders(TestCase):
         self.assertFalse(order.overdue)
 
     def test_total_amount(self):
-        """Test the correct sum of all items."""
-        user = User.objects.first()
-        c = Customer.objects.first()
-        order = Order.objects.create(
-            user=user, customer=c, ref_name='test', delivery=date.today())
+        """Test the correct sum of all items (applies discount)."""
+        u, c = User.objects.first(), Customer.objects.first()
+        order = Order.objects.create(user=u, customer=c, ref_name='test',
+                                     delivery=date.today(), discount=10, )
         self.assertEqual(order.total, 0)
-        for i in range(5):
+        for _ in range(5):
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
-        self.assertEqual(order.total, 150)
+        self.assertEqual(order.total, 150 * .90)
+        self.assertIsInstance(order.total, float)
 
     def test_total_amount_is_0(self):
         user = User.objects.first()
@@ -847,6 +878,24 @@ class TestOrders(TestCase):
         OrderItem.objects.create(
             reference=order, element=Item.objects.last(), price=-30)
         self.assertEqual(order.total, 0)
+
+    def test_discount_amount(self):
+        u, c = User.objects.first(), Customer.objects.first()
+        o = Order.objects.create(user=u, customer=c, ref_name='test',
+                                 delivery=date.today(), discount=10, )
+        i = Item.objects.last()
+        [OrderItem.objects.create(reference=o, element=i) for _ in range(5)]
+        self.assertEqual(o.discount_amount, 15)
+        self.assertIsInstance(o.discount_amount, float)
+
+    def test_total_pre_discount(self):
+        u, c = User.objects.first(), Customer.objects.first()
+        o = Order.objects.create(user=u, customer=c, ref_name='test',
+                                 delivery=date.today(), discount=10, )
+        i = Item.objects.last()
+        [OrderItem.objects.create(reference=o, element=i) for _ in range(5)]
+        self.assertEqual(o.total_pre_discount, 150)
+        self.assertIsInstance(o.total_pre_discount, float)
 
     def test_total_amount_before_taxes(self):
         user = User.objects.first()
@@ -877,6 +926,7 @@ class TestOrders(TestCase):
 
         for _ in range(2):
             CashFlowIO.objects.create(order=order, amount=10)
+        self.assertIsInstance(order.already_paid, float)
         self.assertEqual(order.already_paid, 20)
 
     def test_pending_amount(self):
@@ -2200,7 +2250,7 @@ class TestInvoice(TestCase):
         for _ in range(3):
             OrderItem.objects.create(reference=o, element=i, price=20, )
         o.kill()
-        self.assertIsInstance(o.invoice.amount, Decimal)
+        self.assertIsInstance(o.invoice.amount, float)
         self.assertEqual(o.invoice.amount, 70)
 
     def test_pay_method_allowed_means(self):
@@ -2764,7 +2814,7 @@ class TestCashFlowIO(TestCase):
                 amount=10)
 
     def test_amount_cant_be_over_pending_in_orders(self):
-        msg = 'No se puede pagar más de la cantidad pendiente (100.00).'
+        msg = 'No se puede pagar más de la cantidad pendiente (100.0).'
         with self.assertRaisesMessage(ValidationError, msg):
             CashFlowIO.objects.create(order=Order.objects.first(), amount=110)
 
