@@ -8,6 +8,7 @@
   * **Nuevo:** Ahora llevamos el control de las distintas fases de los pedidos.
   * **Mejora:** Las fases dentro de los pedidos se han adaptado para cuadrar con
   la vista kanban.
+  * **Mejora:** los tickets ahora imprimen la fecha y la hora.
 
 ### v83, Dic 6
   * **Mejora:** ya se pueden añadir clientes escribiendo el nombre directamente

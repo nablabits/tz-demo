@@ -981,8 +981,10 @@ class Invoice(models.Model):
         p.line(0, line, 180*mm, line)
 
         # Finally, the header
+        n, d = (
+            self.invoice_no, self.issued_on.strftime('%Y.%m.%d - %H:%M'))
         textobject = p.beginText()
-        textobject.setTextOrigin(10, line + 60 * mm)
+        textobject.setTextOrigin(10, line + 70 * mm)
         textobject.textLines(
             """Trapuzarrak · Euskal Jantziak
             Iratxe Maruri Garrastazu
@@ -991,8 +993,9 @@ class Invoice(models.Model):
             48100 Mungia.
             """)
         textobject.moveCursor(0, 20)
-        textobject.textOut(
-            'Factura simplificada nº: {}'.format(self.invoice_no))
+        textobject.textLines(
+            """Factura simplificada nº: {}
+            Fecha: {}""".format(n, d),)
         p.drawText(textobject)
 
         # Close the PDF object cleanly, and we're done.
