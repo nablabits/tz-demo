@@ -1,16 +1,16 @@
 <div class="d-flex align-items-start">
   <h4><i class="far fa-tshirt fa-fw"></i><strong> Prendas añadidas:</strong></h4>
-  {% if order.invoiced %}
+  {% if order.status == '9' %}
     <p class="ml-auto">Tiempo de producción: {{order.production_time}}</p>
   {% else %}
     <p class="ml-auto">Tiempo estimado de producción: {{order_est_total}} ({{order_est.0}} / {{order_est.1}} / {{order_est.2}})</p>
   {% endif %}
 </div>
-{%if order.invoiced%}
+{%if order.status == '9'%}
   {%for item in items%}
     <div class="d-flex mx-3 my-3">
-      <div class="">
-        {{item.qty}} x {{item.element.html_string}}, {{item.price}}€
+      <div class="d-flex">
+        {{item.qty}} x&nbsp;{{item.element.html_string}}, {{item.price}}€
       </div>
       <div class="ml-auto">
         {{item.subtotal}}€

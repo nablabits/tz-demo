@@ -8,8 +8,10 @@
   <ul class="list-group list-group-flush">
     {%for item in items%}
      <li class="list-group-item d-flex justify-content-between">
-         <span>{{item.qty}} x {%include 'includes/item_string.html'%} {{item.price}}€</span>
-         <span>{{item.subtotal}}€</span>
+       <div class="d-flex">
+         {{item.qty}} x&nbsp;{{item.element.html_string}} {{item.price}}€
+       </div>
+       <span>{{item.subtotal}}€</span>
      </li>
     {%endfor%}
   </ul>

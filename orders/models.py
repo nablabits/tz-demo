@@ -144,6 +144,7 @@ class Order(models.Model):
     prepaid = models.DecimalField(
         'Prepago', max_digits=7, decimal_places=2, blank=True, null=True,
         default=0)
+    discount = models.PositiveSmallIntegerField('Descuento %', default=0)
 
     # Custom managers
     objects = models.Manager()
@@ -162,6 +163,11 @@ class Order(models.Model):
         if self.customer and self.customer.provider:
             msg = 'El cliente no puede ser proveedor'
             raise ValidationError({'customer': _(msg)})
+
+        # Ensure that discount does not overrun above 100%
+        if self.discount > 100:
+            msg = 'El descuento no puede ser superior al 100%'
+            raise ValidationError({'discount': _(msg)})
 
     def save(self, *args, **kwargs):
         """Override save method."""
@@ -246,21 +252,34 @@ class Order(models.Model):
 
     @property
     def total(self):
-        """Get the total amount for the invoice."""
+        """Get the total amount for the invoice.
+
+        Summs up all the items' prices and after that applies the discount.
+        """
+        return self.total_pre_discount - self.discount_amount
+
+    @property
+    def discount_amount(self):
+        """Get the amount in € of the discount."""
+        return self.total_pre_discount * self.discount / 100
+
+    @property
+    def total_pre_discount(self):
+        """Undo the discount in the total."""
         items = self.items.aggregate(
             total=models.Sum(models.F('qty') * models.F('price'),
                              output_field=models.DecimalField()))
-        return [items['total'] if items['total'] else 0][0]
+        return float(items['total']) if items['total'] else 0
 
     @property
     def total_bt(self):
         """Get the total amount before taxes."""
-        return round(float(self.total) / 1.21, 2)
+        return round(self.total_pre_discount / 1.21, 2)
 
     @property
     def vat(self):
         """Calculate the taxes amount."""
-        return round(float(self.total_bt) * .21, 2)
+        return round(self.total_bt * .21, 2)
 
     @property
     def already_paid(self):
@@ -270,25 +289,12 @@ class Order(models.Model):
         if not prepaid['total']:
             return 0
         else:
-            return prepaid['total']
+            return float(prepaid['total'])
 
     @property
     def pending(self):
         """Get the pending amount of the order."""
-        return self.total - self.already_paid
-
-    @property
-    def invoiced(self):
-        """Determine if the order is already invoiced.
-
-        This setting determines if order appears as pending. Invoiced orders
-        don't appear as pending although their pending property is > 0, this
-        keeps their prepaid amount. This applies to orders > 2019.
-        """
-        if self.delivery >= date(2019, 1, 1):
-            return Invoice.objects.filter(reference=self)
-        else:
-            return True
+        return round(self.total - self.already_paid, 2)
 
     @property
     def days_open(self):
@@ -962,7 +968,7 @@ class Invoice(models.Model):
         buffer = io.BytesIO()
 
         # Create the PDF object, using the buffer as its "file."
-        w, h = 180 * mm, (160 + 30 * len(items)) * mm
+        w, h = 180 * mm, (180 + 30 * len(items)) * mm
         p = canvas.Canvas(buffer, pagesize=(w, h))
         p.setFont("Helvetica", 24)
 
@@ -970,9 +976,18 @@ class Invoice(models.Model):
         line = 20 * mm  # bottom margin
 
         # Start out with the summary
-        summary = (
-            'Guztira: {}€'.format(order.total),
-            'BEZ/IVA (21%) €: {}€'.format(order.vat), )
+        if order.discount:
+            da, d_perc = (order.discount_amount, order.discount)
+            summary = (
+                'Guztira/Total: {}€'.format(order.total),
+                'Deskontua/Dto ({}%): {}€'.format(d_perc, da),
+                'BEZ/IVA (21%) €: {}€'.format(order.vat),
+                'Kuota/Base: {}€'.format(order.total_bt), )
+        else:
+            summary = (
+                'Guztira/Total: {}€'.format(order.total),
+                'BEZ/IVA (21%) €: {}€'.format(order.vat),
+                'Kuota/Base: {}€'.format(order.total_bt), )
         for textline in summary:
             p.drawRightString(170 * mm, line, textline)
             line += 15 * mm
@@ -994,8 +1009,10 @@ class Invoice(models.Model):
         p.line(0, line, 180*mm, line)
 
         # Finally, the header
+        n, d = (
+            self.invoice_no, self.issued_on.strftime('%Y.%m.%d - %H:%M'))
         textobject = p.beginText()
-        textobject.setTextOrigin(10, line + 60 * mm)
+        textobject.setTextOrigin(10, line + 70 * mm)
         textobject.textLines(
             """Trapuzarrak · Euskal Jantziak
             Iratxe Maruri Garrastazu
@@ -1004,8 +1021,9 @@ class Invoice(models.Model):
             48100 Mungia.
             """)
         textobject.moveCursor(0, 20)
-        textobject.textOut(
-            'Factura simplificada nº: {}'.format(self.invoice_no))
+        textobject.textLines(
+            """Factura simplificada nº: {}
+            Fecha: {}""".format(n, d),)
         p.drawText(textobject)
 
         # Close the PDF object cleanly, and we're done.
@@ -1259,8 +1277,15 @@ class StatusShift(models.Model):
         # print('status changed', self.status)
         return super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
-        """Override the delete method."""
+    def delete(self, clear_all=False, *args, **kwargs):
+        """Override the delete method.
+
+        clear_all argument was created for the update_20 module prevent the
+        Validation error on deleting last item of an order.
+        """
+        if clear_all:
+            return super().delete(*args, **kwargs)
+
         # Orders must have at least one (the first) ss
         ss = self.order.status_shift
         if ss.count() == 1:

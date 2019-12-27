@@ -122,10 +122,10 @@ $(function () {
           } else if (data.redirect) {
             window.location.replace(data.redirect)
           } else {
-            $('#action-modal').modal('hide')
+            $(data.html_id).html(data.html)
             $('#action-modal #bg-working').addClass('d-none')
             $('#action-modal #check-success').removeClass('d-none')
-            $(data.html_id).html(data.html)
+            $('#action-modal').modal('hide')
           }
         } else {
           btn.removeClass('d-none')

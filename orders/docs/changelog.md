@@ -1,13 +1,21 @@
 ## Trapuzarrak app registro de cambios
 ***
 ### v??, date
-  * **Nuevo:** Ahora los pedidos aceptan un parametro grupo para clientes
+  * **Nuevo:** Ahora los pedidos aceptan un parámetro grupo para clientes
   particulares que hacen un pedido para su grupo.
   * **Nuevo:** ya podemos llevar el control de los prepagos y las facturas
   pendientes de cargo.
   * **Nuevo:** Ahora llevamos el control de las distintas fases de los pedidos.
+  * **Nuevo:** Podemos añadir descuentos a los pedidos.
+  * **Nuevo:** se puede añadir un numero de lote a las prendas de stock que vendamos
+  que nos servirá para saber la estancia media.
   * **Mejora:** Las fases dentro de los pedidos se han adaptado para cuadrar con
   la vista kanban.
+  * **Mejora:** los tickets ahora imprimen la fecha y la hora.
+  * **Mejora:** ahora el cuadro de diálogo de añadir/editar pedido tiene el campo
+  notas colapsado para que se vea completo.
+  * **Bug:** al editar un pedido ya no hay que volver a introducir el nombre del
+  cliente.
 
 ### v83, Dic 6
   * **Mejora:** ya se pueden añadir clientes escribiendo el nombre directamente
