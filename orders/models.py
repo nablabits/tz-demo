@@ -231,6 +231,11 @@ class Order(models.Model):
         i = Invoice(reference=self, pay_method=pay_method, amount=self.total)
         i.save(kill=True)
 
+        # Update items' stock
+        for item in self.items.all():
+            item.element.stocked -= item.qty
+            item.element.save()
+
         # Finally archive the project in todoist
         self.archive()
 
@@ -352,9 +357,20 @@ class Order(models.Model):
         return time['tc'] + time['ts'] + time['ti']
 
     def deliver(self):
-        """Deliver the order and update the date."""
+        """Deliver the order and update the date.
+
+        Deliver is the last stage for tz orders. It can't be undone to ensure
+        that items are added to stock once.
+        """
         self.status = '7'
         self.delivery = date.today()
+
+        # Add items to stock
+        if self.tz:
+            for i in self.items.all():
+                i.element.stocked += i.qty
+                i.element.save()
+
         return self.save()
 
     def kanban_forward(self):
@@ -369,8 +385,7 @@ class Order(models.Model):
         elif self.status in ('3', '4', '5'):
             self.status = '6'
         elif self.status == '6':
-            self.status = '7'
-            self.delivery = date.today()
+            self.deliver()
         elif self.status == '8':
             self.status = '1'
         else:
@@ -497,8 +512,11 @@ class Item(models.Model):
     notes = models.TextField('Observaciones', blank=True, null=True)
     fabrics = models.DecimalField('Tela (M)', max_digits=5, decimal_places=2)
     foreing = models.BooleanField('Externo', default=False)
-    price = models.DecimalField('Precio unitario',
-                                max_digits=6, decimal_places=2, default=0)
+    price = models.DecimalField(
+        'Precio unitario', max_digits=6, decimal_places=2, default=0)
+    stocked = models.PositiveSmallIntegerField('Stock uds', default=0)
+    health = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0, editable=False, )
 
     def __str__(self):
         """Object's representation."""
@@ -508,36 +526,54 @@ class Item(models.Model):
 
     def clean(self):
         """Clean up the model to avoid duplicate items."""
-        exists = Item.objects.filter(name=self.name)
-        if exists:
-            for item in exists:
-                duplicated = (self.item_type == item.item_type and
-                              self.item_class == item.item_class and
-                              self.size == item.size and
-                              self.fabrics == item.fabrics and
-                              self.price == item.price and
-                              self.foreing == item.foreing and
-                              self.notes == item.notes
-                              )
-                if duplicated:
-                    msg = 'This item it\'s already in the db'
-                    raise ValidationError({'name': _(msg)})
+        if self.name == 'Predeterminado':
+            msg = "'Predeterminado' name is reserved"
+            raise ValidationError({'name': _(msg)})
 
     def save(self, *args, **kwargs):
-        """Override save method.
+        """Override save metod.
 
-        Item named Predeterminado is reserved, so raise an exception. Avoid,
-        also, duplicate items
+        Possible health statuses:
+        sales | stocked | health
+        0       0         -100
+        0       1         -stock
+        1       1         1
+        1       2         2
+        2       1         0.5
+        2       0         0
         """
-        if self.name == 'Predeterminado':
-            try:
-                Item.objects.get(name='Predeterminado')
-            except ObjectDoesNotExist:
-                super().save(*args, **kwargs)
-            else:
-                raise ValidationError('\'Predeterminado\' name is reserved')
+        sales = self.year_sales / 12  # month averaged
+        if not sales and not self.stocked:
+            self.health = - 100
+        elif not sales and self.stocked:
+            self.health = - self.stocked
         else:
-            super().save(*args, **kwargs)
+            self.health = self.stocked / sales
+
+        super().save(*args, **kwargs)
+
+    def sales(self, period='all_time'):
+        """Return the sales in the selected period.
+
+        Notice that tz orders prior to 2018 have status '9' so they must be
+        filtered out.
+        """
+        if period == 'all_time':
+            date_in = date(2019, 1, 1)
+        else:
+            if not isinstance(period, timedelta):
+                raise TypeError('Period should be timedelta.')
+            if period < timedelta(0):
+                raise ValueError('Period must be positive.')
+            date_in = date.today() - period
+
+        date_out = date.today()
+        sales = self.order_item.filter(reference__delivery__gte=date_in)
+        sales = sales.filter(reference__delivery__lte=date_out)
+        sales = sales.filter(reference__status='9')
+        sales = sales.exclude(reference__customer__name__iexact='trapuzarrak')
+        sales = sales.aggregate(total=models.Sum('qty'))
+        return sales['total'] if sales['total'] else 0
 
     @property
     def html_string(self):
@@ -593,6 +629,16 @@ class Item(models.Model):
         """Sum the total production for this item."""
         item = self.order_item.aggregate(total=models.Sum('qty'))
         return [0 if (not item['total'] or self.foreing) else item['total']][0]
+
+    @property
+    def all_time_sales(self):
+        """Get the total sales for this item."""
+        return self.sales()
+
+    @property
+    def year_sales(self):
+        """Get the last 12 months sales for this item."""
+        return self.sales(period=timedelta(days=365))
 
     class Meta:
         ordering = ('name',)

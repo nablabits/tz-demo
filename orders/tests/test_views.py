@@ -6,7 +6,6 @@ from random import randint
 
 from django import forms
 from django.contrib.auth.models import User
-from django.core import mail
 from django.core.exceptions import ObjectDoesNotExist, ValidationError
 from django.http import JsonResponse, Http404, FileResponse
 from django.test import Client, TestCase, tag
@@ -18,7 +17,7 @@ from orders.models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
     PQueue, Timetable, CashFlowIO)
 from orders.forms import (ItemTimesForm, InvoiceForm, OrderItemNotes,
-                          CashFlowIOForm, OrderItemForm, OrderForm)
+                          CashFlowIOForm, OrderItemForm, OrderForm, ItemForm, )
 from orders.views import CommonContexts
 
 from decouple import config
@@ -37,7 +36,7 @@ class CommonContextKanbanTests(TestCase):
         c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
 
         # Create an item
-        i = Item.objects.create(name='test', fabrics=10, price=30)
+        i = Item.objects.create(name='test', fabrics=10, price=30, stocked=30)
 
         # Create some orders with items
         for n in range(5):
@@ -503,7 +502,7 @@ class CommonContextOrderDetails(TestCase):
 
     def test_estimated_times(self):
         items = [Item.objects.create(
-            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+            name=s, fabrics=5, price=30, stocked=10) for s in ('a', 'b', 'c',)]
 
         for n, item in enumerate(items):
             OrderItem.objects.create(
@@ -543,6 +542,41 @@ class CommonContextOrderDetails(TestCase):
         self.assertEqual(context['version'], settings.VERSION)
 
 
+class CommonContextStockTabs(TestCase):
+    """Test the common variables for the view and the AJAX response."""
+
+    @classmethod
+    def setUpTestData(cls):
+        u = User.objects.create_user(username='foo')
+        c = Customer.objects.create(name='foo', cp=0, phone=0)
+        Order.objects.create(
+            user=u, customer=c, ref_name='foo', delivery=date.today())
+
+    def test_tab_elements(self):
+        p1, p2, p3, zero, negative = [
+            Item.objects.create(
+                name='bar', fabrics=2, stocked=s) for s in (5, 15, 5, 0, 5)]
+
+        o = Order.objects.first()
+        OrderItem.objects.create(element=p1, reference=o, qty=5)  # 0 stock
+        OrderItem.objects.create(element=p2, reference=o, qty=14)  # 1 stock
+        OrderItem.objects.create(element=p3, reference=o, qty=1)  # 4 stock
+
+        o.kill()
+
+        cc = CommonContexts.stock_tabs()
+
+        self.assertEqual(cc['tab_elements']['p1'][0], p1)
+        self.assertEqual(cc['tab_elements']['p2'][0], p2)
+        self.assertEqual(cc['tab_elements']['p3'][0], p3)
+        self.assertEqual(cc['tab_elements']['zero'][0], zero)
+        self.assertEqual(cc['tab_elements']['negative'][0], negative)
+
+    def test_tab_item_types(self):
+        cc = CommonContexts.stock_tabs()
+        self.assertEqual(cc['item_types'], settings.ITEM_TYPE[1:])
+
+
 class CommonContextPqueue(TestCase):
     """Test the common context variables for pqueue."""
 
@@ -568,7 +602,7 @@ class CommonContextPqueue(TestCase):
                                      budget=2000,
                                      prepaid=0)
         for i in range(1, 3):
-            Item.objects.create(name='Test item%s' % i, fabrics=5)
+            Item.objects.create(name='Test item%s' % i, fabrics=5, stocked=30)
 
         # Create orderitems
         for item in Item.objects.all():
@@ -583,7 +617,7 @@ class CommonContextPqueue(TestCase):
                                          delivery=date.today(),
                                          status=s)
             OrderItem.objects.create(reference=order,
-                                     element=Item.objects.first())
+                                     element=Item.objects.last())
 
         invoiced = Order.objects.get(ref_name='foo6')
         invoiced.kill()
@@ -695,7 +729,7 @@ class CommonContextPqueue(TestCase):
                                          delivery=date.today(),
                                          status=s)
             OrderItem.objects.create(reference=order,
-                                     element=Item.objects.first())
+                                     element=Item.objects.last())
 
         invoiced = Order.objects.get(ref_name='foo6')
         invoiced.kill()
@@ -736,7 +770,7 @@ class PrintableTicketTests(TestCase):
         self.client.login(username='regular', password='test')
         c = Customer.objects.create(
             name='Test', city='Bilbao', phone=0, cp=48003)
-        Item.objects.create(name='Test', fabrics=5, price=10)
+        Item.objects.create(name='Test', fabrics=5, price=10, stocked=30)
         order = Order.objects.create(
             user=u, customer=c, ref_name='Test', delivery=date.today(),
             budget=0, prepaid=0, )
@@ -955,7 +989,7 @@ class MainViewTests(TestCase):
             Order.objects.create(
                 user=user, customer=customer, ref_name='Test order%s' % i,
                 delivery=date.today(), inbox_date=timezone.now())
-        Item.objects.create(name='test', fabrics=1, price=10)
+        Item.objects.create(name='test', fabrics=1, price=10, stocked=50)
         for order in Order.objects.all():
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
@@ -1192,11 +1226,12 @@ class MainViewTests(TestCase):
         goal = elapsed.days * settings.GOAL
 
         # Set qtys to have a decent number of 'em
-        qty = 10 * elapsed.days
+        qty = 100
         for item in OrderItem.objects.all():
             item.qty = qty
+            item.element.stocked += qty + 5  # and enough stock
+            item.element.save()
             item.save()
-            qty += elapsed.days
 
         # Set sold obj
         sold.kill()
@@ -1709,7 +1744,7 @@ class SearchBoxTest(TestCase):
     def test_search_on_items(self):
         """Test the correct item search."""
         order = Order.objects.first()
-        item = Item.objects.create(name='Test', fabrics=0, price=2)
+        item = Item.objects.create(name='Test', fabrics=0, price=2, stocked=30)
         resp = self.client.post(
             reverse('search'),
             {'search-on': 'items', 'search-obj': 'test',
@@ -1968,7 +2003,7 @@ class ItemsListTests(TestCase):
             Order.objects.create(
                 user=user, customer=customer, ref_name='Test order%s' % i,
                 delivery=date.today(), inbox_date=timezone.now())
-        Item.objects.create(name='test', fabrics=1, price=10)
+        Item.objects.create(name='test', fabrics=1, price=10, stocked=30)
         for order in Order.objects.all():
             OrderItem.objects.create(
                 reference=order, element=Item.objects.last())
@@ -2078,7 +2113,7 @@ class InvoicesListTest(TestCase):
 
         Customer.objects.create(
             name='Test', city='Bilbao', phone=0, cp=48003)
-        Item.objects.create(name='Test', fabrics=5, price=10)
+        Item.objects.create(name='Test', fabrics=5, price=10, stocked=30)
 
     def test_timetable_required_skips_superusers_or_voyeur(self):
         """Superusers & voyeur don't track times."""
@@ -2394,7 +2429,7 @@ class KanbanTests(TestCase):
         c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
 
         # Create an item
-        i = Item.objects.create(name='test', fabrics=10, price=30)
+        i = Item.objects.create(name='test', fabrics=10, price=30, stocked=30)
 
         # Create some orders with items
         for n in range(5):
@@ -2508,6 +2543,92 @@ class KanbanTests(TestCase):
         """Test the correct var."""
         resp = self.client.get(reverse('kanban'))
         self.assertEqual(resp.context['title'], 'TrapuZarrak · Vista Kanban')
+
+
+class StockManagerTests(TestCase):
+    """Test the view."""
+
+    @classmethod
+    def setUpTestData(cls):
+        """Create the necessary items on database at once."""
+        # Create a user
+        User.objects.create_user(
+            username='user', is_staff=True, password='test')
+
+        # Create some different items
+        item = Item.objects.create
+        [item(name='test', fabrics=10, item_type=it, stocked=10, )
+            for it in ('2', '3')]
+
+        cls.client = Client()
+
+    def setUp(self):
+        """Auto login for tests."""
+        self.client.login(username='user', password='test')
+
+    def test_timetable_required_skips_superusers_or_voyeur(self):
+        """Superusers & voyeur don't track times."""
+        voyeur = config('VOYEUR_USER')
+        vu = User.objects.create_user(username=voyeur, password='vu_pass')
+        su = User.objects.create_user(
+            username='su', password='su_pass', is_superuser=True)
+
+        self.client.login(username=voyeur, password='vu_pass')
+        resp = self.client.get(reverse('stock_manager'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=vu))
+
+        self.client.login(username='su', password='su_pass')
+        resp = self.client.get(reverse('stock_manager'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertFalse(Timetable.objects.filter(user=su))
+
+    def test_timetable_required_creates_timetable(self):
+        """When no working session is open a timetable should be created."""
+        self.assertFalse(Timetable.objects.all())
+        resp = self.client.get(reverse('stock_manager'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/stock_manager.html')
+        self.assertEquals(Timetable.objects.count(), 1)
+        self.assertEquals(Timetable.objects.all()[0].user.username, 'user')
+
+    def test_timetable_required_is_void_15_hours(self):
+        """When the timer has been running for +15h user should be prompted."""
+        Timetable.objects.create(
+            user=User.objects.first(),
+            start=(timezone.now() - timedelta(hours=15.5)),
+        )
+        login_url = '/add-hours'
+        resp = self.client.get(reverse('stock_manager'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertRedirects(resp, login_url)
+        self.assertEquals(Timetable.objects.count(), 1)
+
+    def test_timetable_required_is_void_change_date_and_still_valid(self):
+        """When the timer has been running since the day before."""
+        self.client.login(username='regular', password='test')
+        dlt = (timezone.now() - timedelta(hours=14.5))
+        if timezone.now().date() == dlt.date():
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            resp = self.client.get(reverse('stock_manager'))
+            self.assertEqual(resp.status_code, 200)
+            self.assertTemplateUsed(resp, 'tz/stock_manager.html')
+            self.assertEquals(Timetable.objects.count(), 1)
+        else:  # runs fine before 14:30
+            Timetable.objects.create(user=User.objects.first(), start=dlt, )
+            login_url = '/add-hours'
+            resp = self.client.get(reverse('stock_manager'))
+            self.assertEqual(resp.status_code, 302)
+            self.assertRedirects(resp, login_url)
+            self.assertEquals(Timetable.objects.count(), 1)
+
+    def test_stock_manager_filters_item_types(self):
+        resp = self.client.get(
+            reverse('stock_manager'), {'filter_type': '2'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'tz/stock_manager.html')
+        i = Item.objects.filter(item_type='2')
+        self.assertEqual(resp.context['tab_elements']['negative'][0], i[0])
 
 
 @tag('todoist')
@@ -2714,7 +2835,8 @@ class OrderViewTests(TestCase):
 
     def test_post_kill_order(self):
         order = Order.objects.first()
-        OrderItem.objects.create(reference=order, element=Item.objects.first())
+        item = Item.objects.create(name='foo', fabrics=5, stocked=10)
+        OrderItem.objects.create(reference=order, element=item)
         msg = 'Order has no invoice.'
         with self.assertRaisesMessage(ObjectDoesNotExist, msg):
             order.invoice
@@ -2755,7 +2877,7 @@ class OrderViewTests(TestCase):
         Performed by CommonContexts, but left here anyway.
         """
         order = Order.objects.first()
-        item = Item.objects.create(name='Test', fabrics=5)
+        item = Item.objects.create(name='Test', fabrics=5, stocked=30)
         for i in range(3):
             OrderItem.objects.create(reference=order, element=item)
         resp = self.client.get(reverse('order_view', args=[order.pk]))
@@ -2810,7 +2932,7 @@ class OrderExpressTests(TestCase):
 
         Customer.objects.create(
             name='Test', city='Bilbao', phone=0, cp=48003)
-        Item.objects.create(name='Test', fabrics=5, price=10)
+        Item.objects.create(name='Test', fabrics=5, price=10, stocked=30)
 
     def test_timetable_required_skips_superusers_or_voyeur(self):
         """Superusers & voyeur don't track times."""
@@ -2874,7 +2996,7 @@ class OrderExpressTests(TestCase):
             Invoice.objects.get(reference=order)  # The invoice not yet
 
         OrderItem.objects.create(
-            element=Item.objects.first(), qty=5, reference=order)
+            element=Item.objects.last(), qty=5, reference=order)
         resp = self.client.post(reverse('order_express', args=[order.pk]),
                                 {'pay_method': settings.PAYMENT_METHODS[0][0]})
 
@@ -3077,10 +3199,12 @@ class CustomerViewTests(TestCase):
                                  budget=2000,
                                  prepaid=0)
 
+        item = Item.objects.create(name='foo', fabrics=1, stocked=30, )
+
         # Create some items
-        for item in range(5):
+        for _ in range(5):
             order = Order.objects.get(ref_name='example0')
-            OrderItem.objects.create(qty=5,
+            OrderItem.objects.create(element=item, qty=5,
                                      description='notes',
                                      reference=order)
 
@@ -3182,7 +3306,8 @@ class CustomerViewTests(TestCase):
         customer = Customer.objects.first()
         no_orders = Order.objects.filter(customer=customer)
         self.assertEqual(no_orders.count(), 5)
-        item = Item.objects.create(name='Test', fabrics=1, price=10)
+        item = Item.objects.create(
+            name='Test', fabrics=1, price=10, stocked=30, )
 
         orders = Order.objects.all()
         for order in orders:
@@ -3250,7 +3375,7 @@ class PQueueManagerTests(TestCase):
                                      budget=2000,
                                      prepaid=0)
         for i in range(1, 3):
-            Item.objects.create(name='Test item%s' % i, fabrics=5)
+            Item.objects.create(name='Test item%s' % i, fabrics=5, stocked=30)
 
         # Create orderitems
         for item in Item.objects.all():
@@ -3381,7 +3506,7 @@ class PQueueTabletTests(TestCase):
                                      budget=2000,
                                      prepaid=0)
         for i in range(1, 3):
-            Item.objects.create(name='Test item%s' % i, fabrics=5)
+            Item.objects.create(name='Test item%s' % i, fabrics=5, stocked=30)
 
         # Create orderitems
         for item in Item.objects.all():
@@ -3588,8 +3713,7 @@ class ActionsGetMethod(TestCase):
     def setUpTestData(cls):
         """Set up some data for the tests.
 
-        We should create a user, a customer, an order, an item and a file to
-        play with.
+        We should create a user, a customer, an order, and an item.
         """
         regular = User.objects.create_user(username='regular', password='test')
 
@@ -3604,22 +3728,22 @@ class ActionsGetMethod(TestCase):
 
         # Create an order
         customer = Customer.objects.get(name='Customer')
-        Order.objects.create(user=regular,
-                             customer=customer,
-                             ref_name='example',
-                             delivery=date.today(),
-                             waist=randint(10, 50),
-                             chest=randint(10, 50),
-                             hip=randint(10, 50),
-                             lenght=randint(10, 50),
-                             others='Custom notes',
-                             budget=2000,
-                             prepaid=0)
+        order = Order.objects.create(user=regular,
+                                     customer=customer,
+                                     ref_name='example',
+                                     delivery=date.today(),
+                                     waist=randint(10, 50),
+                                     chest=randint(10, 50),
+                                     hip=randint(10, 50),
+                                     lenght=randint(10, 50),
+                                     others='Custom notes',
+                                     budget=2000,
+                                     prepaid=0)
 
         # Create Item & time
-        order = Order.objects.get(ref_name='example')
-        OrderItem.objects.create(qty=5, description='notes', reference=order)
-        cls.client = Client()
+        item = Item.objects.create(name='foo', fabrics=2, stocked=30)
+        OrderItem.objects.create(
+            element=item, qty=5, description='notes', reference=order)
 
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
@@ -3846,8 +3970,6 @@ class ActionsGetMethod(TestCase):
     def test_view_ticket(self):
         """Test the proper ticket display."""
         order = Order.objects.first()
-        OrderItem.objects.create(
-            element=Item.objects.first(), reference=order, price=10)
         order.kill()
         resp = self.client.get(reverse('actions'),
                                {'pk': order.invoice.pk,
@@ -4136,7 +4258,7 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(data['redirect'], reverse('main'))
 
     def test_obj_item_adds_item(self):
-        """Test the proepr creation of item objects."""
+        """Test the proper creation of item objects."""
         self.client.post(reverse('actions'), {'action': 'object-item-add',
                                               'pk': 'None',
                                               'name': 'Example Item',
@@ -4146,6 +4268,7 @@ class ActionsPostMethodCreate(TestCase):
                                               'fabrics': 4,
                                               'price': 500,
                                               'notes': 'Custom Notes',
+                                              'stocked': 30,
                                               })
         item = Item.objects.get(name='Example Item')
         self.assertEqual(item.item_type, '2')
@@ -4167,6 +4290,7 @@ class ActionsPostMethodCreate(TestCase):
                                  'fabrics': 4,
                                  'price': 500,
                                  'notes': 'Custom Notes',
+                                 'stocked': 10,
                                  'test': True,
                                  })
         self.assertIsInstance(resp, JsonResponse)
@@ -4328,6 +4452,7 @@ class ActionsPostMethodEdit(TestCase):
                                  'notes': 'Changed notes',
                                  'pk': item.pk,
                                  'action': 'object-item-edit',
+                                 'stocked': 20,
                                  'test': True
                                  })
         # Test the response object
@@ -4466,7 +4591,7 @@ class ActionsPostMethodEdit(TestCase):
 
     def test_delete_obj_item_deletes_the_item(self):
         """Test the correct item deletion."""
-        item = Item.objects.create(name='Test', fabrics=5)
+        item = Item.objects.create(name='Test', fabrics=5, stocked=30)
         resp = self.client.post(reverse('actions'),
                                 {'pk': item.pk,
                                  'action': 'object-item-delete',
@@ -4526,7 +4651,7 @@ class OrdersCRUDTests(TestCase):
         c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
 
         # Create an item
-        i = Item.objects.create(name='test', fabrics=10, price=30)
+        i = Item.objects.create(name='test', fabrics=10, price=30, stocked=30)
 
         # Create some orders with items
         for n in range(5):
@@ -4867,6 +4992,138 @@ class OrdersCRUDTests(TestCase):
             resp.content.decode("utf-8"), 'The action was not found.')
 
 
+class ItemsCRUDTests(TestCase):
+    """Test the ItemsCRUD view."""
+
+    def setUp(self):
+        User.objects.create_user(
+            username='user', is_staff=True, password='test')
+
+        # Create some different items
+        item = Item.objects.create
+        [item(name='test', fabrics=10, item_type=it, stocked=10, )
+            for it in ('2', '3')]
+
+        self.client.login(username='user', password='test')
+
+    def test_get_data_is_dict(self):
+        item = Item.objects.last()
+        payload = {'action': 'edit-stock', 'item_pk': item.pk, }
+        resp = self.client.get(reverse('items-CRUD'), payload)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_get_item_none_returns_404(self):
+        payload = {'action': 'edit-stock', 'test': True}
+        resp = self.client.get(reverse('items-CRUD'), payload)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_get_edit_stock_item_instance(self):
+        item = Item.objects.last()
+        payload = {'action': 'edit-stock', 'item_pk': item.pk, 'test': True}
+        resp = self.client.get(reverse('items-CRUD'), payload)
+        self.assertEqual(resp.context['item'], item)
+        self.assertIsInstance(resp.context['form'], ItemForm)
+        self.assertEqual(resp.context['form'].instance, item)
+        self.assertEqual(resp.context['modal_title'], 'Editar stock')
+        self.assertTemplateUsed('includes/custom_forms/edit_stock.html')
+
+    def test_get_action_was_not_recognized(self):
+        payload = {'action': 'void'}
+        resp = self.client.get(reverse('items-CRUD'), payload)
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(
+            resp.content.decode("utf-8"), 'Action was not recogniced.')
+
+    def test_get_is_json_response(self):
+        item = Item.objects.last()
+        payload = {'action': 'edit-stock', 'item_pk': item.pk, }
+        resp = self.client.get(reverse('items-CRUD'), payload)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['html'])
+
+    def test_post_data_is_dict(self):
+        item = Item.objects.last()
+        payload = {'action': 'edit-stock', 'item_pk': item.pk, }
+        resp = self.client.post(reverse('items-CRUD'), payload)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertIsInstance(data, dict)
+
+    def test_post_item_none_returns_404(self):
+        payload = {'action': 'edit-stock', 'test': True}
+        resp = self.client.post(reverse('items-CRUD'), payload)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_post_edit_form_is_valid_context(self):
+        item = Item.objects.last()
+        self.assertEqual(item.stocked, 10)
+        payload = {
+            'action': 'edit-stock', 'item_pk': item.pk, 'name': item.name,
+            'item_type': item.item_type, 'item_class': item.item_class,
+            'size': item.size, 'fabrics': item.fabrics, 'price': item.price,
+            'stocked': 20, 'test': True, }
+        resp = self.client.post(reverse('items-CRUD'), payload)
+        self.assertTemplateUsed(resp, 'includes/stock_tabs.html')
+        self.assertTrue('tab_elements' in resp.context)
+        self.assertTrue('item_types' in resp.context)
+
+        item = Item.objects.get(pk=item.pk)
+        self.assertEqual(item.stocked, 20)
+
+    def test_post_edit_form_is_valid_json_response(self):
+        item = Item.objects.last()
+        self.assertEqual(item.stocked, 10)
+        payload = {
+            'action': 'edit-stock', 'item_pk': item.pk, 'name': item.name,
+            'item_type': item.item_type, 'item_class': item.item_class,
+            'size': item.size, 'fabrics': item.fabrics, 'price': item.price,
+            'stocked': 20, }
+        resp = self.client.post(reverse('items-CRUD'), payload)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['html'])
+        self.assertTrue(data['form_is_valid'])
+        self.assertEqual(data['html_id'], '#stock-tabs')
+
+    def test_post_edit_form_rejected_context(self):
+        item = Item.objects.last()
+        self.assertEqual(item.stocked, 10)
+        payload = {
+            'action': 'edit-stock', 'item_pk': item.pk, 'name': item.name,
+            'item_type': item.item_type, 'item_class': item.item_class,
+            'size': item.size, 'fabrics': 'VOID', 'price': item.price,
+            'stocked': 20, 'test': True, }
+        resp = self.client.post(reverse('items-CRUD'), payload)
+        self.assertEqual(resp.status_code, 200)
+        self.assertTemplateUsed(resp, 'includes/custom_forms/edit_stock.html')
+        self.assertEqual(resp.context['modal_title'], 'Editar stock')
+        self.assertEqual(resp.context['item'], item)
+        self.assertIsInstance(resp.context['form'], ItemForm)
+        self.assertTrue(resp.context['form'].errors)
+
+    def test_post_edit_form_rejected_json(self):
+        item = Item.objects.last()
+        self.assertEqual(item.stocked, 10)
+        payload = {
+            'action': 'edit-stock', 'item_pk': item.pk, 'name': item.name,
+            'item_type': item.item_type, 'item_class': item.item_class,
+            'size': item.size, 'fabrics': 'VOID', 'price': item.price,
+            'stocked': 20, }
+
+        resp = self.client.post(reverse('items-CRUD'), payload)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsInstance(resp, JsonResponse)
+        self.assertIsInstance(resp.content, bytes)
+        self.assertTrue(data['html'])
+        self.assertFalse(data['form_is_valid'])
+
+
 class OrderItemsCRUDTests(TestCase):
     """Test the AJAX methods."""
 
@@ -4879,7 +5136,7 @@ class OrderItemsCRUDTests(TestCase):
 
         # Create an item
         i = Item.objects.create(
-            name='test', fabrics=10, price=30, notes='Notes')
+            name='test', fabrics=10, price=30, notes='Notes', stocked=30)
 
         Timetable.objects.create(user=u)
 
@@ -5369,7 +5626,7 @@ class CommentsCRUD(TestCase):
         c = Customer.objects.create(name='Customer Test', phone=0, cp=48100)
 
         # Create an item
-        i = Item.objects.create(name='test', fabrics=10, price=30)
+        i = Item.objects.create(name='test', fabrics=10, price=30, stocked=30)
 
         # Create some orders with items
         for n in range(5):
@@ -5522,7 +5779,7 @@ class CashFlowIOCRUDTests(TestCase):
         c = Customer.objects.create(name='Customer foo', phone=0, cp=48100)
 
         # Create an item
-        i = Item.objects.create(name='test', fabrics=10, price=30)
+        i = Item.objects.create(name='test', fabrics=10, price=30, stocked=30)
 
         # Create some orders with items
         o = Order.objects.create(
@@ -5635,7 +5892,8 @@ class PQueueActionsTests(TestCase):
                                      delivery=date.today(),
                                      budget=2000,
                                      prepaid=0)
-        item = Item.objects.create(name='Test item object', fabrics=5)
+        item = Item.objects.create(
+            name='Test item object', fabrics=5, stocked=30)
 
         # Create orderitems
         for i in range(3):
@@ -5927,7 +6185,7 @@ class ItemSelectorTests(TestCase):
             user=user, customer=customer, ref_name='Test',
             delivery=date.today())
         for i in range(3):
-            Item.objects.create(name='Test', fabrics=5, price=10)
+            Item.objects.create(name='Test', fabrics=5, price=10, stocked=30)
 
     def test_fix_context_settings(self):
         """Test the proper values."""
@@ -5948,6 +6206,7 @@ class ItemSelectorTests(TestCase):
                                                     'fabrics': 10,
                                                     'foreing': True,
                                                     'price': 10,
+                                                    'stocked': 30,
                                                     })
         item = Item.objects.get(name='test form')
         self.assertEqual(item.item_type, '1')
@@ -5966,6 +6225,7 @@ class ItemSelectorTests(TestCase):
                                                            'fabrics': 'void',
                                                            'foreing': True,
                                                            'price': 10,
+                                                           'stocked': 5,
                                                            })
         self.assertEqual(
             resp.context['errors'], dict(fabrics=['Enter a number.']))
@@ -6014,6 +6274,7 @@ class ItemSelectorTests(TestCase):
                                  'size': '12',
                                  'fabrics': 10,
                                  'foreing': True,
+                                 'stocked': 10,
                                  'price': 10,
                                  })
         self.assertEqual(resp.context['available_items'].count(), 5)
@@ -6021,7 +6282,8 @@ class ItemSelectorTests(TestCase):
     def test_filter_by_type_get(self):
         """Test the correct by type filter."""
         for i in range(3):
-            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type='2', stocked=30, )
         resp = self.client.get(
             reverse('item-selector'), {'test': True, 'item-type': '2'})
         self.assertEqual(resp.context['available_items'].count(), 3)
@@ -6032,7 +6294,8 @@ class ItemSelectorTests(TestCase):
     def test_filter_by_type_post(self):
         """Test the correct by type filter."""
         for i in range(3):
-            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type='2', stocked=30)
         resp = self.client.post(reverse('item-selector'),
                                 {'name': 'test form',
                                  'item_type': '1',
@@ -6053,7 +6316,7 @@ class ItemSelectorTests(TestCase):
         for i in range(3):
             Item.objects.create(
                 name='Test%s' % i, fabrics=5, item_type=str(i + 1),
-                size=str(i))
+                size=str(i), stocked=30)
         resp = self.client.get(
             reverse('item-selector'),
             {'test': True, 'item-type': '1', 'item-name': 'Test0'})
@@ -6066,7 +6329,7 @@ class ItemSelectorTests(TestCase):
         for i in range(3):
             Item.objects.create(
                 name='Test%s' % i, fabrics=5, item_type=str(i + 1),
-                size=str(i))
+                size=str(i), stocked=30)
         resp = self.client.post(reverse('item-selector'),
                                 {'name': 'test form',
                                  'item_type': '1',
@@ -6087,7 +6350,7 @@ class ItemSelectorTests(TestCase):
         for i in range(3):
             Item.objects.create(
                 name='Test%s' % i, fabrics=5, item_type=str(i + 1),
-                size=str(i))
+                size=str(i), stocked=30)
         resp = self.client.get(
             reverse('item-selector'), {'test': True,
                                        'item-type': '1',
@@ -6101,7 +6364,7 @@ class ItemSelectorTests(TestCase):
         for i in range(3):
             Item.objects.create(
                 name='Test%s' % i, fabrics=5, item_type=str(i + 1),
-                size=str(i))
+                size=str(i), stocked=30)
         resp = self.client.post(reverse('item-selector'),
                                 {'name': 'test form',
                                  'item_type': '1',
@@ -6120,14 +6383,16 @@ class ItemSelectorTests(TestCase):
     def test_item_selector_limits_to_15(self):
         """Test the limiting results."""
         for i in range(15):
-            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type='2', stocked=30)
         resp = self.client.get(reverse('item-selector'), {'test': True})
         self.assertEqual(resp.context['available_items'].count(), 15)
 
     def test_item_counts(self):
         """Test the total amount of items."""
         for i in range(10):
-            Item.objects.create(name='Test%s' % i, fabrics=5, item_type='2')
+            Item.objects.create(
+                name='Test%s' % i, fabrics=5, item_type='2', stocked=30)
         resp = self.client.get(reverse('item-selector'), {'test': True})
         self.assertEqual(resp.context['total_items'], 14)
 

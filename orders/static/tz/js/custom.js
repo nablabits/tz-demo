@@ -51,6 +51,7 @@ $(document).ready(function () {
 
   // Add notes field animation in modals
   $('#action-modal').on('click', '.js-plusToCaret', plusToCaret)
+  $('#root').on('click', '.js-plusToCaret', plusToCaret)
   function plusToCaret () {
     $(this).toggleClass('fa-caret-circle-up')
     $(this).toggleClass('pt-1')

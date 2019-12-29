@@ -58,7 +58,9 @@ class OrderAdmin(admin.ModelAdmin):
 class ItemAdmin(admin.ModelAdmin):
     """Beautify the object item admin view."""
 
-    list_display = ('pk', 'name', 'item_type', 'item_class', 'size')
+    list_display = (
+        'pk', 'name', 'item_type', 'item_class', 'size', 'price', 'stocked',
+        'sales', 'health',)
     list_filter = ('item_type', 'item_class', 'price')
 
 

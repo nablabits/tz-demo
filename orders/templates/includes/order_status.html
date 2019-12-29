@@ -31,39 +31,56 @@ Render the kanban status bar inside order view and the arrows to shift between s
     </a>
   </div>
 {% else %}
-  <div class="d-flex flex-column flex-md-row align-items-center mt-3">
+  <div class="d-flex align-items-center mt-3">
 
-    {# Kanban shift down arrow #}
-    {% if order.status in '234567' %}
+    {# Kanban shift back arrow #}
+    {% if order.status in '234567' and not order.tz%}
+      <i class="fal fa-arrow-alt-left fa-2x pr-2 js-kanban-jump" data-pk="{{order.pk}}" id="status-shiftBack" style="cursor: pointer;"></i>
+    {%endif%}
+
+    {% if order.status in '23456' and order.tz%}  {# tz orders can't go back beyond 6 #}
       <i class="fal fa-arrow-alt-left fa-2x pr-2 js-kanban-jump" data-pk="{{order.pk}}" id="status-shiftBack" style="cursor: pointer;"></i>
     {%endif%}
 
     {# Kanban statuses #}
     <div class="mr-2 btn btn-outline-success {% if order.status == '1' %}active{% endif %}">
-      <i class="fal {{STATUS_ICONS.0}} pr-2"></i>{{order.STATUS.0.1}}</div>
+      <i class="fal {{STATUS_ICONS.0}} pr-2"></i>{{order.STATUS.0.1}}
+    </div>
     <div class="mr-2 btn btn-outline-success {% if order.status == '2' %}active{% endif %}">
-      <i class="fal {{STATUS_ICONS.1}} pr-2"></i>{{order.STATUS.1.1}}</div>
+      <i class="fal {{STATUS_ICONS.1}} pr-2"></i>{{order.STATUS.1.1}}
+    </div>
     <div class="mr-2 btn btn-outline-success {% if order.status == '3' %}active{% endif %}">
-      <i class="fal {{STATUS_ICONS.2}} pr-2"></i>{{order.STATUS.2.1}}</div>
+      <i class="fal {{STATUS_ICONS.2}} pr-2"></i>{{order.STATUS.2.1}}
+    </div>
     <div class="mr-2 btn btn-outline-success {% if order.status == '6' %}active{% endif %}">
-      <i class="fal {{STATUS_ICONS.3}} pr-2"></i>{{order.STATUS.5.1}}</div>
-    {%if order.status != '7'%}
-      <form method="post" action="{% url 'order_view' pk=order.pk %}">
-      {%csrf_token%}
-        <input type="hidden" name="action" value="deliver-order">
-        <button type="submit" class="btn btn-outline-success mr-2">
-          <i class="fal {{STATUS_ICONS.4}} pr-2"></i>Entregar
-        </button>
-      </form>
-    {%else%}
-      <button type="button" class="mr-2 btn btn-outline-success active">
-        <i class="fal {{STATUS_ICONS.4}} pr-2"></i>{{order.STATUS.6.1}}</button>
-    {%endif%}
+      <i class="fal {{STATUS_ICONS.3}} pr-2"></i>{{order.STATUS.5.1}}
+    </div>
+    {% if order.status != '7' %}
+    <div class="mr-2 btn btn-outline-success">
+      <i class="fal {{STATUS_ICONS.4}} pr-2"></i>Entregar
+      {% if order.tz and order.status == '6' %}
+      <i class="fal fa-info-circle text-info pl-1"></i>
+      {%endif%}
+    </div>
+    {% else %}
+    <div class="mr-2 btn btn-outline-success active">
+      <i class="fal {{STATUS_ICONS.4}} pr-2"></i>{{order.STATUS.6.1}}
+    </div>
+    {% endif %}
 
-    {# Kanban shift up arrow #}
+
+    {# Kanban shift forward arrow #}
       {% if order.status in '123456' %}
       <i class="fal fa-arrow-alt-right fa-2x px-1 js-kanban-jump" data-pk="{{order.pk}}" id="status-shiftFwd" style="cursor: pointer;"></i>
     {%endif%}
   </div>
+  {% if order.tz and order.status == '6' %}
+  <div class="d-flex mt-1">
+    <small>
+      <i class="fal fa-info-circle text-info pl-1"></i>
+      Entregar es una acción que no se puede deshacer en pedidos de tz para evitar errores en el stock
+    </small>
+  </div>
+  {% endif %}
 
 {%endif%}

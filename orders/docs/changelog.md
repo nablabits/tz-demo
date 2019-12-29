@@ -9,6 +9,7 @@
   * **Nuevo:** Podemos añadir descuentos a los pedidos.
   * **Nuevo:** se puede añadir un numero de lote a las prendas de stock que vendamos
   que nos servirá para saber la estancia media.
+  * **Nuevo:** se ha añadido un control de stock a las prendas
   * **Mejora:** Las fases dentro de los pedidos se han adaptado para cuadrar con
   la vista kanban.
   * **Mejora:** los tickets ahora imprimen la fecha y la hora.

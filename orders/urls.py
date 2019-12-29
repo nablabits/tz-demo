@@ -32,6 +32,7 @@ urlpatterns = [
     path('pqueue/tablet',
          views.pqueue_tablet, name='pqueue_tablet'),
     path('invoices', views.invoiceslist, name='invoiceslist'),
+    path('stock_manager', views.stock_manager, name='stock_manager'),
 
     # Object related urls
     re_path(r'^order/view/(?P<pk>[0-9]+)$',
@@ -51,6 +52,7 @@ urlpatterns = [
     # AJAX related urls
     path('actions/', views.Actions.as_view(), name='actions'),
     path('orders-CRUD/', views.OrdersCRUD.as_view(), name='orders-CRUD'),
+    path('items-CRUD/', views.ItemsCRUD.as_view(), name='items-CRUD'),
     path('orderitems-CRUD/',
          views.OrderItemsCRUD.as_view(), name='orderitems-CRUD'),
     path('comments-CRUD/', views.CommentsCRUD.as_view(), name='comments-CRUD'),

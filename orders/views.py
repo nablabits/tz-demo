@@ -6,8 +6,7 @@ from random import randint
 import markdown2
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
-from django.core.exceptions import ObjectDoesNotExist, ValidationError
-from django.core.mail import EmailMultiAlternatives
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.paginator import EmptyPage, PageNotAnInteger, Paginator
 from django.db.models import Count, DecimalField, FloatField, F, Q, Sum
 from django.http import (
@@ -131,6 +130,25 @@ class CommonContexts:
                 'version': settings.VERSION,
                 'title': 'Pedido %s: %s, %s' % title, }
         return vars
+
+    @staticmethod
+    def stock_tabs(items=None):
+        """Get the common variables for stock manager."""
+        if not items:
+            items = Item.objects.all().order_by('health')  # Default value
+
+        items = items.exclude(name='Predeterminado')
+        tab_elements = {
+            'p1': items.filter(health=0),
+            'p2': items.filter(health__gt=0).filter(health__lt=1),
+            'p3': items.filter(health__gte=1),
+            'zero': items.filter(health=-100),
+            'negative': items.filter(health__lt=0).filter(health__gt=-100),
+        }
+
+        return {
+            'tab_elements': tab_elements, 'item_types': settings.ITEM_TYPE[1:]
+        }
 
     @staticmethod
     def pqueue():
@@ -681,6 +699,20 @@ def kanban(request):
     context['title'] = 'TrapuZarrak · Vista Kanban'
 
     return render(request, 'tz/kanban.html', context)
+
+
+@login_required
+@timetable_required
+def stock_manager(request):
+    """View and edit items' stock."""
+    items = Item.objects.all().order_by('health')
+    filter_type = request.GET.get('filter_type', None)
+    if filter_type:
+        items = items.filter(item_type=filter_type)
+
+    context = CommonContexts.stock_tabs(items)
+
+    return render(request, 'tz/stock_manager.html', context)
 
 
 # Object views
@@ -1455,6 +1487,83 @@ class OrdersCRUD(View):
 
         if context and template:
             data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
+
+
+class ItemsCRUD(View):
+    """Process all the CRUD actions called by AJAX on Item model.
+
+    This is the new version for AJAX calls since Actions class became really
+    huge to be clear. Eventually each model will have their CRUD AJAX Actions
+    to work with.
+    """
+
+    def get(self, request):
+        """Load a form to save items."""
+        data = dict()
+        item_pk = request.GET.get('item_pk', None)
+        item = Item.objects.get(pk=item_pk) if item_pk else None
+        action = request.GET.get('action', None)
+
+        # The main action: create/edit the item as a whole
+        if action == 'main':
+            pass  # pragma: no cover
+
+        # Edit stock value on stock manager
+        elif action == 'edit-stock':
+            if not item:
+                raise Http404('No item was especified')
+            form = ItemForm(instance=item)
+            template = 'includes/custom_forms/edit_stock.html'
+            modal_title = 'Editar stock'
+            context = {
+                'item': item, 'form': form, 'modal_title': modal_title, }
+
+        else:
+            return HttpResponseServerError('Action was not recogniced.')
+
+        if request.GET.get('test', None):
+            return render(request, template, context=context)
+
+        data['html'] = render_to_string(template, context, request=request)
+        return JsonResponse(data)
+
+    def post(self, request):
+        """Process the form to save the element."""
+        data = dict()
+        item_pk = request.POST.get('item_pk', None)
+        item = Item.objects.get(pk=item_pk) if item_pk else None
+        action = request.POST.get('action', None)
+
+        # The main action: create/edit the item as a whole
+        if action == 'main':
+            pass
+
+        # Edit stock value on stock manager
+        elif action == 'edit-stock':
+            if not item:
+                raise Http404('No item was especified')
+            form = ItemForm(request.POST, instance=item)
+            if form.is_valid():
+                form.save()
+                template = 'includes/stock_tabs.html'
+                context = CommonContexts.stock_tabs()
+                data['html_id'] = '#stock-tabs'
+                data['form_is_valid'] = True
+            else:
+                data['form_is_valid'] = False
+                template = 'includes/custom_forms/edit_stock.html'
+                modal_title = 'Editar stock'
+                context = {
+                    'item': item, 'form': form, 'modal_title': modal_title}
+
+        else:
+            return HttpResponseServerError('Action was not recogniced')
+
+        if request.GET.get('test', None):
+            return render(request, template, context=context)
+
+        data['html'] = render_to_string(template, context, request=request)
         return JsonResponse(data)
 
 

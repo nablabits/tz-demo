@@ -14,7 +14,7 @@ from orders.models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
     PQueue, Timetable, CashFlowIO, StatusShift, ExpenseCategory, )
 
-from orders.settings import PAYMENT_METHODS, WEEK_COLORS
+from orders.settings import PAYMENT_METHODS, WEEK_COLORS, ITEM_TYPE
 
 from decouple import config
 
@@ -242,7 +242,7 @@ class TestOrders(TestCase):
             name='Test', address='This computer', city='No city', phone=55,
             email='customer@example.com', CIF='5555G', notes='note', cp=44)
 
-        Item.objects.create(name='test', fabrics=10, price=30)
+        Item.objects.create(name='test', fabrics=10, price=30, stocked=10)
 
         Order.objects.create(
             user=User.objects.first(), customer=c, ref_name='example',
@@ -813,6 +813,14 @@ class TestOrders(TestCase):
         self.assertEqual(i.issued_on.date(), date.today())
         self.assertEqual(i.invoice_no, 1)
 
+    def test_kill_updates_stock(self):
+        order, item = Order.objects.first(), Item.objects.last()
+        self.assertEqual(item.stocked, 10)
+        OrderItem.objects.create(reference=order, element=item)
+        order.kill()
+        item = Item.objects.get(pk=item.pk)
+        self.assertEqual(item.stocked, 9)
+
     @tag('todoist')
     def test_kill_order_archives_todoist(self):
         order = Order.objects.first()
@@ -957,7 +965,7 @@ class TestOrders(TestCase):
                                      budget=100,
                                      prepaid=100)
         self.assertTrue(order.has_no_items)
-        item = Item.objects.create(name='Test item', fabrics=2)
+        item = Item.objects.create(name='Test item', fabrics=2, stocked=30)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
                                      crop=time(5), sewing=time(3),
@@ -985,7 +993,7 @@ class TestOrders(TestCase):
                                      delivery=date.today(),
                                      budget=100,
                                      prepaid=100)
-        item = Item.objects.create(name='Test item', fabrics=2)
+        item = Item.objects.create(name='Test item', fabrics=2, stocked=30)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
                                      crop=time(5), sewing=time(3),
@@ -1001,7 +1009,7 @@ class TestOrders(TestCase):
                                      delivery=date.today(),
                                      budget=100,
                                      prepaid=100)
-        item = Item.objects.create(name='Test item', fabrics=2)
+        item = Item.objects.create(name='Test item', fabrics=2, stocked=30)
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
                                      crop=time(5), sewing=time(3),
@@ -1020,7 +1028,7 @@ class TestOrders(TestCase):
                                      delivery=date.today(),
                                      )
         items = [Item.objects.create(
-            name=s, fabrics=10, price=30) for s in ('a', 'b', 'c',)]
+            name=s, fabrics=5, price=30, stocked=30) for s in ('a', 'b', 'c',)]
 
         for item in items:
             OrderItem.objects.create(
@@ -1373,24 +1381,167 @@ class TestObjectItems(TestCase):
                             item_class='S',
                             size='10',
                             notes='Default notes',
-                            fabrics=5.2)
+                            fabrics=5.2,
+                            stocked=30, )
         self.assertTrue(Item.objects.get(name='Test item'))
+
+    def test_name(self):
+        i = Item.objects.create(name='foo', fabrics=5, stocked=30, )
+        self.assertEqual(i._meta.get_field('name').verbose_name, 'Nombre')
+
+        msg = 'value too long for type character varying(64)'
+        with self.assertRaisesMessage(DataError, msg):
+            Item.objects.create(name='f' * 65, fabrics=5, stocked=30, )
+
+    def test_item_type(self):
+        for it in ITEM_TYPE:
+            i = Item.objects.create(
+                name='foo', fabrics=5, item_type=it[0], stocked=30)
+            self.assertEqual(
+                i._meta.get_field('item_type').verbose_name, 'Tipo de prenda')
+
+        # Default value
+        i = Item.objects.create(name='foo', fabrics=5, stocked=30)
+        self.assertEqual(i.item_type, '0')
+
+    def test_item_type_out_of_choices(self):
+        msg = "Value '20' is not a valid choice."
+        with self.assertRaisesMessage(ValidationError, msg):
+            i = Item(
+                name='foo', fabrics=5, item_type='20', item_class='S',
+                size=1, price=0, stocked=0, )
+            i.full_clean()
+
+    def test_item_type_out_max_length(self):
+        msg = "value too long for type character varying(2)"
+        with self.assertRaisesMessage(DataError, msg):
+            Item.objects.create(
+                name='foo', fabrics=5, item_type='200', stocked=30)
+
+    def test_item_class(self):
+        for it in ITEM_TYPE:
+            i = Item.objects.create(name='foo', fabrics=5, item_type=it[0])
+            self.assertEqual(
+                i._meta.get_field('item_type').verbose_name, 'Tipo de prenda')
+
+        # Default value
+        i = Item.objects.create(name='foo', fabrics=5)
+        self.assertEqual(i.item_type, '0')
+
+    def test_item_class_out_of_choices(self):
+        msg = "Value 'Void' is not a valid choice."
+        with self.assertRaisesMessage(ValidationError, msg):
+            i = Item(
+                name='foo', fabrics=5, item_type='19', item_class='Void',
+                size=1, price=0, stocked=0, )
+            i.full_clean()
+
+    def test_item_class_out_max_length(self):
+        msg = "value too long for type character varying(1)"
+        with self.assertRaisesMessage(DataError, msg):
+            Item.objects.create(name='foo', fabrics=5, item_class='SS')
+
+    def test_size(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        self.assertEqual(i._meta.get_field('size').verbose_name, 'Talla')
+        self.assertEqual(i.size, '1')
+
+        msg = 'value too long for type character varying(6)'
+        with self.assertRaisesMessage(DataError, msg):
+            Item.objects.create(name='foo', fabrics=5, size='f' * 7)
+
+    def test_notes(self):
+        i = Item(
+            name='foo', fabrics=5, item_type='19', item_class='S',
+            size=1, price=0, stocked=0, )
+        self.assertFalse(i.full_clean())  # can be empty
+        i.save()
+        self.assertEqual(i.notes, None)
+        self.assertEqual(
+            i._meta.get_field('notes').verbose_name, 'Observaciones')
+
+    def test_fabrics(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        self.assertEqual(i._meta.get_field('fabrics').verbose_name, 'Tela (M)')
+        self.assertIsInstance(Item.objects.get(pk=i.pk).fabrics, Decimal)
+
+    def test_fabrics_max_digits(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        msg = 'Ensure that there are no more than 5 digits in total.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.fabrics = 1234567
+            i.full_clean()
+
+    def test_fabrics_max_decimals(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        msg = 'Ensure that there are no more than 2 decimal places.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.fabrics = 12.345
+            i.full_clean()
+
+    def test_foreign(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        i = Item.objects.get(pk=i.pk)
+        self.assertEqual(i._meta.get_field('foreing').verbose_name, 'Externo')
+        self.assertIsInstance(i.foreing, bool)
+        self.assertFalse(i.foreing)
+
+    def test_price(self):
+        i = Item.objects.create(name='foo', fabrics=5,)
+        i = Item.objects.get(pk=i.pk)
+        self.assertEqual(i._meta.get_field('fabrics').verbose_name, 'Tela (M)')
+        self.assertIsInstance(i.price, Decimal)
+        self.assertEqual(i.price, 0)
+
+    def test_price_max_digits(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        msg = 'Ensure that there are no more than 6 digits in total.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.price = 1234567
+            i.full_clean()
+
+    def test_price_max_decimals(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        msg = 'Ensure that there are no more than 2 decimal places.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            i.price = 12.345
+            i.full_clean()
+
+    def test_stocked(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        self.assertEqual(i.stocked, 0)  # default value
+        self.assertEqual(
+            i._meta.get_field('stocked').verbose_name, 'Stock uds')
+        self.assertIsInstance(i.stocked, int)
+
+    def test_stocked_cant_be_negative(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        msg = (
+            'new row for relation "orders_item" violates check constraint' +
+            ' "orders_item_stocked_check"')
+        with self.assertRaisesMessage(IntegrityError, msg):
+            i.stocked = -10
+            i.save()
+
+    def test_stocked_field_cant_be_over_32767(self):
+        """However, it raises invalid opertion on calculating health."""
+        i = Item.objects.create(name='foo', fabrics=5, )
+        msg = "[<class 'decimal.InvalidOperation'>]"
+        with self.assertRaisesMessage(InvalidOperation, msg):
+            i.stocked = 33000
+            i.save()
+
+    def test_health(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+        i = Item.objects.get(pk=i.pk)
+        self.assertEqual(i.health, -100)  # Calculated on save
+        self.assertEqual(
+            i._meta.get_field('health').verbose_name, 'health')
+        self.assertIsInstance(i.health, Decimal)
 
     def test_item_str(self):
         i = Item.objects.create(name='Test item', fabrics=5.2)
         self.assertEqual(i.__str__(), 'No definido Test item S-1 (0€)')
-
-    def test_item_duplicate_raises_error(self):
-        """Clean method should raise ValidationError."""
-        original = Item.objects.create(name='duplicate', fabrics=0, size='2')
-        duplicated = Item(name='duplicate', fabrics=0, size='2')
-        self.assertEqual(original.name, duplicated.name)
-        self.assertEqual(original.item_type, duplicated.item_type)
-        self.assertEqual(original.item_class, duplicated.item_class)
-        self.assertEqual(original.size, duplicated.size)
-        msg = 'This item it\'s already in the db'
-        with self.assertRaisesMessage(ValidationError, msg):
-            duplicated.clean()
 
     def test_object_item_allows_6_chars_on_size(self):
         """Items's size should allow up to 6 chars."""
@@ -1435,12 +1586,115 @@ class TestObjectItems(TestCase):
 
     def test_the_item_object_named_default_is_reserved(self):
         """The item obj named default is reserved & raises ValidationError."""
-        with self.assertRaises(ValidationError):
-            Item.objects.create(name='Predeterminado',
-                                item_type='0',
-                                item_class='0',
-                                size='0',
-                                fabrics=2.2)
+        msg = "'Predeterminado' name is reserved"
+        with self.assertRaisesMessage(ValidationError, msg):
+            i = Item(name='Predeterminado', fabrics=5, item_type='19',
+                     item_class='S', size=1, price=0, stocked=0, )
+            i.full_clean()
+
+    def test_save_health(self):
+        i = Item.objects.create(name='foo', fabrics=5, )
+
+        # No sales and no stock
+        self.assertEqual(i.health, -100)
+
+        # No sales and stock
+        i.stocked = 5
+        i.save()
+        self.assertEqual(i.health, -5)
+
+        # Sales and stock
+        o = Order.objects.first()
+        [OrderItem.objects.create(element=i, reference=o) for _ in range(3)]
+        o.kill()  # update stock and health
+        i = Item.objects.get(pk=i.pk)  # reload item data
+        self.assertEqual(i.health, 2 / (3/12))  # 2 over 3 sales in 12 months
+
+    def test_sales_default_period(self):
+        # clone the order
+        o1 = Order.objects.first()
+        o1.pk = None
+        o1.save()
+        o2 = Order.objects.first()
+        self.assertNotEqual(o1, o2)
+        self.assertEqual(Order.objects.count(), 2)
+
+        # Assign some items to them
+        i = Item.objects.create(name='foo', fabrics=5, stocked=5)
+        for order in Order.objects.all():
+            OrderItem.objects.create(element=i, reference=order, price=5)
+            order.kill()
+        self.assertEqual(i.sales(), 2)
+        o2.delivery = date(2018, 12, 31)  # Irrelevant
+        o2.save()
+        self.assertEqual(i.sales(), 1)
+
+        self.assertEqual(i.sales(), i.year_sales)  # Valid from 2020 on
+        self.assertEqual(i.all_time_sales, 2)
+
+    def test_sales_raises_type_and_value_errors(self):
+        i = Item.objects.create(name='foo', fabrics=5, stocked=5)
+        msg = 'Period should be timedelta.'
+        with self.assertRaisesMessage(TypeError, msg):
+            i.sales('void')
+
+        msg = 'Period must be positive.'
+        with self.assertRaisesMessage(ValueError, msg):
+            i.sales(-timedelta(5))
+
+    def test_sales_custom_period(self):
+        # clone the order
+        o1 = Order.objects.first()
+        o1.pk = None
+        o1.save()
+        o2 = Order.objects.first()
+        self.assertEqual(Order.objects.count(), 2)
+        self.assertNotEqual(o1, o2)
+
+        # Assign some items to them
+        i = Item.objects.create(name='foo', fabrics=5, stocked=5)
+        for order in Order.objects.all():
+            OrderItem.objects.create(element=i, reference=order, price=5)
+            order.kill()
+        self.assertEqual(i.sales(timedelta(days=5)), 2)
+        o2.delivery = date.today() - timedelta(days=6)  # Irrelevant
+        o2.save()
+        self.assertEqual(i.sales(timedelta(days=5)), 1)
+
+    def test_sales_filters_status_9(self):
+        # clone the order
+        o1 = Order.objects.first()
+        o1.pk = None
+        o1.save()
+        o2 = Order.objects.first()
+        self.assertEqual(Order.objects.count(), 2)
+        self.assertNotEqual(o1, o2)
+
+        # Assign some items to it
+        i = Item.objects.create(name='foo', fabrics=5, stocked=5)
+        OrderItem.objects.create(element=i, reference=o2, price=5)
+        o2.kill()
+        self.assertEqual(i.sales(), 1)
+
+    def test_sales_excludes_tz(self):
+        # clone the order
+        o1 = Order.objects.first()
+        o1.pk = None
+        o1.save()
+        o2 = Order.objects.first()
+        self.assertNotEqual(o1, o2)
+        self.assertEqual(Order.objects.count(), 2)
+
+        # Assign some items to them
+        i = Item.objects.create(name='foo', fabrics=5, stocked=5)
+        for order in Order.objects.all():
+            OrderItem.objects.create(element=i, reference=order, price=5)
+            order.kill()
+        self.assertEqual(i.sales(), 2)
+        o2.customer = Customer.objects.create(
+            name='Trapuzarrak', cp=0, phone=0)  # Irrelevant
+        o2.save()
+        self.assertEqual(i.sales(), 1)
 
     def test_item_html_string(self):
         i = Item.objects.create(
@@ -1514,6 +1768,14 @@ class TestObjectItems(TestCase):
         self.assertEqual(i.production, 20)
         self.assertEqual(f.production, 0)
 
+    def test_all_time_sales(self):
+        """Tested in test_sales_default_period."""
+        pass
+
+    def test_year_sales(self):
+        """Tested in test_sales_default_period."""
+        pass
+
 
 class TestOrderItems(TestCase):
     """Test the orderItem model."""
@@ -1542,7 +1804,7 @@ class TestOrderItems(TestCase):
                              budget=2000,
                              prepaid=0)
         # Create item
-        Item.objects.create(name='Test item', fabrics=5, price=10)
+        Item.objects.create(name='Test item', fabrics=5, price=10, stocked=10)
 
     def test_delete_obj_item_is_protected(self):
         """Deleting the reference should be forbidden."""
@@ -1607,7 +1869,6 @@ class TestOrderItems(TestCase):
         b.delete()
         i = OrderItem.objects.get(pk=i.pk)
         self.assertEqual(i.batch, None)
-
 
     def test_orders_with_timed_items_are_at_least_status_3(self):
         o = Order.objects.first()
@@ -2179,7 +2440,8 @@ class TestInvoice(TestCase):
             user=u, customer=c, ref_name='foo', delivery=date.today())
 
         # Create obj item
-        item = Item.objects.create(name='Test item', fabrics=5, price=10)
+        item = Item.objects.create(
+            name='Test item', fabrics=5, price=10, stocked=10)
 
         # Create orderitems
         OrderItem.objects.create(reference=order, element=item)
@@ -2273,7 +2535,7 @@ class TestInvoice(TestCase):
         """But invoices with 0 amount are allowed, eg, with discount."""
         order = Order.objects.first()
         OrderItem.objects.create(
-            reference=order, element=Item.objects.first(), price=-10)
+            reference=order, element=Item.objects.last(), price=-10)
         order.kill()
         self.assertEqual(order.invoice.amount, 0)
 
@@ -2672,7 +2934,8 @@ class TestCashFlowIO(TestCase):
                                  delivery=date.today(), )
 
         # Create items
-        i = Item.objects.create(name='Test item', fabrics=5, price=10)
+        i = Item.objects.create(
+            name='Test item', fabrics=5, price=10, stocked=20)
         OrderItem.objects.create(reference=o, element=i, qty=10)
 
         # Create an expense
