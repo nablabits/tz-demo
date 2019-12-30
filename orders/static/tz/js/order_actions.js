@@ -26,6 +26,7 @@ $(function () {
   })
 
   var loadActionForm = function () {
+    // The old load modal
     var action = $(this).attr('data-action')
     var pk = $(this).attr('data-pk')
     var aditionalPK = false
@@ -49,6 +50,7 @@ $(function () {
   }
 
   var saveActionForm = function (e) {
+    // The old save form in modal
     e.preventDefault()
     var form = $('#send-form')
     var formData = form.serializeArray()
@@ -81,7 +83,8 @@ $(function () {
     })
   }
 
-  function loadForm () {
+  function loadFormModal () {
+    // Load a form inside a modal
     $.ajax({
       url: $(this).attr('action'),
       data: $(this).attr('data'),
@@ -113,7 +116,7 @@ $(function () {
       dataType: 'json',
       beforeSend: function () {
         btn.addClass('d-none')
-        form.find('.js-bg-working').removeClass('d-none')
+        form.find('#bg-working').removeClass('d-none')
       },
       success: function (data) {
         if (data.form_is_valid) {
@@ -306,7 +309,7 @@ $(function () {
 
   // actions new CRUD process (POST)
   $('#root').on('submit', '.js-crud-form', saveForm)
-  $('#root').on('click', '.js-crud-load', loadForm)
+  $('#root').on('click', '.js-crud-load', loadFormModal)
   $('#root').on('click', '.js-kanban-jump', kanbanJump)
 
   // Pqueue actions

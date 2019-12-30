@@ -50,6 +50,7 @@ express and regular ones) and to edit different base_items in the item view.
       <input type="hidden" name="item_type" value="{{data_type.0}}">
       <input type="hidden" name="filter-on-type" value="{{data_type.0}}">
       <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+      <input type="hidden" name="stocked" value="0">
       <div class="form-row m-1">
         <div class="col-4">
           <input class="form-control" type="text" name="name" placeholder="Nuevo modelo de {{data_type.1}}" required>
@@ -101,6 +102,7 @@ express and regular ones) and to edit different base_items in the item view.
       <input type="hidden" name="filter-on-name" value="{{data_name}}">
       <input type="hidden" name="name" value="{{data_name}}">
       <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+      <input type="hidden" name="stocked" value="0">
       <div class="form-row m-1">
         <div class="col">
           <input class="form-control" type="text" name="size" placeholder="Nueva Talla" required>
@@ -144,6 +146,7 @@ express and regular ones) and to edit different base_items in the item view.
   <input type="hidden" name="name" value="{{data_name}}">
   <input type="hidden" name="size" value="{{data_size}}">
   <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+  <input type="hidden" name="stocked" value="0">
   <div class="form-row align-items-center m-1">
     <div class="col-auto">
       <select class="form-control" name="item_class">

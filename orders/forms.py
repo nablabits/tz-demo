@@ -65,9 +65,7 @@ class ItemForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = Item
-        fields = ('name', 'item_type', 'item_class', 'size', 'fabrics',
-                  'notes', 'foreing', 'price', )
-
+        fields = '__all__'
 
 class OrderItemForm(forms.ModelForm):
     """Create new or update order items."""

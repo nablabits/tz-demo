@@ -1,0 +1,51 @@
+{% comment %}
+The stock edit form.
+
+Renders this form in the selected item on stock tabs to perform an edit on the stock.
+{% endcomment %}
+
+{% load widget_tweaks %}
+<div class="modal-header">
+  <h4 class="modal-title">{{modal_title}}</h4>
+  <a type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true"><i class="fa fa-times"></i></span>
+  </a>
+</div>
+
+<form class="js-crud-form" method="post" action="{% url 'items-CRUD' %}">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="edit-stock">
+  <input type="hidden" name="item_pk" value="{{item.pk}}">
+  {% render_field form.name.as_hidden %}
+  {% render_field form.item_type.as_hidden %}
+  {% render_field form.item_class.as_hidden %}
+  {% render_field form.size.as_hidden %}
+  {% render_field form.fabrics.as_hidden %}
+  {% render_field form.price.as_hidden %}
+  <div class="modal-body">
+    <div class="row">
+      <div class="col-9 d-flex my-1">
+        {{item.html_string}}
+      </div>
+      <div class="col-3">
+        <div class="form-group">
+          {% render_field form.stocked class="form-control" %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <div class="mr-auto d-none" id="check-success">
+      <i class="far fa-check text-success"></i> Guardado, puedes cerrar esta ventana.
+    </div>
+    <div class="mr-auto d-none" id="bg-working">
+      <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
+    </div>
+    <div class="mr-auto">
+      {{form.errors}}
+    </div>
+    <button type="submit" class="btn btn-outline-success js-submit">
+      <i class="fas fa-check mr-1"></i>Guardar
+    </button>
+  </div>
+</form>

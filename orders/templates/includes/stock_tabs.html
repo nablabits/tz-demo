@@ -1,0 +1,82 @@
+{% comment %}
+Render the tabs for the stock manager.
+
+This is the dynamic element for AJAX updates when filtering and editing the stock.
+{% endcomment %}
+
+<ul class="nav nav-tabs" role="tablist">
+  <li class="nav-item">
+    <a class="nav-link active" data-toggle="tab" href="#p1-items" role="tab">
+      <i class="fal fa-flask-poison pr-2"></i>Urgentes<span class="ml-1 badge badge-info">{{tab_elements.p1.count}}</span>
+      </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-toggle="tab" href="#p2-items" role="tab">
+      <i class="fal fa-ambulance pr-2"></i>
+      Cortos
+      <span class="ml-1 badge badge-info">{{tab_elements.p2.count}}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-toggle="tab" href="#p3-items" role="tab">
+      <i class="fal fa-thumbs-up pr-2"></i>
+      Bien
+      <span class="ml-1 badge badge-info">{{tab_elements.p3.count}}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-toggle="tab" href="#negative-items" role="tab">
+      <i class="fal fa-ghost pr-2"></i>
+      Stock sin ventas
+      <span class="ml-1 badge badge-info">{{tab_elements.negative.count}}</span>
+    </a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" data-toggle="tab" href="#zero-items" role="tab">
+      <i class="fal fa-coffin pr-2"></i>
+      Ni ventas ni stock <span class="ml-1 badge badge-info">{{tab_elements.zero.count}}</span>
+    </a>
+  </li>
+</ul>
+
+{# Tab content #}
+<div class="tab-content">
+  {% for id, content in tab_elements.items %}
+  <div class="tab-pane {% if forloop.first %}show active{% endif %}" id="{{id}}-items" role="tabpanel">
+    <table class="table">
+      <thead>
+        <tr>
+          <th scope="col">Prenda</th>
+          <th scope="col">Tiempo</th>
+          <th scope="col">Ventas totales</th>
+          <th scope="col">Ventas 12 meses</th>
+          <th scope="col">Stock actual</th>
+          <th scope="col">Salud</th>
+          <th scope="col"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in content %}
+        <tr>
+          <td class="d-flex">{{item.html_string}}</td>
+          {% if item.foreing %}
+            <td>Prenda externa</td>
+          {% else %}
+            <td>{{item.pretty_avg.0}} | {{item.pretty_avg.1}} | {{item.pretty_avg.2}}</td>
+          {% endif %}
+          <td>{{item.all_time_sales}}</td>
+          <td>{{item.year_sales}}</td>
+          <td id="stock-{{item.pk}}">{{item.stocked}}</td>
+          <td>{{item.health}}</td>
+          <td>
+            <button class="mr-auto btn btn-sm btn-outline-success js-crud-load" action="{% url 'items-CRUD' %}" data="item_pk={{item.pk}}&action=edit-stock">
+              <i class="far fa-edit"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endfor %}
+</div>
