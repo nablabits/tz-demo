@@ -1,5 +1,12 @@
 {% extends "tz/base.html" %}
 {% block pqueueview %}
+
+{% comment %}
+The entry point for pqueue view.
+
+Renders a two col view that shows available items and queued items (include).
+{% endcomment %}
+
 <section id="pqueue">
   <!-- Manager view for PC, tablet is in a separate view-->
   <div class="container pt-4">
@@ -16,10 +23,14 @@
           {% for item in available %}
           <div class="border rounded mr-4 my-1 p-2">
             <div class="d-flex align-items-center">
-              <a href="{% url 'order_view' item.reference.pk %}">
-              <strong>{{item.reference.pk}}. {{item.reference.customer.name}}</strong>, &nbsp;
-              </a>
-              {{item.element.html_string}}
+              <div class="d-flex flex-column">
+                <a href="{% url 'order_view' item.reference.pk %}">
+                  <strong>{{item.reference.pk}}. {{item.reference.customer.name}}</strong>, &nbsp;
+                </a>
+                <div class="d-flex">
+                  {{item.element.html_string}}
+                </div>
+              </div>
               <button class="mr-1 btn btn-sm btn-outline-success ml-auto js-queue" data-action="send" data-pk="{{item.pk}}">
                 <i class="fal fa-share"></i>
               </button>

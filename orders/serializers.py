@@ -44,6 +44,14 @@ class InvoiceSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class ExpenseCategorySerializer(serializers.ModelSerializer):
+    """Define the serializer for the item model."""
+
+    class Meta:
+        model = models.ExpenseCategory
+        fields = '__all__'
+
+
 class ExpenseSerializer(serializers.ModelSerializer):
     """Define the serializer for the order item model."""
 
@@ -52,11 +60,27 @@ class ExpenseSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CashFlowIOSerializer(serializers.ModelSerializer):
+    """Define the serializer for the order item model."""
+
+    class Meta:
+        model = models.CashFlowIO
+        fields = '__all__'
+
+
 class BankMovementSerializer(serializers.ModelSerializer):
     """Define the serializer for the order item model."""
 
     class Meta:
         model = models.BankMovement
+        fields = '__all__'
+
+
+class StatusShiftSerializer(serializers.ModelSerializer):
+    """Define the serializer for the order item model."""
+
+    class Meta:
+        model = models.StatusShift
         fields = '__all__'
 
 

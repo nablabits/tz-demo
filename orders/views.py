@@ -27,8 +27,9 @@ from .forms import (
     CommentForm, CustomerForm, EditDateForm, InvoiceForm, ItemForm, OrderForm,
     OrderItemForm, TimetableCloseForm, ItemTimesForm, OrderItemNotes,
     CashFlowIOForm, )
-from .models import (BankMovement, Comment, Customer, Expense, Invoice, Item,
-                     Order, OrderItem, PQueue, Timetable, CashFlowIO, )
+from .models import (
+    BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
+    PQueue, Timetable, CashFlowIO, ExpenseCategory, StatusShift, )
 
 from decouple import config
 
@@ -2135,16 +2136,34 @@ class InvoiceAPIList(viewsets.ReadOnlyModelViewSet):
     serializer_class = serializers.InvoiceSerializer
 
 
+class ExpenseCategoryAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for invoices."""
+    queryset = ExpenseCategory.objects.all()
+    serializer_class = serializers.ExpenseCategorySerializer
+
+
 class ExpenseAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for expenses."""
     queryset = Expense.objects.all()
     serializer_class = serializers.ExpenseSerializer
 
 
+class CashFlowIOAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for expenses."""
+    queryset = CashFlowIO.objects.all()
+    serializer_class = serializers.CashFlowIOSerializer
+
+
 class BankMovementAPIList(viewsets.ReadOnlyModelViewSet):
     """API view for bank movements."""
     queryset = BankMovement.objects.all()
     serializer_class = serializers.BankMovementSerializer
+
+
+class StatusShiftAPIList(viewsets.ReadOnlyModelViewSet):
+    """API view for bank movements."""
+    queryset = StatusShift.objects.all()
+    serializer_class = serializers.StatusShiftSerializer
 
 
 class TimetableAPIList(viewsets.ReadOnlyModelViewSet):
