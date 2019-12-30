@@ -15,6 +15,8 @@
   * **Mejora:** los tickets ahora imprimen la fecha y la hora.
   * **Mejora:** ahora el cuadro de diálogo de añadir/editar pedido tiene el campo
   notas colapsado para que se vea completo.
+  * **Bug:** las barras the la pantalla principal ya están ajustadas a las cantidades
+  correspondientes.
   * **Bug:** al editar un pedido ya no hay que volver a introducir el nombre del
   cliente.
 
