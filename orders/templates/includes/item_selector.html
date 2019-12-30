@@ -1,3 +1,10 @@
+{% comment %}
+Render the item selector.
+
+Item selector is the interactive interface to add order items to orders (both
+express and regular ones) and to edit different base_items in the item view.
+{% endcomment %}
+
 <div class="d-flex align-items-center">
   <button type="button" class="btn btn-outline-success mx-1 {%if not data_type%}active{%endif%} js-item-selector" data-aditional-pk="{{order.pk}}">
     <i class="fal fa-filter pr-3"></i>Todas las prendas
@@ -43,6 +50,7 @@
       <input type="hidden" name="item_type" value="{{data_type.0}}">
       <input type="hidden" name="filter-on-type" value="{{data_type.0}}">
       <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+      <input type="hidden" name="stocked" value="0">
       <div class="form-row m-1">
         <div class="col-4">
           <input class="form-control" type="text" name="name" placeholder="Nuevo modelo de {{data_type.1}}" required>
@@ -94,6 +102,7 @@
       <input type="hidden" name="filter-on-name" value="{{data_name}}">
       <input type="hidden" name="name" value="{{data_name}}">
       <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+      <input type="hidden" name="stocked" value="0">
       <div class="form-row m-1">
         <div class="col">
           <input class="form-control" type="text" name="size" placeholder="Nueva Talla" required>
@@ -137,6 +146,7 @@
   <input type="hidden" name="name" value="{{data_name}}">
   <input type="hidden" name="size" value="{{data_size}}">
   <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+  <input type="hidden" name="stocked" value="0">
   <div class="form-row align-items-center m-1">
     <div class="col-auto">
       <select class="form-control" name="item_class">
@@ -175,48 +185,49 @@
 <div class="d-flex">
   <ul class="list-group list-group-flush">
     {%for item in available_items%}
-     <li class="list-group-item d-flex align-items-center">
-         {%include 'includes/item_string.html'%}
-         {%if item.notes%}
-         <span class="mr-1"><i class="far fa-sticky-note ml-2"></i></span>
-         {%endif%}
-         {%if item.foreing%}
-         <span class="mr-1"><i class="far fa-sign-in-alt"></i></span>
-         {%endif%}
-         <span class="ml-3">{{item.production}}</span>
-         <span class="ml-3">{{item.price}}€</span>
-         <span class="ml-1 mr-5">({{item.fabrics}}m)</span>
-         {% if not item.foreing %}
-           {%if item.avg_crop or item.avg_sewing or item.avg_iron%}
-            <span class="ml-1 mr-5">
-              {% if item.avg_crop %}
-                {{item.avg_crop}}
-              {% else %}
-                Sin tiempos de corte
-              {% endif %}
-              &middot;
-              {% if item.avg_sewing %}
-                {{item.avg_sewing}}
-              {% else %}
-                Sin tiempos de costura
-              {% endif %}
-              &middot;
-              {% if item.avg_iron %}
-                {{item.avg_iron}}
-              {% else %}
-                Sin tiempos de planchado
-              {% endif %}
-            </span>
-           {% else %}
-            Sin datos
-           {% endif %}
-         {% endif %}
-         <span class="ml-5">{%include 'includes/action_buttons.html'%}</span>
-     </li>
-    {%endfor%}
-    {%if total_items > 5%}
       <li class="list-group-item d-flex align-items-center">
-      <i class="far fa-ellipsis-v-alt mr-2"></i> Y {{total_items|add:"-5"}} más.
+        #{{item.pk}}-{{item.html_string}}
+        {%if item.notes%}
+          <span class="mr-1"><i class="far fa-sticky-note ml-2"></i></span>
+        {%endif%}
+        {%if item.foreing%}
+          <span class="mr-1"><i class="far fa-sign-in-alt"></i></span>
+        {%endif%}
+        <span class="ml-3">{{item.production}}</span>
+        <span class="ml-3">{{item.price}}€</span>
+        <span class="ml-1 mr-5">({{item.fabrics}}m)</span>
+        {% if not item.foreing %}
+          <span class="ml-1 mr-2">
+              {{item.pretty_avg.0}}&middot;
+          </span>
+          <span class="ml-1 mr-2">
+              {{item.pretty_avg.1}}&middot;
+          </span>
+          <span class="ml-1 mr-2">
+              {{item.pretty_avg.2}}
+          </span>
+        {% endif %}
+
+      {# show some buttons depending if we are adding to order or we are editing base items #}
+      <span class="ml-5">
+        {% if order %}
+          <button class="mr-1 btn btn-sm btn-outline-success js-crud-load" action="{% url 'orderitems-CRUD' %}" data="element={{item.pk}}&reference={{order.pk}}">
+            <i class="far fa-share"></i>
+          </button>
+        {% else %}
+          <button class="mr-1 btn btn-sm btn-outline-success js-crud-edit" data-action="object-item-edit" data-pk="{{item.pk}}">
+            <i class="far fa-edit"></i>
+          </button>
+          <button class="mr-1 btn btn-sm btn-outline-danger js-crud-delete" data-action="object-item-delete" data-pk="{{item.pk}}">
+            <i class="far fa-trash"></i>
+          </button>
+        {% endif %}
+      </span>
+    </li>
+    {%endfor%}
+    {%if total_items > 15%}
+      <li class="list-group-item d-flex align-items-center">
+      <i class="far fa-ellipsis-v-alt mr-2"></i> Y {{total_items|add:"-15"}} más.
       </li>
     {%endif%}
   </ul>

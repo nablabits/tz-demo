@@ -25,9 +25,7 @@ class OrderForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = Order
-        fields = ('customer', 'membership', 'ref_name', 'delivery', 'priority',
-                  'waist', 'chest', 'hip', 'lenght', 'others',
-                  'budget', 'prepaid', 'confirmed', )
+        fields = '__all__'
 
     def __init__(self, *args, **kwargs):
         """Override default settings."""
@@ -67,25 +65,28 @@ class ItemForm(forms.ModelForm):
         """Meta options for a quick design."""
 
         model = Item
-        fields = ('name', 'item_type', 'item_class', 'size', 'fabrics',
-                  'notes', 'foreing', 'price', )
-
+        fields = '__all__'
 
 class OrderItemForm(forms.ModelForm):
-    """Add items to the order using a form."""
+    """Create new or update order items."""
 
     class Meta:
-        """Meta options for a quick design."""
+        """Define the model and the fields for the form."""
 
         model = OrderItem
-        fields = ('element', 'qty', 'crop', 'sewing', 'iron', 'description',
-                  'fit', 'stock', 'price')
+        fields = '__all__'
 
     def __init__(self, *args, **kwargs):
-        """Override the order in the reference dropdown."""
+        """Override some of the fields defatults."""
         super(OrderItemForm, self).__init__(*args, **kwargs)
+
+        # Set the order for the order dropdown
         queryset = Item.objects.order_by('item_type')
         self.fields['element'].queryset = queryset
+
+        # Filter the results for batch field
+        queryset = Order.objects.filter(customer__name__iexact='trapuzarrak')
+        self.fields['batch'].queryset = queryset.order_by('pk')
 
 
 class ItemTimesForm(forms.ModelForm):

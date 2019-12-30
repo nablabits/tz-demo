@@ -1,52 +1,124 @@
+{% comment %}
+Add/Edit order items.
+
+This custom form template lets create or edit order items. Fits to item selector both in regular and express orders. Does not depend on regular form template.
+{% endcomment %}
+
 {% load widget_tweaks %}
-<div class="row">
-  <div class="col-7">
-    <div class="form-group">
-      <label for="id_element">Prenda:</label>
-      {% render_field form.element class="form-control" %}
-    </div>
-  </div>
-  <div class="col-2">
-    <div class="form-group">
-      {{form.qty.label_tag}}
-      {% render_field form.qty class="form-control" %}
-    </div>
-  </div>
-  <div class="col-3">
-    <div class="form-group">
-      <label for="id_price">Precio:</label>
-      {% render_field form.price class="form-control" %}
-    </div>
-  </div>
+
+<div class="modal-header">
+  <h4 class="modal-title">{{modal_title}}</h4>
+  <a type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true"><i class="fa fa-times"></i></span>
+  </a>
 </div>
-<div class="row js-set-times">
-  <div class="col">
-    <div class="form-group">
-      {{form.crop.label_tag}}
-      {% render_field form.crop class="form-control" %}
+<form class="js-crud-form" method="post" action="{% url 'orderitems-CRUD' %}">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="main">
+  <input type="hidden" name="element" value="{{base_item.pk}}">
+  <input type="hidden" name="reference" value="{{order.pk}}">
+  {% render_field form.fit.as_hidden %}
+
+  <div class="modal-body">
+    <div class="d-flex align-items-center mb-2">
+      <span class="mr-1"><strong>Prenda seleccionada: </strong></span>
+      {{base_item.html_string}}
+    </div>
+    {% if base_item.price == 0 %}
+      <div class="alert alert-warning" role="alert">
+        <i class="fa fa-exclamation-triangle pr-2"></i>Atención esta prenda no tiene precio
+      </div>
+    {% endif %}
+    <div class="row">
+      <div class="col-3">
+        <div class="form-group">
+          {{ form.qty.label_tag }}
+          {% render_field form.qty class="form-control" %}
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="form-group">
+          {{ form.price.label_tag }}
+          {% render_field form.price class="form-control" value=base_item.price%}
+        </div>
+      </div>
+      <div class="col">
+        <div class="form-group">
+          <label for="id_batch">Lote</label>
+          {% render_field form.batch class="form-control" %}
+        </div>
+      </div>
+    </div>
+
+    {% if order_item %}  {# Only render the fields if we're upadting #}
+      <input type="hidden" name="order_item_pk" value="{{order_item.pk}}">
+      <div class="row js-set-times">
+        <div class="col">
+          <div class="form-group">
+            {{form.crop.label_tag}}
+            {% render_field form.crop class="form-control" %}
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group">
+            {{form.sewing.label_tag}}
+            {% render_field form.sewing class="form-control" %}
+          </div>
+        </div>
+        <div class="col">
+          <div class="form-group">
+            {{form.iron.label_tag}}
+            {% render_field form.iron class="form-control" %}
+          </div>
+        </div>
+      </div>
+    {% else %}  {# or hide them on creating a new instance #}
+      {% render_field form.crop.as_hidden %}
+      {% render_field form.sewing.as_hidden %}
+      {% render_field form.iron.as_hidden %}
+    {% endif %}
+
+    {# Description field collapse #}
+    <div class="d-flex flex-column">
+      <h5 style="cursor:pointer" data-toggle="collapse" data-target="#add-description" aria-hidden="true" aria-expanded="true">
+        <div class="collapse" id="add-description">
+          {% render_field form.description class="form-control" rows="2" %}
+        </div>
+        Descripción<i class="far fa-plus-circle ml-2 js-plusToCaret"></i></h5>
+    </div>
+    <hr>
+    <div class="d-flex ml-4">
+      <div class="form-check">
+        {% if base_item.price == 0 %}
+          <input type="checkbox" name="set-default-price" class="form-check-input" id="set-default-price" checked>
+          <label for="set-default-price">Asigna este precio a la prenda genérica (deberías)</label>
+        {% else %}
+          <input type="checkbox" name="set-default-price" class="form-check-input" id="set-default-price">
+          <label for="set-default-price">Actualizar la prenda genérica con este precio</label>
+        {% endif %}
+      </div>
+    </div>
+    <div class="d-flex ml-4">
+      <div class="form-check">
+        {% if order.ref_name != 'Quick' %}
+          {% render_field form.stock class="form-check-input" %}
+          <label for="id_stock">Es una prenda de Stock</label>
+        {% endif %}
+      </div>
     </div>
   </div>
-  <div class="col">
-    <div class="form-group">
-      {{form.sewing.label_tag}}
-      {% render_field form.sewing class="form-control" %}
+  <div class="modal-footer">
+    <div class="mr-auto d-none" id="check-success">
+      <i class="far fa-check text-success"></i> Guardado, puedes cerrar esta ventana.
     </div>
-  </div>
-  <div class="col">
-    <div class="form-group">
-      {{form.iron.label_tag}}
-      {% render_field form.iron class="form-control" %}
+    <div class="mr-auto d-none" id="bg-working">
+      <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
     </div>
+    <div class="mr-auto">
+      {{form.errors}}
+    </div>
+    <button type="submit" class="btn btn-outline-success js-submit">
+      <i class="fas fa-check mr-1"></i>Guardar
+    </button>
   </div>
-</div>
-<div class="d-flex">
-  <div class="form-group form-check">
-      {% render_field form.stock class="form-check-input" %}
-      <label class="form-check-label" for="id_stock">Es una prenda de stock</label>
-  </div>
-</div>
-<div class="form-group">
-  {{form.description.label_tag}}
-  {% render_field form.description class="form-control" %}
-</div>
-{{form.fit.as_hidden}}
+</form>

@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from orders.models import (BankMovement, Customer, Expense, Invoice, Item,
+from orders.models import (BankMovement, Customer, Expense, Item,
                            Order, OrderItem, Timetable)
 
 
@@ -19,11 +19,12 @@ class ReadOnlyTests(APITestCase):
         c = Customer.objects.create(name='Test Customer', phone=0, cp=0)
         order = Order.objects.create(
             customer=c, user=su, ref_name='Test order', delivery=date.today())
-        item = Item.objects.create(name='Test item', fabrics=0, price=10)
+        item = Item.objects.create(
+            name='Test item', fabrics=0, price=10, stocked=30)
         OrderItem.objects.create(
             element=item, reference=order, description='Test order item')
 
-        Invoice.objects.create(reference=order, )
+        order.kill()
 
         # Login
         self.client.credentials(HTTP_AUTHORIZATION='Token ' + token.key)

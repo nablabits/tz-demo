@@ -25,30 +25,8 @@ $(function () {
     }
   })
 
-  var updateStatus = function () {
-    /* Updates current order status */
-    var pk = $(this).attr('data-pk')
-    var status = $(this).attr('data-status')
-    var action = 'update-status'
-    $.ajax({
-      url: '/actions/',
-      data: $.param({
-        'pk': pk, 'status': status, 'action': action
-      }),
-      type: 'post',
-      dataType: 'json',
-      success: function (data) {
-        if (data.reload) {
-          location.reload()
-        } else {
-          $(data.html_id).html(data.html)
-        }
-      }
-    })
-    return false
-  }
-
   var loadActionForm = function () {
+    // The old load modal
     var action = $(this).attr('data-action')
     var pk = $(this).attr('data-pk')
     var aditionalPK = false
@@ -72,6 +50,7 @@ $(function () {
   }
 
   var saveActionForm = function (e) {
+    // The old save form in modal
     e.preventDefault()
     var form = $('#send-form')
     var formData = form.serializeArray()
@@ -104,7 +83,26 @@ $(function () {
     })
   }
 
-  var saveForm = function (e) {
+  function loadFormModal () {
+    // Load a form inside a modal
+    $.ajax({
+      url: $(this).attr('action'),
+      data: $(this).attr('data'),
+      type: 'get',
+      dataType: 'json',
+      beforeSend: function () {
+        $('#action-modal').modal('show')
+      },
+      success: function (data) {
+        $('#action-modal .modal-content').html(data.html)
+        if ($('#action-modal #id_stock').attr('checked')) {
+          $('#action-modal .js-set-times').slideUp()
+        }
+      }
+    })
+  }
+
+  function saveForm (e) {
     // the new method to process AJAX for each model
     e.preventDefault()
     var form = $(this)
@@ -118,7 +116,7 @@ $(function () {
       dataType: 'json',
       beforeSend: function () {
         btn.addClass('d-none')
-        form.find('.js-bg-working').removeClass('d-none')
+        form.find('#bg-working').removeClass('d-none')
       },
       success: function (data) {
         if (data.form_is_valid) {
@@ -128,10 +126,14 @@ $(function () {
             window.location.replace(data.redirect)
           } else {
             $(data.html_id).html(data.html)
+            $('#action-modal #bg-working').addClass('d-none')
+            $('#action-modal #check-success').removeClass('d-none')
+            $('#action-modal').modal('hide')
           }
         } else {
           btn.removeClass('d-none')
           errorBox.html(data.errors)
+          $('#action-modal .modal-content').html(data.html)
         }
       }
     })
@@ -140,7 +142,7 @@ $(function () {
   var kanbanJump = function () {
     // Move within kanban statuses
     var pk = $(this).attr('data-pk')
-    var direction = $(this).attr('data-direction')
+    var origin = $(this).attr('id')
 
     // Show spinner and hide arrows to avoid problems
     var spinner = '#bg-working-' + pk
@@ -150,7 +152,7 @@ $(function () {
     $.ajax({
       url: '/orders-CRUD/',
       data: $.param({
-        'pk': pk, 'direction': direction, 'action': 'kanban-jump'
+        'pk': pk, 'origin': origin, 'action': 'kanban-jump'
       }),
       type: 'post',
       dataType: 'json',
@@ -269,10 +271,9 @@ $(function () {
           console.log('click');
           var name = $(this).text()
           var pk = $(this).attr('value')
-          console.log(name, pk);
           if (pk !== 'void') {
-            $('#action-modal ' + '#' + url).val(name)
-            $('#action-modal ' + hiddenInput).attr('value', pk)
+            $('#root ' + '#' + url).val(name)
+            $('#root ' + hiddenInput).attr('value', pk)
             $(outcome).empty().removeClass('border')
           }
         })
@@ -301,15 +302,14 @@ $(function () {
 
   // actions (POST)
   $('#action-modal').on('click', '#send-form button', saveActionForm)
-  $('#root').on('click', '.js-order-status', updateStatus)
-  $('.js-order-status').click(updateStatus)
   $('#search').on('submit', '.js-search-order', searchAction)
 
   // Customer hints for orders
-  $('#action-modal').on('keyup', '.js-hints', Hints)
+  $('#root').on('keyup', '.js-hints', Hints)
 
   // actions new CRUD process (POST)
   $('#root').on('submit', '.js-crud-form', saveForm)
+  $('#root').on('click', '.js-crud-load', loadFormModal)
   $('#root').on('click', '.js-kanban-jump', kanbanJump)
 
   // Pqueue actions

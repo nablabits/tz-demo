@@ -1,12 +1,18 @@
 {% extends "tz/base.html" %}
 {% block listview %}
+
+{% comment %}
+Loads a generic list view for customers & base items depending on the variables
+got.
+{% endcomment %}
+
 {% if placeholder %}
   {% include 'includes/search_box.html' %}
 {% endif %}
 <div class="container mt-4">
   <div class="d-flex-column my-4">
     <h3>{{h3}}</h3>
-      <button type="button" class="btn btn-outline-success js-crud-add" data-action="{{js_action_add}}"  data-pk="{{js_data_pk}}">
+      <button type="button" class="btn btn-outline-success js-crud-add" data-action="{{js_action_add}}">
         <i class="fa fa-plus"></i> {{btn_title_add}}
       </button>
   </div>

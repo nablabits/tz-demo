@@ -5,7 +5,7 @@ from datetime import date
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from orders.forms import CustomerForm, ItemForm, OrderForm
+from orders.forms import CustomerForm, OrderForm
 from orders.models import Customer, Order
 
 
@@ -102,51 +102,6 @@ class OrderFormTest(TestCase):
         self.assertEqual(len(form.fields['customer'].choices), 2)
         for customer in form.fields['customer'].choices:
             self.assertNotEqual(customer[1], 'express')
-
-
-class ItemFormTest(TestCase):
-    """Test the ItemForm."""
-
-    def setUp(self):
-        """Set up the tests."""
-        self.form = ItemForm({'name': 'Test Item',
-                              'item_type': '1',
-                              'item_class': 'S',
-                              'size': 10,
-                              'fabrics': 10,
-                              'price': 100,
-                              'notes': 'Notes',
-                              'foreing': True})
-        self.assertTrue(self.form.is_valid())
-        self.form.save()
-
-    def test_avoid_duplicates(self):
-        """When trying to save a duplicated form, is_valid() is False."""
-        duplicated_form = ItemForm({'name': 'Test Item',
-                                    'item_type': '1',
-                                    'item_class': 'S',
-                                    'size': 10,
-                                    'fabrics': 10,
-                                    'price': 100,
-                                    'notes': 'Notes',
-                                    'foreing': True})
-        not_valid = duplicated_form.is_valid()
-        self.assertFalse(not_valid)
-        self.assertEqual(duplicated_form.errors['name'][0],
-                         'Items cannot have the same name the same size and ' +
-                         'the same class')
-
-    def test_items_with_different_fabrics_should_be_accepted(self):
-        """Avoid cleaning for edited items."""
-        same_fabrics = ItemForm({'name': 'Test Item',
-                                 'item_type': '1',
-                                 'item_class': 'S',
-                                 'size': 10,
-                                 'fabrics': 12,
-                                 'price': 100,
-                                 'notes': 'Another Notes',
-                                 'foreing': True})
-        self.assertTrue(same_fabrics.is_valid())
 
 
 class OrderItemFormTest(TestCase):

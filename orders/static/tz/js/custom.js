@@ -49,6 +49,15 @@ $(document).ready(function () {
   loadChangelog()
   $('#item_objects_list').on('submit', '.js-filter-view', filterItems)
 
+  // Add notes field animation in modals
+  $('#action-modal').on('click', '.js-plusToCaret', plusToCaret)
+  $('#root').on('click', '.js-plusToCaret', plusToCaret)
+  function plusToCaret () {
+    $(this).toggleClass('fa-caret-circle-up')
+    $(this).toggleClass('pt-1')
+    $(this).toggleClass('fa-plus-circle')
+  }
+
   // Change toggle on click
   $('#unconfirmed-toggle').click(function () {
     $('#unconfirmed-toggle > i').toggleClass('fa-toggle-off')
@@ -59,6 +68,12 @@ $(document).ready(function () {
   $('.js-kanban').hover(function () {
     $(this).find('.fa-pencil').toggleClass('d-none')
     $(this).find('.fa-comment-plus').toggleClass('d-none')
+  })
+
+  // Hover effects on kanban arrows
+  $('.js-kanban-jump').hover(function () {
+    $(this).toggleClass('fal')
+    $(this).toggleClass('fas')
   })
 
   // enalarge ticket on invoice issuing

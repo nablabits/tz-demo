@@ -4,6 +4,23 @@
 {% load humanize %}
 {% load i18n %}
 {% language 'es' %}
+
+{% comment %}
+Render the info about the order.
+
+Has three sections:
+  1) The quick info ref_name, customer, price and confirmation
+  2) The kanban stage
+  3, way bigger) a 4-tab view:
+    * Main, details in deep about the order, prices management and status tracker
+    * Items, shows the items already added to the order.
+      Also has the item_selector collapsed to add more items.
+      It renders with a staged area called item_quick_list in layout 8-4
+    * Comments.
+    * Tasks, connects with todoist to check the pending tasks.
+{% endcomment %}
+
+
 <section id="order_view" data-pk="{{ order.pk }}">
   <div class="container-fluid mt-4 pb-3 border-bottom">
     <div class="d-flex align-items-center">
@@ -47,12 +64,35 @@
       {%endif%}
       {%if not order.invoiced%}
         <div class="d-flex ml-auto">
-          <button class="btn btn-outline-success mr-2 js-crud-edit" data-action="order-edit"  data-pk="{{order.pk}}" id="order-edit">
+          <button class="btn btn-outline-success mr-2 js-crud-load" action="{% url 'orders-CRUD' %}" data="order_pk={{order.pk}}">
             <i class="fal fa-edit"></i> Editar pedido
           </button>
-          <div class="{% if order.status == '8' %}d-none{% else %}d-flex mb-auto{% endif %}">
-              <button class="ml-2 btn btn-outline-danger js-order-status" data-status="8" data-pk="{{order.pk}}" id="status-cancel"><i class="fas fa-times"></i> Anular pedido</button>
+
+          {# Cancel order form #}
+          {% if order.status != '8' %}
+          <div class="d-flex mb-auto">
+            <form action="{% url 'orders-CRUD' %}" method="post">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="main">
+              <input type="hidden" name="inbox_date" value="{{order.inbox_date}}">
+              <input type="hidden" name="user" value="{{order.user}}">
+              <input type="hidden" name="customer" value="{{order.customer.pk}}">
+              <input type="hidden" name="membership" value="{{order.membership.pk}}">
+              <input type="hidden" name="ref_name" value="{{order.ref_name}}">
+              <input type="hidden" name="delivery" value="{{order.delivery}}">
+              <input type="hidden" name="status" value="8">
+              <input type="hidden" name="priority" value="{{order.priority}}">
+              <input type="hidden" name="confirmed" value="{{order.confirmed}}">
+              <input type="hidden" name="waist" value="{{order.waist}}">
+              <input type="hidden" name="chest" value="{{order.chest}}">
+              <input type="hidden" name="hip" value="{{order.hip}}">
+              <input type="hidden" name="lenght" value="{{order.lenght}}">
+              <input type="hidden" name="others" value="{{order.others}}">
+              <input type="hidden" name="discount" value="{{order.discount}}">
+              <button type="submit" class="ml-2 btn btn-outline-danger"><i class="fas fa-times"></i> Anular pedido</button>
+            </form>
           </div>
+          {% endif %}
         </div>
       {%endif%}
     </div>
@@ -103,6 +143,8 @@
       <div class="tab-pane fade {% if tab == 'main' %}show active{% endif %} mb-3" id="main" role="tabpanel" aria-labelledby="main-tab">
         <div class="row mt-3 mb-5">
           <div class="col-lg-4 col-md-6">
+
+            <!-- Main Info Card-->
             <div class="card" id="main-card">
               <div class="card-header">
                 <h5><i class="far fa-info pr-2"></i>Información principal</h5>
@@ -129,6 +171,8 @@
 
               </div>
             </div>
+
+            <!-- Data for invoicing card-->
             <div class="card mt-2 mb-4" id="invoice-data">
               <div class="card-header">
                 <h5><i class="far fa-sack-dollar pr-2"></i>Datos para la facturación</h5>
@@ -141,9 +185,9 @@
                   <span>{{order.customer.cp}}, {{order.customer.city}}</span>
                 </div>
                 <div class="d-flex mt-2 flex-column">
-                  {%for item in items%}
+                  {%for item in order.items.all%}
                     <div class="d-flex">
-                      <span>{{item.qty}} x {%include 'includes/item_string.html'%}</span>
+                      {{item.qty}} x&nbsp;{{item.element.html_string}}
                       <div class="ml-auto">
                         <span class="mr-4">{{item.price_bt}}€</span>
                         <span><strong>{{item.subtotal_bt}}€</strong></span>
@@ -152,13 +196,24 @@
                   {%endfor%}
                 </div>
               </div>
-              <div class="card-footer text-muted">
-                <strong>Base imponible:</strong> {{order.total_bt}}€<br>
-                <strong>IVA:</strong> {{order.vat}}€
+              <div class="card-footer">
+                <div class="d-flex justify-content-end">
+                  <div class="d-flex flex-column text-right">
+                    <span><strong>Base imponible:</strong> {{order.total_bt}}€</span>
+                    <span><strong>IVA:</strong> {{order.vat}}€</span>
+                    {% if order.discount %}
+                    <span><strong>Subtotal:</strong> {{order.total_pre_discount}}€</span>
+                    <span><strong>Descuento:</strong> {{order.discount_amount}}€ ({{order.discount}}%)</span>
+                    {% endif %}
+                    <span><strong>Total:</strong> {{order.total}}€</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
           <div class="col-lg-4 col-md-6">
+
+            <!-- Payments control card -->
             <div class="card" id="payments-card">
               <div class="card-header">
                 <div class="d-flex justify-content-between">
@@ -188,7 +243,7 @@
                 </div>
                 <div class="d-flex flex-column">
                   <h5 class="">
-                    <i class="far fa-shopping-cart fa-fw mr-4"></i><strong>Total del pedido:</strong> {{order.total}}€
+                    <i class="far fa-shopping-cart fa-fw mr-4"></i><strong>Total del pedido:</strong> {{order.total}}€ {% if order.discount %}({{order.discount}}% dto){% endif %}
                   </h5>
                   <div class="d-flex flex-column border-bottom pb-2">
                     <h5>
@@ -211,8 +266,8 @@
                   {%if order.customer.name != 'trapuzarrak'%}
                     <div class="d-flex align-items-center mt-4">
                       {%if order.status == '7'%}
-                        <button type="button" class="btn btn-outline-success js-crud-add" data-action="ticket-to-invoice" data-pk="{{order.pk}}">
-                          <i class="fa fa-euro"></i> Facturar
+                        <button type="button" class="btn btn-outline-success" data-toggle="collapse" data-target="#kill-order">
+                          <i class="fa {{STATUS_ICONS.5}} pr-2"></i>Facturar
                         </button>
                       {%else%}
                         <button type="button" class="btn btn-outline-success btn-disabled mr-2" disabled>
@@ -221,10 +276,50 @@
                         <small>Solo los pedidos entregados se pueden facturar.</small>
                       {%endif%}
                     </div>
+                    <div class="collapse mt-4" id="kill-order">
+                      <div class="d-flex justify-content-center">
+                        <div class="d-flex flex-column">
+                          <form class="form-inline" action="{% url 'order_view' pk=order.pk %}" method="post" >
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="kill-order">
+                            <label class="sr-only" for="id_pay_method">Medio de pago</label>
+                            {% render_field kill_order.pay_method class="form-control mx-2"%}
+                            <button type="submit" class="btn btn-sm btn-outline-success mr-2">
+                              <i class="fas fa-check pr-2"></i>confirmar
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger mr-2">
+                              <i class="fas fa-times pr-2"></i>Cerrar
+                            </button>
+                          </form>
+                          <small>Ya sabes que facturar es una acción que no se puede deshacer,<br>así que asegúrate de que todo está correcto</small>
+                        </div>
+                      </div>
+                    </div>
+
                   {%endif%}
                 </div>
               </div>
             </div>
+
+            <!-- Status Tracker Card -->
+            <div class="card mt-2 mb-4" id="status-tracker-card">
+              <div class="card-header">
+                <div class="d-flex justify-content-between">
+                  <h5><i class="far fa-hand-holding-usd pr-2"></i>Status Tracker</h5>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="d-flex flex-column">
+                  Este pedido lleva abierto {{order.days_open}} días
+                  {% for icon, status in status_tracker %}
+                    {% if status %}
+                    <span class="my-1"><i class="fa {{icon}} fa-fw mr-2"></i>{{status.date_in}}</span>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>

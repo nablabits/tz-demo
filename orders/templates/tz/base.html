@@ -41,7 +41,7 @@
               <a class="dropdown-item" href="{% url 'kanban' %}"><i class="fal fa-list fa-fw"></i> Lista de pedidos</a>
               <a class="dropdown-item" href="{% url 'itemslist' %}"><i class="fal fa-tshirt fa-fw"></i> Editor de prendas</a>
               <a class="dropdown-item" href="{% url 'pqueue_manager' %}"><i class="fal fa-fw fa-clipboard-list-check"></i> Cola de producción</a>
-              <a class="dropdown-item js-crud-add" href="#" data-action="order-add" data-pk="0"><i class="fal fa-fw fa-plus"></i> Nuevo pedido</a>
+              <a class="dropdown-item js-crud-load" action="{% url 'orders-CRUD' %}"><i class="fal fa-fw fa-plus"></i> Nuevo pedido</a>
             </div>
           </li>
           <li class="nav-item dropdown">
@@ -77,6 +77,7 @@
       {% block kanban %}{% endblock %}
       {% block listview %}{% endblock %}
       {% block invoices %}{% endblock %}
+      {% block stock_manager %}{% endblock %}
       {% block pqueuetablet %}{% endblock %}
       {% block timetable_list %}{% endblock %}
     </div>

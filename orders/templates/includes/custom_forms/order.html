@@ -1,65 +1,131 @@
+{% comment %}
+Add/Edit orders.
+
+This custom form template lets create or edit orders. Does not depend on regular form template.
+{% endcomment %}
+
+
 {% load widget_tweaks %}
 
-<div class="form-group">
-  {{ form.customer.label_tag }}
-  <input class="form-control js-hints" type="text" placeholder="Empieza a escribir..." id="customer-hints" autocomplete="off">
-  <input type="hidden" name="customer" value="" id="selected-customer">
-  <div class="d-flex flex-column" id="search-result-customer"></div>
+<div class="modal-header">
+  <h4 class="modal-title">{{modal_title}}</h4>
+  <a type="button" class="close" data-dismiss="modal" aria-label="Close">
+    <span aria-hidden="true"><i class="fa fa-times"></i></span>
+  </a>
 </div>
-<div class="form-group">
-  <label for="id_membership">Grupo:</label>
-  <input class="form-control js-hints" type="text" placeholder="Empieza a escribir..." id="group-hints" autocomplete="off">
-  <input type="hidden" name="membership" value="" id="selected-group">
-  <div class="d-flex flex-column" id="search-result-group"></div>
-</div>
-<div class="form-group">
-  {{ form.ref_name.label_tag }}
-  {% render_field form.ref_name class="form-control" %}
-</div>
-<div class="row">
-  <div class="col">
+<form class="js-crud-form" method="post" action="{% url 'orders-CRUD' %}">
+  {% csrf_token %}
+  <input type="hidden" name="action" value="main">
+  <input type="hidden" name="user" value="{{user.pk}}">
+  {% render_field form.inbox_date.as_hidden %}
+  {% render_field form.status.as_hidden %}
+  {% if order %}<input type="hidden" name="pk" value="{{order.pk}}">{% endif %}
+
+  <div class="modal-body">
+
+    {# Customer & group row #}
+    <div class="row">
+      <div class="col">
+        <div class="form-group">
+          {{ form.customer.label_tag }}
+          {% if order.customer %}
+            <input class="form-control js-hints" type="text" value="{{order.customer.name}}" id="customer-hints" autocomplete="off">
+            <input type="hidden" name="customer" value="{{order.customer.pk}}" id="selected-customer">
+          {% else %}
+            <input class="form-control js-hints" type="text" placeholder="Empieza a escribir..." id="customer-hints" autocomplete="off">
+            <input type="hidden" name="customer" value="" id="selected-customer">
+          {% endif %}
+          <div class="d-flex flex-column" id="search-result-customer"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="form-group">
+          <label for="id_membership">Grupo:</label>
+          {% if order.group %}
+            <input class="form-control js-hints" type="text" value="{{order.group.name}}" id="group-hints" autocomplete="off">
+            <input type="hidden" name="membership" value="{{order.group.pk}}" id="selected-group">
+          {% else %}
+            <input class="form-control js-hints" type="text" placeholder="Empieza a escribir..." id="group-hints" autocomplete="off">
+            <input type="hidden" name="membership" value="" id="selected-group">
+          {% endif %}
+          <div class="d-flex flex-column" id="search-result-group"></div>
+        </div>
+      </div>
+    </div>
     <div class="form-group">
-      {{ form.delivery.label_tag }}
-      <input type="date" class="form-control" name="{{ form.delivery.name }}" id="{{ form.delivery.id_for_label }}" {% if form.delivery.value != None %} value="{{ form.delivery.value|stringformat:'s' }}" {% endif %}>
+      {{ form.ref_name.label_tag }}
+      {% render_field form.ref_name class="form-control" %}
     </div>
-  </div>
-  <div class="col">
+    <div class="row">
+      <div class="col">
+        <div class="form-group">
+          {{ form.delivery.label_tag }}
+          <input type="date" class="form-control" name="{{ form.delivery.name }}" id="{{ form.delivery.id_for_label }}" {% if form.delivery.value != None %} value="{{ form.delivery.value|stringformat:'s' }}" {% endif %}>
+        </div>
+      </div>
+      <div class="col">
+        <div class="form-group">
+          {{ form.priority.label_tag }}
+          {% render_field form.priority class="form-control" %}
+        </div>
+      </div>
+      <div class="col-3">
+        <div class="form-group">
+          {{ form.discount.label_tag }}
+          {% render_field form.discount class="form-control" %}
+        </div>
+
+      </div>
+    </div>
     <div class="form-group">
-      {{ form.priority.label_tag }}
-      {% render_field form.priority class="form-control" %}
+      <div class="row">
+        <div class="col">
+          {{ form.waist.label_tag }}
+          {% render_field form.waist class="form-control" %}
+        </div>
+        <div class="col">
+          {{ form.chest.label_tag }}
+          {% render_field form.chest class="form-control" %}
+        </div>
+        <div class="col">
+          {{ form.hip.label_tag }}
+          {% render_field form.hip class="form-control" %}
+        </div>
+
+        <div class="col">
+          {{ form.lenght.label_tag }}
+          {% render_field form.lenght class="form-control" %}
+        </div>
+      </div>
+    </div>
+
+    {# Description field collapse #}
+    <div class="d-flex flex-column">
+      <div class="collapse" id="add-description">
+        {% render_field form.others class="form-control" rows="3"%}
+      </div>
+      <h5 style="cursor:pointer" data-toggle="collapse" data-target="#add-description" aria-hidden="true" aria-expanded="true">Descripción<i class="far fa-plus-circle ml-2 js-plusToCaret"></i></h5>
+    </div>
+    <div class="form-check">
+      {% render_field form.confirmed class="form-check-input" %}
+      <label for="id_confirmed" class="form-check-label"> Pedido Confirmado</label>
     </div>
   </div>
-</div>
 
-
-<div class="form-group">
-  <div class="row">
-    <div class="col">
-      {{ form.waist.label_tag }}
-      {% render_field form.waist class="form-control" %}
+  {# Footer #}
+  <div class="modal-footer">
+    <div class="mr-auto d-none" id="check-success">
+      <i class="far fa-check text-success"></i> Guardado, puedes cerrar esta ventana.
     </div>
-    <div class="col">
-      {{ form.chest.label_tag }}
-      {% render_field form.chest class="form-control" %}
+    <div class="mr-auto d-none" id="bg-working">
+      <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
     </div>
-    <div class="col">
-      {{ form.hip.label_tag }}
-      {% render_field form.hip class="form-control" %}
+    <div class="mr-auto">
+      {{form.errors}}
     </div>
-
-    <div class="col">
-      {{ form.lenght.label_tag }}
-      {% render_field form.lenght class="form-control" %}
-    </div>
+    <button type="submit" class="btn btn-outline-success js-submit">
+      <i class="fas fa-check mr-1"></i>Guardar
+    </button>
   </div>
-</div>
 
-<div class="form-group">
-  {{ form.others.label_tag }}
-  {% render_field form.others class="form-control" rows="3"%}
-</div>
-
-<div class="form-check">
-  {% render_field form.confirmed class="form-check-input" %}
-  <label for="id_confirmed" class="form-check-label"> Pedido Confirmado</label>
-</div>
+</form>
