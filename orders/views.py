@@ -319,19 +319,26 @@ def main(request):
     # Finally, insert the goal estimation to compute (5th aggregate)
     aggregates.append(goal)
 
-    # Estimate the length of the bar from the relevant amounts: inbounds,
-    # outbounds and goal
-    relevant = (aggregates[0], aggregates[3], aggregates[5])
-    mn, mx = min(relevant) * .9,  max(relevant) * 1.1
-    bar_len = mx - mn
+    """The bar calculation algorithm.
 
-    # Estimate the percentages for each aggregate
-    bar = [round((amount - mn) * 100 / bar_len, 2) for amount in aggregates]
+    Shows the difference between the heads of the three bars: goal, incomes &
+    expenses. This means that the max value of the bar should be calculated
+    among these three quantities. To prevent larger values eating the smaller
+    ones, their tails are cropped so the min becomes close to zero.
 
-    # Adjust confirmed and unconfirmed since they are not included in relevant
-    bar[1] = round(((sum(aggregates[:2]) - mn)*100 / bar_len)-bar[0], 2)
-    bar[2] = round(((sum(aggregates[:3]) - mn)*100 / bar_len)-sum(bar[:2]), 2)
-    bar[4] = round(((sum(aggregates[3:5]) - mn)*100 / bar_len)-bar[3], 2)
+    Also, the bar is reduced by 90% so the min value shows some amount.
+    """
+    upper_bound = (sum(aggregates[:3]), sum(aggregates[2:4]), aggregates[5])
+    lower_bound = (aggregates[0], aggregates[3], aggregates[5])
+    bar_max, bar_min = max(upper_bound), min(lower_bound) * .9
+    bar_range = bar_max - bar_min
+    bar = list()
+    for qty in aggregates:
+        if qty in lower_bound:  # crop only min relevant's tails
+            cropped = qty - bar_min
+            bar.append(round(90 * cropped / bar_range))
+        else:
+            bar.append(round(90 * qty / bar_range))
 
     # GoalBox, tracked time ratios this year
     nat = timedelta(0)

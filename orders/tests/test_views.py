@@ -1201,6 +1201,7 @@ class MainViewTests(TestCase):
         self.assertEqual(resp.context['aggregates'][2], 10)
         self.assertIsInstance(resp.context['aggregates'][2], int)
 
+    @tag('current')
     def test_bar(self):
         """Test the correct amounts for bar."""
         # Create one more order to have all the elements
@@ -1216,25 +1217,28 @@ class MainViewTests(TestCase):
         supplier = Customer.objects.create(
             name='supplier', address='foo', city='bar', CIF='baz', phone=0,
             cp=0, provider=True)
-        Expense.objects.create(
-            issuer=supplier, invoice_no=0, issued_on=date.today(),
-            amount=100)
 
         # Fetch the goal
         today, cur_year = date.today(), date.today().year
         elapsed = today - date(cur_year - 1, 12, 31)
         goal = elapsed.days * settings.GOAL
 
-        # Set qtys to have a decent number of 'em
-        qty = 100
-        for item in OrderItem.objects.all():
-            item.qty = qty
-            item.element.stocked += qty + 5  # and enough stock
-            item.element.save()
-            item.save()
-
-        # Set sold obj
-        sold.kill()
+        # Create some activity each 50 days
+        ratio = int(elapsed.days / 50) + 1
+        for _ in range(ratio):
+            base_item = Item.objects.last()
+            amount = int(goal/ratio)
+            o = Order.objects.create(user=User.objects.first(),
+                                     customer=Customer.objects.first(),
+                                     delivery=date.today(), ref_name='Test',)
+            OrderItem.objects.create(
+                element=base_item, reference=o, price=amount + 10)
+            o.kill()
+            base_item.stocked += 2
+            base_item.save()
+            Expense.objects.create(
+                issuer=supplier, invoice_no=0, issued_on=date.today(),
+                amount=amount + 5)
 
         # Set unconfirmed order
         unconfirmed.confirmed = False
@@ -1244,21 +1248,20 @@ class MainViewTests(TestCase):
         resp = self.client.get(reverse('main'))
         sales, conf, unconf, exp, fut_exp, goal = resp.context['aggregates']
 
-        relevant = (sales, exp, goal)
-        mn, mx = min(relevant) * .9,  max(relevant) * 1.1
-        bar_len = mx - mn
+        upper_bound = (sales + conf + unconf,
+                       exp + fut_exp,
+                       goal, )
+        lower_bound = (sales, exp, goal)
+        bar_max, bar_min = max(upper_bound), min(lower_bound) * .9
+        bar_range = bar_max - bar_min
 
         bar = resp.context['bar']
-        self.assertEqual(bar[0], round((sales - mn) * 100 / bar_len, 2))
-        self.assertEqual(
-            bar[1], round(((sales + conf - mn) * 100 / bar_len) - bar[0], 2))
-        self.assertEqual(
-            bar[2],
-            round(((sales + conf + unconf - mn)*100/bar_len)-sum(bar[:2]), 2))
-        self.assertEqual(bar[3], round((exp - mn) * 100 / bar_len, 2))
-        self.assertEqual(
-            bar[4], round(((exp + fut_exp - mn) * 100 / bar_len) - bar[3], 2))
-        self.assertEqual(bar[5], round((goal - mn) * 100 / bar_len, 2))
+        self.assertEqual(bar[0], round(90 * (sales - bar_min) / bar_range))
+        self.assertEqual(bar[1], round(90 * conf / bar_range))
+        self.assertEqual(bar[2], round(90 * unconf / bar_range))
+        self.assertEqual(bar[3], round(90 * (exp - bar_min) / bar_range))
+        self.assertEqual(bar[4], round(90 * fut_exp / bar_range))
+        self.assertEqual(bar[5], round(90 * (goal - bar_min) / bar_range))
 
     def test_expenses_avoid_NoneType_error(self):
         """Total should return 0 in None queries."""
