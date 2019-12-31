@@ -543,9 +543,9 @@ class Item(models.Model):
         2       0         0
         """
         sales = self.year_sales / 12  # month averaged
-        if not sales and not self.stocked:
+        if sales == 0 and self.stocked == 0:
             self.health = - 100
-        elif not sales and self.stocked:
+        elif sales == 0 and self.stocked > 0:
             self.health = - self.stocked
         else:
             self.health = self.stocked / sales
@@ -559,7 +559,7 @@ class Item(models.Model):
         filtered out.
         """
         if period == 'all_time':
-            date_in = date(2019, 1, 1)
+            date_in = date(2018, 1, 1)
         else:
             if not isinstance(period, timedelta):
                 raise TypeError('Period should be timedelta.')
@@ -567,9 +567,7 @@ class Item(models.Model):
                 raise ValueError('Period must be positive.')
             date_in = date.today() - period
 
-        date_out = date.today()
         sales = self.order_item.filter(reference__delivery__gte=date_in)
-        sales = sales.filter(reference__delivery__lte=date_out)
         sales = sales.filter(reference__status='9')
         sales = sales.exclude(reference__customer__name__iexact='trapuzarrak')
         sales = sales.aggregate(total=models.Sum('qty'))
