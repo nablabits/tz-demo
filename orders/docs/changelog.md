@@ -1,6 +1,6 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v??, date
+### v84, Jan 1
   * **Nuevo:** Ahora los pedidos aceptan un parámetro grupo para clientes
   particulares que hacen un pedido para su grupo.
   * **Nuevo:** ya podemos llevar el control de los prepagos y las facturas
@@ -15,6 +15,8 @@
   * **Mejora:** los tickets ahora imprimen la fecha y la hora.
   * **Mejora:** ahora el cuadro de diálogo de añadir/editar pedido tiene el campo
   notas colapsado para que se vea completo.
+  * **Bug:** las barras the la pantalla principal ya están ajustadas a las cantidades
+  correspondientes.
   * **Bug:** al editar un pedido ya no hay que volver a introducir el nombre del
   cliente.
 

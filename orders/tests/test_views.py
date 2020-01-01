@@ -1201,7 +1201,6 @@ class MainViewTests(TestCase):
         self.assertEqual(resp.context['aggregates'][2], 10)
         self.assertIsInstance(resp.context['aggregates'][2], int)
 
-    @tag('current')
     def test_bar(self):
         """Test the correct amounts for bar."""
         # Create one more order to have all the elements
@@ -2225,7 +2224,10 @@ class InvoicesListTest(TestCase):
             resp.context['cf_inbounds_today_cash']['total_transfer'], 5)
 
     def test_invoices_week_displays_week_invoices(self):
-        """Test display week's invoices and their total amount."""
+        """Test display week's invoices and their total amount.
+
+        Fails on year change but it is not worth to fight against it.
+        """
         self.client.login(username='regular', password='test')
         user = User.objects.first()
         c = Customer.objects.first()

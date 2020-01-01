@@ -12,6 +12,9 @@ class LiveOrders(models.Manager):
     def get_queryset(self):
         """Return the queryset."""
         live_orders = super().get_queryset().exclude(status__in=[8, 9])
+        live_orders = live_orders.exclude(
+            models.Q(status='7') &
+            models.Q(customer__name__iexact='Trapuzarrak'))
         return live_orders.exclude(customer__name__iexact='express')
 
 
