@@ -1514,15 +1514,6 @@ class TestObjectItems(TestCase):
             i._meta.get_field('stocked').verbose_name, 'Stock uds')
         self.assertIsInstance(i.stocked, int)
 
-    def test_stocked_cant_be_negative(self):
-        i = Item.objects.create(name='foo', fabrics=5, )
-        msg = (
-            'new row for relation "orders_item" violates check constraint' +
-            ' "orders_item_stocked_check"')
-        with self.assertRaisesMessage(IntegrityError, msg):
-            i.stocked = -10
-            i.save()
-
     def test_stocked_field_cant_be_over_32767(self):
         """However, it raises invalid opertion on calculating health."""
         i = Item.objects.create(name='foo', fabrics=5, )
@@ -1627,9 +1618,8 @@ class TestObjectItems(TestCase):
         self.assertEqual(i.sales(), 2)
         o2.delivery = date(2018, 12, 31)  # Irrelevant
         o2.save()
-        self.assertEqual(i.sales(), 1)
 
-        self.assertEqual(i.sales(), i.year_sales)  # Valid from 2020 on
+        self.assertEqual(i.year_sales, 1)
         self.assertEqual(i.all_time_sales, 2)
 
     def test_sales_raises_type_and_value_errors(self):

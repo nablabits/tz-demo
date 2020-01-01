@@ -612,8 +612,10 @@ def invoiceslist(request):
         creation__date=timezone.now().date())
     week = Invoice.objects.filter(
         issued_on__week=timezone.now().date().isocalendar()[1])
+    week = week.filter(issued_on__year=date.today().year)
     month = Invoice.objects.filter(
         issued_on__month=timezone.now().date().month)
+    month = month.filter(issued_on__year=date.today().year)
     all_time_cash = Invoice.objects.filter(pay_method='C')
     all_time_cash = all_time_cash.aggregate(total_cash=Sum('amount'))
     cf_inbounds_today_cash = cf_inbounds_today.aggregate(
