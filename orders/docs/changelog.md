@@ -1,6 +1,6 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v??, date
+### v84, Jan 1
   * **Nuevo:** Ahora los pedidos aceptan un parámetro grupo para clientes
   particulares que hacen un pedido para su grupo.
   * **Nuevo:** ya podemos llevar el control de los prepagos y las facturas
