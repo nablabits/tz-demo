@@ -1232,7 +1232,7 @@ class CashFlowIO(models.Model):
         else:
             pending = self.expense.pending
 
-        if self.amount > pending:
+        if float(self.amount) > float(pending):
             msg = ('No se puede pagar más de la cantidad ' +
                    'pendiente ({}).'.format(pending))
             raise ValidationError({'amount': _(msg)})
@@ -1251,13 +1251,13 @@ class CashFlowIO(models.Model):
         corresponding cash flow movement. Also we need to do so with expense
         objects.
         """
-        print('Updating invoices')
+        print('  Updating invoices')
         invoices = Invoice.objects.reverse()
         for i in invoices:
             CashFlowIO.objects.create(creation=i.issued_on, order=i.reference,
                                       amount=i.amount, pay_method=i.pay_method)
 
-        print('Updating expenses')
+        print('  Updating expenses')
         expenses = Expense.objects.reverse()
         for e in expenses:
             creation = timezone.now() - (timezone.now().date() - e.issued_on)
