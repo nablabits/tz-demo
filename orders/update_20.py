@@ -66,7 +66,8 @@ for o in Order.objects.exclude(status__in=['7', '9']):
         ss.save(force_save=True)
 
 # Create some expense categories
-print('Creating some default expense categories')
+print('Creating some expense categories')
+[cat.delete() for cat in ExpenseCategory.objects.exclude(name='default')]
 cat = (
     'People', 'rent', 'taxes', 'resources', 'supply_raw', 'supply_resell', )
 
