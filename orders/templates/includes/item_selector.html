@@ -183,52 +183,72 @@ express and regular ones) and to edit different base_items in the item view.
 </h3>
 
 <div class="d-flex">
-  <ul class="list-group list-group-flush">
-    {%for item in available_items%}
-      <li class="list-group-item d-flex align-items-center">
-        #{{item.pk}}-{{item.html_string}}
-        {%if item.notes%}
-          <span class="mr-1"><i class="far fa-sticky-note ml-2"></i></span>
-        {%endif%}
-        {%if item.foreing%}
-          <span class="mr-1"><i class="far fa-sign-in-alt"></i></span>
-        {%endif%}
-        <span class="ml-3">{{item.production}}</span>
-        <span class="ml-3">{{item.price}}€</span>
-        <span class="ml-1 mr-5">({{item.fabrics}}m)</span>
-        {% if not item.foreing %}
-          <span class="ml-1 mr-2">
-              {{item.pretty_avg.0}}&middot;
-          </span>
-          <span class="ml-1 mr-2">
-              {{item.pretty_avg.1}}&middot;
-          </span>
-          <span class="ml-1 mr-2">
-              {{item.pretty_avg.2}}
-          </span>
-        {% endif %}
-
-      {# show some buttons depending if we are adding to order or we are editing base items #}
-      <span class="ml-5">
-        {% if order %}
-          <button class="mr-1 btn btn-sm btn-outline-success js-crud-load" action="{% url 'orderitems-CRUD' %}" data="element={{item.pk}}&reference={{order.pk}}">
-            <i class="far fa-share"></i>
-          </button>
-        {% else %}
-          <button class="mr-1 btn btn-sm btn-outline-success js-crud-edit" data-action="object-item-edit" data-pk="{{item.pk}}">
-            <i class="far fa-edit"></i>
-          </button>
-          <button class="mr-1 btn btn-sm btn-outline-danger js-crud-delete" data-action="object-item-delete" data-pk="{{item.pk}}">
-            <i class="far fa-trash"></i>
-          </button>
-        {% endif %}
-      </span>
-    </li>
-    {%endfor%}
-    {%if total_items > 15%}
-      <li class="list-group-item d-flex align-items-center">
-      <i class="far fa-ellipsis-v-alt mr-2"></i> Y {{total_items|add:"-15"}} más.
-      </li>
-    {%endif%}
-  </ul>
+  <table class="table">
+    <thead>
+      <th scope="col">Prenda</th>
+      <th scope="col">Stock</th>
+      <th scope="col">Precio</th>
+      {% if not order %}<th scope="col">Tela</th>{% endif %}
+      <th scope="col">Tiempos</th>
+      <th scope="col">Acciones</th>
+    </thead>
+    <tbody>
+      {% for item in available_items %}
+        <tr>
+          <td class="d-flex">
+            #{{item.pk}}-{{item.html_string}}
+          </td>
+          {% if item.stocked == 0 %}
+            <td class="text-danger">
+              <strong>{{item.stocked}}</strong>
+            </td>
+          {% else %}
+            <td>{{item.stocked}}</td>
+          {% endif %}
+          <td>{{item.price}}</td>
+          {% if not order %}<td>{{item.fabrics}}</td>{% endif %}
+          <td>
+            {% if not item.foreing %}
+              <span class="ml-1 mr-2">
+                  {{item.pretty_avg.0}}&middot;
+              </span>
+              <span class="ml-1 mr-2">
+                  {{item.pretty_avg.1}}&middot;
+              </span>
+              <span class="ml-1 mr-2">
+                  {{item.pretty_avg.2}}
+              </span>
+            {% else %}
+              Externa
+            {% endif %}
+          </td>
+          <td>
+            {% if order %}
+              {% if item.stocked != 0 or order.ref_name != 'Quick'%}
+                <button class="mr-1 btn btn-sm btn-outline-success js-crud-load" action="{% url 'orderitems-CRUD' %}" data="element={{item.pk}}&reference={{order.pk}}">
+                  <i class="far fa-share"></i>
+                </button>
+              {% else %}
+                Sin stock
+              {% endif %}
+            {% else %}
+              {% if item.stocked != 0 %}
+                <button class="mr-1 btn btn-sm btn-outline-success js-crud-edit" data-action="object-item-edit" data-pk="{{item.pk}}">
+                  <i class="far fa-edit"></i>
+              </button>
+              {% endif %}
+              <button class="mr-1 btn btn-sm btn-outline-danger js-crud-delete" data-action="object-item-delete" data-pk="{{item.pk}}">
+                <i class="far fa-trash"></i>
+              </button>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      {%if total_items > 15%}
+        <tr>
+          <td rowspan="5">Y {{total_items|add:"-15"}} más.</td>
+        </tr>
+      {%endif%}
+    </tbody>
+  </table>
 </div>

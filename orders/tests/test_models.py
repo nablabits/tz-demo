@@ -1965,6 +1965,33 @@ class TestOrderItems(TestCase):
         with self.assertRaises(ValidationError):
             item.clean()
 
+    def test_adding_more_items_than_stocked_raises_error(self):
+        base_item = Item.objects.last()
+        self.assertEqual(base_item.stocked, 10)
+
+        # Test first express orders
+        order = Order.objects.first()
+        order.ref_name = 'Quick'
+        order.save()
+        item = OrderItem.objects.create(
+            element=base_item, reference=order, qty=11)
+        msg = 'Estás intentando añadir más prendas de las que tienes.'
+        with self.assertRaisesMessage(ValidationError, msg):
+            item.clean()
+
+        # Now regular ones when adding stock items
+        order.ref_name = 'foo'
+        order.save()
+        item = OrderItem.objects.create(
+            element=base_item, reference=order, qty=11, stock=True, )
+        with self.assertRaisesMessage(ValidationError, msg):
+            item.clean()
+
+        # However, adding non-stock sholud be ok
+        item = OrderItem.objects.create(
+            element=base_item, reference=order, qty=11, stock=False, )
+        self.assertFalse(item.clean())
+
     def test_add_items_to_orders_default_item(self):
         """If no element is selected, Predetermiando is default."""
         order = Order.objects.first()

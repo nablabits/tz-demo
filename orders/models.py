@@ -751,6 +751,15 @@ class OrderItem(models.Model):
                    'de trapuzarrak')
             raise ValidationError({'batch': _(msg)})
 
+        # Avoid adding more items than stocked in express orders
+        condition = (
+            (self.qty > self.element.stocked and (
+                self.reference.ref_name == 'Quick' or self.stock))
+        )
+        if condition:
+            msg = ('Estás intentando añadir más prendas de las que tienes.')
+            raise ValidationError({'qty': _(msg)})
+
     @property
     def time_quality(self):
         """Display a message depending on how much time has been tracked."""

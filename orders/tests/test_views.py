@@ -5390,7 +5390,7 @@ class OrderItemsCRUDTests(TestCase):
         o.save()
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'reference': o.pk,
-                                 'element': Item.objects.first().pk,
+                                 'element': Item.objects.last().pk,
                                  'qty': 5,
                                  'crop': timedelta(0),
                                  'sewing': timedelta(0),
