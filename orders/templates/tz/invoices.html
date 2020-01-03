@@ -140,7 +140,7 @@
           </thead>
           <tbody>
             {% for cf in cf_inbounds_today %}
-              {% if cf.order.invoiced %}
+              {% if cf.order.status == '9' %}
                 <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{cf.order.pk}}">
                   <th>{{cf.order}}</th>
               {% else %}

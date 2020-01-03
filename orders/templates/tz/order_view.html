@@ -62,7 +62,7 @@ Has three sections:
         <i class="fa fa-user-clock mr-2"></i><strong>Sin confirmar</strong>
       </span>
       {%endif%}
-      {%if not order.invoiced%}
+      {%if order.status != 9%}
         <div class="d-flex ml-auto">
           <button class="btn btn-outline-success mr-2 js-crud-load" action="{% url 'orders-CRUD' %}" data="order_pk={{order.pk}}">
             <i class="fal fa-edit"></i> Editar pedido
@@ -352,7 +352,7 @@ Has three sections:
               <div class="col-9" id="orderitems-list">
                 {%include 'includes/orderitems_list.html'%}
               </div>
-              {% if not order.invoiced %}
+              {% if order.status != '9' %}
                 <div class="col">
                   <div class="mt-5 d-flex justify-content-center">
                     <button type="button" class="btn btn-lg btn-outline-success mr-2" data-toggle="collapse" data-target="#item-selector-wrapper" id="item-selector-btn">
