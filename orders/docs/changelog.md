@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v85, Jan 3
+  * Ya aparece correcatamente el indicador de lo vendido hoy.
+  * 
+
 ### v84, Jan 1
   * **Nuevo:** Ahora los pedidos aceptan un parámetro grupo para clientes
   particulares que hacen un pedido para su grupo.
