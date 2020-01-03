@@ -1,8 +1,12 @@
 ## Trapuzarrak app registro de cambios
 ***
 ### v85, Jan 3
-  * Ya aparece correcatamente el indicador de lo vendido hoy.
-  * 
+  * **Mejora:** El selector de prendas está un poco más ordenado y ahora muestra
+  el stock disponible.
+  * **Bug:** Ya no se puede añadir más stock del disponible a ventas express.
+  * **Bug:** Ya aparece correcatamente el indicador de lo vendido hoy.
+  * **Bug:** Las cantidades de lo pendiente de cobrar ya aparecen correctamente
+  en la vista principal.
 
 ### v84, Jan 1
   * **Nuevo:** Ahora los pedidos aceptan un parámetro grupo para clientes
