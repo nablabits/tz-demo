@@ -16,7 +16,10 @@ router.register(r'item', views.ItemAPIList)
 router.register(r'order_item', views.OrderItemAPIList)
 router.register(r'invoice', views.InvoiceAPIList)
 router.register(r'expense', views.ExpenseAPIList)
+router.register(r'expense_category', views.ExpenseCategoryAPIList)
+router.register(r'cashflowio', views.CashFlowIOAPIList)
 router.register(r'bank_movement', views.BankMovementAPIList)
+router.register(r'status_shift', views.StatusShiftAPIList)
 router.register(r'timetable', views.TimetableAPIList)
 
 urlpatterns = [

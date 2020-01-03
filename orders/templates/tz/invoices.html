@@ -12,7 +12,7 @@
       <a class="nav-link" data-toggle="tab" href="#today" role="tab">
         <i class="fal fa-calendar-day pr-2"></i>
         Hoy
-        <span class="ml-1 badge badge-info">{{today|length}}</span>
+        <span class="ml-1 badge badge-info">{{cf_inbounds_today.count}}</span>
       </a>
     </li>
     <li class="nav-item">
@@ -140,7 +140,7 @@
           </thead>
           <tbody>
             {% for cf in cf_inbounds_today %}
-              {% if cf.order.invoiced %}
+              {% if cf.order.status == '9' %}
                 <tr class="js-view-list-item js-crud-edit" data-action="view-ticket" data-pk="{{cf.order.pk}}">
                   <th>{{cf.order}}</th>
               {% else %}

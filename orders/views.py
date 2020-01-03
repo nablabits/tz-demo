@@ -368,7 +368,9 @@ def main(request):
         active_msg = 'Aunque hay %s para entregar' % waiting
 
     # Pending box
-    pending = [o.pending for o in Order.live.all() if o.pending]
+    relevant = Order.live.exclude(customer__name__iexact='Trapuzarrak')
+    relevant = relevant.filter(confirmed=True)
+    pending = [o.pending for o in relevant if o.pending]
     pending_amount = int(sum(pending))
     pending_msg = '{}€ tenemos aún<br>por cobrar'.format(pending_amount)
     if pending_amount == 0:
@@ -444,7 +446,7 @@ def main(request):
                      'tt_ratio': tt_ratio,
                      'active': active,
                      'active_msg': active_msg,
-                     'pending': len(pending),
+                     'pending': relevant.count(),
                      'pending_msg': pending_msg,
                      'outdated': outdated,
                      'month': month['total'],
