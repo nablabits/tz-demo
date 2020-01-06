@@ -83,8 +83,6 @@ express and regular ones) and to edit different base_items in the item view.
         </div>
       </div>
     </form>
-
-
 {%endif%}
 
 {%if data_name and not data_size%}<!-- Select item size -->
@@ -132,47 +130,46 @@ express and regular ones) and to edit different base_items in the item view.
         </div>
       </div>
     </form>
-
-
 {%endif%}
-{%if data_size%}
-<h5>Nuevo acabado para T-{{data_size}}</h5>
-<form class="js-item-selector-add">  <!--New class for item-->
-  {%csrf_token%}
-  <input type="hidden" name="item_type" value="{{data_type.0}}">
-  <input type="hidden" name="filter-on-type" value="{{data_type.0}}">
-  <input type="hidden" name="filter-on-name" value="{{data_name}}">
-  <input type="hidden" name="filter-on-size" value="{{data_size}}">
-  <input type="hidden" name="name" value="{{data_name}}">
-  <input type="hidden" name="size" value="{{data_size}}">
-  <input type="hidden" name="aditionalpk" value="{{order.pk}}">
-  <input type="hidden" name="stocked" value="0">
-  <div class="form-row align-items-center m-1">
-    <div class="col-auto">
-      <select class="form-control" name="item_class">
-        {%for iClass in item_classes%}
-        <option value="{{iClass.0}}" {%if forloop.first%}selected{%endif%}>{{iClass.1}}</option>
-        {%endfor%}
 
-      </select>
-    </div>
-    <div class="col-auto">
-      <input class="form-control" type="number" name="fabrics" placeholder="Tela" step="0.01" required>
-    </div>
-    <div class="col-auto">
-      <input class="form-control" type="number" name="price" placeholder="Precio" step="0.01" required>
-    </div>
-    <div class="col-auto">
-      <div class="form-check pt-2">
-        <input class="form-check-input" type="checkbox" name="foreing" id="id_foreing">
-        <label class="form-check-label" for="id_foreing">Externo</label>
+{%if data_size%} <!--Add new size for selected item -->
+  <h5>Nuevo acabado para T-{{data_size}}</h5>
+  <form class="js-item-selector-add">  <!--New class for item-->
+    {%csrf_token%}
+    <input type="hidden" name="item_type" value="{{data_type.0}}">
+    <input type="hidden" name="filter-on-type" value="{{data_type.0}}">
+    <input type="hidden" name="filter-on-name" value="{{data_name}}">
+    <input type="hidden" name="filter-on-size" value="{{data_size}}">
+    <input type="hidden" name="name" value="{{data_name}}">
+    <input type="hidden" name="size" value="{{data_size}}">
+    <input type="hidden" name="aditionalpk" value="{{order.pk}}">
+    <input type="hidden" name="stocked" value="0">
+    <div class="form-row align-items-center m-1">
+      <div class="col-auto">
+        <select class="form-control" name="item_class">
+          {%for iClass in item_classes%}
+          <option value="{{iClass.0}}" {%if forloop.first%}selected{%endif%}>{{iClass.1}}</option>
+          {%endfor%}
+
+        </select>
+      </div>
+      <div class="col-auto">
+        <input class="form-control" type="number" name="fabrics" placeholder="Tela" step="0.01" required>
+      </div>
+      <div class="col-auto">
+        <input class="form-control" type="number" name="price" placeholder="Precio" step="0.01" required>
+      </div>
+      <div class="col-auto">
+        <div class="form-check pt-2">
+          <input class="form-check-input" type="checkbox" name="foreing" id="id_foreing">
+          <label class="form-check-label" for="id_foreing">Externo</label>
+        </div>
+      </div>
+      <div class="col">
+        <button type="submit" class="btn btn-outline-success">Añadir acabado T-{{data_size}}</button>
       </div>
     </div>
-    <div class="col">
-      <button type="submit" class="btn btn-outline-success">Añadir acabado T-{{data_size}}</button>
-    </div>
-  </div>
-</form>
+  </form>
 {%endif%}
 
 <h3 class="mt-4 pb-1 border-bottom">
@@ -195,9 +192,18 @@ express and regular ones) and to edit different base_items in the item view.
     <tbody>
       {% for item in available_items %}
         <tr>
-          <td class="d-flex">
-            #{{item.pk}}-{{item.html_string}}
-          </td>
+          {% if item.notes %}
+            <td style="cursor: pointer;" data-toggle="collapse" data-target=".item-detail-{{item.pk}}">
+              <div class="d-flex align-items-center">
+                #{{item.pk}}-{{item.html_string}}<i class="far fa-sticky-note ml-2"></i>
+              </div>
+              <div class="collapse item-detail-{{item.pk}}">
+                {{item.notes}}
+              </div>
+            </td>
+          {% else %}
+            <td class="d-flex"> #{{item.pk}}-{{item.html_string}} </td>
+          {% endif %}
           {% if item.stocked == 0 %}
             <td class="text-danger">
               <strong>{{item.stocked}}</strong>
