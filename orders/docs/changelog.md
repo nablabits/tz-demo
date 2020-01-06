@@ -1,6 +1,11 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v85, Jan 3
+### v86, Ene 6
+  * **Nuevo:** se han añadido automáticamente los trajes de niña hibridos.
+  * **Bug:** el selector de prendas ya vuelve a mostrar las notas de cada prenda
+  (si las hay)
+
+### v85, Ene 3
   * **Mejora:** El selector de prendas está un poco más ordenado y ahora muestra
   el stock disponible.
   * **Bug:** Ya no se puede añadir más stock del disponible a ventas express.
@@ -8,7 +13,7 @@
   * **Bug:** Las cantidades de lo pendiente de cobrar ya aparecen correctamente
   en la vista principal.
 
-### v84, Jan 1
+### v84, Ene 1
   * **Nuevo:** Ahora los pedidos aceptan un parámetro grupo para clientes
   particulares que hacen un pedido para su grupo.
   * **Nuevo:** ya podemos llevar el control de los prepagos y las facturas

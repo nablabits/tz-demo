@@ -2,7 +2,7 @@
 
 # The name for the app
 APP_NAME = "Trapu Zarrak app"
-VERSION = 'v85'
+VERSION = 'v86'
 
 # Available types of clothes
 ITEM_TYPE = (
