@@ -43,14 +43,14 @@ This is the dynamic element for AJAX updates when filtering and editing the stoc
 <div class="tab-content">
   {% for id, content in tab_elements.items %}
   <div class="tab-pane {% if forloop.first %}show active{% endif %}" id="{{id}}-items" role="tabpanel">
-    <table class="table">
+    {% if content %}
+      <table class="table">
       <thead>
         <tr>
           <th scope="col">Prenda</th>
-          <th scope="col">Tiempo</th>
-          <th scope="col">Ventas totales</th>
-          <th scope="col">Ventas 12 meses</th>
-          <th scope="col">Stock actual</th>
+          <th scope="col">Totales</th>
+          <th scope="col">12 meses</th>
+          <th scope="col">Stock</th>
           <th scope="col">Salud</th>
           <th scope="col"></th>
         </tr>
@@ -59,12 +59,7 @@ This is the dynamic element for AJAX updates when filtering and editing the stoc
         {% for item in content %}
         <tr>
           <td class="d-flex">{{item.html_string}}</td>
-          {% if item.foreing %}
-            <td>Prenda externa</td>
-          {% else %}
-            <td>{{item.pretty_avg.0}} | {{item.pretty_avg.1}} | {{item.pretty_avg.2}}</td>
-          {% endif %}
-          <td>{{item.all_time_sales}}</td>
+          <td>{{item.total_sales}}</td>
           <td>{{item.year_sales}}</td>
           <td id="stock-{{item.pk}}">{{item.stocked}}</td>
           <td>{{item.health}}</td>
@@ -77,6 +72,35 @@ This is the dynamic element for AJAX updates when filtering and editing the stoc
         {% endfor %}
       </tbody>
     </table>
+    {% else %}
+      {% if id == 'p1' %}
+        <div class="d-flex flex-column justify-content-center mt-5">
+          <h2 class="text-center"><i class="fad fa-flask-poison fa-2x"></i></h2>
+          <h2 class="text-center">Genial!<br>No hay prendas urgentes de producir</h2>
+        </div>
+      {% elif id == 'p2' %}
+        <div class="d-flex flex-column justify-content-center mt-5">
+          <h2 class="text-center"><i class="fad fa-ambulance fa-2x"></i></h2>
+          <h2 class="text-center">No andamos cortos de nada,<br> pero no te confies</h2>
+        </div>
+      {% elif id == 'p3' %}
+        <div class="d-flex flex-column justify-content-center mt-5">
+          <h2 class="text-center"><i class="fad fa-bug fa-2x"></i></h2>
+          <h2 class="text-center">Oops<br>Esta lista debería estar llena<br>Llama al servicio técnico.</h2>
+          <h5 class="text-center">Que seguro que pasa algo</h5>
+        </div>
+      {% elif id == 'negative' %}
+        <div class="d-flex flex-column justify-content-center mt-5">
+          <h2 class="text-center"><i class="fad fa-star fa-2x"></i></h2>
+          <h2 class="text-center">Wow<br>Esto es eficiencia!</h2>
+        </div>
+      {% else %}
+        <div class="d-flex flex-column justify-content-center mt-5">
+          <h2 class="text-center"><i class="fad fa-vacuum fa-2x"></i></h2>
+          <h2 class="text-center">Fantástico!<br>Todo está limpio y recogido.</h2>
+        </div>
+      {% endif %}
+    {% endif %}
   </div>
   {% endfor %}
 </div>
