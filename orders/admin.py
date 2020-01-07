@@ -60,7 +60,7 @@ class ItemAdmin(admin.ModelAdmin):
 
     list_display = (
         'pk', 'name', 'item_type', 'item_class', 'size', 'price', 'stocked',
-        'sales', 'health',)
+        'sales', 'health', 'year_sales', 'total_sales', )
     list_filter = ('item_type', 'item_class', 'price')
 
 

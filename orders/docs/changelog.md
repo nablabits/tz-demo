@@ -1,5 +1,10 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v87, Ene 7
+  * **Mejora:** el control de stock ahora funciona de forma un poco más
+  eficiente.
+  * **Mejora:** el editor de prendas ahora muestra ventas totales y parciales.
+
 ### v86, Ene 6
   * **Nuevo:** se han añadido automáticamente los trajes de niña hibridos.
   * **Bug:** el selector de prendas ya vuelve a mostrar las notas de cada prenda

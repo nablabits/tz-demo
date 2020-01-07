@@ -142,9 +142,10 @@ class CommonContexts:
         tab_elements = {
             'p1': items.filter(health=0),
             'p2': items.filter(health__gt=0).filter(health__lt=1),
-            'p3': items.filter(health__gte=1),
-            'zero': items.filter(health=-100),
-            'negative': items.filter(health__lt=0).filter(health__gt=-100),
+            'p3': items.filter(health__gte=1)[:50],
+            'zero': items.filter(health=-100)[:50],
+            'negative': items.filter(
+                health__lt=0).filter(health__gt=-100)[:50],
         }
 
         return {

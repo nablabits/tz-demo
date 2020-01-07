@@ -64,6 +64,14 @@ $(document).ready(function () {
     $('#unconfirmed-toggle > i').toggleClass('fa-toggle-on')
   })
 
+  // activate buttons in stock manager
+  var url = window.location.pathname + window.location.search
+  $('.js-activate-btn').each(function () {
+    if ($(this).attr('href') === url) {
+      $(this).find('.item-selector').css('background-color', '#daf9bc')
+    }
+  })
+
   // Hover efects in kanban
   $('.js-kanban').hover(function () {
     $(this).find('.fa-pencil').toggleClass('d-none')

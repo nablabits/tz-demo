@@ -1522,6 +1522,10 @@ class TestObjectItems(TestCase):
             i.stocked = 33000
             i.save()
 
+    def test_total_sales(self):
+        """Tested in sales default period."""
+        pass
+
     def test_health(self):
         i = Item.objects.create(name='foo', fabrics=5, )
         i = Item.objects.get(pk=i.pk)
@@ -1619,8 +1623,10 @@ class TestObjectItems(TestCase):
         o2.delivery = date(2018, 12, 31)  # Irrelevant
         o2.save()
 
+        i.save()  # recalculate
+
+        self.assertEqual(i.total_sales, 2)
         self.assertEqual(i.year_sales, 1)
-        self.assertEqual(i.all_time_sales, 2)
 
     def test_sales_raises_type_and_value_errors(self):
         i = Item.objects.create(name='foo', fabrics=5, stocked=5)
@@ -1757,14 +1763,6 @@ class TestObjectItems(TestCase):
         c.save()
         self.assertEqual(i.production, 20)
         self.assertEqual(f.production, 0)
-
-    def test_all_time_sales(self):
-        """Tested in test_sales_default_period."""
-        pass
-
-    def test_year_sales(self):
-        """Tested in test_sales_default_period."""
-        pass
 
 
 class TestOrderItems(TestCase):

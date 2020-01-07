@@ -192,18 +192,21 @@ express and regular ones) and to edit different base_items in the item view.
     <tbody>
       {% for item in available_items %}
         <tr>
-          {% if item.notes %}
-            <td style="cursor: pointer;" data-toggle="collapse" data-target=".item-detail-{{item.pk}}">
-              <div class="d-flex align-items-center">
-                #{{item.pk}}-{{item.html_string}}<i class="far fa-sticky-note ml-2"></i>
+          <td style="cursor: pointer;" data-toggle="collapse" data-target=".item-detail-{{item.pk}}">
+            <div class="d-flex align-items-center">
+              #{{item.pk}}-{{item.html_string}}{% if item.notes %}<i class="far fa-sticky-note ml-2"></i>{% endif %}
+            </div>
+            <div class="collapse item-detail-{{item.pk}}">
+              <div class="d-flex flex-column">
+                <span>{{item.notes}}</span>
+                <span>Ventas totales: {{item.total_sales}}</span>
+                <span>Ventas último año: {{item.year_sales}}</span>
+                {% if not item.foreing %}
+                  <span>Producción: {{item.production}}</span>
+                {% endif %}
               </div>
-              <div class="collapse item-detail-{{item.pk}}">
-                {{item.notes}}
-              </div>
-            </td>
-          {% else %}
-            <td class="d-flex"> #{{item.pk}}-{{item.html_string}} </td>
-          {% endif %}
+            </div>
+          </td>
           {% if item.stocked == 0 %}
             <td class="text-danger">
               <strong>{{item.stocked}}</strong>

@@ -515,6 +515,8 @@ class Item(models.Model):
     price = models.DecimalField(
         'Precio unitario', max_digits=6, decimal_places=2, default=0)
     stocked = models.PositiveSmallIntegerField('Stock uds', default=0)
+    total_sales = models.IntegerField(default=0, editable=False, )
+    year_sales = models.SmallIntegerField(default=0, editable=False, )
     health = models.DecimalField(
         max_digits=5, decimal_places=2, default=0, editable=False, )
 
@@ -542,13 +544,18 @@ class Item(models.Model):
         2       1         0.5
         2       0         0
         """
-        sales = self.year_sales / 12  # month averaged
-        if sales == 0 and self.stocked == 0:
+        # Estimate sales fields
+        self.total_sales = self.sales()
+        self.year_sales = self.sales(period=timedelta(days=365))
+
+        # Estimate health
+        avg_sales = self.year_sales / 12  # month averaged
+        if avg_sales == 0 and self.stocked == 0:
             self.health = - 100
-        elif sales == 0 and self.stocked > 0:
+        elif avg_sales == 0 and self.stocked > 0:
             self.health = - self.stocked
         else:
-            self.health = self.stocked / sales
+            self.health = self.stocked / avg_sales
 
         super().save(*args, **kwargs)
 
@@ -627,16 +634,6 @@ class Item(models.Model):
         """Sum the total production for this item."""
         item = self.order_item.aggregate(total=models.Sum('qty'))
         return [0 if (not item['total'] or self.foreing) else item['total']][0]
-
-    @property
-    def all_time_sales(self):
-        """Get the total sales for this item."""
-        return self.sales()
-
-    @property
-    def year_sales(self):
-        """Get the last 12 months sales for this item."""
-        return self.sales(period=timedelta(days=365))
 
     class Meta:
         ordering = ('name',)
