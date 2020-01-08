@@ -58,7 +58,9 @@ This is the dynamic element for AJAX updates when filtering and editing the stoc
       <tbody>
         {% for item in content %}
         <tr>
-          <td class="d-flex">{{item.html_string}}</td>
+          <td class="d-flex align-items-center">
+            {{item.html_string}}{% if item.foreing %}<i class="far fa-sign-in-alt px-1"></i>{% endif %}
+          </td>
           <td>{{item.total_sales}}</td>
           <td>{{item.year_sales}}</td>
           <td id="stock-{{item.pk}}">{{item.stocked}}</td>

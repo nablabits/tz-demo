@@ -1692,6 +1692,28 @@ class TestObjectItems(TestCase):
         o2.save()
         self.assertEqual(i.sales(), 1)
 
+    def test_consistent_foreign(self):
+        # Create some siblings
+        sizes = ('1', '2', '3', '4')
+        a, b, c, d = [Item.objects.create(
+            name='foo', item_type='2', fabrics=5, size=s) for s in sizes]
+
+        # Create some non-siblings items
+        Item.objects.create(name='foo', item_type='3', fabrics=2)
+        Item.objects.create(name='bar', item_type='2', fabrics=2)
+        Item.objects.create(name='bar', item_type='3', fabrics=2)
+
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 0)
+
+        a.foreing = True
+        a.save()
+        self.assertEqual(Item.objects.get(foreing=True), a)
+
+        a.consistent_foreign()
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 4)
+        for i in Item.objects.filter(foreing=True):
+            self.assertTrue(i in [a, b, c, d])
+
     def test_item_html_string(self):
         i = Item.objects.create(
             name='foo', item_type='2', item_class='M', size='xs', fabrics=5)

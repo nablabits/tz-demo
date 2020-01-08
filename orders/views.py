@@ -1224,7 +1224,8 @@ class Actions(View):
         elif action == 'object-item-add':
             form = ItemForm(request.POST)
             if form.is_valid():
-                form.save()
+                i = form.save()
+                i.consistent_foreign()
                 items = Item.objects.all()[:11]
                 data['html_id'] = '#item-selector'
                 data['form_is_valid'] = True
@@ -1272,6 +1273,7 @@ class Actions(View):
             form = ItemForm(request.POST, instance=item)
             if form.is_valid():
                 form.save()
+                item.consistent_foreign()
                 items = Item.objects.all()[:11]
                 data['html_id'] = '#item-selector'
                 data['form_is_valid'] = True
@@ -1559,6 +1561,7 @@ class ItemsCRUD(View):
             form = ItemForm(request.POST, instance=item)
             if form.is_valid():
                 form.save()
+                item.consistent_foreign()
                 template = 'includes/stock_tabs.html'
                 context = CommonContexts.stock_tabs()
                 data['html_id'] = '#stock-tabs'
@@ -1987,7 +1990,8 @@ def item_selector(request):
     if request.method == 'POST':
         form = ItemForm(request.POST)
         if form.is_valid():
-            form.save()
+            i = form.save()
+            i.consistent_foreign()
         else:
             context['errors'] = form.errors
 
