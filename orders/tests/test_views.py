@@ -4283,6 +4283,19 @@ class ActionsPostMethodCreate(TestCase):
         self.assertEqual(item.price, 500)
         self.assertEqual(item.notes, 'Custom Notes')
 
+    def test_obj_item_add_updates_foreign_siblings(self):
+        Item.objects.create(
+            name='Sibling', item_type='2', size='5', fabrics=5, foreing=True)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 1)
+
+        payload = {
+            'action': 'object-item-add', 'pk': 'None', 'name': 'Sibling',
+            'item_type': '2', 'item_class': 'S', 'size': '4', 'fabrics': 4,
+            'price': 500, 'stocked': 30, 'foreing': False, }
+
+        self.client.post(reverse('actions'), payload)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 2)
+
     def test_obj_item_add_context_response(self):
         """Test the context returned by obj item creation."""
         resp = self.client.post(reverse('actions'),
@@ -4479,6 +4492,21 @@ class ActionsPostMethodEdit(TestCase):
         self.assertNotEqual(item.size, edited.size)
         self.assertNotEqual(item.fabrics, edited.fabrics)
         self.assertNotEqual(item.price, edited.price)
+
+    def test_obj_item_edit_updates_foreign_siblings(self):
+        Item.objects.create(
+            name='Sibling', item_type='2', size='5', fabrics=5, foreing=True)
+        i = Item.objects.create(
+            name='Sibling', item_type='2', size='6', fabrics=5, foreing=False)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 1)
+
+        payload = {
+            'action': 'object-item-edit', 'pk': i.pk, 'name': i.name,
+            'item_type': i.item_type, 'item_class': i.item_class, 'size': '7',
+            'fabrics': 4, 'price': 500, 'stocked': 30, 'foreing': False, }
+
+        self.client.post(reverse('actions'), payload)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 2)
 
     def test_obj_item_edit_invalid_form_returns_to_form_again(self):
         """Test the proper rejection of forms."""
@@ -5094,6 +5122,22 @@ class ItemsCRUDTests(TestCase):
         self.assertTrue(data['html'])
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#stock-tabs')
+
+    @tag('current')
+    def test_obj_item_edit_updates_foreign_siblings(self):
+        Item.objects.create(
+            name='Sibling', item_type='2', size='5', fabrics=5, foreing=True)
+        i = Item.objects.create(
+            name='Sibling', item_type='2', size='6', fabrics=5, foreing=False)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 1)
+
+        payload = {
+            'action': 'edit-stock', 'item_pk': i.pk, 'name': i.name,
+            'item_type': i.item_type, 'item_class': i.item_class, 'size': '7',
+            'fabrics': 4, 'price': 500, 'stocked': 30, 'foreing': False, }
+
+        self.client.post(reverse('items-CRUD'), payload)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 2)
 
     def test_post_edit_form_rejected_context(self):
         item = Item.objects.last()
@@ -6220,6 +6264,18 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(item.fabrics, 10)
         self.assertTrue(item.foreing)
         self.assertEqual(item.price, 10)
+
+    def test_valid_form_updates_foreign_siblings(self):
+        Item.objects.create(
+            name='Sibling', item_type='2', size='5', fabrics=5, foreing=True)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 1)
+
+        payload = {
+            'name': 'Sibling', 'item_type': '2', 'price': 5, 'item_class': 'S',
+            'size': '7', 'fabrics': 4, 'stocked': 30, 'foreing': False, }
+
+        self.client.post(reverse('item-selector'), payload)
+        self.assertEqual(Item.objects.filter(foreing=True).count(), 2)
 
     def test_invalid_form(self):
         """Test the proper response of invalid forms."""

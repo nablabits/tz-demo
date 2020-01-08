@@ -580,6 +580,21 @@ class Item(models.Model):
         sales = sales.aggregate(total=models.Sum('qty'))
         return sales['total'] if sales['total'] else 0
 
+    def consistent_foreign(self):
+        """Make siblings foreigns when one of the siblings is foreign.
+
+        Siblings are the items that differ in size while sharing type & name.
+        This method is applied on CRUD actions throughput the app but on admin
+        view to have some control.
+        """
+        siblings = Item.objects.filter(
+            name=self.name, item_type=self.item_type)
+
+        if siblings.filter(foreing=True).exists():
+            for s in siblings:
+                s.foreing = True
+                s.save()
+
     @property
     def html_string(self):
         """Render the item string for views."""

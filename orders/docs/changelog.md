@@ -1,5 +1,11 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v88, ???
+  * **Mejora:** al tener una prenda externa todas sus compañeras en tallas
+  diferentes también serán externas.
+  * **Bug:** han vuleto los botones que habían huido en el editor de prendas.
+  * **Bug:** al acutalizar el stock ya no se desmarcan las prendas externas.
+
 ### v87, Ene 7
   * **Mejora:** el control de stock ahora funciona de forma un poco más
   eficiente.
