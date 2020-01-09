@@ -1133,7 +1133,7 @@ class Expense(models.Model):
                                  on_delete=models.SET_DEFAULT)
     in_b = models.BooleanField('En B', default=False)
     notes = models.TextField('Observaciones', blank=True, null=True)
-    closed = models.BooleanField('Cerrado', default=False)
+    closed = models.BooleanField('Cerrado', default=False, editable=False)
     consultancy = models.BooleanField(default=True)
 
     def __str__(self):
@@ -1152,6 +1152,12 @@ class Expense(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()
+
+        # Get the value for the closed attribute
+        self.closed = False  # default
+        if self.pending == 0:
+            self.closed = True
+
         super().save(*args, **kwargs)
 
     def kill(self):
@@ -1159,22 +1165,7 @@ class Expense(models.Model):
         if self.pending:
             CashFlowIO.objects.create(
                 expense=self, amount=self.pending, pay_method=self.pay_method)
-        self.closed = True
         self.save()
-
-    def _self_close(self):
-        """Check the consistency of the close attribute.
-
-        Closed attribute rely on their cashflows' amounts and although delete
-        method should reopen the expense, it might be useful from time to time
-        to check manually if everything is ok. This method does so.
-        """
-        if self.pending:
-            self.closed = False  # Swap truth
-        else:
-            self.closed = True  # Swap truth
-
-        return self.save()
 
     @property
     def already_paid(self):
@@ -1203,8 +1194,8 @@ class CashFlowIO(models.Model):
     creation = models.DateTimeField(default=timezone.now)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True,
                               null=True, related_name='cfio_prepaids')
-    expense = models.ForeignKey(Expense, on_delete=models.CASCADE, blank=True,
-                                null=True, limit_choices_to={'closed': False})
+    expense = models.ForeignKey(
+        Expense, on_delete=models.CASCADE, blank=True, null=True,)
     amount = models.DecimalField(max_digits=7, decimal_places=2)
     pay_method = models.CharField(
         max_length=1, choices=settings.PAYMENT_METHODS, default='C')
@@ -1218,18 +1209,18 @@ class CashFlowIO(models.Model):
         """Override save options."""
         self.clean()  # Run custom validators
         super().save(*args, **kwargs)
-        e = self.expense
-        if e and e.pending == 0:
-            e.closed = True
-            e.save()
+        if self.expense:
+            self.expense.save()  # Update closed attr (if any)
 
     def delete(self, *args, **kwargs):
-        """Override delete options."""
-        # Ensure expenses are reopened after deleting one of their cashflows
-        if self.expense:
-            self.expense.closed = False
-            self.expense.save()
+        """Ensure expenses are reopened after deleting one of their cashflows.
+
+        Notice that bulk delete in admin view skips this method.
+        """
+        e = self.expense  # Fetch the element before deleting its cf
         super().delete(*args, **kwargs)
+        if e:
+            e.save()  # updates the closed attr
 
     def clean(self):
         """Custom validation parameters."""

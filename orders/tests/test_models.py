@@ -2786,7 +2786,6 @@ class TestExpense(TestCase):
         expense = Expense.objects.get(pk=expense.pk)
         self.assertEqual(expense.category.name, 'default')
 
-
     def test_in_b_field(self):
         """Test the field."""
         expense = Expense.objects.create(
@@ -2812,6 +2811,7 @@ class TestExpense(TestCase):
             expense._meta.get_field('notes').verbose_name,
             'Observaciones')
 
+    @tag('current')
     def test_closed_field(self):
         """Test the field."""
         expense = Expense.objects.create(
@@ -2824,6 +2824,15 @@ class TestExpense(TestCase):
         self.assertEqual(
             expense._meta.get_field('closed').verbose_name,
             'Cerrado')
+
+        expense.kill()
+        self.assertTrue(expense.closed)
+
+        self.assertEqual(CashFlowIO.objects.count(), 1)
+        cf = CashFlowIO.objects.first()
+        cf.delete()
+        expense.save()  # update status
+        self.assertFalse(expense.closed)
 
     def test_consultancy_field(self):
         """Test the field."""
@@ -2867,28 +2876,6 @@ class TestExpense(TestCase):
             self.assertTrue(CashFlowIO.objects.get(expense=expense))
 
             cf.delete()
-
-    def test_self_close(self):
-        e = Expense.objects.create(
-            issuer=Customer.objects.first(), invoice_no='foo', concept='bar',
-            issued_on=date.today(), amount=100, closed=True)
-
-        # Test pending and closed
-        self.assertTrue(e.closed and e.pending)  # Inconsistent
-        e._self_close()
-        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent
-        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent
-
-        # Test not pending and not closed
-        e.kill()
-        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent
-        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent
-        e.closed = False
-        e.save()
-        self.assertFalse(e.closed or e.pending)  # Inconsistent
-        e._self_close()
-        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent again
-        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent again
 
     def test_already_paid(self):
         e = Expense.objects.create(
@@ -3095,6 +3082,7 @@ class TestCashFlowIO(TestCase):
         self.assertTrue(cf.expense.closed)
 
     def test_delete_opens_the_expense_again(self):
+        self.assertFalse(Expense.objects.first().closed)
         cf = CashFlowIO.objects.create(
             expense=Expense.objects.first(), amount=100)  # kills the debt
         self.assertTrue(cf.expense.closed)

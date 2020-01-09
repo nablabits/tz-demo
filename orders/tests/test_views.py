@@ -2178,6 +2178,22 @@ class InvoicesListTest(TestCase):
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
 
+    @tag('current')
+    def test_invoices_list_reload_expenses(self):
+        c = Customer.objects.create(
+            name='foo', city='bar', CIF='baz', phone=0, cp=0, provider=True,
+            address='baz', )
+        for _ in range(2):
+            e = Expense.objects.create(
+                issuer=c, invoice_no='foo', issued_on=date.today(),
+                concept='bar', amount=10, )
+            e.kill()
+        self.client.login(username='regular', password='test')
+        payload = {'reload-expenses': True, }
+        resp = self.client.get(reverse('invoiceslist'), payload)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEquals(data['out'], 'Everything was up to date.')
+
     def test_invoices_today_displays_today_invoices(self):
         """Test display today's invoices and their total amount."""
         self.client.login(username='regular', password='test')

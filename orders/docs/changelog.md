@@ -1,6 +1,12 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v88, ???
+### v89, ???
+  * **Mejora:** ahora hay un boton para actualizar el estado de las facturas
+  pendientes (en caso de hacer un *bulk delete*)
+  * **Bug:** al eliminar un prepago de una factura pendiente, ésta se marca
+  automaticamente como abierta
+
+### v88, Ene 8
   * **Mejora:** al tener una prenda externa todas sus compañeras en tallas
   diferentes también serán externas.
   * **Bug:** han vuleto los botones que habían huido en el editor de prendas.
