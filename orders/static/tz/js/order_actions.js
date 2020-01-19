@@ -35,7 +35,7 @@ $(function () {
     }
     $.ajax({
       url: '/actions/',
-      data: { 'pk': pk, 'action': action, 'aditionalpk': aditionalPK },
+      data: { pk: pk, action: action, aditionalpk: aditionalPK },
       dataType: 'json',
       beforeSend: function () {
         $('#action-modal').modal('show')

@@ -610,6 +610,14 @@ def itemslist(request):
 @timetable_required
 def invoiceslist(request):
     """List all the invoices."""
+    if request.GET.get('reload-expenses', None):
+        k = Expense.objects.filter(closed=False).count()
+        [e.save() for e in Expense.objects.all()]
+        k = Expense.objects.filter(closed=False).count() - k  # lookup changes
+        ok = 'Everything was up to date.'
+        out = '{} element(s) updated, reload view'.format(k) if k else ok
+        return JsonResponse({'out': out, })
+
     # Invoiced today, current week and current month
     cf_inbounds_today = CashFlowIO.inbounds.filter(
         creation__date=timezone.now().date())

@@ -550,7 +550,7 @@ class CommonContextStockTabs(TestCase):
         u = User.objects.create_user(username='foo')
         c = Customer.objects.create(name='foo', cp=0, phone=0)
         Order.objects.create(
-            user=u, customer=c, ref_name='foo', delivery=date.today())
+            user=u, customer=c, ref_name='Quick', delivery=date.today())
 
     def test_tab_elements(self):
         p1, p2, p3, zero, negative = [
@@ -2177,6 +2177,21 @@ class InvoicesListTest(TestCase):
             self.assertEqual(resp.status_code, 302)
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
+
+    def test_invoices_list_reload_expenses(self):
+        c = Customer.objects.create(
+            name='foo', city='bar', CIF='baz', phone=0, cp=0, provider=True,
+            address='baz', )
+        for _ in range(2):
+            e = Expense.objects.create(
+                issuer=c, invoice_no='foo', issued_on=date.today(),
+                concept='bar', amount=10, )
+            e.kill()
+        self.client.login(username='regular', password='test')
+        payload = {'reload-expenses': True, }
+        resp = self.client.get(reverse('invoiceslist'), payload)
+        data = json.loads(str(resp.content, 'utf-8'))
+        self.assertEquals(data['out'], 'Everything was up to date.')
 
     def test_invoices_today_displays_today_invoices(self):
         """Test display today's invoices and their total amount."""
@@ -5123,7 +5138,6 @@ class ItemsCRUDTests(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#stock-tabs')
 
-    @tag('current')
     def test_obj_item_edit_updates_foreign_siblings(self):
         Item.objects.create(
             name='Sibling', item_type='2', size='5', fabrics=5, foreing=True)

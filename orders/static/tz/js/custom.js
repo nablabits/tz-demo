@@ -34,6 +34,23 @@ $(document).ready(function () {
     return false
   }
 
+  // Update expenses button
+  function updateExpenses () {
+    $.ajax({
+      url: $(this).attr('action'),
+      dataType: 'json',
+      beforeSend: function () {
+        $('.bg-working').toggleClass('d-none')
+        // try to get rid of function
+      },
+      success: function (data) {
+        $('.bg-working').toggleClass('d-none')
+        $('#reload-outcome').html(data.out).delay(3000).fadeOut(800)
+      }
+    })
+  }
+  $('.js-reload-expenses').click(updateExpenses)
+
   // opens a list item on orders/customers view
   var openItem = function () {
     var href = $(this).attr('data-href')

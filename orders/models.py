@@ -302,9 +302,20 @@ class Order(models.Model):
         return round(self.total - self.already_paid, 2)
 
     @property
+    def closed(self):
+        """Determine if the order is closed."""
+        tz = 'trapuzarrak'
+        return (
+            (self.status == '9') or
+            (self.status == '7' and self.customer.name.lower() == tz))
+
+    @property
     def days_open(self):
         """Calculate the days the order has been open."""
-        return (date.today() - self.status_shift.first().date_in.date()).days
+        if self.closed:
+            return (self.delivery - self.inbox_date.date()).days
+        else:
+            return (date.today() - self.inbox_date.date()).days
 
     @property
     def color(self):
@@ -537,12 +548,16 @@ class Item(models.Model):
 
         Possible health statuses:
         sales | stocked | health
-        0       0         -100
+        0       0         -100    #small enough
         0       1         -stock
         1       1         1
         1       2         2
         2       1         0.5
         2       0         0
+
+        Also, items that only appear in regular orders should have more health,
+        since they are scarcely used. That means that they are going to have
+        always the best health possible (over 200).
         """
         # Estimate sales fields
         self.total_sales = self.sales()
@@ -556,6 +571,10 @@ class Item(models.Model):
             self.health = - self.stocked
         else:
             self.health = self.stocked / avg_sales
+
+        # Add more health to regular orders' items
+        if self.order_item.exclude(reference__ref_name='Quick').exists():
+            self.health += 300
 
         super().save(*args, **kwargs)
 
@@ -803,11 +822,11 @@ class OrderItem(models.Model):
     @property
     def estimated_time(self):
         """Return the estimated time in seconds to produce the item."""
-        item = Item.objects.get(pk=self.element.pk)
+        item = self.element
         times = (
-            (item.avg_crop * self.qty).seconds,
-            (item.avg_sewing * self.qty).seconds,
-            (item.avg_iron * self.qty).seconds, )
+            (item.avg_crop * self.qty).total_seconds(),
+            (item.avg_sewing * self.qty).total_seconds(),
+            (item.avg_iron * self.qty).total_seconds(), )
         return times
 
     @property
@@ -1133,7 +1152,7 @@ class Expense(models.Model):
                                  on_delete=models.SET_DEFAULT)
     in_b = models.BooleanField('En B', default=False)
     notes = models.TextField('Observaciones', blank=True, null=True)
-    closed = models.BooleanField('Cerrado', default=False)
+    closed = models.BooleanField('Cerrado', default=False, editable=False)
     consultancy = models.BooleanField(default=True)
 
     def __str__(self):
@@ -1152,6 +1171,12 @@ class Expense(models.Model):
 
     def save(self, *args, **kwargs):
         self.clean()
+
+        # Get the value for the closed attribute
+        self.closed = False  # default
+        if self.pending == 0:
+            self.closed = True
+
         super().save(*args, **kwargs)
 
     def kill(self):
@@ -1159,22 +1184,7 @@ class Expense(models.Model):
         if self.pending:
             CashFlowIO.objects.create(
                 expense=self, amount=self.pending, pay_method=self.pay_method)
-        self.closed = True
         self.save()
-
-    def _self_close(self):
-        """Check the consistency of the close attribute.
-
-        Closed attribute rely on their cashflows' amounts and although delete
-        method should reopen the expense, it might be useful from time to time
-        to check manually if everything is ok. This method does so.
-        """
-        if self.pending:
-            self.closed = False  # Swap truth
-        else:
-            self.closed = True  # Swap truth
-
-        return self.save()
 
     @property
     def already_paid(self):
@@ -1203,8 +1213,8 @@ class CashFlowIO(models.Model):
     creation = models.DateTimeField(default=timezone.now)
     order = models.ForeignKey(Order, on_delete=models.CASCADE, blank=True,
                               null=True, related_name='cfio_prepaids')
-    expense = models.ForeignKey(Expense, on_delete=models.CASCADE, blank=True,
-                                null=True, limit_choices_to={'closed': False})
+    expense = models.ForeignKey(
+        Expense, on_delete=models.CASCADE, blank=True, null=True,)
     amount = models.DecimalField(max_digits=7, decimal_places=2)
     pay_method = models.CharField(
         max_length=1, choices=settings.PAYMENT_METHODS, default='C')
@@ -1218,18 +1228,18 @@ class CashFlowIO(models.Model):
         """Override save options."""
         self.clean()  # Run custom validators
         super().save(*args, **kwargs)
-        e = self.expense
-        if e and e.pending == 0:
-            e.closed = True
-            e.save()
+        if self.expense:
+            self.expense.save()  # Update closed attr (if any)
 
     def delete(self, *args, **kwargs):
-        """Override delete options."""
-        # Ensure expenses are reopened after deleting one of their cashflows
-        if self.expense:
-            self.expense.closed = False
-            self.expense.save()
+        """Ensure expenses are reopened after deleting one of their cashflows.
+
+        Notice that bulk delete in admin view skips this method.
+        """
+        e = self.expense  # Fetch the element before deleting its cf
         super().delete(*args, **kwargs)
+        if e:
+            e.save()  # updates the closed attr
 
     def clean(self):
         """Custom validation parameters."""

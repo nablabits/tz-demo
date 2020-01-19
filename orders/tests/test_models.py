@@ -948,9 +948,44 @@ class TestOrders(TestCase):
             CashFlowIO.objects.create(order=order, amount=10)
         self.assertEqual(order.pending, 130)
 
+    def test_closed(self):
+        o = Order.objects.first()
+        self.assertFalse(o.closed)
+
+        tz = Customer.objects.create(name='Trapuzarrak', phone=0, cp=0)
+        o.customer = tz
+        o.status = '7'
+        o.delivery = date.today() - timedelta(days=1)
+        o.save()
+        self.assertTrue(o.closed)
+
+        o.customer = Customer.objects.first()
+        o.save()
+        self.assertFalse(o.closed)
+
+        OrderItem.objects.create(element=Item.objects.last(), reference=o)
+        o.kill()
+        self.assertTrue(o.closed)
+
     def test_days_open(self):
         o = Order.objects.first()
-        self.assertEqual(o.days_open, 0)
+        o.inbox_date = o.inbox_date - timedelta(days=5)
+        self.assertEqual(o.days_open, 5)
+
+        tz = Customer.objects.create(name='Trapuzarrak', phone=0, cp=0)
+        o.customer = tz
+        o.status = '7'
+        o.delivery = date.today() - timedelta(days=1)
+        o.save()
+        self.assertEqual(o.days_open, 4)
+
+        o.customer = Customer.objects.first()
+        o.save()
+        self.assertEqual(o.days_open, 5)
+
+        OrderItem.objects.create(element=Item.objects.last(), reference=o)
+        o.kill()
+        self.assertEqual(o.days_open, 4)
 
     def test_color(self):
         o = Order.objects.first()
@@ -1603,7 +1638,14 @@ class TestObjectItems(TestCase):
         [OrderItem.objects.create(element=i, reference=o) for _ in range(3)]
         o.kill()  # update stock and health
         i = Item.objects.get(pk=i.pk)  # reload item data
-        self.assertEqual(i.health, 2 / (3/12))  # 2 over 3 sales in 12 months
+
+        # 2 over 3 sales in 12 months plus 300 since the order was regular
+        self.assertEqual(i.health, (2 / (3/12)) + 300)
+
+        o.ref_name = 'Quick'  # Make one of the orders express
+        o.save()
+        i.save()
+        self.assertEqual(i.health, (2 / (3/12)))
 
     def test_sales_default_period(self):
         # clone the order
@@ -2133,7 +2175,8 @@ class TestOrderItems(TestCase):
         test_item = OrderItem.objects.create(
             element=items[0], qty=5, reference=order)
 
-        self.assertEqual(test_item.prettified_est, ['2.0h', '4.0h', '6.0h'])
+        self.assertEqual(
+            test_item.prettified_est, ['50.0h', '100.0h', '150.0h'])
 
     def test_ticket_print(self):
         item_obj = Item.objects.create(
@@ -2786,7 +2829,6 @@ class TestExpense(TestCase):
         expense = Expense.objects.get(pk=expense.pk)
         self.assertEqual(expense.category.name, 'default')
 
-
     def test_in_b_field(self):
         """Test the field."""
         expense = Expense.objects.create(
@@ -2824,6 +2866,15 @@ class TestExpense(TestCase):
         self.assertEqual(
             expense._meta.get_field('closed').verbose_name,
             'Cerrado')
+
+        expense.kill()
+        self.assertTrue(expense.closed)
+
+        self.assertEqual(CashFlowIO.objects.count(), 1)
+        cf = CashFlowIO.objects.first()
+        cf.delete()
+        expense.save()  # update status
+        self.assertFalse(expense.closed)
 
     def test_consultancy_field(self):
         """Test the field."""
@@ -2867,28 +2918,6 @@ class TestExpense(TestCase):
             self.assertTrue(CashFlowIO.objects.get(expense=expense))
 
             cf.delete()
-
-    def test_self_close(self):
-        e = Expense.objects.create(
-            issuer=Customer.objects.first(), invoice_no='foo', concept='bar',
-            issued_on=date.today(), amount=100, closed=True)
-
-        # Test pending and closed
-        self.assertTrue(e.closed and e.pending)  # Inconsistent
-        e._self_close()
-        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent
-        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent
-
-        # Test not pending and not closed
-        e.kill()
-        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent
-        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent
-        e.closed = False
-        e.save()
-        self.assertFalse(e.closed or e.pending)  # Inconsistent
-        e._self_close()
-        self.assertFalse(e.pending and e.closed)  # 0 and 1, consistent again
-        self.assertTrue(e.pending or e.closed)  # 0 or 1, consistent again
 
     def test_already_paid(self):
         e = Expense.objects.create(
@@ -3095,6 +3124,7 @@ class TestCashFlowIO(TestCase):
         self.assertTrue(cf.expense.closed)
 
     def test_delete_opens_the_expense_again(self):
+        self.assertFalse(Expense.objects.first().closed)
         cf = CashFlowIO.objects.create(
             expense=Expense.objects.first(), amount=100)  # kills the debt
         self.assertTrue(cf.expense.closed)
