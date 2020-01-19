@@ -1,10 +1,13 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v89, ???
+### v89, Ene 19
   * **Mejora:** ahora hay un boton para actualizar el estado de las facturas
   pendientes (en caso de hacer un *bulk delete*)
   * **Mejora:** Las prendas que no se venden en ventas express, tienen más salud
   y aparecen más abajo en el control de stock.
+  * **Mejora:** al cambiar el stock, la app recuerda dónde estaba.
+  * **Bug:** Las prendas en la vista de pedidos no mostraban correctamente los
+  tiempos estimados de producción.
   * **Bug:** al eliminar un prepago de una factura pendiente, ésta se marca
   automáticamente como abierta
 

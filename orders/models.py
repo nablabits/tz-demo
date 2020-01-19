@@ -811,11 +811,11 @@ class OrderItem(models.Model):
     @property
     def estimated_time(self):
         """Return the estimated time in seconds to produce the item."""
-        item = Item.objects.get(pk=self.element.pk)
+        item = self.element
         times = (
-            (item.avg_crop * self.qty).seconds,
-            (item.avg_sewing * self.qty).seconds,
-            (item.avg_iron * self.qty).seconds, )
+            (item.avg_crop * self.qty).total_seconds(),
+            (item.avg_sewing * self.qty).total_seconds(),
+            (item.avg_iron * self.qty).total_seconds(), )
         return times
 
     @property

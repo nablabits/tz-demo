@@ -2178,7 +2178,6 @@ class InvoicesListTest(TestCase):
             self.assertRedirects(resp, login_url)
             self.assertEquals(Timetable.objects.count(), 1)
 
-    @tag('current')
     def test_invoices_list_reload_expenses(self):
         c = Customer.objects.create(
             name='foo', city='bar', CIF='baz', phone=0, cp=0, provider=True,
@@ -5139,7 +5138,6 @@ class ItemsCRUDTests(TestCase):
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#stock-tabs')
 
-    @tag('current')
     def test_obj_item_edit_updates_foreign_siblings(self):
         Item.objects.create(
             name='Sibling', item_type='2', size='5', fabrics=5, foreing=True)

@@ -1587,7 +1587,6 @@ class TestObjectItems(TestCase):
                      item_class='S', size=1, price=0, stocked=0, )
             i.full_clean()
 
-    @tag('current')
     def test_save_health(self):
         i = Item.objects.create(name='foo', fabrics=5, )
 
@@ -1611,8 +1610,7 @@ class TestObjectItems(TestCase):
         o.ref_name = 'Quick'  # Make one of the orders express
         o.save()
         i.save()
-        self.assertEqual(i.health, (2 / (3/12))
-
+        self.assertEqual(i.health, (2 / (3/12)))
 
     def test_sales_default_period(self):
         # clone the order
@@ -2142,7 +2140,8 @@ class TestOrderItems(TestCase):
         test_item = OrderItem.objects.create(
             element=items[0], qty=5, reference=order)
 
-        self.assertEqual(test_item.prettified_est, ['2.0h', '4.0h', '6.0h'])
+        self.assertEqual(
+            test_item.prettified_est, ['50.0h', '100.0h', '150.0h'])
 
     def test_ticket_print(self):
         item_obj = Item.objects.create(
@@ -2820,7 +2819,6 @@ class TestExpense(TestCase):
             expense._meta.get_field('notes').verbose_name,
             'Observaciones')
 
-    @tag('current')
     def test_closed_field(self):
         """Test the field."""
         expense = Expense.objects.create(
