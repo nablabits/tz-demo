@@ -302,9 +302,20 @@ class Order(models.Model):
         return round(self.total - self.already_paid, 2)
 
     @property
+    def closed(self):
+        """Determine if the order is closed."""
+        tz = 'trapuzarrak'
+        return (
+            (self.status == '9') or
+            (self.status == '7' and self.customer.name.lower() == tz))
+
+    @property
     def days_open(self):
         """Calculate the days the order has been open."""
-        return (date.today() - self.status_shift.first().date_in.date()).days
+        if self.closed:
+            return (self.delivery - self.inbox_date.date()).days
+        else:
+            return (date.today() - self.inbox_date.date()).days
 
     @property
     def color(self):

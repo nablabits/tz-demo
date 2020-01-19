@@ -310,7 +310,11 @@ Has three sections:
               </div>
               <div class="card-body">
                 <div class="d-flex flex-column">
-                  Este pedido lleva abierto {{order.days_open}} días
+                  {% if order.closed %}
+                    Este pedido estuvo abierto {{order.days_open}} días
+                  {% else %}
+                    Este pedido lleva abierto {{order.days_open}} días
+                  {% endif %}
                   {% for icon, status in status_tracker %}
                     {% if status %}
                     <span class="my-1"><i class="fa {{icon}} fa-fw mr-2"></i>{{status.date_in}}</span>

@@ -948,9 +948,44 @@ class TestOrders(TestCase):
             CashFlowIO.objects.create(order=order, amount=10)
         self.assertEqual(order.pending, 130)
 
+    def test_closed(self):
+        o = Order.objects.first()
+        self.assertFalse(o.closed)
+
+        tz = Customer.objects.create(name='Trapuzarrak', phone=0, cp=0)
+        o.customer = tz
+        o.status = '7'
+        o.delivery = date.today() - timedelta(days=1)
+        o.save()
+        self.assertTrue(o.closed)
+
+        o.customer = Customer.objects.first()
+        o.save()
+        self.assertFalse(o.closed)
+
+        OrderItem.objects.create(element=Item.objects.last(), reference=o)
+        o.kill()
+        self.assertTrue(o.closed)
+
     def test_days_open(self):
         o = Order.objects.first()
-        self.assertEqual(o.days_open, 0)
+        o.inbox_date = o.inbox_date - timedelta(days=5)
+        self.assertEqual(o.days_open, 5)
+
+        tz = Customer.objects.create(name='Trapuzarrak', phone=0, cp=0)
+        o.customer = tz
+        o.status = '7'
+        o.delivery = date.today() - timedelta(days=1)
+        o.save()
+        self.assertEqual(o.days_open, 4)
+
+        o.customer = Customer.objects.first()
+        o.save()
+        self.assertEqual(o.days_open, 5)
+
+        OrderItem.objects.create(element=Item.objects.last(), reference=o)
+        o.kill()
+        self.assertEqual(o.days_open, 4)
 
     def test_color(self):
         o = Order.objects.first()

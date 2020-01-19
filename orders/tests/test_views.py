@@ -550,7 +550,7 @@ class CommonContextStockTabs(TestCase):
         u = User.objects.create_user(username='foo')
         c = Customer.objects.create(name='foo', cp=0, phone=0)
         Order.objects.create(
-            user=u, customer=c, ref_name='foo', delivery=date.today())
+            user=u, customer=c, ref_name='Quick', delivery=date.today())
 
     def test_tab_elements(self):
         p1, p2, p3, zero, negative = [
