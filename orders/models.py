@@ -537,12 +537,16 @@ class Item(models.Model):
 
         Possible health statuses:
         sales | stocked | health
-        0       0         -100
+        0       0         -100    #small enough
         0       1         -stock
         1       1         1
         1       2         2
         2       1         0.5
         2       0         0
+
+        Also, items that only appear in regular orders should have more health,
+        since they are scarcely used. That means that they are going to have
+        always the best health possible (over 200).
         """
         # Estimate sales fields
         self.total_sales = self.sales()
@@ -556,6 +560,10 @@ class Item(models.Model):
             self.health = - self.stocked
         else:
             self.health = self.stocked / avg_sales
+
+        # Add more health to regular orders' items
+        if self.order_item.exclude(reference__ref_name='Quick').exists():
+            self.health += 300
 
         super().save(*args, **kwargs)
 

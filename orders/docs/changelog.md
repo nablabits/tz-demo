@@ -3,8 +3,10 @@
 ### v89, ???
   * **Mejora:** ahora hay un boton para actualizar el estado de las facturas
   pendientes (en caso de hacer un *bulk delete*)
+  * **Mejora:** Las prendas que no se venden en ventas express, tienen más salud
+  y aparecen más abajo en el control de stock.
   * **Bug:** al eliminar un prepago de una factura pendiente, ésta se marca
-  automaticamente como abierta
+  automáticamente como abierta
 
 ### v88, Ene 8
   * **Mejora:** al tener una prenda externa todas sus compañeras en tallas

@@ -1587,6 +1587,7 @@ class TestObjectItems(TestCase):
                      item_class='S', size=1, price=0, stocked=0, )
             i.full_clean()
 
+    @tag('current')
     def test_save_health(self):
         i = Item.objects.create(name='foo', fabrics=5, )
 
@@ -1603,7 +1604,15 @@ class TestObjectItems(TestCase):
         [OrderItem.objects.create(element=i, reference=o) for _ in range(3)]
         o.kill()  # update stock and health
         i = Item.objects.get(pk=i.pk)  # reload item data
-        self.assertEqual(i.health, 2 / (3/12))  # 2 over 3 sales in 12 months
+
+        # 2 over 3 sales in 12 months plus 300 since the order was regular
+        self.assertEqual(i.health, (2 / (3/12)) + 300)
+
+        o.ref_name = 'Quick'  # Make one of the orders express
+        o.save()
+        i.save()
+        self.assertEqual(i.health, (2 / (3/12))
+
 
     def test_sales_default_period(self):
         # clone the order
