@@ -1317,13 +1317,7 @@ class Actions(View):
                 if sbt_2nd == 'save-and-archive':
                     pqueue_item = get_object_or_404(PQueue, pk=item.pk)
                     pqueue_item.complete()
-                pqueue = PQueue.objects.select_related('item__reference')
-                pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
-                pqueue_completed = pqueue.filter(score__lt=0)
-                pqueue_active = pqueue.filter(score__gt=0)
-                context = {'active': pqueue_active,
-                           'completed': pqueue_completed,
-                           }
+                context = CommonContexts.pqueue()
             else:
                 custom_form = 'includes/custom_forms/add_times.html'
                 context = {'form': form,
@@ -1463,6 +1457,7 @@ class OrdersCRUD(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#kanban-columns'
+                template = 'includes/kanban_columns.html'
                 context = CommonContexts.kanban()
             else:
                 data['form_is_valid'] = False
@@ -1907,13 +1902,7 @@ def pqueue_actions(request):
             'error': False, }
     template = 'includes/pqueue_list.html'
 
-    pqueue = PQueue.objects.select_related('item__reference')
-    pqueue = pqueue.exclude(item__reference__status__in=[7, 8])
-    pqueue_completed = pqueue.filter(score__lt=0)
-    pqueue_active = pqueue.filter(score__gt=0)
-    context = {'active': pqueue_active,
-               'completed': pqueue_completed,
-               }
+    context = CommonContexts.pqueue()
 
     if action == 'send':
         item = get_object_or_404(OrderItem, pk=pk)
@@ -1964,7 +1953,7 @@ def pqueue_actions(request):
     # Tablet view id
     if action == 'tb-complete' or action == 'tb-uncomplete':
         data['html_id'] = '#pqueue-list-tablet'
-        template = 'tz/pqueue_tablet.html'
+        template = 'includes/pqueue_tablet.html'
 
     """
     Test stuff. Since it's not very straightforward extract this data
