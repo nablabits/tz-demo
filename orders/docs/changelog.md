@@ -3,6 +3,8 @@
 ### v90, Ene 22
   * **Bug:** la vista de la tablet ahora muestra correctamente la información al
   completar un item.
+  * **Bug:** Solucionados alguonos bugs que hacían a los tests de las vistas no
+  ser tan precisos.
 
 ### v89, Ene 19
   * **Mejora:** ahora hay un boton para actualizar el estado de las facturas

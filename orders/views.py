@@ -1457,6 +1457,7 @@ class OrdersCRUD(View):
                 form.save()
                 data['form_is_valid'] = True
                 data['html_id'] = '#kanban-columns'
+                template = 'includes/kanban_columns.html'
                 context = CommonContexts.kanban()
             else:
                 data['form_is_valid'] = False
