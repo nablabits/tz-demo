@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v90, Ene 22
+  * **Bug:** la vista de la tablet ahora muestra correctamente la información al
+  completar un item.
+
 ### v89, Ene 19
   * **Mejora:** ahora hay un boton para actualizar el estado de las facturas
   pendientes (en caso de hacer un *bulk delete*)
