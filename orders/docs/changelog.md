@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v90a, Ene 24
+  * **Mejora:** Ya se puede añadir stock desde el editor de prendas.
+  * **Bug:** Al añadir comentarios a prendas el cuadro ya va a desaparecer más.
+
 ### v90, Ene 22
   * **Bug:** la vista de la tablet ahora muestra correctamente la información al
   completar un item.
