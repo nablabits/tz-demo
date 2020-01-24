@@ -8,26 +8,26 @@ Add/Edit base items. Depends on regular form template.
   {% render_field form.name class="form-control" %}
 </div>
 <div class="row">
-  <div class="col-6">
+  <div class="col-5">
     <div class="form-group">
       {{form.item_type.label_tag}}
       {% render_field form.item_type class="form-control" %}
     </div>
   </div>
-  <div class="col-6">
+  <div class="col-5">
     <div class="form-group">
       {{form.item_class.label_tag}}
       {% render_field form.item_class class="form-control" %}
     </div>
   </div>
-</div>
-<div class="row">
-  <div class="col">
+  <div class="col-2">
     <div class="form-group">
       {{form.size.label_tag}}
       {% render_field form.size class="form-control" %}
     </div>
   </div>
+</div>
+<div class="row">
   <div class="col">
     <div class="form-group">
       {{form.fabrics.label_tag}}
@@ -42,6 +42,12 @@ Add/Edit base items. Depends on regular form template.
   </div>
   <div class="col">
     <div class="form-group">
+      {{form.stocked.label_tag}}
+      {% render_field form.stocked class="form-control" %}
+    </div>
+  </div>
+  <div class="col">
+    <div class="form-group">
       {{form.foreing.label_tag}}
       {% render_field form.foreing class="form-control" %}
     </div>
@@ -51,4 +57,3 @@ Add/Edit base items. Depends on regular form template.
   {{form.notes.label_tag}}
   {% render_field form.notes class="form-control" %}
 </div>
-{{form.stocked.as_hidden}}
