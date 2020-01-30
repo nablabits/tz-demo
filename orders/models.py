@@ -576,6 +576,12 @@ class Item(models.Model):
         if self.order_item.exclude(reference__ref_name='Quick').exists():
             self.health += 300
 
+        if self.health > 999.99:
+            self.health = 999
+
+        # Uppercase size
+        self.size = self.size.upper()
+
         super().save(*args, **kwargs)
 
     def sales(self, period='all_time'):

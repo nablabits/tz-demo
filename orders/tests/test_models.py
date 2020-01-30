@@ -1647,6 +1647,14 @@ class TestObjectItems(TestCase):
         i.save()
         self.assertEqual(i.health, (2 / (3/12)))
 
+        i.stocked = 2000
+        i.save()
+        self.assertEqual(i.health, 999)
+
+    def test_uppercase_size(self):
+        i = Item.objects.create(name='foo', size='BaR0', fabrics=0)
+        self.assertEqual(i.size, 'BAR0')
+
     def test_sales_default_period(self):
         # clone the order
         o1 = Order.objects.first()
@@ -1762,7 +1770,7 @@ class TestObjectItems(TestCase):
         html_str = (
             '\n<div class="d-block"><span class="mr-1">Pantalón foo</span>' +
             '</div><div class="d-block"><span class="badge badge-primary' +
-            ' mr-1">Medium</span><span class="badge badge-info mr-1">T-xs' +
+            ' mr-1">Medium</span><span class="badge badge-info mr-1">T-XS' +
             '</span></div>\n')
         self.assertEqual(i.html_string, html_str)
 
@@ -1950,7 +1958,7 @@ class TestOrderItems(TestCase):
 
     def test_orderitem_default_price(self):
         """When no price is given, pickup the object item's default."""
-        object_item = Item.objects.first()
+        object_item = Item.objects.last()
         object_item.price = 200
         object_item.name = 'Item default price'
         object_item.save()
