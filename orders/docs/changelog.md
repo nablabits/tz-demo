@@ -4,6 +4,8 @@
   * **Mejora:** al añadir prendas, el cuadro de dialogo muestra una referencia
   sobre el precio con un 15% más
   * **Mejora:** las tallas ahora se graban en mayusculas (aunque no quieras)
+  * **Bug:** Ya no puedes borrar prendas (aunque quieras), es un privilegio de
+  *superuser*
   * **Bug:** Ya  se puede añadir stock a algunas prendas sin que la app se quede
   pensando eternamente
 

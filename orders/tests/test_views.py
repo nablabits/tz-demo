@@ -2099,8 +2099,6 @@ class ItemsListTests(TestCase):
         self.assertEqual(resp.context['btn_title_add'], 'Añadir prenda')
         self.assertEqual(resp.context['js_action_add'], 'object-item-add')
         self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
-        self.assertEqual(resp.context['js_action_delete'],
-                         'object-item-delete')
         self.assertEqual(resp.context['version'], settings.VERSION)
 
 
@@ -3784,7 +3782,6 @@ class ActionsGetMethod(TestCase):
                    'customer-edit',
                    'object-item-edit',
                    'pqueue-add-time',
-                   'object-item-delete',
                    'order-express-delete',
                    'customer-delete',
                    'view-ticket',
@@ -3954,23 +3951,6 @@ class ActionsGetMethod(TestCase):
         vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn', )
         self.assertTrue(self.context_vars(context, vars))
 
-    def test_delete_obj_item(self):
-        """Test context dictionaries and template."""
-        item = Item.objects.first()
-        resp = self.client.get(reverse('actions'),
-                               {'pk': item.pk,
-                                'action': 'object-item-delete',
-                                'test': True,
-                                })
-        self.assertEqual(resp.status_code, 200)
-        self.assertIsInstance(resp.content, bytes)
-        data = json.loads(str(resp.content, 'utf-8'))
-        template = data['template']
-        context = data['context']
-        self.assertEqual(template, 'includes/delete_confirmation.html')
-        vars = ('modal_title', 'pk', 'action', 'msg', 'submit_btn')
-        self.assertTrue(self.context_vars(context, vars))
-
     def test_delete_customer(self):
         """Test context dictionaries and template."""
         customer = Customer.objects.get(name='Customer')
@@ -4031,7 +4011,6 @@ class ActionsPostMethodRaises(TestCase):
                    'customer-edit',
                    'object-item-edit',
                    'pqueue-add-time',
-                   'object-item-delete',
                    'order-express-delete',
                    'customer-delete',
                    )
@@ -4202,7 +4181,6 @@ class ActionsPostMethodCreate(TestCase):
                    'customer-edit',
                    'object-item-edit',
                    'pqueue-add-time',
-                   'object-item-delete',
                    'customer-delete',
                    )
         for action in actions:
@@ -4335,8 +4313,7 @@ class ActionsPostMethodCreate(TestCase):
         self.assertIsInstance(context, list)
         self.assertTrue(data['form_is_valid'])
         self.assertEqual(data['html_id'], '#item-selector')
-        vars = ('item_types', 'available_items', 'js_action_edit',
-                'js_action_delete', )
+        vars = ('item_types', 'available_items', 'js_action_edit', )
         self.assertTrue(self.context_vars(context, vars))
 
     def test_obj_item_add_invalid_form_returns_to_form_again(self):
@@ -4490,8 +4467,7 @@ class ActionsPostMethodEdit(TestCase):
                                  })
         # Test the response object
         data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('item_types', 'available_items', 'js_action_edit',
-                'js_action_delete',)
+        vars = ('item_types', 'available_items', 'js_action_edit', )
         self.assertIsInstance(resp, JsonResponse)
         self.assertIsInstance(resp.content, bytes)
         self.assertTrue(data['form_is_valid'])
@@ -4636,29 +4612,6 @@ class ActionsPostMethodEdit(TestCase):
         self.assertEqual(data['redirect'], reverse('main'))
         with self.assertRaises(ObjectDoesNotExist):
             OrderItem.objects.get(pk=order.pk)
-
-    def test_delete_obj_item_deletes_the_item(self):
-        """Test the correct item deletion."""
-        item = Item.objects.create(name='Test', fabrics=5, stocked=30)
-        resp = self.client.post(reverse('actions'),
-                                {'pk': item.pk,
-                                 'action': 'object-item-delete',
-                                 'test': True
-                                 })
-        # Test the response object
-        data = json.loads(str(resp.content, 'utf-8'))
-        vars = ('item_types', 'available_items', 'js_action_edit',
-                'js_action_delete', )
-        self.assertIsInstance(resp, JsonResponse)
-        self.assertIsInstance(resp.content, bytes)
-        self.assertTrue(data['form_is_valid'])
-        self.assertEqual(data['template'], 'includes/item_selector.html')
-        self.assertEqual(data['html_id'], '#item-selector')
-        self.assertTrue(self.context_vars(data['context'], vars))
-
-        # test if the object was actually deleted
-        with self.assertRaises(ObjectDoesNotExist):
-            Item.objects.get(pk=item.pk)
 
     def test_delete_customer_deletes_customer(self):
         """Test the proper deletion of customers."""
@@ -6263,8 +6216,6 @@ class ItemSelectorTests(TestCase):
         self.assertEqual(resp.context['item_types'], settings.ITEM_TYPE[1:])
         self.assertEqual(resp.context['item_classes'], settings.ITEM_CLASSES)
         self.assertEqual(resp.context['js_action_edit'], 'object-item-edit')
-        self.assertEqual(
-            resp.context['js_action_delete'], 'object-item-delete')
 
     def test_form_saves_item(self):
         """Test the proper save of new items."""

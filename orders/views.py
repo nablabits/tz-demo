@@ -600,7 +600,6 @@ def itemslist(request):
                      'btn_title_add': 'Añadir prenda',
                      'js_action_add': 'object-item-add',
                      'js_action_edit': 'object-item-edit',
-                     'js_action_delete': 'object-item-delete',
                      }
 
     return render(request, 'tz/list_view.html', view_settings)
@@ -1080,16 +1079,6 @@ class Actions(View):
                        }
             template = 'includes/regular_form.html'
 
-        # Delete item objects (GET)
-        elif action == 'object-item-delete':
-            item = get_object_or_404(Item, pk=pk)
-            context = {'modal_title': 'Eliminar prenda',
-                       'msg': 'Realmente borrar la prenda?',
-                       'pk': item.pk,
-                       'action': 'object-item-delete',
-                       'submit_btn': 'Sí, borrar'}
-            template = 'includes/delete_confirmation.html'
-
         # delete order express (GET)
         elif action == 'order-express-delete':
             order = get_object_or_404(Order, pk=pk)
@@ -1240,7 +1229,6 @@ class Actions(View):
                 context = {'item_types': settings.ITEM_TYPE[1:],
                            'available_items': items,
                            'js_action_edit': 'object-item-edit',
-                           'js_action_delete': 'object-item-delete',
                            }
                 template = 'includes/item_selector.html'
             else:
@@ -1288,7 +1276,6 @@ class Actions(View):
                 context = {'item_types': settings.ITEM_TYPE[1:],
                            'available_items': items,
                            'js_action_edit': 'object-item-edit',
-                           'js_action_delete': 'object-item-delete',
                            }
                 template = 'includes/item_selector.html'
             else:
@@ -1333,20 +1320,6 @@ class Actions(View):
 
                 item = OrderItem.objects.select_related('reference').get(pk=pk)
                 form = OrderItemForm(instance=item)
-
-        # Delete object Item
-        elif action == 'object-item-delete':
-            item = get_object_or_404(Item, pk=pk)
-            item.delete()
-            data['form_is_valid'] = True
-            items = Item.objects.all()[:11]
-            data['html_id'] = '#item-selector'
-            context = {'item_types': settings.ITEM_TYPE[1:],
-                       'available_items': items,
-                       'js_action_edit': 'object-item-edit',
-                       'js_action_delete': 'object-item-delete',
-                       }
-            template = 'includes/item_selector.html'
 
         # Delete order express (POST)
         elif action == 'order-express-delete':
@@ -1981,7 +1954,6 @@ def item_selector(request):
     context = {'item_types': settings.ITEM_TYPE[1:],
                'item_classes': settings.ITEM_CLASSES,
                'js_action_edit': 'object-item-edit',
-               'js_action_delete': 'object-item-delete'
                }
 
     # Process form when addding items on the fly
