@@ -5273,17 +5273,23 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'includes/custom_forms/order_item.html')
 
+    @tag('current')
     def test_get_edit_and_delete_order_item(self):
         i = OrderItem.objects.first()
+        bi = Item.objects.last()
+        bi.price = 100
+        bi.save()
+        i = OrderItem.objects.get(pk=i.pk)
         resp = self.client.get(reverse('orderitems-CRUD'),
                                {'reference': Order.objects.first().pk,
-                                'element': Item.objects.first().pk,
+                                'element': bi.pk,
                                 'order_item': i.pk,
                                 'test': True, })
         self.assertIsInstance(resp.context['form'], OrderItemForm)
         self.assertEqual(resp.context['form'].instance, i)
         self.assertEqual(
             resp.context['modal_title'], 'Editar prenda en pedido.')
+        self.assertEqual(resp.context['discount_hint'], 115)
 
     def test_get_delete_template_used(self):
         resp = self.client.get(reverse('orderitems-CRUD'),

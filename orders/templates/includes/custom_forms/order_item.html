@@ -34,13 +34,14 @@ This custom form template lets create or edit order items. Fits to item selector
         <div class="form-group">
           {{ form.qty.label_tag }}
           {% render_field form.qty class="form-control" %}
-          <small>stock: {{base_item.stocked}}</small>
+          <small class="form-text text-muted">stock: {{base_item.stocked}}</small>
         </div>
       </div>
       <div class="col-3">
         <div class="form-group">
           {{ form.price.label_tag }}
           {% render_field form.price class="form-control" value=base_item.price%}
+          <small class="form-text text-muted">{{discount_hint}}€ (+15%)</small>
         </div>
       </div>
       <div class="col">

@@ -1625,6 +1625,7 @@ class OrderItemsCRUD(View):
                    'order_item': order_item,
                    'order': order,
                    'modal_title': modal_title,
+                   'discount_hint': round(float(base_item.price) * 1.15, 1)
                    }
 
         if request.POST.get('test', None):
