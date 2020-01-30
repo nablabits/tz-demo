@@ -2,6 +2,8 @@
 ***
 ### v91, ???
   * **Mejora:** las tallas ahora se graban en mayusculas (aunque no quieras)
+  * **Bug:** Ya  se puede añadir stock a algunas prendas sin que la app se quede
+  pensando eternamente
 
 ### v90a, Ene 24
   * **Mejora:** Ya se puede añadir stock desde el editor de prendas.
