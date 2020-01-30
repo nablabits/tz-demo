@@ -4720,7 +4720,6 @@ class OrdersCRUDTests(TestCase):
         data = json.loads(str(resp.content, 'utf-8'))
         self.assertIsInstance(data, dict)
 
-    @tag('current')
     def test_get_template_used(self):
         resp = self.client.get(reverse('orders-CRUD'), {'test': True})
         self.assertTemplateUsed(resp, 'includes/custom_forms/order.html')
@@ -4828,7 +4827,6 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(data['redirect'], url)
         self.assertTrue(data['form_is_valid'])
 
-    @tag('current')
     def test_post_main_rejects_form(self):
         """Test first the JSON response and then with the dummy objects."""
         order = Order.objects.first()
@@ -4883,7 +4881,6 @@ class OrdersCRUDTests(TestCase):
         for var in common_vars:
             self.assertTrue(var in resp.context)
 
-    @tag('current')
     def test_post_edit_date_valid_form_template(self):
         """Test the correct teplate."""
         resp = self.client.post(
@@ -4981,7 +4978,6 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(
             resp.content.decode("utf-8"), 'Unknown direction.')
 
-    @tag('current')
     def test_post_kanban_jump_origin_status(self):
         """Just test the existence."""
         resp = self.client.post(reverse('orders-CRUD'),
@@ -5008,7 +5004,6 @@ class OrdersCRUDTests(TestCase):
         self.assertEqual(data['html_id'], '#order-status')
         self.assertTrue(data['form_is_valid'])
 
-    @tag('current')
     def test_post_kanban_jump_origin_kanban_view(self):
         """Just test the existence."""
         resp = self.client.post(reverse('orders-CRUD'),
@@ -5071,7 +5066,6 @@ class ItemsCRUDTests(TestCase):
         resp = self.client.get(reverse('items-CRUD'), payload)
         self.assertEqual(resp.status_code, 404)
 
-    @tag('current')
     def test_get_edit_stock_item_instance(self):
         item = Item.objects.last()
         payload = {'action': 'edit-stock', 'item_pk': item.pk, 'test': True}
@@ -5261,7 +5255,6 @@ class OrderItemsCRUDTests(TestCase):
                                 'test': True, })
         self.assertEquals(resp.context['order_item'], i)
 
-    @tag('current')
     def test_get_template_used_for_create_and_edit(self):
         # Create
         resp = self.client.get(reverse('orderitems-CRUD'),
@@ -5292,7 +5285,6 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(
             resp.context['modal_title'], 'Editar prenda en pedido.')
 
-    @tag('current')
     def test_get_delete_template_used(self):
         resp = self.client.get(reverse('orderitems-CRUD'),
                                {'reference': Order.objects.first().pk,
@@ -5403,7 +5395,6 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(resp.context['order_est_total'], '0s')
         self.assertTrue(resp.context['data']['form_is_valid'])
 
-    @tag('current')
     def test_post_action_main_saves_item(self):
         self.assertEqual(OrderItem.objects.count(), 5)
         resp = self.client.post(reverse('orderitems-CRUD'),
@@ -5451,7 +5442,6 @@ class OrderItemsCRUDTests(TestCase):
                               'action': 'main',
                               'test': True, })
 
-    @tag('current')
     def test_post_action_main_renders_ticket_view(self):
         o = Order.objects.first()
         o.ref_name = 'Quick'
@@ -5468,7 +5458,6 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(resp.context['data']['html_id'], '#ticket-wrapper')
         self.assertTemplateUsed(resp, 'includes/ticket.html')
 
-    @tag('current')
     def test_post_action_main_renders_quick_list(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'reference': Order.objects.first().pk,
@@ -5482,7 +5471,6 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(resp.context['data']['html_id'], '#quick-list')
         self.assertTemplateUsed(resp, 'includes/item_quick_list.html')
 
-    @tag('current')
     def test_post_action_main_form_not_valid(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'reference': Order.objects.first().pk,
@@ -5539,7 +5527,6 @@ class OrderItemsCRUDTests(TestCase):
         with self.assertRaisesMessage(ObjectDoesNotExist, msg):
             OrderItem.objects.get(pk=item.pk)
 
-    @tag('current')
     def test_post_action_delete_renders_ticket_view(self):
         o = Order.objects.first()
         o.ref_name = 'Quick'
@@ -5557,7 +5544,6 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(resp.context['data']['html_id'], '#ticket-wrapper')
         self.assertTemplateUsed(resp, 'includes/ticket.html')
 
-    @tag('current')
     def test_post_action_delete_renders_quick_list(self):
         resp = self.client.post(reverse('orderitems-CRUD'),
                                 {'reference': Order.objects.first().pk,
@@ -5792,7 +5778,6 @@ class CommentsCRUD(TestCase):
         for var in common_vars:
             self.assertTrue(var in resp.context)
 
-    @tag('current')
     def test_add_comment_valid_form_template(self):
         """Test the correct teplate."""
         resp = self.client.post(

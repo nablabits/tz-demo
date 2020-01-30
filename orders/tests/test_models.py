@@ -1647,6 +1647,10 @@ class TestObjectItems(TestCase):
         i.save()
         self.assertEqual(i.health, (2 / (3/12)))
 
+    def test_uppercase_size(self):
+        i = Item.objects.create(name='foo', size='BaR0', fabrics=0)
+        self.assertEqual(i.size, 'BAR0')
+
     def test_sales_default_period(self):
         # clone the order
         o1 = Order.objects.first()

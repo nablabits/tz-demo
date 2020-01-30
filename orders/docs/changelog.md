@@ -1,5 +1,8 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v91, ???
+  * **Mejora:** las tallas ahora se graban en mayusculas (aunque no quieras)
+
 ### v90a, Ene 24
   * **Mejora:** Ya se puede añadir stock desde el editor de prendas.
   * **Bug:** Al añadir comentarios a prendas el cuadro ya va a desaparecer más.
