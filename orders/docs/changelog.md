@@ -1,6 +1,7 @@
 ## Trapuzarrak app registro de cambios
 ***
 ### v92, ???
+  * **Mejora:** las prendas sin precio aparecen en rojo.
   * **Bug:** si al añadir una prenda a un pedido no se indica precio, ésta ya no
   cogerá el precio base, así podemos añadir prendas a precio 0.
 

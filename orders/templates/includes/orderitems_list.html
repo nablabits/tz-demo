@@ -65,7 +65,12 @@ Lets also update times on the fly by clicking the corresponding item.
             </div>
           </div>
         </td>
-        <td data-toggle="collapse" data-target=".item-detail-{{item.pk}}">{{item.subtotal}}€</td>
+        {% if item.subtotal == 0 %}
+          <td class="text-danger font-weight-bold" data-toggle="collapse" data-target=".item-detail-{{item.pk}}">
+        {% else %}
+          <td data-toggle="collapse" data-target=".item-detail-{{item.pk}}">
+        {% endif %}
+          {{item.subtotal}}€</td>
         <td>
           {%if not item.stock and not item.element.foreing%}
             <div class="d-flex aling-items-center" data-toggle="collapse" data-target=".item-detail-{{item.pk}}">
