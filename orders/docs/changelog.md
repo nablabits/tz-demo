@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v92, ???
+  * **Bug:** si al añadir una prenda a un pedido no se indica precio, ésta ya no
+  cogerá el precio base, así podemos añadir prendas a precio 0.
+
 ### v91, Ene 30
   * **Mejora:** al añadir prendas, el cuadro de dialogo muestra una referencia
   sobre el precio con un 15% más

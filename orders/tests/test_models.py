@@ -614,7 +614,7 @@ class TestOrders(TestCase):
         self.assertEqual(Order.live.count(), 5)
         invoiced, cancelled = Order.live.all()[:2]
         OrderItem.objects.create(
-            reference=invoiced, element=Item.objects.last())
+            reference=invoiced, element=Item.objects.last(), price=30, )
         invoiced.kill()
         cancelled.status = '8'
         cancelled.save()
@@ -646,7 +646,8 @@ class TestOrders(TestCase):
         # Now an invoiced express order
         i = Order.objects.create(
             user=u, customer=express, ref_name='Test', delivery=date.today())
-        OrderItem.objects.create(reference=i, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=i, element=Item.objects.last(), price=30, )
         i.kill()
 
         # finally an obsolete order, invoice missing
@@ -654,7 +655,7 @@ class TestOrders(TestCase):
             user=u, customer=express, ref_name='Obsolete',
             delivery=date.today())
         OrderItem.objects.create(
-            reference=obsolete, element=Item.objects.last())
+            reference=obsolete, element=Item.objects.last(), price=30, )
 
         self.assertEqual(Order.objects.count(), 4)  # total orders
         self.assertEqual(Order.obsolete.count(), 1)
@@ -683,7 +684,8 @@ class TestOrders(TestCase):
         o = Order.objects.first()
         self.assertEqual(o.status, '1')
 
-        OrderItem.objects.create(reference=o, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=o, element=Item.objects.last(), price=30, )
         o.kill()
         self.assertEqual(o.status, '9')
 
@@ -748,7 +750,7 @@ class TestOrders(TestCase):
         order = Order.objects.first()
         for i in range(5):
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=30, )
         order.kill()
         self.assertEqual(CashFlowIO.objects.count(), 1)
         self.assertEqual(order.pending, 0)
@@ -759,7 +761,8 @@ class TestOrders(TestCase):
 
     def test_kill_order_avoids_orders_to_be_rekilled(self):
         order = Order.objects.first()
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(Invoice.objects.count(), 0)
         order.kill()
         self.assertEqual(Invoice.objects.count(), 1)
@@ -768,7 +771,8 @@ class TestOrders(TestCase):
 
     def test_kill_order_kills_pending_payments(self):
         order = Order.objects.first()
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=30, )
         order.kill()
         cf = CashFlowIO.objects.get(order=order)
         self.assertTrue(cf)
@@ -790,21 +794,24 @@ class TestOrders(TestCase):
 
     def test_kill_order_updates_delivery_date(self):
         order = Order.objects.first()
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(order.delivery, date(2018, 2, 1))
         order.kill()
         self.assertEqual(order.delivery, date.today())
 
     def test_kill_order_updates_status(self):
         order = Order.objects.first()
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(order.status, '1')
         order.kill()
         self.assertEqual(order.status, '9')
 
     def test_kill_order_creates_invoice(self):
         order = Order.objects.first()
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=30, )
         order.kill()
         i = Invoice.objects.first()
         self.assertEqual(i.reference, order)
@@ -816,7 +823,7 @@ class TestOrders(TestCase):
     def test_kill_updates_stock(self):
         order, item = Order.objects.first(), Item.objects.last()
         self.assertEqual(item.stocked, 10)
-        OrderItem.objects.create(reference=order, element=item)
+        OrderItem.objects.create(reference=order, element=item, price=30, )
         order.kill()
         item = Item.objects.get(pk=item.pk)
         self.assertEqual(item.stocked, 9)
@@ -824,7 +831,8 @@ class TestOrders(TestCase):
     @tag('todoist')
     def test_kill_order_archives_todoist(self):
         order = Order.objects.first()
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=30, )
 
         order.create_todoist()
         order = Order.objects.get(pk=order.pk)
@@ -872,7 +880,7 @@ class TestOrders(TestCase):
         self.assertEqual(order.total, 0)
         for _ in range(5):
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(order.total, 150 * .90)
         self.assertIsInstance(order.total, float)
 
@@ -882,7 +890,7 @@ class TestOrders(TestCase):
         order = Order.objects.create(
             user=user, customer=c, ref_name='test', delivery=date.today())
         OrderItem.objects.create(
-            reference=order, element=Item.objects.last(), price=0)  # 30€
+            reference=order, element=Item.objects.last(), price=30)  # 30€
         OrderItem.objects.create(
             reference=order, element=Item.objects.last(), price=-30)
         self.assertEqual(order.total, 0)
@@ -892,7 +900,8 @@ class TestOrders(TestCase):
         o = Order.objects.create(user=u, customer=c, ref_name='test',
                                  delivery=date.today(), discount=10, )
         i = Item.objects.last()
-        [OrderItem.objects.create(reference=o, element=i) for _ in range(5)]
+        [OrderItem.objects.create(
+            reference=o, element=i, price=30, ) for _ in range(5)]
         self.assertEqual(o.discount_amount, 15)
         self.assertIsInstance(o.discount_amount, float)
 
@@ -901,7 +910,8 @@ class TestOrders(TestCase):
         o = Order.objects.create(user=u, customer=c, ref_name='test',
                                  delivery=date.today(), discount=10, )
         i = Item.objects.last()
-        [OrderItem.objects.create(reference=o, element=i) for _ in range(5)]
+        [OrderItem.objects.create(
+            reference=o, element=i, price=30, ) for _ in range(5)]
         self.assertEqual(o.total_pre_discount, 150)
         self.assertIsInstance(o.total_pre_discount, float)
 
@@ -912,7 +922,7 @@ class TestOrders(TestCase):
             user=user, customer=c, ref_name='test', delivery=date.today())
         for i in range(5):
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(order.total_bt, round(150 / 1.21, 2))
 
     def test_vat(self):
@@ -922,14 +932,14 @@ class TestOrders(TestCase):
             user=user, customer=c, ref_name='test', delivery=date.today())
         for i in range(5):
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(order.vat, round(150 * .21 / 1.21, 2))
 
     def test_already_paid(self):
         order = Order.objects.first()
         for i in range(5):
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(order.already_paid, 0)
 
         for _ in range(2):
@@ -941,7 +951,7 @@ class TestOrders(TestCase):
         order = Order.objects.first()
         for i in range(5):
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=30, )
         self.assertEqual(order.pending, 150)
 
         for _ in range(2):
@@ -963,7 +973,8 @@ class TestOrders(TestCase):
         o.save()
         self.assertFalse(o.closed)
 
-        OrderItem.objects.create(element=Item.objects.last(), reference=o)
+        OrderItem.objects.create(
+            element=Item.objects.last(), reference=o, price=30, )
         o.kill()
         self.assertTrue(o.closed)
 
@@ -983,7 +994,8 @@ class TestOrders(TestCase):
         o.save()
         self.assertEqual(o.days_open, 5)
 
-        OrderItem.objects.create(element=Item.objects.last(), reference=o)
+        OrderItem.objects.create(
+            element=Item.objects.last(), reference=o, price=30, )
         o.kill()
         self.assertEqual(o.days_open, 4)
 
@@ -1004,7 +1016,7 @@ class TestOrders(TestCase):
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
                                      crop=time(5), sewing=time(3),
-                                     iron=time(0))
+                                     iron=time(0), price=30, )
         order = Order.objects.get(pk=order.pk)
         self.assertFalse(order.has_no_items)
 
@@ -1032,7 +1044,7 @@ class TestOrders(TestCase):
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
                                      crop=time(5), sewing=time(3),
-                                     iron=time(0))
+                                     iron=time(0), price=30, )
         self.assertEqual(order.times[0], 4)
         self.assertEqual(order.times[1], 6)
 
@@ -1048,7 +1060,7 @@ class TestOrders(TestCase):
         for i in range(2):
             OrderItem.objects.create(element=item, reference=order, qty=i,
                                      crop=time(5), sewing=time(3),
-                                     iron=time(0))
+                                     iron=time(0), price=30, )
         stocked = OrderItem.objects.all()[0]
         stocked.stock = True
         stocked.save()
@@ -1070,7 +1082,7 @@ class TestOrders(TestCase):
                 element=item, qty=10, reference=older,
                 crop=timedelta(seconds=10),
                 sewing=timedelta(seconds=20),
-                iron=timedelta(seconds=30), )
+                iron=timedelta(seconds=30), price=30, )
 
         curr = Order.objects.create(
             user=User.objects.first(),
@@ -1079,10 +1091,12 @@ class TestOrders(TestCase):
             delivery=date.today()
         )
 
-        OrderItem.objects.create(element=items[0], qty=5, reference=curr)
-        OrderItem.objects.create(element=items[1], qty=7, reference=curr)
         OrderItem.objects.create(
-            element=items[2], qty=7, reference=curr, stock=True)
+            element=items[0], qty=5, reference=curr, price=30, )
+        OrderItem.objects.create(
+            element=items[1], qty=7, reference=curr, price=30, )
+        OrderItem.objects.create(
+            element=items[2], qty=7, reference=curr, stock=True, price=30, )
 
         curr = Order.objects.get(pk=curr.pk)
 
@@ -1097,7 +1111,8 @@ class TestOrders(TestCase):
             prepaid=10)
         times = [timedelta(minutes=t) for t in (10, 20, 30)]
         OrderItem.objects.create(reference=order, element=Item.objects.last(),
-                                 crop=times[0], sewing=times[1], iron=times[2])
+                                 crop=times[0], sewing=times[1], iron=times[2],
+                                 price=30, )
         self.assertEqual(order.production_time, timedelta(hours=1))
 
     def test_deliver(self):
@@ -1172,7 +1187,8 @@ class TestOrders(TestCase):
             self.assertEqual(order.status, '1')
 
         # Raise ValidationError for invoiced orders
-        OrderItem.objects.create(reference=order, element=Item.objects.last())
+        OrderItem.objects.create(
+            reference=order, element=Item.objects.last(), price=30, )
         # kill() creates two status shitfs, one for status 7 (thererby calling
         # Order.deliver()) and another for status 9.
         order.kill()
@@ -1635,7 +1651,8 @@ class TestObjectItems(TestCase):
 
         # Sales and stock
         o = Order.objects.first()
-        [OrderItem.objects.create(element=i, reference=o) for _ in range(3)]
+        [OrderItem.objects.create(
+            element=i, reference=o, price=10, ) for _ in range(3)]
         o.kill()  # update stock and health
         i = Item.objects.get(pk=i.pk)  # reload item data
 
@@ -1783,7 +1800,7 @@ class TestObjectItems(TestCase):
                 element=item, qty=10 * n + 1, reference=Order.objects.first(),
                 crop=timedelta(seconds=10),
                 sewing=timedelta(seconds=20),
-                iron=timedelta(seconds=30), )
+                iron=timedelta(seconds=30), price=10, )
 
         not_timed_order = Order.objects.create(
             user=User.objects.first(),
@@ -1791,7 +1808,8 @@ class TestObjectItems(TestCase):
             ref_name='No time order',
             delivery=date.today(), )
 
-        OrderItem.objects.create(element=items[0], reference=not_timed_order)
+        OrderItem.objects.create(
+            element=items[0], reference=not_timed_order, price=10, )
 
         # reload the item list
         items = [Item.objects.get(pk=item.pk) for item in items]
@@ -1817,7 +1835,7 @@ class TestObjectItems(TestCase):
                 element=item, qty=10 * n + 1, reference=Order.objects.first(),
                 crop=timedelta(seconds=10),
                 sewing=timedelta(seconds=20),
-                iron=timedelta(seconds=30), )
+                iron=timedelta(seconds=30), price=10, )
 
         a = Item.objects.first()
         self.assertEqual(a.pretty_avg, ['10s', '20s', '30s'])
@@ -1830,7 +1848,8 @@ class TestObjectItems(TestCase):
         self.assertEqual(f.production, 0)
         oi = OrderItem.objects
         a, b, c = [
-            oi.create(reference=o, element=i, qty=10) for _ in range(3)]
+            oi.create(
+                reference=o, element=i, qty=10, price=10, ) for _ in range(3)]
         c.element = f
         c.save()
         self.assertEqual(i.production, 20)
@@ -1870,7 +1889,7 @@ class TestOrderItems(TestCase):
         """Deleting the reference should be forbidden."""
         item = Item.objects.first()
         OrderItem.objects.create(
-            element=item, reference=Order.objects.first())
+            element=item, reference=Order.objects.first(), price=10)
         with self.assertRaises(IntegrityError):
             item.delete()
 
@@ -1878,6 +1897,7 @@ class TestOrderItems(TestCase):
         """Items are by default new produced for orders."""
         item = OrderItem.objects.create(element=Item.objects.first(),
                                         reference=Order.objects.first(),
+                                        price=10,
                                         )
         self.assertFalse(item.stock)
         self.assertIsInstance(item.stock, bool)
@@ -1889,7 +1909,7 @@ class TestOrderItems(TestCase):
         item = Item.objects.create(name='Test item', fabrics=5.2)
         OrderItem.objects.create(description='Test item',
                                  reference=order,
-                                 element=item)
+                                 element=item, price=10)
 
         created_item = OrderItem.objects.get(description='Test item')
         self.assertEqual(created_item.reference, order)
@@ -1909,7 +1929,8 @@ class TestOrderItems(TestCase):
             user=u, customer=tz, ref_name='foo', delivery=date.today())
         c = Order.objects.create(
             user=u, customer=cs, ref_name='bar', delivery=date.today())
-        i = OrderItem.objects.create(element=Item.objects.first(), reference=a)
+        i = OrderItem.objects.create(
+            element=Item.objects.first(), reference=a, price=10)
         self.assertEqual(i.batch, None)
         i.batch = b
         i.save()
@@ -1934,7 +1955,8 @@ class TestOrderItems(TestCase):
         o = Order.objects.first()
         self.assertEqual(o.status, '1')
         i = OrderItem.objects.create(
-            reference=o, element=Item.objects.last(), crop=timedelta(1))
+            reference=o, element=Item.objects.last(), crop=timedelta(1),
+            price=10, )
         self.assertEqual(o.status, '3')
         o.kanban_backward()
         self.assertEqual(o.status, '2')
@@ -1956,22 +1978,12 @@ class TestOrderItems(TestCase):
         self.assertEqual(item._meta.get_field('price').verbose_name,
                          'Precio unitario')
 
-    def test_orderitem_default_price(self):
-        """When no price is given, pickup the object item's default."""
-        object_item = Item.objects.last()
-        object_item.price = 200
-        object_item.name = 'Item default price'
-        object_item.save()
-        item = OrderItem.objects.create(
-            element=object_item, reference=Order.objects.first(), )
-        self.assertEqual(item.price, 200)
-
     def test_orderitem_stock_items_have_no_times(self):
         item = OrderItem.objects.create(
             element=Item.objects.first(),
             reference=Order.objects.first(),
             crop=timedelta(5), sewing=timedelta(10), iron=timedelta(10),
-            stock=True
+            stock=True, price=10
         )
 
         self.assertEqual(item.crop, timedelta(0))
@@ -1985,7 +1997,7 @@ class TestOrderItems(TestCase):
         order.save()
         object_item = Item.objects.first()
         item = OrderItem.objects.create(
-            element=object_item, reference=Order.objects.first(), )
+            element=object_item, reference=Order.objects.first(), price=10, )
         self.assertTrue(item.stock)
 
     def test_orderitem_tz_orders_have_no_stock_items(self):
@@ -1995,7 +2007,8 @@ class TestOrderItems(TestCase):
         order.customer = tz
         order.save()
         item = OrderItem.objects.create(
-            element=Item.objects.first(), reference=order, stock=True)
+            element=Item.objects.first(), reference=order, stock=True,
+            price=10, )
 
         self.assertFalse(item.stock)
 
@@ -2008,7 +2021,8 @@ class TestOrderItems(TestCase):
         object_item.foreing = True
         object_item.save()
         item = OrderItem.objects.create(
-            element=object_item, reference=Order.objects.first(), stock=True)
+            element=object_item, reference=Order.objects.first(), stock=True,
+            price=10, )
         self.assertFalse(item.stock)
 
     def test_stock_items_cant_be_fit(self):
@@ -2016,7 +2030,7 @@ class TestOrderItems(TestCase):
         order = Order.objects.first()
         item = Item.objects.last()
         o_item = OrderItem.objects.create(
-            element=item, reference=order, fit=True, stock=True)
+            element=item, reference=order, fit=True, stock=True, price=10, )
         self.assertFalse(o_item.fit)
         self.assertTrue(o_item.stock)
         o_item.fit = True
@@ -2031,7 +2045,8 @@ class TestOrderItems(TestCase):
         base_item = Item.objects.last()
         base_item.foreing = True
         base_item.save()
-        item = OrderItem.objects.create(element=base_item, reference=order)
+        item = OrderItem.objects.create(
+            element=base_item, reference=order, price=10, )
         with self.assertRaises(ValidationError):
             item.clean()
 
@@ -2044,7 +2059,7 @@ class TestOrderItems(TestCase):
         order.ref_name = 'Quick'
         order.save()
         item = OrderItem.objects.create(
-            element=base_item, reference=order, qty=11)
+            element=base_item, reference=order, qty=11, price=10, )
         msg = 'Estás intentando añadir más prendas de las que tienes.'
         with self.assertRaisesMessage(ValidationError, msg):
             item.clean()
@@ -2053,13 +2068,13 @@ class TestOrderItems(TestCase):
         order.ref_name = 'foo'
         order.save()
         item = OrderItem.objects.create(
-            element=base_item, reference=order, qty=11, stock=True, )
+            element=base_item, reference=order, qty=11, stock=True, price=10, )
         with self.assertRaisesMessage(ValidationError, msg):
             item.clean()
 
         # However, adding non-stock sholud be ok
         item = OrderItem.objects.create(
-            element=base_item, reference=order, qty=11, stock=False, )
+            element=base_item, reference=order, qty=11, stock=False, price=10)
         self.assertFalse(item.clean())
 
     def test_add_items_to_orders_default_item(self):
@@ -2067,7 +2082,7 @@ class TestOrderItems(TestCase):
         order = Order.objects.first()
         item = Item.objects.get(name='Predeterminado')
         OrderItem.objects.create(description='Test item',
-                                 reference=order, )
+                                 reference=order, price=10, )
 
         created_item = OrderItem.objects.get(description='Test item')
         self.assertEqual(created_item.element, item)
@@ -2084,7 +2099,8 @@ class TestOrderItems(TestCase):
 
         # Add an item to these orders
         for i in Order.objects.all():
-            OrderItem.objects.create(reference=i, element=Item.objects.last())
+            OrderItem.objects.create(
+                reference=i, element=Item.objects.last(), price=10, )
 
         self.assertEqual(OrderItem.active.count(), 7)
 
@@ -2108,7 +2124,8 @@ class TestOrderItems(TestCase):
                                               reference=order,
                                               crop=timedelta(2),
                                               sewing=timedelta(2),
-                                              iron=timedelta(2),)
+                                              iron=timedelta(2),
+                                              price=10, )
         self.assertEqual(order_item.time_quality, 3)
         order_item.sewing = timedelta(0)
         self.assertEqual(order_item.time_quality, 2)
@@ -2148,7 +2165,7 @@ class TestOrderItems(TestCase):
                 element=item, qty=10 * n + 1, reference=Order.objects.first(),
                 crop=timedelta(seconds=10),
                 sewing=timedelta(seconds=20),
-                iron=timedelta(seconds=30), )
+                iron=timedelta(seconds=30), price=10, )
 
         # Create an order
         order = Order.objects.create(
@@ -2158,7 +2175,7 @@ class TestOrderItems(TestCase):
             delivery=date.today(), )
 
         test_item = OrderItem.objects.create(
-            element=items[0], qty=5, reference=order)
+            element=items[0], qty=5, reference=order, price=10, )
 
         self.assertEqual(test_item.estimated_time, (50, 100, 150))
 
@@ -2171,7 +2188,7 @@ class TestOrderItems(TestCase):
                 element=item, qty=10 * n + 1, reference=Order.objects.first(),
                 crop=timedelta(hours=10),
                 sewing=timedelta(hours=20),
-                iron=timedelta(hours=30), )
+                iron=timedelta(hours=30), price=10, )
 
         # Create an order
         order = Order.objects.create(
@@ -2181,7 +2198,7 @@ class TestOrderItems(TestCase):
             delivery=date.today(), )
 
         test_item = OrderItem.objects.create(
-            element=items[0], qty=5, reference=order)
+            element=items[0], qty=5, reference=order, price=10, )
 
         self.assertEqual(
             test_item.prettified_est, ['50.0h', '100.0h', '150.0h'])
@@ -2190,7 +2207,8 @@ class TestOrderItems(TestCase):
         item_obj = Item.objects.create(
             name='ticket print', item_type='1', fabrics=10, price=30)
         item = OrderItem.objects.create(
-            element=item_obj, reference=Order.objects.first(), qty=5, )
+            element=item_obj, reference=Order.objects.first(), qty=5,
+            price=10, )
         self.assertEqual(item.ticket_print, '5 x Falda ticket print')
 
         # Now test a generic object (foreign)
@@ -2240,7 +2258,8 @@ class TestPQueue(TestCase):
 
         # Create orderitems
         for item in Item.objects.all():
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(
+                reference=order, element=item, price=10, )
 
     def test_item_is_a_one_to_one_field(self):
         """That is, each item should appear once on the table."""
@@ -2337,7 +2356,7 @@ class TestPQueue(TestCase):
 
         # first create a decent list
         for i in range(10):
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=10, )
         score = 1
         for item in OrderItem.objects.all():
             PQueue.objects.create(item=item, score=score)
@@ -2347,8 +2366,8 @@ class TestPQueue(TestCase):
         self.assertEqual(PQueue.objects.first().score, 1)
 
         # now, create a new pqueue entry
-        item = OrderItem.objects.create(reference=order,
-                                        element=Item.objects.first())
+        item = OrderItem.objects.create(
+            reference=order, element=Item.objects.first(), price=10, )
         PQueue.objects.create(item=item, score=0)
         queue = PQueue.objects.all()
         self.assertEqual(queue.count(), 14)
@@ -2366,7 +2385,7 @@ class TestPQueue(TestCase):
 
         # first create a decent list
         for i in range(10):
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=10, )
         score = 10
         for item in OrderItem.objects.all():
             PQueue.objects.create(item=item, score=score)
@@ -2532,7 +2551,7 @@ class TestInvoice(TestCase):
             name='Test item', fabrics=5, price=10, stocked=10)
 
         # Create orderitems
-        OrderItem.objects.create(reference=order, element=item)
+        OrderItem.objects.create(reference=order, element=item, price=10, )
 
     def test_reference_is_a_one_to_one_field(self):
         """That is, each order should appear once on the table."""
@@ -2579,7 +2598,8 @@ class TestInvoice(TestCase):
         for _ in range(3):
             o = Order.objects.create(
                 user=u, customer=c, ref_name='foo', delivery=date.today())
-            OrderItem.objects.create(reference=o, element=Item.objects.last())
+            OrderItem.objects.create(
+                reference=o, element=Item.objects.last(), price=10, )
             o.kill()
         invoices = Invoice.objects.reverse()
         [self.assertEqual(i.invoice_no, n+1) for n, i in enumerate(invoices)]
@@ -3010,7 +3030,7 @@ class TestCashFlowIO(TestCase):
         # Create items
         i = Item.objects.create(
             name='Test item', fabrics=5, price=10, stocked=20)
-        OrderItem.objects.create(reference=o, element=i, qty=10)
+        OrderItem.objects.create(reference=o, element=i, qty=10, price=10, )
 
         # Create an expense
         Expense.objects.create(

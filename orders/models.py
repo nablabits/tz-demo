@@ -736,11 +736,6 @@ class OrderItem(models.Model):
             self.reference.status = '3'
             self.reference.save()
 
-        # When no price is given, pickup the object item's default
-        if not self.price:
-            obj_item = Item.objects.get(pk=self.element.pk)
-            self.price = obj_item.price
-
         # Ensure that order express items are stocked
         if self.reference.ref_name == 'Quick':
             self.stock = True

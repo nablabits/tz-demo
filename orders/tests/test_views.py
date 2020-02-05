@@ -43,7 +43,7 @@ class CommonContextKanbanTests(TestCase):
             o = Order.objects.create(
                 user=u, customer=c, ref_name='test%s' % n,
                 delivery=date.today(), )
-            OrderItem.objects.create(reference=o, element=i, qty=n)
+            OrderItem.objects.create(reference=o, element=i, qty=n, price=30)
 
     def test_icebox_items_have_status_1(self):
         """Test the icebox items."""
@@ -458,7 +458,7 @@ class CommonContextOrderDetails(TestCase):
             o = Order.objects.create(
                 user=user, customer=c, ref_name='test%s' % n,
                 delivery=date.today(), )
-            OrderItem.objects.create(reference=o, element=i, qty=n)
+            OrderItem.objects.create(reference=o, element=i, qty=n, price=30)
 
     def test_request_is_required(self):
         msg = ('order_details() missing 1 required positional argument:' +
@@ -509,7 +509,8 @@ class CommonContextOrderDetails(TestCase):
                 element=item, qty=10 * n + 1, reference=Order.objects.first(),
                 crop=timedelta(seconds=10),
                 sewing=timedelta(seconds=20),
-                iron=timedelta(seconds=30), )
+                iron=timedelta(seconds=30),
+                price=30, )
 
         # Create an order
         order = Order.objects.create(
@@ -518,7 +519,8 @@ class CommonContextOrderDetails(TestCase):
             ref_name='Current',
             delivery=date.today(), )
 
-        OrderItem.objects.create(element=items[0], qty=5, reference=order)
+        OrderItem.objects.create(
+            element=items[0], qty=5, reference=order, price=30)
 
         context = CommonContexts.order_details(self.request, order.pk)
         self.assertEqual(context['order_est'], ['50s', '~2m', '~2m'])
@@ -558,9 +560,12 @@ class CommonContextStockTabs(TestCase):
                 name='bar', fabrics=2, stocked=s) for s in (5, 15, 5, 0, 5)]
 
         o = Order.objects.first()
-        OrderItem.objects.create(element=p1, reference=o, qty=5)  # 0 stock
-        OrderItem.objects.create(element=p2, reference=o, qty=14)  # 1 stock
-        OrderItem.objects.create(element=p3, reference=o, qty=1)  # 4 stock
+        OrderItem.objects.create(
+            element=p1, reference=o, qty=5, price=30)  # 0 stock
+        OrderItem.objects.create(
+            element=p2, reference=o, qty=14, price=30)  # 1 stock
+        OrderItem.objects.create(
+            element=p3, reference=o, qty=1, price=30)  # 4 stock
 
         o.kill()
 
@@ -606,7 +611,7 @@ class CommonContextPqueue(TestCase):
 
         # Create orderitems
         for item in Item.objects.all():
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=30)
 
     def test_available_items_excludes_delivered_cancelled_and_invoiced(self):
         """The list only includes active orders."""
@@ -617,7 +622,7 @@ class CommonContextPqueue(TestCase):
                                          delivery=date.today(),
                                          status=s)
             OrderItem.objects.create(reference=order,
-                                     element=Item.objects.last())
+                                     element=Item.objects.last(), price=30)
 
         invoiced = Order.objects.get(ref_name='foo6')
         invoiced.kill()
@@ -729,7 +734,7 @@ class CommonContextPqueue(TestCase):
                                          delivery=date.today(),
                                          status=s)
             OrderItem.objects.create(reference=order,
-                                     element=Item.objects.last())
+                                     element=Item.objects.last(), price=30)
 
         invoiced = Order.objects.get(ref_name='foo6')
         invoiced.kill()
@@ -775,7 +780,7 @@ class PrintableTicketTests(TestCase):
             user=u, customer=c, ref_name='Test', delivery=date.today(),
             budget=0, prepaid=0, )
         OrderItem.objects.create(
-            reference=order, element=Item.objects.last())
+            reference=order, element=Item.objects.last(), price=30)
         order.kill()
 
     def test_printable_ticket_requires_login(self):
@@ -992,7 +997,7 @@ class MainViewTests(TestCase):
         Item.objects.create(name='test', fabrics=1, price=10, stocked=50)
         for order in Order.objects.all():
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=10)
         self.client.login(username='regular', password='test')
 
     def test_timetable_required_skips_superusers_or_voyeur(self):
@@ -1209,7 +1214,7 @@ class MainViewTests(TestCase):
             customer=Customer.objects.first(),
             delivery=date.today(), ref_name='Test', )
         OrderItem.objects.create(
-            reference=order, element=Item.objects.last())
+            reference=order, element=Item.objects.last(), price=30)
         sold, confirmed, unconfirmed = Order.objects.all()[:3]
 
         # Create also an expense
@@ -1539,7 +1544,8 @@ class MainViewTests(TestCase):
             c = Customer.objects.create(name='Test%s' % i, phone=i, cp=i)
             o = Order.objects.create(
                 user=u, customer=c, ref_name='foo', delivery=date.today(), )
-            OrderItem.objects.create(reference=o, element=Item.objects.last())
+            OrderItem.objects.create(
+                reference=o, element=Item.objects.last(), price=30)
             o.kill()
 
         resp = self.client.get(reverse('main'))
@@ -1810,7 +1816,8 @@ class CustomerListTests(TestCase):
 
         # Create some items
         order = Order.objects.get(ref_name='example0')
-        [OrderItem.objects.create(qty=5, reference=order) for _ in range(5)]
+        [OrderItem.objects.create(
+            qty=5, reference=order, price=30) for _ in range(5)]
 
         # deliver the first 10 orders
         [o.deliver() for o in Order.objects.all().order_by('inbox_date')[:10]]
@@ -2008,7 +2015,7 @@ class ItemsListTests(TestCase):
         Item.objects.create(name='test', fabrics=1, price=10, stocked=30)
         for order in Order.objects.all():
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=30)
         self.client.login(username='regular', password='test')
 
     def test_timetable_required_skips_superusers_or_voyeur(self):
@@ -2201,7 +2208,7 @@ class InvoicesListTest(TestCase):
                 user=user, customer=c, ref_name='Test', delivery=date.today(),
                 budget=0, prepaid=0, )
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=10)
             order.kill(pay_method=pm)
 
         resp = self.client.get(reverse('invoiceslist'))
@@ -2223,7 +2230,7 @@ class InvoicesListTest(TestCase):
             order = Order.objects.create(
                 user=u, customer=c, ref_name='Test', delivery=date.today(), )
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=10)
             CashFlowIO.objects.create(order=order, pay_method=pm, amount=5)
 
         resp = self.client.get(reverse('invoiceslist'))
@@ -2249,7 +2256,7 @@ class InvoicesListTest(TestCase):
                 user=user, customer=c, ref_name='Test', delivery=date.today(),
                 budget=0, prepaid=0, )
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=10)
             today = timezone.now().date().isocalendar()[2]
             delay = timedelta(days=randint(0, today - 1))
             i = Invoice(
@@ -2274,7 +2281,7 @@ class InvoicesListTest(TestCase):
                 user=user, customer=c, ref_name='Test', delivery=date.today(),
                 budget=0, prepaid=0, )
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=10)
             delay = timedelta(days=randint(0, date.today().day - 1))
             i = Invoice(reference=order, issued_on=timezone.now() - delay,
                         pay_method=pm)
@@ -2295,7 +2302,7 @@ class InvoicesListTest(TestCase):
             order = Order.objects.create(
                 user=user, customer=c, ref_name='Test', delivery=date.today())
             OrderItem.objects.create(
-                reference=order, element=Item.objects.last())
+                reference=order, element=Item.objects.last(), price=10)
             i = Invoice(
                 reference=order, issued_on=timezone.now() - timedelta(days=30),
                 pay_method=pm)
@@ -2351,7 +2358,7 @@ class InvoicesListTest(TestCase):
             user=user, customer=c, ref_name='Test', delivery=date.today(),
             budget=0, prepaid=0, )
         OrderItem.objects.create(
-            reference=order, element=Item.objects.last())
+            reference=order, element=Item.objects.last(), price=10)
         order.kill(pay_method='C')
         resp = self.client.get(reverse('invoiceslist'))
         self.assertEqual(resp.context['balance'], -10)
@@ -2454,7 +2461,7 @@ class KanbanTests(TestCase):
             o = Order.objects.create(
                 user=u, customer=c, ref_name='test%s' % n,
                 delivery=date.today(), )
-            OrderItem.objects.create(reference=o, element=i, qty=n)
+            OrderItem.objects.create(reference=o, element=i, qty=n, price=30)
 
         cls.client = Client()
 
@@ -2854,7 +2861,7 @@ class OrderViewTests(TestCase):
     def test_post_kill_order(self):
         order = Order.objects.first()
         item = Item.objects.create(name='foo', fabrics=5, stocked=10)
-        OrderItem.objects.create(reference=order, element=item)
+        OrderItem.objects.create(reference=order, element=item, price=30)
         msg = 'Order has no invoice.'
         with self.assertRaisesMessage(ObjectDoesNotExist, msg):
             order.invoice
@@ -2897,7 +2904,7 @@ class OrderViewTests(TestCase):
         order = Order.objects.first()
         item = Item.objects.create(name='Test', fabrics=5, stocked=30)
         for i in range(3):
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=30)
         resp = self.client.get(reverse('order_view', args=[order.pk]))
         self.assertEqual(resp.context['items'].count(), 3)
 
@@ -3014,7 +3021,7 @@ class OrderExpressTests(TestCase):
             Invoice.objects.get(reference=order)  # The invoice not yet
 
         OrderItem.objects.create(
-            element=Item.objects.last(), qty=5, reference=order)
+            element=Item.objects.last(), qty=5, reference=order, price=30)
         resp = self.client.post(reverse('order_express', args=[order.pk]),
                                 {'pay_method': settings.PAYMENT_METHODS[0][0]})
 
@@ -3078,14 +3085,13 @@ class OrderExpressTests(TestCase):
             user=user, customer=c, ref_name='Test', delivery=date.today(),
             budget=0, prepaid=0, )
         excluded_item = OrderItem.objects.create(
-            reference=regular_order, element=Item.objects.last()
-        )
+            reference=regular_order, element=Item.objects.last(), price=30)
         self.client.post(reverse('actions'),
                          {'cp': 0, 'pk': 'None',
                           'action': 'order-express-add', })
         order_express = Order.objects.get(customer__name='express')
         included_item = OrderItem.objects.create(
-            reference=order_express, element=Item.objects.last())
+            reference=order_express, element=Item.objects.last(), price=30)
 
         resp = self.client.get(
             reverse('order_express', args=[order_express.pk]))
@@ -3224,7 +3230,7 @@ class CustomerViewTests(TestCase):
             order = Order.objects.get(ref_name='example0')
             OrderItem.objects.create(element=item, qty=5,
                                      description='notes',
-                                     reference=order)
+                                     reference=order, price=30)
 
         # deliver the first 10 orders
         order_bulk_edit = Order.objects.all().order_by('inbox_date')[:3]
@@ -3332,7 +3338,7 @@ class CustomerViewTests(TestCase):
             order.customer = customer
             order.prepaid = 0
             order.save()
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=30)
 
         Order.objects.first().kill()
 
@@ -3397,7 +3403,7 @@ class PQueueManagerTests(TestCase):
 
         # Create orderitems
         for item in Item.objects.all():
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=30)
 
         self.client.login(username='regular', password='test')
 
@@ -3528,7 +3534,7 @@ class PQueueTabletTests(TestCase):
 
         # Create orderitems
         for item in Item.objects.all():
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=30)
 
         self.client.login(username='regular', password='test')
 
@@ -3761,7 +3767,8 @@ class ActionsGetMethod(TestCase):
         # Create Item & time
         item = Item.objects.create(name='foo', fabrics=2, stocked=30)
         OrderItem.objects.create(
-            element=item, qty=5, description='notes', reference=order)
+            element=item, qty=5, description='notes',
+            reference=order, price=30, )
 
     def context_vars(self, context, vars):
         """Compare the given vars with the ones in response."""
@@ -4379,7 +4386,7 @@ class ActionsPostMethodEdit(TestCase):
         order = Order.objects.get(ref_name='example')
         OrderItem.objects.create(qty=1,
                                  description='example item',
-                                 reference=order)
+                                 reference=order, price=30)
 
         # Load client
         self.client = Client()
@@ -4659,7 +4666,7 @@ class OrdersCRUDTests(TestCase):
             o = Order.objects.create(
                 user=u, customer=c, ref_name='test%s' % n,
                 delivery=date.today(), )
-            OrderItem.objects.create(reference=o, element=i, qty=n)
+            OrderItem.objects.create(reference=o, element=i, qty=n, price=30)
         # Load client
         self.client = Client()
 
@@ -5161,7 +5168,7 @@ class OrderItemsCRUDTests(TestCase):
             o = Order.objects.create(
                 user=u, customer=c, ref_name='test%s' % n,
                 delivery=date.today(), )
-            OrderItem.objects.create(reference=o, element=i, qty=n)
+            OrderItem.objects.create(reference=o, element=i, qty=n, price=30)
         # Load client
         self.client = Client()
 
@@ -5226,7 +5233,6 @@ class OrderItemsCRUDTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTemplateUsed(resp, 'includes/custom_forms/order_item.html')
 
-    @tag('current')
     def test_get_edit_and_delete_order_item(self):
         i = OrderItem.objects.first()
         bi = Item.objects.last()
@@ -5346,6 +5352,7 @@ class OrderItemsCRUDTests(TestCase):
                                 {'reference': Order.objects.first().pk,
                                  'element': Item.objects.first().pk,
                                  'qty': 5,
+                                 'price': 30,
                                  'crop': timedelta(0),
                                  'sewing': timedelta(0),
                                  'iron': timedelta(0),
@@ -5360,6 +5367,7 @@ class OrderItemsCRUDTests(TestCase):
                                 {'reference': Order.objects.first().pk,
                                  'element': Item.objects.first().pk,
                                  'qty': 5,
+                                 'price': 30,
                                  'crop': timedelta(0),
                                  'sewing': timedelta(0),
                                  'iron': timedelta(0),
@@ -5377,6 +5385,7 @@ class OrderItemsCRUDTests(TestCase):
                          {'reference': Order.objects.first().pk,
                           'element': item.pk,
                           'qty': 5,
+                          'price': 30,
                           'crop': timedelta(0),
                           'sewing': timedelta(0),
                           'iron': timedelta(0),
@@ -5394,6 +5403,7 @@ class OrderItemsCRUDTests(TestCase):
                              {'reference': Order.objects.first().pk,
                               'element': Item.objects.last().pk,
                               'qty': 5,
+                              'price': 30,
                               'crop': timedelta(0),
                               'sewing': timedelta(0),
                               'iron': timedelta(0),
@@ -5409,6 +5419,7 @@ class OrderItemsCRUDTests(TestCase):
                                 {'reference': o.pk,
                                  'element': Item.objects.last().pk,
                                  'qty': 5,
+                                 'price': 30,
                                  'crop': timedelta(0),
                                  'sewing': timedelta(0),
                                  'iron': timedelta(0),
@@ -5422,6 +5433,7 @@ class OrderItemsCRUDTests(TestCase):
                                 {'reference': Order.objects.first().pk,
                                  'element': Item.objects.first().pk,
                                  'qty': 5,
+                                 'price': 30,
                                  'crop': timedelta(0),
                                  'sewing': timedelta(0),
                                  'iron': timedelta(0),
@@ -5655,7 +5667,7 @@ class CommentsCRUD(TestCase):
             o = Order.objects.create(
                 user=u, customer=c, ref_name='test%s' % n,
                 delivery=date.today(), )
-            OrderItem.objects.create(reference=o, element=i, qty=n)
+            OrderItem.objects.create(reference=o, element=i, qty=n, price=30)
         # Load client
         self.client = Client()
 
@@ -5806,7 +5818,7 @@ class CashFlowIOCRUDTests(TestCase):
         # Create some orders with items
         o = Order.objects.create(
             user=u, customer=c, ref_name='foo', delivery=date.today(), )
-        OrderItem.objects.create(reference=o, element=i, qty=10)
+        OrderItem.objects.create(reference=o, element=i, qty=10, price=30)
 
         # Load client
         self.client = Client()
@@ -5919,7 +5931,7 @@ class PQueueActionsTests(TestCase):
 
         # Create orderitems
         for i in range(3):
-            OrderItem.objects.create(reference=order, element=item)
+            OrderItem.objects.create(reference=order, element=item, price=30)
 
         self.client.login(username='regular', password='test')
 
