@@ -5847,6 +5847,7 @@ class CashFlowIOCRUDTests(TestCase):
                                  'order': o.pk,
                                  'amount': 100,
                                  'pay_method': 'C',
+                                 'creation': '2020-02-05 09:30:40',
                                  })
         self.assertEqual(resp.status_code, 200)
         data = json.loads(str(resp.content, 'utf-8'))
@@ -5862,6 +5863,7 @@ class CashFlowIOCRUDTests(TestCase):
                                  'order': o.pk,
                                  'amount': 500,
                                  'pay_method': 'C',
+                                 'creation': '2020-02-05 09:30:40',
                                  })
         self.assertEqual(resp.status_code, 200)
         data = json.loads(str(resp.content, 'utf-8'))

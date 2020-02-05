@@ -342,16 +342,28 @@
         <div class="d-flex">
           <form class="js-crud-form" method="post" action="{% url 'cashflowio-CRUD' %}">
             {% csrf_token %}
-            <div class="form-inline mb-2">
+            <div class="form-row mb-2 align-items-end">
               <input type="hidden" name="action" value="add-prepaid">
               <input type="hidden" name="pay_method" value="T">
-              <label class="sr-only" for="id_expense">Pedido Nº</label>
-              {% render_field add_prepaids.expense class="form-control"%}
-              <label class="sr-only" for="id_amount">Cantidad</label>
-              {% render_field add_prepaids.amount class="form-control ml-2"%}
-              <label class="sr-only" for="id_pay_method">Medio de pago</label>
-              {% render_field add_prepaids.pay_method class="form-control ml-2"%}
-              <button type="submit" class="btn btn btn-outline-success ml-2 js-submit">Añadir prepago</button>
+              <div class="form-group col-5">
+                {{add_prepaids.expense.label_tag}}
+                {% render_field add_prepaids.expense class="form-control"%}
+              </div>
+              <div class="form-group col-1">
+                {{add_prepaids.amount.label_tag}}
+                {% render_field add_prepaids.amount class="form-control"%}
+              </div>
+              <div class="form-group col-2">
+                {{add_prepaids.pay_method.label_tag}}
+                {% render_field add_prepaids.pay_method class="form-control"%}
+              </div>
+              <div class="form-group col-2">
+                {{add_prepaids.creation.label_tag}}
+                {% render_field add_prepaids.creation class="form-control"%}
+              </div>
+              <div class="col-2 mb-3">
+                <button type="submit" class="btn btn btn-outline-success js-submit">Añadir prepago</button>
+              </div>
               <div class="mr-auto ml-3 d-none" id="bg-working">
                 <i class="far fa-spinner fa-spin"></i> Procesando, ten paciencia.
               </div>
