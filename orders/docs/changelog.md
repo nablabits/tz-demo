@@ -1,6 +1,6 @@
 ## Trapuzarrak app registro de cambios
 ***
-### v92, ???
+### v92, Feb 6
   * **Mejora:** ahora se puede añadir fecha a los prepagos desde la interfaz principal.
   * **Mejora:** las prendas sin precio aparecen en rojo.
   * **Bug:** si al añadir una prenda a un pedido no se indica precio, ésta ya no
