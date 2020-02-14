@@ -3,6 +3,7 @@
 ### v92, ???
   * **Nuevo:** los elementos kanban muestran los tiempos que faltan por añadir
   (0/0/0 significa perfecto.)
+  * **Mejora:** se ha actualizado el objetivo para 2020
 
 ### v91, Ene 30
   * **Mejora:** al añadir prendas, el cuadro de dialogo muestra una referencia
