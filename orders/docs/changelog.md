@@ -1,5 +1,9 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v92, ???
+  * **Nuevo:** los elementos kanban muestran los tiempos que faltan por añadir
+  (0/0/0 significa perfecto.)
+
 ### v91, Ene 30
   * **Mejora:** al añadir prendas, el cuadro de dialogo muestra una referencia
   sobre el precio con un 15% más
