@@ -595,6 +595,10 @@ class Item(models.Model):
         # Uppercase size
         self.size = self.size.upper()
 
+        # Quick workaround for negative stock (design flaw)
+        if self.stocked < 0:
+            self.stocked = 0
+
         super().save(*args, **kwargs)
 
     def sales(self, period='all_time'):
