@@ -2,7 +2,7 @@
 
 # The name for the app
 APP_NAME = "Trapu Zarrak app"
-VERSION = 'v92'
+VERSION = 'v93'
 
 # Available types of clothes
 ITEM_TYPE = (
@@ -49,7 +49,7 @@ STATUS_ICONS = (
     'fa-euro',  # Invoiced
 )
 
-GOAL = 197
+GOAL = round(89582 / 365, 0)  # ~245€
 
 WEEK_COLORS = dict(this='#28a745', next='#1dddff', in_two='#74f5de')
 

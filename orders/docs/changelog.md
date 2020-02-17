@@ -1,5 +1,11 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v93, feb 17
+  * **Nuevo:** los elementos kanban muestran los tiempos que faltan por añadir
+  (0/0/0 significa perfecto.)
+  * **Mejora:** se ha actualizado el objetivo para 2020
+  * **Bug:** se ha corregido un fallo al facturar pedidos regulares y añadir prepagos.
+
 ### v92, Feb 6
   * **Mejora:** ahora se puede añadir fecha a los prepagos desde la interfaz principal.
   * **Mejora:** las prendas sin precio aparecen en rojo.

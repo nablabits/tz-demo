@@ -342,8 +342,21 @@ class Order(models.Model):
         tracked = 0
         items = self.items.filter(stock=False)
         for item in items:
-            tracked = tracked + item.time_quality
+            tracked += item.time_quality
         return (tracked, len(items) * 3)
+
+    @property
+    def missing_times(self):
+        """Count how many of the trackeable times are still missing."""
+        zero = timedelta(0)
+        if not self.items.exists():
+            return False
+        trackeable = self.items.exclude(
+            stock=True).exclude(element__foreing=True)
+        missing_crop = trackeable.filter(crop=zero).count()
+        missing_sewing = trackeable.filter(sewing=zero).count()
+        missing_iron = trackeable.filter(iron=zero).count()
+        return (missing_crop, missing_sewing, missing_iron, )
 
     @property
     def estimated_time(self):
@@ -581,6 +594,10 @@ class Item(models.Model):
 
         # Uppercase size
         self.size = self.size.upper()
+
+        # Quick workaround for negative stock (design flaw)
+        if self.stocked < 0:
+            self.stocked = 0
 
         super().save(*args, **kwargs)
 

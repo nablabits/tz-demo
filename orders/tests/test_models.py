@@ -1067,6 +1067,35 @@ class TestOrders(TestCase):
         self.assertEqual(order.times[0], 2)
         self.assertEqual(order.times[1], 3)
 
+    @tag('current')
+    def test_missing_times(self):
+        o, i = Order.objects.first(), Item.objects.last()
+        self.assertFalse(o.missing_times)
+        a, b, c = [
+            OrderItem.objects.create(reference=o, element=i) for _ in range(3)]
+        self.assertEqual(o.missing_times, (3, 3, 3))
+
+        b.stock = True
+        b.save()
+        self.assertEqual(o.missing_times, (2, 2, 2))
+
+        a.crop = timedelta(seconds=120)
+        a.save()
+        self.assertEqual(o.missing_times, (1, 2, 2))
+
+        a.sewing = timedelta(seconds=120)
+        a.save()
+        self.assertEqual(o.missing_times, (1, 1, 2))
+
+        a.iron = timedelta(seconds=120)
+        a.save()
+        self.assertEqual(o.missing_times, (1, 1, 1))
+
+        c.element.foreing = True
+        c.element.save()
+        self.assertEqual(o.missing_times, (0, 0, 0))
+
+
     def test_order_estimated_time(self):
         # Create previous orders
         older = Order.objects.create(user=User.objects.first(),

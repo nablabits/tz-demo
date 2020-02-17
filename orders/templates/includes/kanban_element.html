@@ -21,6 +21,11 @@
     {%if order.already_paid%}<i class="far fa-coins text-warning mx-1"></i>{%endif%}
     {%if order.total == 0%}<i class="far fa-piggy-bank text-danger mx-1"></i>{%endif%}
     {%if order.has_no_items%}<i class="far fa-empty-set text-info mx-1"></i>{%endif%}
+    {% if order.missing_times %}
+      <span class="ml-1">
+        {{order.missing_times.0}}/{{order.missing_times.1}}/{{order.missing_times.2}}
+      </span>
+    {% endif %}
 
     <div class="d-flex ml-auto">
       {% if order.has_comments %}
