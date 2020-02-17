@@ -67,6 +67,7 @@ class ItemForm(forms.ModelForm):
         model = Item
         fields = '__all__'
 
+
 class OrderItemForm(forms.ModelForm):
     """Create new or update order items."""
 

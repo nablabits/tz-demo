@@ -228,6 +228,7 @@ Has three sections:
                     {% csrf_token %}
                     <div class="form-inline mb-2">
                       <input type="hidden" name="order" value="{{order.pk}}">
+                      <input type="hidden" name="expense" value="">
                       <input type="hidden" name="action" value="add-prepaid">
                       <label class="sr-only" for="id_amount">Cantidad</label>
                       {% render_field add_prepaids.amount class="form-control" value=order.pending%}

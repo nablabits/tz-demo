@@ -1828,7 +1828,7 @@ class CashFlowIOCRUD(View):
                 data = {'reload': True, 'form_is_valid': True}
             else:
                 first = list(form.errors.values())[0][0]
-                data = {'errors': first, 'form_is_valid': False}
+                data = {'errors': form.errors, 'form_is_valid': False}
         else:
             return HttpResponseServerError('The action was not found.')
 
