@@ -1067,7 +1067,6 @@ class TestOrders(TestCase):
         self.assertEqual(order.times[0], 2)
         self.assertEqual(order.times[1], 3)
 
-    @tag('current')
     def test_missing_times(self):
         o, i = Order.objects.first(), Item.objects.last()
         self.assertFalse(o.missing_times)
@@ -1094,7 +1093,6 @@ class TestOrders(TestCase):
         c.element.foreing = True
         c.element.save()
         self.assertEqual(o.missing_times, (0, 0, 0))
-
 
     def test_order_estimated_time(self):
         # Create previous orders
@@ -1914,6 +1912,10 @@ class TestOrderItems(TestCase):
         # Create item
         Item.objects.create(name='Test item', fabrics=5, price=10, stocked=10)
 
+        i = Item.objects.first()
+        i.stocked = 10
+        i.save()
+
     def test_delete_obj_item_is_protected(self):
         """Deleting the reference should be forbidden."""
         item = Item.objects.first()
@@ -2065,6 +2067,69 @@ class TestOrderItems(TestCase):
         o_item.fit = True
         o_item.save()
         self.assertFalse(OrderItem.objects.get(pk=o_item.pk).fit)
+
+    @tag('current')
+    def test_stock_chages(self):
+        o, bi = Order.objects.first(), Item.objects.last()
+        self.assertEqual(bi.stocked, 10)
+
+        # Adding new items to production has no effect on stock
+        # new -> null
+        oi = OrderItem.objects.create(element=bi, reference=o, qty=2, price=5)
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 10)
+
+        # if the objects are stock or foreign, stocked should decrease
+        # New -> stock
+        OrderItem.objects.create(
+            element=bi, reference=o, qty=2, price=5, stock=True)
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 8)
+
+        # New -> foreign
+        bi2 = Item.objects.create(
+            name='foo', fabrics=5, price=10, stocked=10, foreing=True)
+        OrderItem.objects.create(element=bi2, reference=o, qty=2, price=5)
+        self.assertEqual(bi2.stocked, 8)
+
+        # Keeping the object as no stock has also no effect on stocked
+        # prev.null -> self.null
+        oi.qty = 3
+        oi.save()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 8)
+
+        # Changing that item to stock should reduce by qty
+        # prev.null -> self.stock
+        oi.stock = True
+        oi.save()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 5)
+
+        # Changes in qty should turn out in changes in stocked
+        # prev.stock -> self.stock
+        oi.qty = 7
+        oi.save()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 1)
+
+        oi.qty = 5
+        oi.save()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 3)
+
+        oi.qty = 1
+        oi.save()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 7)
+
+        # As long as stock is true, otherwise restore stocked qtys
+        # prev.stock -> self.null
+        oi.stock = False
+        oi.save()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 8)
+
 
     def test_tz_orders_cant_contain_foreign_items(self):
         tz = Customer.objects.create(name='TrapuZarrak', phone=0, cp=0)

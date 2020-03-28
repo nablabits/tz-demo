@@ -231,11 +231,6 @@ class Order(models.Model):
         i = Invoice(reference=self, pay_method=pay_method, amount=self.total)
         i.save(kill=True)
 
-        # Update items' stock
-        for item in self.items.all():
-            item.element.stocked -= item.qty
-            item.element.save()
-
         # Finally archive the project in todoist
         self.archive()
 
@@ -578,6 +573,7 @@ class Item(models.Model):
 
         # Estimate health
         avg_sales = self.year_sales / 12  # month averaged
+        print(avg_sales, self.stocked)
         if avg_sales == 0 and self.stocked == 0:
             self.health = - 100
         elif avg_sales == 0 and self.stocked > 0:
@@ -732,7 +728,19 @@ class OrderItem(models.Model):
 
     def save(self, *args, **kwargs):
         """Override the save method."""
-        # Avoid items to be stock and fit simultaneously.
+        # Return the qty back to stock first of all & later recalculate
+        try:
+            prev = OrderItem.objects.get(pk=self.pk)
+        except ObjectDoesNotExist:
+            prev = None
+        else:
+            if prev.stock or prev.element.foreing:
+                print('prev', self.element.stocked)
+                self.element.stocked += prev.qty
+                self.element.save()
+                print('new stock', self.element.stocked)
+
+        # Default item
         try:
             default = Item.objects.get(name='Predeterminado')
         except ObjectDoesNotExist:
@@ -772,9 +780,22 @@ class OrderItem(models.Model):
         if self.batch:
             self.stock = True
 
-        # Finally, ensure that foreign items are not Stock
+        # Ensure that foreign items are not Stock
         if self.element.foreing:
             self.stock = False
+
+        # Notice changes in stock status
+        recalculate = False
+        if prev:
+            if not prev.stock and self.stock:
+                recalculate = True
+
+        # Finally, recalculate the stock
+        if self.stock or self.element.foreing or recalculate:
+            self.element.stocked -= self.qty
+            if self.element.stocked < 0:
+                raise ValidationError('Negative stock')
+            self.element.save()
 
         super().save(*args, **kwargs)
 
