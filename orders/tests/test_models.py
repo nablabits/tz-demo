@@ -820,14 +820,6 @@ class TestOrders(TestCase):
         self.assertEqual(i.issued_on.date(), date.today())
         self.assertEqual(i.invoice_no, 1)
 
-    def test_kill_updates_stock(self):
-        order, item = Order.objects.first(), Item.objects.last()
-        self.assertEqual(item.stocked, 10)
-        OrderItem.objects.create(reference=order, element=item, price=30, )
-        order.kill()
-        item = Item.objects.get(pk=item.pk)
-        self.assertEqual(item.stocked, 9)
-
     @tag('todoist')
     def test_kill_order_archives_todoist(self):
         order = Order.objects.first()
@@ -1071,7 +1063,8 @@ class TestOrders(TestCase):
         o, i = Order.objects.first(), Item.objects.last()
         self.assertFalse(o.missing_times)
         a, b, c = [
-            OrderItem.objects.create(reference=o, element=i) for _ in range(3)]
+            OrderItem.objects.create(reference=o, element=i, price=10) 
+            for _ in range(3)]
         self.assertEqual(o.missing_times, (3, 3, 3))
 
         b.stock = True
@@ -1678,10 +1671,13 @@ class TestObjectItems(TestCase):
 
         # Sales and stock
         o = Order.objects.first()
-        [OrderItem.objects.create(
-            element=i, reference=o, price=10, ) for _ in range(3)]
-        o.kill()  # update stock and health
-        i = Item.objects.get(pk=i.pk)  # reload item data
+        for _ in range(3):
+            k0 = OrderItem(element=i, reference=o, price=10, stock=True)
+            k0.clean()  # update stock & health
+            k0.save()
+
+        o.kill()  # Sales account for health
+        i.save()  # Recalculate the health
 
         # 2 over 3 sales in 12 months plus 300 since the order was regular
         self.assertEqual(i.health, (2 / (3/12)) + 300)
@@ -2027,8 +2023,10 @@ class TestOrderItems(TestCase):
         order.ref_name = 'Quick'
         order.save()
         object_item = Item.objects.first()
-        item = OrderItem.objects.create(
+        item = OrderItem(
             element=object_item, reference=Order.objects.first(), price=10, )
+        item.clean()
+        item.save()
         self.assertTrue(item.stock)
 
     def test_orderitem_tz_orders_have_no_stock_items(self):
@@ -2037,9 +2035,10 @@ class TestOrderItems(TestCase):
         order = Order.objects.first()
         order.customer = tz
         order.save()
-        item = OrderItem.objects.create(
-            element=Item.objects.first(), reference=order, stock=True,
-            price=10, )
+        item = OrderItem(element=Item.objects.first(), reference=order,
+                         stock=True, price=10, )
+        item.clean()
+        item.save()
 
         self.assertFalse(item.stock)
 
@@ -2051,9 +2050,11 @@ class TestOrderItems(TestCase):
         object_item = Item.objects.last()
         object_item.foreing = True
         object_item.save()
-        item = OrderItem.objects.create(
+        item = OrderItem(
             element=object_item, reference=Order.objects.first(), stock=True,
             price=10, )
+        item.clean()
+        item.save()
         self.assertFalse(item.stock)
 
     def test_stock_items_cant_be_fit(self):
@@ -2068,68 +2069,105 @@ class TestOrderItems(TestCase):
         o_item.save()
         self.assertFalse(OrderItem.objects.get(pk=o_item.pk).fit)
 
-    @tag('current')
     def test_stock_chages(self):
         o, bi = Order.objects.first(), Item.objects.last()
         self.assertEqual(bi.stocked, 10)
 
         # Adding new items to production has no effect on stock
         # new -> null
-        oi = OrderItem.objects.create(element=bi, reference=o, qty=2, price=5)
+        k0 = OrderItem(element=bi, reference=o, qty=2, price=5)
+        k0.clean()
+        k0.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 10)
 
         # if the objects are stock or foreign, stocked should decrease
         # New -> stock
-        OrderItem.objects.create(
+        k1 = OrderItem(
             element=bi, reference=o, qty=2, price=5, stock=True)
+        k1.clean()
+        k1.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 8)
 
         # New -> foreign
         bi2 = Item.objects.create(
             name='foo', fabrics=5, price=10, stocked=10, foreing=True)
-        OrderItem.objects.create(element=bi2, reference=o, qty=2, price=5)
+        k2 = OrderItem(element=bi2, reference=o, qty=2, price=5)
+        k2.clean()
+        k2.save()
         self.assertEqual(bi2.stocked, 8)
 
         # Keeping the object as no stock has also no effect on stocked
         # prev.null -> self.null
-        oi.qty = 3
-        oi.save()
+        k0.qty = 3
+        k0.clean()
+        k0.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 8)
 
         # Changing that item to stock should reduce by qty
         # prev.null -> self.stock
-        oi.stock = True
-        oi.save()
+        k0.stock = True
+        k0.clean()
+        k0.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 5)
 
         # Changes in qty should turn out in changes in stocked
         # prev.stock -> self.stock
-        oi.qty = 7
-        oi.save()
+        k0.qty = 7
+        k0.clean()
+        k0.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 1)
 
-        oi.qty = 5
-        oi.save()
+        k0.qty = 5
+        k0.clean()
+        k0.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 3)
 
-        oi.qty = 1
-        oi.save()
+        k0.qty = 1
+        k0.clean()
+        k0.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 7)
 
         # As long as stock is true, otherwise restore stocked qtys
         # prev.stock -> self.null
-        oi.stock = False
-        oi.save()
+        k0.stock = False
+        k0.clean()
+        k0.save()
         bi.refresh_from_db()
         self.assertEqual(bi.stocked, 8)
 
+        # Deleting should restore stock as well
+        # prev.stock => delete
+        k0.stock = True
+        k0.clean()
+        k0.save()
+        self.assertEqual(bi.stocked, 7)
+        k0.delete()
+        self.assertEqual(bi.stocked, 8)
+
+        # Stocked qtys are affected as well by express orders
+        e0 = Order.objects.create(
+            ref_name='Quick', user=User.objects.first(),
+            customer=Customer.objects.first(), delivery=date.today())
+        k3 = OrderItem(element=bi, reference=e0, qty=5, price=10)
+        k3.clean()
+        k3.save()
+        self.assertEqual(bi.stocked, 3)
+
+        # Deleting the order, deletes in cascade and stock is recovered
+        e0.delete()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 8)
+
+        o.delete()
+        bi.refresh_from_db()
+        self.assertEqual(bi.stocked, 10)
 
     def test_tz_orders_cant_contain_foreign_items(self):
         tz = Customer.objects.create(name='TrapuZarrak', phone=0, cp=0)
@@ -2152,22 +2190,27 @@ class TestOrderItems(TestCase):
         order = Order.objects.first()
         order.ref_name = 'Quick'
         order.save()
-        item = OrderItem.objects.create(
+        item = OrderItem(
             element=base_item, reference=order, qty=11, price=10, )
         msg = 'Estás intentando añadir más prendas de las que tienes.'
         with self.assertRaisesMessage(ValidationError, msg):
             item.clean()
 
         # Now regular ones when adding stock items
+        # Validation assertion kept last stocked qty so it must be restarted
+        base_item.stocked = 10
+        base_item.save()
         order.ref_name = 'foo'
         order.save()
-        item = OrderItem.objects.create(
+        item = OrderItem(
             element=base_item, reference=order, qty=11, stock=True, price=10, )
         with self.assertRaisesMessage(ValidationError, msg):
             item.clean()
 
         # However, adding non-stock sholud be ok
-        item = OrderItem.objects.create(
+        base_item.stocked = 10
+        base_item.save()
+        item = OrderItem(
             element=base_item, reference=order, qty=11, stock=False, price=10)
         self.assertFalse(item.clean())
 

@@ -555,27 +555,26 @@ class CommonContextStockTabs(TestCase):
             user=u, customer=c, ref_name='Quick', delivery=date.today())
 
     def test_tab_elements(self):
-        p1, p2, p3, zero, negative = [
-            Item.objects.create(
-                name='bar', fabrics=2, stocked=s) for s in (5, 15, 5, 0, 5)]
+        items = [Item.objects.create(
+            name='bar', fabrics=2, stocked=s) for s in (5, 15, 5, 0, 5)]
 
         o = Order.objects.first()
-        OrderItem.objects.create(
-            element=p1, reference=o, qty=5, price=30)  # 0 stock
-        OrderItem.objects.create(
-            element=p2, reference=o, qty=14, price=30)  # 1 stock
-        OrderItem.objects.create(
-            element=p3, reference=o, qty=1, price=30)  # 4 stock
+        k0 = OrderItem(
+            element=items[0], reference=o, qty=5, price=30, stock=True)
+        k1 = OrderItem(
+            element=items[1], reference=o, qty=14, price=30, stock=True)
+        k2 = OrderItem(
+            element=items[2], reference=o, qty=1, price=30, stock=True)
 
-        o.kill()
+        for k in (k0, k1, k2):  # Update stock
+            k.clean()
+            k.save()
+        o.kill()  # Sell something to change health
 
         cc = CommonContexts.stock_tabs()
-
-        self.assertEqual(cc['tab_elements']['p1'][0], p1)
-        self.assertEqual(cc['tab_elements']['p2'][0], p2)
-        self.assertEqual(cc['tab_elements']['p3'][0], p3)
-        self.assertEqual(cc['tab_elements']['zero'][0], zero)
-        self.assertEqual(cc['tab_elements']['negative'][0], negative)
+        for name, i in zip(('p1', 'p2', 'p3', 'zero', 'negative'), items):
+            i.save()  # Update health
+            self.assertEqual(cc['tab_elements'][name][0], i)
 
     def test_tab_item_types(self):
         cc = CommonContexts.stock_tabs()
@@ -1227,7 +1226,8 @@ class MainViewTests(TestCase):
         elapsed = today - date(cur_year - 1, 12, 31)
         goal = elapsed.days * settings.GOAL
 
-        ratio = int(elapsed.days / 50) + 1
+        # Create some activity each 25 days
+        ratio = int(elapsed.days / 25) + 1
         for _ in range(ratio):
             base_item = Item.objects.last()
             amount = int(goal/ratio)

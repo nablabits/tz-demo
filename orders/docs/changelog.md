@@ -1,5 +1,8 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v94, ???
+  * **Bug:** ahora el stock se recalcula al añadir prendas a los pedidos en lugar de al facturarlos.
+
 ### v93, feb 17
   * **Nuevo:** los elementos kanban muestran los tiempos que faltan por añadir
   (0/0/0 significa perfecto.)

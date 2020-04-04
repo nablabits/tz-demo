@@ -197,6 +197,16 @@ class Order(models.Model):
         has changed)"""
         StatusShift.objects.create(order=self, status=self.status)
 
+    def delete(self, *args, **kwargs):
+        """Override delete method.
+
+        Ensure stock qtys are returned to the store by deleting individual
+        items since CASCADE does not call items.delete()
+        """
+        for i in self.items.all():
+            i.delete()
+        super().delete(*args, **kwargs)
+
     def kill(self, pay_method='C'):
         """Kill the order.
 
@@ -573,7 +583,6 @@ class Item(models.Model):
 
         # Estimate health
         avg_sales = self.year_sales / 12  # month averaged
-        print(avg_sales, self.stocked)
         if avg_sales == 0 and self.stocked == 0:
             self.health = - 100
         elif avg_sales == 0 and self.stocked > 0:
@@ -728,18 +737,6 @@ class OrderItem(models.Model):
 
     def save(self, *args, **kwargs):
         """Override the save method."""
-        # Return the qty back to stock first of all & later recalculate
-        try:
-            prev = OrderItem.objects.get(pk=self.pk)
-        except ObjectDoesNotExist:
-            prev = None
-        else:
-            if prev.stock or prev.element.foreing:
-                print('prev', self.element.stocked)
-                self.element.stocked += prev.qty
-                self.element.save()
-                print('new stock', self.element.stocked)
-
         # Default item
         try:
             default = Item.objects.get(name='Predeterminado')
@@ -761,10 +758,6 @@ class OrderItem(models.Model):
             self.reference.status = '3'
             self.reference.save()
 
-        # Ensure that order express items are stocked
-        if self.reference.ref_name == 'Quick':
-            self.stock = True
-
         # Ensure that stock items have no times and can't be fit
         if self.stock:
             self.crop = timedelta(0)
@@ -772,32 +765,23 @@ class OrderItem(models.Model):
             self.iron = timedelta(0)
             self.fit = False
 
-        # Ensure tz orders don't contain stock items
-        if self.reference.customer.name.lower() == 'trapuzarrak':
-            self.stock = False
+        super().save(*args, **kwargs)
 
-        # Ensure that providing a batch number makes the item stock
-        if self.batch:
-            self.stock = True
+    def delete(self, *args, **kwargs):
+        """Override delete method.
 
-        # Ensure that foreign items are not Stock
-        if self.element.foreing:
-            self.stock = False
-
-        # Notice changes in stock status
-        recalculate = False
-        if prev:
-            if not prev.stock and self.stock:
-                recalculate = True
-
-        # Finally, recalculate the stock
-        if self.stock or self.element.foreing or recalculate:
-            self.element.stocked -= self.qty
-            if self.element.stocked < 0:
-                raise ValidationError('Negative stock')
+        On delete, ensure the qty goes back to the store for the affected
+        members.
+        """
+        affected = (
+            self.stock or self.element.foreing or
+            self.reference.ref_name == 'Quick'
+        )
+        if affected:
+            self.element.stocked += self.qty
             self.element.save()
 
-        super().save(*args, **kwargs)
+        super().delete(*args, **kwargs)
 
     def clean(self):
         """Define custom validators."""
@@ -821,14 +805,52 @@ class OrderItem(models.Model):
                    'de trapuzarrak')
             raise ValidationError({'batch': _(msg)})
 
-        # Avoid adding more items than stocked in express orders
-        condition = (
-            (self.qty > self.element.stocked and (
-                self.reference.ref_name == 'Quick' or self.stock))
+        # In order to properly calculate the stock movements some checks should
+        # be performed before
+
+        # Ensure tz orders don't contain stock items
+        if self.reference.customer.name.lower() == 'trapuzarrak':
+            self.stock = False
+
+        # Ensure that providing a batch number makes the item stock
+        if self.batch:
+            self.stock = True
+
+        # Ensure that order express items are stocked
+        if self.reference.ref_name == 'Quick':
+            self.stock = True
+
+        # Ensure that foreign items are not Stock
+        if self.element.foreing:
+            self.stock = False
+
+        # Affected members should return their qty back to the store
+        try:
+            prev = OrderItem.objects.get(pk=self.pk)
+        except ObjectDoesNotExist:
+            pass
+        else:
+            affected = (
+                prev.stock or prev.element.foreing or
+                self.reference.ref_name == 'Quick'
+            )
+            if affected:
+                self.element.stocked += prev.qty
+
+        # Affected members recover their stock from the store
+        affected = (
+            self.stock or self.element.foreing or
+            self.reference.ref_name == 'Quick'
         )
-        if condition:
-            msg = ('Estás intentando añadir más prendas de las que tienes.')
+        if affected:
+            self.element.stocked -= self.qty
+
+        if self.element.stocked < 0:
+            msg = (
+                'Estás intentando añadir más prendas de las que tienes.')
             raise ValidationError({'qty': _(msg)})
+        else:
+            self.element.save()
 
     @property
     def time_quality(self):
