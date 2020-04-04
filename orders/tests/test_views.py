@@ -1227,7 +1227,6 @@ class MainViewTests(TestCase):
         elapsed = today - date(cur_year - 1, 12, 31)
         goal = elapsed.days * settings.GOAL
 
-        # Create some activity each 50 days
         ratio = int(elapsed.days / 50) + 1
         for _ in range(ratio):
             base_item = Item.objects.last()
