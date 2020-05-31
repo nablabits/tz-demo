@@ -1,5 +1,11 @@
 ## Trapuzarrak app registro de cambios
 ***
+### v94, may 31
+  * **Nuevo:** Ya se pueden imprimir tickets regalo.
+  * **Mejora:** Cuando se introduce un cp la ciudad se añade automáticamente si ya esta registrada en la app. Y viceversa, si se  sabe la ciudad, el CP se añade automáticamente. 
+  * **Mejora:** las ventas express no cerradas se eliminan automáticamente.
+  * **Bug:** ahora el stock se recalcula al añadir prendas a los pedidos en lugar de al facturarlos.
+
 ### v93, feb 17
   * **Nuevo:** los elementos kanban muestran los tiempos que faltan por añadir
   (0/0/0 significa perfecto.)

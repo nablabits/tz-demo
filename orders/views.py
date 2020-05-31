@@ -208,8 +208,10 @@ def timetable_required(function):
 @login_required
 def printable_ticket(request, invoice_no):
     """Download an invoiced order."""
+    # fetch the gift status
+    gift = request.GET.get('gift', False)
     invoice = Invoice.objects.get(invoice_no=invoice_no)
-    pdf = invoice.printable_ticket()
+    pdf = invoice.printable_ticket(gift=gift)
     filename = 'ticket-{}.pdf'.format(invoice.invoice_no)
     return FileResponse(pdf, as_attachment=True, filename=filename, )
 
@@ -811,7 +813,7 @@ def order_express_view(request, pk):
         pay_method = request.POST.get('pay_method', None)
         if cp:  # Add a zip code to the express order
             c = Customer.objects.get_or_create(
-                name='express', city='server', phone=0, cp=cp,
+                name='express', city='SERVER', phone=0, cp=cp,
                 notes='AnnonymousUserAutmaticallyCreated')
             order.customer = c[0]
             order.save()
@@ -830,10 +832,10 @@ def order_express_view(request, pk):
             raise Http404('Something went wrong with the request.')
 
     # Redirect regular orders
-    if order.customer.name != 'express':
+    if order.customer.name != 'EXPRESS':
         return redirect(reverse('order_view', args=[order.pk]))
 
-    customers = Customer.objects.exclude(name='express')
+    customers = Customer.objects.exclude(name='EXPRESS')
     customers = customers.exclude(provider=True)
     items = OrderItem.objects.filter(reference=order)
     available_items = Item.objects.all()[:10]
@@ -1149,10 +1151,10 @@ class Actions(View):
 
         # Add express order
         if action == 'order-express-add':
-            customer, created = Customer.objects.get_or_create(
-                name='express', city='server', phone=0,
+            customer, _ = Customer.objects.get_or_create(
+                name='EXPRESS', city='SERVER', phone=0,
                 cp=self.request.POST.get('cp'),
-                notes='AnnonymousUserAutmaticallyCreated'
+                notes='ANNONYMOUSUSERAUTMATICALLYCREATED'
             )
             order = Order.objects.create(
                 user=request.user, customer=customer, ref_name='Quick',

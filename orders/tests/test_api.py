@@ -21,8 +21,8 @@ class ReadOnlyTests(APITestCase):
             customer=c, user=su, ref_name='Test order', delivery=date.today())
         item = Item.objects.create(
             name='Test item', fabrics=0, price=10, stocked=30)
-        OrderItem.objects.create(
-            element=item, reference=order, description='Test order item')
+        OrderItem.objects.create(element=item, reference=order,
+                                 description='Test order item', price=10)
 
         order.kill()
 
@@ -61,7 +61,7 @@ class ReadOnlyTests(APITestCase):
         """Test the correct content for customer API."""
         resp = self.client.get(reverse('customer-list'))
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.data[0]['name'], 'Test Customer')
+        self.assertEqual(resp.data[0]['name'], 'TEST CUSTOMER')
 
         # Finally ensure that all the fields are included
         fields = ('creation', 'name', 'address', 'city', 'phone', 'email',

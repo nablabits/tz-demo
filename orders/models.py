@@ -77,6 +77,27 @@ class Customer(models.Model):
         if self.provider:
             self.group = False
 
+        # Capitalize strings for consistency
+        charfields = [self.name, self.address, self.city, self.email,
+                      self.CIF, self.notes, ]
+        uppercased = [f.upper() if f else '' for f in charfields]
+        self.name, self.address, self.city = uppercased[:3]
+        self.email, self.CIF, self.notes = uppercased[3:]
+
+        # Look for already saved cities and overwrite provided city since zip
+        # codes are unique
+        valid_cities = Customer.objects.exclude(city__iexact='SERVER')
+        c0 = valid_cities.filter(cp=self.cp).exclude(cp=0)
+        c0 = c0.exclude(pk=self.pk)  # when having one, it must be editable.
+        if c0.exists():
+            self.city = c0.first().city
+
+        # If no cp is provided we should find a suitable city already in the db
+        if self.cp == 0 and self.city:
+            c0 = valid_cities.filter(city__iexact=self.city)
+            if c0.exists():
+                self.cp = c0.first().cp
+
         super().save(*args, **kwargs)
 
     def email_name(self):
@@ -171,6 +192,13 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save method."""
+        # delete all the express orders that are open but not invoiced
+        deprecated = Order.objects.filter(
+            status='7').filter(ref_name__iexact='quick').exclude(pk=self.pk)
+        if deprecated.exists():
+            for order in deprecated:
+                order.delete()
+
         # ensure invoiced orders are in status 9
         try:
             self.invoice
@@ -196,6 +224,16 @@ class Order(models.Model):
         """After saving, add a new StatusShift (will be created only if status
         has changed)"""
         StatusShift.objects.create(order=self, status=self.status)
+
+    def delete(self, *args, **kwargs):
+        """Override delete method.
+
+        Ensure stock qtys are returned to the store by deleting individual
+        items since CASCADE does not call items.delete()
+        """
+        for i in self.items.all():
+            i.delete()
+        super().delete(*args, **kwargs)
 
     def kill(self, pay_method='C'):
         """Kill the order.
@@ -230,11 +268,6 @@ class Order(models.Model):
         # And issue the invoice
         i = Invoice(reference=self, pay_method=pay_method, amount=self.total)
         i.save(kill=True)
-
-        # Update items' stock
-        for item in self.items.all():
-            item.element.stocked -= item.qty
-            item.element.save()
 
         # Finally archive the project in todoist
         self.archive()
@@ -732,7 +765,7 @@ class OrderItem(models.Model):
 
     def save(self, *args, **kwargs):
         """Override the save method."""
-        # Avoid items to be stock and fit simultaneously.
+        # Default item
         try:
             default = Item.objects.get(name='Predeterminado')
         except ObjectDoesNotExist:
@@ -753,10 +786,6 @@ class OrderItem(models.Model):
             self.reference.status = '3'
             self.reference.save()
 
-        # Ensure that order express items are stocked
-        if self.reference.ref_name == 'Quick':
-            self.stock = True
-
         # Ensure that stock items have no times and can't be fit
         if self.stock:
             self.crop = timedelta(0)
@@ -764,19 +793,23 @@ class OrderItem(models.Model):
             self.iron = timedelta(0)
             self.fit = False
 
-        # Ensure tz orders don't contain stock items
-        if self.reference.customer.name.lower() == 'trapuzarrak':
-            self.stock = False
-
-        # Ensure that providing a batch number makes the item stock
-        if self.batch:
-            self.stock = True
-
-        # Finally, ensure that foreign items are not Stock
-        if self.element.foreing:
-            self.stock = False
-
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        """Override delete method.
+
+        On delete, ensure the qty goes back to the store for the affected
+        members.
+        """
+        affected = (
+            self.stock or self.element.foreing or
+            self.reference.ref_name == 'Quick'
+        )
+        if affected:
+            self.element.stocked += self.qty
+            self.element.save()
+
+        super().delete(*args, **kwargs)
 
     def clean(self):
         """Define custom validators."""
@@ -800,14 +833,52 @@ class OrderItem(models.Model):
                    'de trapuzarrak')
             raise ValidationError({'batch': _(msg)})
 
-        # Avoid adding more items than stocked in express orders
-        condition = (
-            (self.qty > self.element.stocked and (
-                self.reference.ref_name == 'Quick' or self.stock))
+        # In order to properly calculate the stock movements some checks should
+        # be performed before
+
+        # Ensure tz orders don't contain stock items
+        if self.reference.customer.name.lower() == 'trapuzarrak':
+            self.stock = False
+
+        # Ensure that providing a batch number makes the item stock
+        if self.batch:
+            self.stock = True
+
+        # Ensure that order express items are stocked
+        if self.reference.ref_name == 'Quick':
+            self.stock = True
+
+        # Ensure that foreign items are not Stock
+        if self.element.foreing:
+            self.stock = False
+
+        # Affected members should return their qty back to the store
+        try:
+            prev = OrderItem.objects.get(pk=self.pk)
+        except ObjectDoesNotExist:
+            pass
+        else:
+            affected = (
+                prev.stock or prev.element.foreing or
+                self.reference.ref_name == 'Quick'
+            )
+            if affected:
+                self.element.stocked += prev.qty
+
+        # Affected members recover their stock from the store
+        affected = (
+            self.stock or self.element.foreing or
+            self.reference.ref_name == 'Quick'
         )
-        if condition:
-            msg = ('Estás intentando añadir más prendas de las que tienes.')
+        if affected:
+            self.element.stocked -= self.qty
+
+        if self.element.stocked < 0:
+            msg = (
+                'Estás intentando añadir más prendas de las que tienes.')
             raise ValidationError({'qty': _(msg)})
+        else:
+            self.element.save()
 
     @property
     def time_quality(self):
@@ -1046,8 +1117,11 @@ class Invoice(models.Model):
         if self.reference.has_no_items:
             raise ValidationError({'reference': 'The invoice has no items'})
 
-    def printable_ticket(self, lc=False):
-        """Create a PDF with the sale summary to send or to print."""
+    def printable_ticket(self, lc=False, gift=False):
+        """Create a PDF with the sale summary to send or to print.
+
+        Includes an option to show price 0€ for gifts.
+        """
         def linecutter(ticket_print):
             """Cut the line string when it's too long."""
             f, s, n = ticket_print, None, 25
@@ -1078,18 +1152,22 @@ class Invoice(models.Model):
         line = 20 * mm  # bottom margin
 
         # Start out with the summary
+        total = order.total if not gift else 0
+        d_perc = order.discount if not gift else 0
+        da = order.discount_amount if not gift else 0
+        vat = order.vat if not gift else 0
+        total_bt = order.total_bt if not gift else 0
         if order.discount:
-            da, d_perc = (order.discount_amount, order.discount)
             summary = (
-                'Guztira/Total: {}€'.format(order.total),
+                'Guztira/Total: {}€'.format(total),
                 'Deskontua/Dto ({}%): {}€'.format(d_perc, da),
-                'BEZ/IVA (21%) €: {}€'.format(order.vat),
-                'Kuota/Base: {}€'.format(order.total_bt), )
+                'BEZ/IVA (21%) €: {}€'.format(vat),
+                'Kuota/Base: {}€'.format(total_bt), )
         else:
             summary = (
-                'Guztira/Total: {}€'.format(order.total),
-                'BEZ/IVA (21%) €: {}€'.format(order.vat),
-                'Kuota/Base: {}€'.format(order.total_bt), )
+                'Guztira/Total: {}€'.format(total),
+                'BEZ/IVA (21%) €: {}€'.format(vat),
+                'Kuota/Base: {}€'.format(total_bt), )
         for textline in summary:
             p.drawRightString(170 * mm, line, textline)
             line += 15 * mm
@@ -1100,8 +1178,10 @@ class Invoice(models.Model):
 
         # Sale breakdown
         for item in items:
-            p.drawRightString(130 * mm, line, '{}€'.format(item.price), )
-            p.drawRightString(170 * mm, line, '{}€'.format(item.subtotal), )
+            price = item.price if not gift else 0
+            subtotal = item.subtotal if not gift else 0
+            p.drawRightString(130 * mm, line, '{}€'.format(price), )
+            p.drawRightString(170 * mm, line, '{}€'.format(subtotal), )
             for tl in linecutter(item.ticket_print):
                 p.drawString(10, line, tl)
                 line += 10 * mm
@@ -1543,7 +1623,6 @@ class Timetable(models.Model):
 
     class Meta:
         ordering = ('start',)
-#
 #
 #
 #

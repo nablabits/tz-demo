@@ -34,7 +34,11 @@ This custom form template lets create or edit order items. Fits to item selector
         <div class="form-group">
           {{ form.qty.label_tag }}
           {% render_field form.qty class="form-control" %}
-          <small class="form-text text-muted">stock: {{base_item.stocked}}</small>
+          {% if order_item.stock or base_item.foreing %}
+            <small class="form-text text-muted">stock: {{base_item.stocked|add:form.qty.value}}</small>
+          {% else %}
+            <small class="form-text text-muted">stock: {{base_item.stocked}}</small>
+          {% endif %}
         </div>
       </div>
       <div class="col-3">
@@ -103,7 +107,7 @@ This custom form template lets create or edit order items. Fits to item selector
     </div>
     <div class="d-flex ml-4">
       <div class="form-check">
-        {% if order.ref_name != 'Quick' %}
+        {% if not base_item.foreing and order.ref_name != 'Quick' %}
           {% render_field form.stock class="form-check-input" %}
           <label for="id_stock">Es una prenda de Stock</label>
         {% endif %}
