@@ -192,6 +192,13 @@ class Order(models.Model):
 
     def save(self, *args, **kwargs):
         """Override save method."""
+        # delete all the express orders that are open but not invoiced
+        deprecated = Order.objects.filter(
+            status='7').filter(ref_name__iexact='quick').exclude(pk=self.pk)
+        if deprecated.exists():
+            for order in deprecated:
+                order.delete()
+
         # ensure invoiced orders are in status 9
         try:
             self.invoice

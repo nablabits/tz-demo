@@ -232,7 +232,6 @@ class TestCustomer(TestCase):
         self.assertEqual(c.CIF, 'BAZ')
         self.assertEqual(c.notes, '')
 
-    @tag('current')
     def test_SERVER_city_is_excluded_from_valid_cities(self):
         c = Customer.objects.first()
         c.city = 'server'
@@ -241,7 +240,6 @@ class TestCustomer(TestCase):
         c = Customer.objects.create(name='foo', cp=43, phone=0, city='baz')
         self.assertEqual(c.city, 'BAZ')  # baz is overwritten
 
-    @tag('current')
     def test_valid_cities_to_look_for_have_same_cp(self):
         [Customer.objects.create(
             name='foo', cp=n, phone=0, city='bar{}'.format(str(n)))
@@ -250,7 +248,6 @@ class TestCustomer(TestCase):
 
         self.assertEqual(c.city, 'BAR2')
 
-    @tag('current')
     def test_valid_cities_to_look_for_exclude_cp0(self):
         zero, _ = [Customer.objects.create(
             name='foo', cp=n, phone=0, city='bar{}'.format(str(n)))
@@ -258,7 +255,6 @@ class TestCustomer(TestCase):
         c = Customer.objects.create(name='bar', cp=0, city='baz', phone=0)
         self.assertTrue((c.cp == zero.cp) and (c.city != zero.city))
 
-    @tag('current')
     def test_when_there_is_only_one_entry_city_sholud_be_editable(self):
         c = Customer.objects.first()
         self.assertEqual(c.city, 'BAR')
@@ -266,7 +262,6 @@ class TestCustomer(TestCase):
         c.save()
         self.assertEqual(c.city, 'BAZ')  # baz is writable
 
-    @tag('current')
     def test_find_city_when_zip_is_zero(self):
         c = Customer.objects.create(name='foo', cp=0, city='bar', phone=0)
         self.assertEqual(c.cp, 44)
@@ -687,11 +682,12 @@ class TestOrders(TestCase):
         """Test the obsolete order custom manager."""
         u = User.objects.first()
         c = Customer.objects.first()
-        express = Customer.objects.create(name='express', phone=0, cp=0)
 
         # First a common order
         Order.objects.create(
             user=u, customer=c, ref_name='Test', delivery=date.today())
+
+        express = Customer.objects.create(name='express', phone=0, cp=0)
 
         # Now an invoiced express order
         i = Order.objects.create(
@@ -729,6 +725,21 @@ class TestOrders(TestCase):
         msg = 'El descuento no puede ser superior al 100%'
         with self.assertRaisesMessage(ValidationError, msg):
             o.clean()
+
+    def test_obsolete_express_orders_are_removed(self):
+        """When a new order express is open old ones should be erased."""
+        u = User.objects.first()
+        c = Customer.objects.first()
+        express = Customer.objects.create(name='express', phone=0, cp=0)
+        obsolete = Order.objects.create(
+            user=u, customer=express, ref_name='Quick', delivery=date.today(),
+            status='7')
+
+        new = Order.objects.create(
+            user=u, customer=express, ref_name='Quick', delivery=date.today())
+
+        with self.assertRaises(ObjectDoesNotExist):
+            Order.objects.get(pk=obsolete.pk)
 
     def test_invoiced_orders_are_status_9(self):
         o = Order.objects.first()
@@ -3166,7 +3177,6 @@ class TestExpense(TestCase):
                 issuer=void, invoice_no='Test',
                 issued_on=date.today(), concept='Concept', amount=100, )
 
-    @tag('current')
     def test_no_city_raises_error(self):
         """Raise ValidationError with partially filled customers."""
         void = Customer.objects.create(
