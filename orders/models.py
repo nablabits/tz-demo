@@ -1117,8 +1117,11 @@ class Invoice(models.Model):
         if self.reference.has_no_items:
             raise ValidationError({'reference': 'The invoice has no items'})
 
-    def printable_ticket(self, lc=False):
-        """Create a PDF with the sale summary to send or to print."""
+    def printable_ticket(self, lc=False, gift=False):
+        """Create a PDF with the sale summary to send or to print.
+
+        Includes an option to show price 0€ for gifts.
+        """
         def linecutter(ticket_print):
             """Cut the line string when it's too long."""
             f, s, n = ticket_print, None, 25
@@ -1149,18 +1152,22 @@ class Invoice(models.Model):
         line = 20 * mm  # bottom margin
 
         # Start out with the summary
+        total = order.total if not gift else 0
+        d_perc = order.discount if not gift else 0
+        da = order.discount_amount if not gift else 0
+        vat = order.vat if not gift else 0
+        total_bt = order.total_bt if not gift else 0
         if order.discount:
-            da, d_perc = (order.discount_amount, order.discount)
             summary = (
-                'Guztira/Total: {}€'.format(order.total),
+                'Guztira/Total: {}€'.format(total),
                 'Deskontua/Dto ({}%): {}€'.format(d_perc, da),
-                'BEZ/IVA (21%) €: {}€'.format(order.vat),
-                'Kuota/Base: {}€'.format(order.total_bt), )
+                'BEZ/IVA (21%) €: {}€'.format(vat),
+                'Kuota/Base: {}€'.format(total_bt), )
         else:
             summary = (
-                'Guztira/Total: {}€'.format(order.total),
-                'BEZ/IVA (21%) €: {}€'.format(order.vat),
-                'Kuota/Base: {}€'.format(order.total_bt), )
+                'Guztira/Total: {}€'.format(total),
+                'BEZ/IVA (21%) €: {}€'.format(vat),
+                'Kuota/Base: {}€'.format(total_bt), )
         for textline in summary:
             p.drawRightString(170 * mm, line, textline)
             line += 15 * mm
@@ -1171,8 +1178,10 @@ class Invoice(models.Model):
 
         # Sale breakdown
         for item in items:
-            p.drawRightString(130 * mm, line, '{}€'.format(item.price), )
-            p.drawRightString(170 * mm, line, '{}€'.format(item.subtotal), )
+            price = item.price if not gift else 0
+            subtotal = item.subtotal if not gift else 0
+            p.drawRightString(130 * mm, line, '{}€'.format(price), )
+            p.drawRightString(170 * mm, line, '{}€'.format(subtotal), )
             for tl in linecutter(item.ticket_print):
                 p.drawString(10, line, tl)
                 line += 10 * mm
