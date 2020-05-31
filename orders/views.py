@@ -208,8 +208,10 @@ def timetable_required(function):
 @login_required
 def printable_ticket(request, invoice_no):
     """Download an invoiced order."""
+    # fetch the gift status
+    gift = request.GET.get('gift', False)
     invoice = Invoice.objects.get(invoice_no=invoice_no)
-    pdf = invoice.printable_ticket()
+    pdf = invoice.printable_ticket(gift=gift)
     filename = 'ticket-{}.pdf'.format(invoice.invoice_no)
     return FileResponse(pdf, as_attachment=True, filename=filename, )
 

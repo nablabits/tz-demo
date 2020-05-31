@@ -24,6 +24,11 @@
         <i class="fa fa-vote-yea"></i><br>Imprimir ticket
       </button>
     </a>
+    <a href="{% url 'ticket_print' order.invoice.invoice_no  %}?&gift=true">
+      <button class="mr-1 mt-1 btn btn-outline-success">
+        <i class="fa fa-vote-yea"></i><br>Imprimir ticket regalo
+      </button>
+    </a>
     {% if order.customer.name != 'express' %}
     <a href="{% url 'order_view' order.pk %}">
       <button class="ml-1 mt-1 btn btn-outline-success">
