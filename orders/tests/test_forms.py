@@ -12,7 +12,6 @@ from orders.models import Customer, Order
 class CustomerFormTest(TestCase):
     """Test the customer form."""
 
-    @tag('current')
     def test_avoid_duplicates(self):
         """Test to prevent duplicates."""
         Customer.objects.create(name='Test duplicate',
