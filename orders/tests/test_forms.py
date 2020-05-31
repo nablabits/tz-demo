@@ -3,7 +3,7 @@
 from datetime import date
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, tag
 
 from orders.forms import CustomerForm, OrderForm
 from orders.models import Customer, Order
@@ -12,6 +12,7 @@ from orders.models import Customer, Order
 class CustomerFormTest(TestCase):
     """Test the customer form."""
 
+    @tag('current')
     def test_avoid_duplicates(self):
         """Test to prevent duplicates."""
         Customer.objects.create(name='Test duplicate',
@@ -23,14 +24,14 @@ class CustomerFormTest(TestCase):
                                 cp='00000',
                                 notes='No notes',
                                 )
-        duplicated_customer = CustomerForm({'name': 'Test duplicate',
-                                            'city': 'mungia',
-                                            'address': 'Foruen enparantza',
+        duplicated_customer = CustomerForm({'name': 'TEST DUPLICATE',
+                                            'city': 'MUNGIA',
+                                            'address': 'FORUEN ENPARANTZA',
                                             'phone': '666555444',
-                                            'email': 'jondoe@jondoe.com',
+                                            'email': 'JONDOE@JONDOE.COM',
                                             'CIF': '0000T',
                                             'cp': '00000',
-                                            'notes': 'No notes',
+                                            'notes': 'NO NOTES',
                                             })
         self.assertFalse(duplicated_customer.is_valid())
         self.assertEqual(duplicated_customer.errors['name'][0],

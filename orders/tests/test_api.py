@@ -61,7 +61,7 @@ class ReadOnlyTests(APITestCase):
         """Test the correct content for customer API."""
         resp = self.client.get(reverse('customer-list'))
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.data[0]['name'], 'Test Customer')
+        self.assertEqual(resp.data[0]['name'], 'TEST CUSTOMER')
 
         # Finally ensure that all the fields are included
         fields = ('creation', 'name', 'address', 'city', 'phone', 'email',

@@ -77,6 +77,27 @@ class Customer(models.Model):
         if self.provider:
             self.group = False
 
+        # Capitalize strings for consistency
+        charfields = [self.name, self.address, self.city, self.email,
+                      self.CIF, self.notes, ]
+        uppercased = [f.upper() if f else '' for f in charfields]
+        self.name, self.address, self.city = uppercased[:3]
+        self.email, self.CIF, self.notes = uppercased[3:]
+
+        # Look for already saved cities and overwrite provided city since zip
+        # codes are unique
+        valid_cities = Customer.objects.exclude(city__iexact='SERVER')
+        c0 = valid_cities.filter(cp=self.cp).exclude(cp=0)
+        c0 = c0.exclude(pk=self.pk)  # when having one, it must be editable.
+        if c0.exists():
+            self.city = c0.first().city
+
+        # If no cp is provided we should find a suitable city already in the db
+        if self.cp == 0 and self.city:
+            c0 = valid_cities.filter(city__iexact=self.city)
+            if c0.exists():
+                self.cp = c0.first().cp
+
         super().save(*args, **kwargs)
 
     def email_name(self):
@@ -1586,7 +1607,6 @@ class Timetable(models.Model):
 
     class Meta:
         ordering = ('start',)
-#
 #
 #
 #

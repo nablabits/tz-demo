@@ -1,6 +1,7 @@
 ## Trapuzarrak app registro de cambios
 ***
 ### v94, ???
+  * **Mejora:** Cuando se introduce un cp la ciudad se añade automáticamente si ya esta registrada en la app. Y viceversa, si se  sabe la ciudad, el CP se añade automáticamente. 
   * **Bug:** ahora el stock se recalcula al añadir prendas a los pedidos en lugar de al facturarlos.
 
 ### v93, feb 17

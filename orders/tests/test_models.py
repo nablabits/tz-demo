@@ -46,7 +46,7 @@ class CommentsTests(TestCase):
         comment = Comment.objects.all()[0]
         today = date.today()
         comment_str = ('El ' + str(today) + ', user comentó en ' +
-                       str(comment.reference.pk) + ' Customer Test example')
+                       str(comment.reference.pk) + ' CUSTOMER TEST example')
         self.assertTrue(isinstance(comment, Comment))
         self.assertEqual(comment.__str__(), comment_str)
 
@@ -68,7 +68,7 @@ class TestCustomer(TestCase):
 
     def test_customer_name_field(self):
         c = Customer.objects.first()
-        self.assertEqual(c.name, 'Test')
+        self.assertEqual(c.name, 'TEST')
         self.assertEqual(
             c._meta.get_field('name').verbose_name, 'Nombre')
         with self.assertRaises(DataError):
@@ -77,7 +77,7 @@ class TestCustomer(TestCase):
 
     def test_customer_address_field(self):
         c = Customer.objects.first()
-        self.assertEqual(c.address, 'foo street')
+        self.assertEqual(c.address, 'FOO STREET')
         self.assertEqual(
             c._meta.get_field('address').verbose_name, 'Dirección')
 
@@ -90,7 +90,7 @@ class TestCustomer(TestCase):
 
     def test_customer_city_field(self):
         c = Customer.objects.first()
-        self.assertEqual(c.city, 'bar')
+        self.assertEqual(c.city, 'BAR')
         self.assertEqual(
             c._meta.get_field('city').verbose_name, 'Localidad')
 
@@ -109,7 +109,7 @@ class TestCustomer(TestCase):
 
     def test_customer_email_field(self):
         c = Customer.objects.first()
-        self.assertEqual(c.email, 'foo@bar.baz')
+        self.assertEqual(c.email, 'FOO@BAR.BAZ')
         self.assertEqual(
             c._meta.get_field('email').verbose_name, 'Email')
 
@@ -130,7 +130,7 @@ class TestCustomer(TestCase):
 
     def test_customer_CIF_field(self):
         c = Customer.objects.first()
-        self.assertEqual(c.CIF, 'baz')
+        self.assertEqual(c.CIF, 'BAZ')
         self.assertEqual(
             c._meta.get_field('CIF').verbose_name, 'CIF')
 
@@ -163,7 +163,7 @@ class TestCustomer(TestCase):
 
     def test_customer_notes_field(self):
         c = Customer.objects.first()
-        self.assertEqual(c.notes, 'default')
+        self.assertEqual(c.notes, 'DEFAULT')
         self.assertEqual(
             c._meta.get_field('notes').verbose_name, 'Observaciones')
 
@@ -197,12 +197,12 @@ class TestCustomer(TestCase):
 
     def test_customer_str(self):
         c = Customer.objects.first()
-        self.assertEqual(c.__str__(), 'Test')
+        self.assertEqual(c.__str__(), 'TEST')
 
     def test_avoid_duplicates(self):
         copy = Customer(
-            name='Test', address='foo street', city='bar', phone=55,
-            email='foo@bar.baz', CIF='baz', cp=44, notes='default',
+            name='TEST', address='FOO STREET', city='BAR', phone=55,
+            email='FOO@BAR.BAZ', CIF='BAZ', cp=44, notes='DEFAULT',
         )
         with self.assertRaises(ValidationError):
             copy.clean()
@@ -220,6 +220,56 @@ class TestCustomer(TestCase):
         c = Customer.objects.first()
         self.assertFalse(c.group)
         self.assertTrue(c.provider)
+
+    def test_capitalize_all_fields_by_default(self):
+        c = Customer.objects.create(
+            name='notUpperCASed', address='Foo', city='BaR',
+            email='fOO@bar.es', CIF='baZ', phone=5, cp=0)
+        self.assertEqual(c.name, 'NOTUPPERCASED')
+        self.assertEqual(c.address, 'FOO')
+        self.assertEqual(c.city, 'BAR')
+        self.assertEqual(c.email, 'FOO@BAR.ES')
+        self.assertEqual(c.CIF, 'BAZ')
+        self.assertEqual(c.notes, '')
+
+    @tag('current')
+    def test_SERVER_city_is_excluded_from_valid_cities(self):
+        c = Customer.objects.first()
+        c.city = 'server'
+        c.save()
+
+        c = Customer.objects.create(name='foo', cp=43, phone=0, city='baz')
+        self.assertEqual(c.city, 'BAZ')  # baz is overwritten
+
+    @tag('current')
+    def test_valid_cities_to_look_for_have_same_cp(self):
+        [Customer.objects.create(
+            name='foo', cp=n, phone=0, city='bar{}'.format(str(n)))
+            for n in range(3)]
+        c = Customer.objects.create(name='bar', cp=2, city='baz', phone=0)
+
+        self.assertEqual(c.city, 'BAR2')
+
+    @tag('current')
+    def test_valid_cities_to_look_for_exclude_cp0(self):
+        zero, _ = [Customer.objects.create(
+            name='foo', cp=n, phone=0, city='bar{}'.format(str(n)))
+            for n in range(2)]
+        c = Customer.objects.create(name='bar', cp=0, city='baz', phone=0)
+        self.assertTrue((c.cp == zero.cp) and (c.city != zero.city))
+
+    @tag('current')
+    def test_when_there_is_only_one_entry_city_sholud_be_editable(self):
+        c = Customer.objects.first()
+        self.assertEqual(c.city, 'BAR')
+        c.city = 'BAZ'
+        c.save()
+        self.assertEqual(c.city, 'BAZ')  # baz is writable
+
+    @tag('current')
+    def test_find_city_when_zip_is_zero(self):
+        c = Customer.objects.create(name='foo', cp=0, city='bar', phone=0)
+        self.assertEqual(c.cp, 44)
 
     def test_email_name(self):
         """Test the correct output for email comunications."""
@@ -1063,7 +1113,7 @@ class TestOrders(TestCase):
         o, i = Order.objects.first(), Item.objects.last()
         self.assertFalse(o.missing_times)
         a, b, c = [
-            OrderItem.objects.create(reference=o, element=i, price=10) 
+            OrderItem.objects.create(reference=o, element=i, price=10)
             for _ in range(3)]
         self.assertEqual(o.missing_times, (3, 3, 3))
 
@@ -3054,7 +3104,7 @@ class TestExpense(TestCase):
         expense = Expense.objects.create(
             issuer=Customer.objects.first(), invoice_no='foo',
             issued_on=date.today(), concept='bar', amount=100, notes='baz')
-        s = '{} {}'.format(expense.pk, 'Customer Test')
+        s = '{} {}'.format(expense.pk, 'CUSTOMER TEST')
         self.assertEqual(expense.__str__(), s)
 
     def test_kill(self):
@@ -3116,11 +3166,13 @@ class TestExpense(TestCase):
                 issuer=void, invoice_no='Test',
                 issued_on=date.today(), concept='Concept', amount=100, )
 
+    @tag('current')
     def test_no_city_raises_error(self):
         """Raise ValidationError with partially filled customers."""
         void = Customer.objects.create(
             name='Customer Test', address='Cache', phone='666666666',
-            CIF='444E', cp=48003, provider=True, )
+            CIF='444E', cp=8003, provider=True, )
+        print(void.city)
         with self.assertRaises(ValidationError):
             Expense.objects.create(
                 issuer=void, invoice_no='Test', issued_on=date.today(),
@@ -3156,7 +3208,7 @@ class TestCashFlowIO(TestCase):
         u = User.objects.create_user(username='user', is_staff=True, )
 
         # Create customers
-        c = Customer.objects.create(name='foo', phone=99, cp=22)
+        c = Customer.objects.create(name='foo', phone=99, cp=21)
         p = Customer.objects.create(name='foo', address='bar', city='baz',
                                     CIF='zaz', phone=99, cp=22, provider=True)
 
