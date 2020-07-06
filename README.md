@@ -1,5 +1,27 @@
-# Local installation
+# TZ app
+
+This app is one of my long-term projects starting back in 2018. The purpose is to manage a local business mainly focussed on tailor made basque clothes. 
+These are some of the main features:
+* Live progress of the business health: incomes, expenses, target & tracked times on production.
+* Kanban view of active orders with status tracker across stages
+* Prepaids management.
+* Production queue management.
+* Stock tracking. 
+* Bank balance for those in-cash payments.
+* Time tracker for employees
+
+### Live demo
+Check out a live demo hosted in heroku: https://tzmockup.herokuapp.com/  
+
+Alternatively you can install in a local environment, see below.
+
 ---
+
+Sadly the language of this app is full in Spanish since it's the language its users spkeak.   
+
+
+## Local installation
+
 
 + Clone the repo  
 `$ git clone git@github.com:nablabits/tz-demo.git`
