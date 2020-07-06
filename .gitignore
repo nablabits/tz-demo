@@ -11,3 +11,4 @@ media
 htmlcov
 staticfiles
 geckodriver.log
+*.swp
