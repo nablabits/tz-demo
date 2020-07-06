@@ -765,19 +765,6 @@ class OrderItem(models.Model):
 
     def save(self, *args, **kwargs):
         """Override the save method."""
-        # Default item
-        try:
-            default = Item.objects.get(name='Predeterminado')
-        except ObjectDoesNotExist:
-            default = Item.objects.create(name='Predeterminado',
-                                          item_type='0',
-                                          item_class='0',
-                                          size=0,
-                                          fabrics=0)
-        try:
-            self.element
-        except ObjectDoesNotExist:
-            self.element = default
 
         # Ensure that items with times are at least in status 3
         times = (self.crop or self.sewing or self.iron)

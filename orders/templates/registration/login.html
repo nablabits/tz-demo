@@ -4,7 +4,7 @@
 <head>
   <title>{{title}}</title>
   <link rel="stylesheet" href="{% static 'tz/css/bootstrap.min.css' %}">
-  <link rel="stylesheet" id="cff-font-awesome-css"  href="{% static 'tz/css/font-awesome.min.css' %}" />
+  <script src="https://kit.fontawesome.com/fc33d72d9c.js"></script>
   <link href="https://fonts.googleapis.com/css?family=Dosis" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'tz/css/style.css' %}">
 </head>
@@ -18,30 +18,43 @@
         </div>
       </div>
     </header>
-    <section id="login">
-      <div class="container my-4">
+    <section class="container" id="login">
+      <div class="my-4">
         <div class="d-flex justify-content-center">
-          <div class="card">
-            <div class="card-header">
-              <h3><strong>Inicia sesión</strong></h3>
-            </div>
-            <div class="card-body">
-              <form method="post">
-                {% csrf_token %}
-                <div class="form-group">
-                  <label for="id_username">Usuario</label>
-                  {% render_field form.username class="form-control" %}
+          <div class="d-flex flex-column w-50">
+            <div class="card">
+              <div class="card-header">
+                <h3><strong>Login</strong></h3>
+              </div>
+              <div class="card-body">
+                <form method="post">
+                  {% csrf_token %}
+                  <div class="form-group">
+                    <label for="id_username">Username</label>
+                    {% render_field form.username class="form-control"%}
+                  </div>
+                  <div class="form-group">
+                    <label for="id_password">Password</label>
+                    {% render_field form.password class="form-control"%}
+                  </div>
+                  <div class="d-flex justify-content-center">
+                    <button id="submit" class="btn btn-outline-success mr-1">Submit</button>
+                    <a href="#"></a>
+                  </div>
+                </form>
+                <div class="d-flex justify-content-center text-center mt-4">
+                  <div class="alert alert-primary" role="alert">
+                    <div class="d-flex flex-column align-items-center mt-4 px-3" id="msgBox">
+                      <p><i class="fas fa-info-circle fa-3x text-info"></i></p>
+                      <p>You can enter the app with <em>user</em> &amp; <em>pass</em></p>
+                      The db should be populated already but, alternatively, you can start fresh by pressing the populate button that will create dummy data for this year (takes a couple of minutes)
+                    </div>
+                  </div>
                 </div>
-                <div class="form-group">
-                  <label for="id_password">Contraseña</label>
-                  {% render_field form.password class="form-control" %}
+                <div class="d-flex justify-content-center mt-2">
+                  <button class="btn btn-info" id="populate"><i class="fas fa-redo mr-1"></i>Populate db</button>
                 </div>
-                <div class="d-flex justify-content-center">
-                  <button id="submit" class="btn btn-outline-success mr-1">Enviar</button>
-                  <a href="#"></a>
-                </div>
-              </form>
-            </div>
+              </div>
             </div>
           </div>
         </div>
@@ -50,6 +63,6 @@
     <script src="{% static 'tz/js/jquery-3.2.1.min.js' %}"></script>
     <script src="{% static 'tz/js/popper.min.js' %}"></script>
     <script src="{% static 'tz/js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'tz/js/order_actions.js' %}"></script>
+    <script src="{% static 'tz/js/populate.js' %}"></script>
   </body>
 </html>

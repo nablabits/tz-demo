@@ -27,6 +27,9 @@ urlpatterns = [
     path('', views.main, name='main'),
     path('search', views.search, name='search'),
 
+    # Populate database
+    path('populate', views.populate_trigger, name='populate'),
+
     # List related urls
     path('kanban', views.kanban, name='kanban'),
     path('customers', views.customerlist, name='customerlist'),

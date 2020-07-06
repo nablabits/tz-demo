@@ -30,6 +30,7 @@ from .forms import (
 from .models import (
     BankMovement, Comment, Customer, Expense, Invoice, Item, Order, OrderItem,
     PQueue, Timetable, CashFlowIO, ExpenseCategory, StatusShift, )
+from orders.populate import populate
 
 from decouple import config
 
@@ -179,6 +180,16 @@ class CommonContexts:
                          }
 
         return view_settings
+
+
+@require_GET
+def populate_trigger(request):
+    pass
+    try:
+        populate()
+    except:
+        return JsonResponse({'populated': False, })
+    return JsonResponse({'populated': True, })
 
 
 def timetable_required(function):
