@@ -47,5 +47,11 @@ for the database name and *tz_admin* for the username:
   $ python manage.py migrate
   $ python manage.py runserver
   ```
+* Populate the db (before there was a button in the login but it was deprecated)
+  ```
+  $ python manage.py shell
+  >>> from orders.populate import populate
+  >>> populate()
+  ```
 
-* Finally navigate to https://127.0.0.1:8000 and, once populated the db, login with *user* & *pass*
+* Finally navigate to https://127.0.0.1:8000 and login with *user* & *pass*
