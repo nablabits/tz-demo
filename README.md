@@ -11,13 +11,13 @@ These are some of the main features:
 * Time tracker for employees
 
 ### Live demo
-Check out a live demo hosted in heroku: https://tzmockup.herokuapp.com/  
+Check out a live demo hosted in heroku (takes a couple of minutes to wake up, be patitent): https://tzmockup.herokuapp.com/  
 
 Alternatively you can install in a local environment, see below.
 
 ---
 
-Sadly the language of this app is full in Spanish since it's the language its users spkeak.   
+Sadly the language of this app is full in Spanish since it's the language their users speak.   
 
 
 ## Local installation
